@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ArguGod - LLM Knowledge Base</title>
+    <style>
+        body { margin:0; padding:0; font-family:Arial,sans-serif; background:#1a1a1a; color:white; overflow:hidden; }
+        #canvas-container { width:100vw; height:100vh; }
+        #ui {
+            position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.85);
+            padding: 15px; border-radius: 8px; z-index: 100; width: 280px;
+        }
+        select, button { width:100%; padding:10px; margin:8px 0; background:#333; color:white; border:none; border-radius:4px; font-size:14px; }
+        button:hover { background:#555; }
+        #status { margin-top:10px; font-size:13px; color:#0f0; }
+    </style>
+</head>
+<body>
+    <div id="ui">
+        <h3>ArguGod • LLM Knowledge Base</h3>
+        
+        <label>Topic:</label>
+        <select id="topic-select"></select>
+        
+        <button id="compile-btn">🔨 Compile Wiki with Gemini</button>
+        <button id="mindmap-btn">🧠 View My Personal Mindmap</button>
+        
+        <div id="status"></div>
+    </div>
+    
+    <div id="canvas-container"></div>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="/static/graph.js"></script>
+</body>
+</html>

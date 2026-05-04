@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Code Graph Visualizer</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+            background-color: #1a1a1a;
+            color: #ffffff;
+            overflow: hidden;
+        }
+
+        #container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        #controls {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            z-index: 1000;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 10px;
+            border-radius: 5px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        #search {
+            padding: 5px;
+            border: 1px solid #555;
+            border-radius: 3px;
+            background: #333;
+            color: #fff;
+        }
+
+        button {
+            padding: 5px 10px;
+            background: #444;
+            color: #fff;
+            border: 1px solid #666;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #555;
+        }
+
+        #node-info {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            z-index: 1000;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 10px;
+            border-radius: 5px;
+            max-width: 300px;
+            display: none;
+        }
+
+        .node-label {
+            font-size: 12px;
+            text-align: center;
+            pointer-events: none;
+        }
+
+        .legend {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            z-index: 1000;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 10px;
+            border-radius: 5px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 5px;
+        }
+
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            margin-right: 10px;
+            border-radius: 50%;
+        }
+    </style>
+</head>
+<body>
+    <div id="container">
+        <div id="controls">
+            <input type="text" id="search" placeholder="Search nodes...">
+            <button id="search-btn">Search</button>
+            <button id="reset-zoom">Reset Zoom</button>
+            <button id="toggle-physics">Toggle Physics</button>
+        </div>
+
+        <div id="node-info">
+            <h3 id="node-name"></h3>
+            <p id="node-type"></p>
+            <p id="node-file"></p>
+            <p id="node-content"></p>
+        </div>
+
+        <div class="legend">
+            <div class="legend-item">
+                <div class="legend-color" style="background: #ff6b6b;"></div>
+                <span>Class</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #4ecdc4;"></div>
+                <span>Function</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #45b7d1;"></div>
+                <span>Module</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #f9ca24;"></div>
+                <span>Import</span>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pixi.js/7.2.4/pixi.min.js"></script>
+    <script>
+        // Graph Visualizer using PixiJS
+        class GraphVisualizer {
+            constructor() {
+                this.app = new PIXI.Application({
+                    width: window.innerWidth,
+                    height: window.innerHeight,
+                    backgroundColor: 0x1a1a1a,
+                    antialias: true
+                });
+
+                document.getElementById('container').appendChild(this.app.view);
+
+                this.nodes = new Map();
+                this.edges = [];
+                this.nodeSprites = new Map();
+                this.edgeGraphics = new PIXI.Graphics();
+
+                this.app.stage.addChild(this.edgeGraphics);
+
+                // Physics and interaction
+                this.isDragging = false;
+                this.draggedNode = null;
+                this.physicsEnabled = true;
+                this.zoom = 1;
+                this.panX = 0;
+                this.panY = 0;
+
+                this.setupEventListeners();
+                this.loadGraphData();
+            }
+
+            setupEventListeners() {
+                // Mouse wheel zoom
+                this.app.view.addEventListener('wheel', (e) => {
+                    e.preventDefault();
+                    const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
+                    this.zoom *= zoomFactor;
+                    this.updateTransform();
+                });
+
+                // Pan with middle mouse
+                let isPanning = false;
+                let lastMouseX, lastMouseY;
+
+                this.app.view.addEventListener('mousedown', (e) => {
+                    if (e.button === 1) { // Middle mouse
+                        isPanning = true;
+                        lastMouseX = e.clientX;
+                        lastMouseY = e.clientY;
+                    }
+                });
+
+                this.app.view.addEventListener('mousemove', (e) => {
+                    if (isPanning) {
+                        this.panX += e.clientX - lastMouseX;
+                        this.panY += e.clientY - lastMouseY;
+                        lastMouseX = e.clientX;
+                        lastMouseY = e.clientY;
+                        this.updateTransform();
+                    }
+                });
+
+                this.app.view.addEventListener('mouseup', () => {
+                    isPanning = false;
+                });
+
+                // Search functionality
+                document.getElementById('search-btn').addEventListener('click', () => {
+                    this.searchNodes();
+                });
+
+                document.getElementById('search').addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') {
+                        this.searchNodes();
+                    }
+                });
+
+                // Reset zoom
+                document.getElementById('reset-zoom').addEventListener('click', () => {
+                    this.zoom = 1;
+                    this.panX = 0;
+                    this.panY = 0;
+                    this.updateTransform();
+                });
+
+                // Toggle physics
+                document.getElementById('toggle-physics').addEventListener('click', () => {
+                    this.physicsEnabled = !this.physicsEnabled;
+                });
+
+                // Window resize
+                window.addEventListener('resize', () => {
+                    this.app.renderer.resize(window.innerWidth, window.innerHeight);
+                });
+            }
+
+            updateTransform() {
+                this.app.stage.scale.set(this.zoom);
+                this.app.stage.position.set(this.panX, this.panY);
+            }
+
+            async loadGraphData() {
+                try {
+                    const response = await fetch('/graph');
+                    const data = await response.json();
+
+                    this.nodes.clear();
+                    data.nodes.forEach(node => {
+                        this.nodes.set(node.id, node);
+                    });
+
+                    this.edges = data.edges;
+                    this.createVisualization();
+                } catch (error) {
+                    console.error('Error loading graph data:', error);
+                }
+            }
+
+            createVisualization() {
+                // Clear existing sprites
+                this.nodeSprites.forEach(sprite => {
+                    this.app.stage.removeChild(sprite);
+                    sprite.destroy();
+                });
+                this.nodeSprites.clear();
+
+                // Create force-directed layout
+                this.layoutNodes();
+
+                // Create node sprites
+                this.nodes.forEach(node => {
+                    this.createNodeSprite(node);
+                });
+
+                // Create edges
+                this.drawEdges();
+
+                // Start physics loop
+                this.app.ticker.add(() => {
+                    if (this.physicsEnabled) {
+                        this.updatePhysics();
+                    }
+                });
+            }
+
+            layoutNodes() {
+                // Simple force-directed layout
+                const centerX = this.app.screen.width / 2;
+                const centerY = this.app.screen.height / 2;
+                const radius = Math.min(centerX, centerY) * 0.8;
+
+                let angle = 0;
+                const angleStep = (Math.PI * 2) / this.nodes.size;
+
+                this.nodes.forEach((node, id) => {
+                    node.x = centerX + Math.cos(angle) * radius;
+                    node.y = centerY + Math.sin(angle) * radius;
+                    node.vx = 0;
+                    node.vy = 0;
+                    angle += angleStep;
+                });
+            }
+
+            createNodeSprite(node) {
+                const sprite = new PIXI.Graphics();
+
+                // Node color based on type
+                let color = 0x888888; // Default gray
+                switch (node.type) {
+                    case 'class':
+                        color = 0xff6b6b; // Red
+                        break;
+                    case 'function':
+                        color = 0x4ecdc4; // Teal
+                        break;
+                    case 'module':
+                        color = 0x45b7d1; // Blue
+                        break;
+                    case 'import':
+                        color = 0xf9ca24; // Yellow
+                        break;
+                }
+
+                // Draw node circle
+                sprite.beginFill(color);
+                sprite.drawCircle(0, 0, 15);
+                sprite.endFill();
+
+                // Add border
+                sprite.lineStyle(2, 0xffffff, 0.5);
+                sprite.drawCircle(0, 0, 15);
+
+                // Position
+                sprite.x = node.x;
+                sprite.y = node.y;
+
+                // Make interactive
+                sprite.interactive = true;
+                sprite.buttonMode = true;
+
+                sprite.on('mousedown', (e) => {
+                    this.isDragging = true;
+                    this.draggedNode = node;
+                    e.stopPropagation();
+                });
+
+                sprite.on('mousemove', (e) => {
+                    if (this.isDragging && this.draggedNode === node) {
+                        const newPosition = e.data.getLocalPosition(this.app.stage);
+                        node.x = newPosition.x;
+                        node.y = newPosition.y;
+                        sprite.x = node.x;
+                        sprite.y = node.y;
+                        this.drawEdges();
+                    }
+                });
+
+                sprite.on('mouseup', () => {
+                    this.isDragging = false;
+                    this.draggedNode = null;
+                });
+
+                sprite.on('click', () => {
+                    this.showNodeInfo(node);
+                });
+
+                // Add label
+                const label = new PIXI.Text(node.name, {
+                    fontFamily: 'Arial',
+                    fontSize: 12,
+                    fill: 0xffffff,
+                    align: 'center'
+                });
+                label.anchor.set(0.5);
+                label.y = 25;
+                sprite.addChild(label);
+
+                this.app.stage.addChild(sprite);
+                this.nodeSprites.set(node.id, sprite);
+            }
+
+            drawEdges() {
+                this.edgeGraphics.clear();
+                this.edgeGraphics.lineStyle(1, 0x666666, 0.5);
+
+                this.edges.forEach(edge => {
+                    const sourceNode = this.nodes.get(edge.source_id);
+                    const targetNode = this.nodes.get(edge.target_id);
+
+                    if (sourceNode && targetNode) {
+                        this.edgeGraphics.moveTo(sourceNode.x, sourceNode.y);
+                        this.edgeGraphics.lineTo(targetNode.x, targetNode.y);
+                    }
+                });
+            }
+
+            updatePhysics() {
+                // Simple repulsive force between nodes
+                const repulsionStrength = 1000;
+                const damping = 0.9;
+
+                this.nodes.forEach((nodeA, idA) => {
+                    if (this.draggedNode && this.draggedNode.id === idA) return;
+
+                    let forceX = 0;
+                    let forceY = 0;
+
+                    this.nodes.forEach((nodeB, idB) => {
+                        if (idA === idB) return;
+
+                        const dx = nodeA.x - nodeB.x;
+                        const dy = nodeA.y - nodeB.y;
+                        const distance = Math.sqrt(dx * dx + dy * dy);
+
+                        if (distance > 0) {
+                            const force = repulsionStrength / (distance * distance);
+                            forceX += (dx / distance) * force;
+                            forceY += (dy / distance) * force;
+                        }
+                    });
+
+                    nodeA.vx += forceX * 0.01;
+                    nodeA.vy += forceY * 0.01;
+
+                    nodeA.vx *= damping;
+                    nodeA.vy *= damping;
+
+                    nodeA.x += nodeA.vx;
+                    nodeA.y += nodeA.vy;
+
+                    // Update sprite position
+                    const sprite = this.nodeSprites.get(idA);
+                    if (sprite) {
+                        sprite.x = nodeA.x;
+                        sprite.y = nodeA.y;
+                    }
+                });
+
+                this.drawEdges();
+            }
+
+            showNodeInfo(node) {
+                const infoDiv = document.getElementById('node-info');
+                document.getElementById('node-name').textContent = node.name;
+                document.getElementById('node-type').textContent = `Type: ${node.type}`;
+                document.getElementById('node-file').textContent = `File: ${node.file_path}`;
+                document.getElementById('node-content').textContent = node.content ?
+                    `Content: ${node.content.substring(0, 100)}...` : 'No content';
+
+                infoDiv.style.display = 'block';
+            }
+
+            async searchNodes() {
+                const query = document.getElementById('search').value.trim();
+                if (!query) return;
+
+                try {
+                    const response = await fetch('/nodes/search', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            query: query
+                        })
+                    });
+
+                    const results = await response.json();
+
+                    // Highlight found nodes
+                    this.nodeSprites.forEach((sprite, id) => {
+                        const node = this.nodes.get(id);
+                        const isMatch = results.some(r => r.id === id);
+                        sprite.alpha = isMatch ? 1.0 : 0.3;
+                    });
+
+                } catch (error) {
+                    console.error('Search error:', error);
+                }
+            }
+        }
+
+        // Initialize when DOM is loaded
+        document.addEventListener('DOMContentLoaded', () => {
+            new GraphVisualizer();
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,7 @@
+# LLM-compiled Wiki - theism_atheism
+
+The debate between theism and atheism involves numerous philosophical arguments. Pro-theistic arguments include the [[Cosmological Argument (Kalam)]], [[Fine-Tuning Argument]], [[Teleological Argument (Design)]], [[Moral Argument]], and [[Ontological Argument]]. These arguments posit that the existence of the universe, its laws, its fine-tuning for life, morality, and the concept of a perfect being point towards a divine creator.
+
+Conversely, atheistic arguments often center on the [[Problem of Evil]], highlighting the incompatibility of suffering with an all-good, all-powerful God; the [[Argument from Lack of Evidence]], questioning the absence of conclusive proof; the [[Argument from Inconsistent Revelations]], pointing to the diversity and contradictions in religious claims; [[Divine Hiddenness]], suggesting a loving God would be more apparent; and the [[Euthyphro Dilemma]], challenging the foundation of divine command ethics.
+
+The [[Theism as a Hypothesis]] perspective views theism as a testable concept, while [[Deism]] proposes a creator God who does not intervene. The confidence levels reflect the perceived strength and common acceptance of these arguments within philosophical discourse.

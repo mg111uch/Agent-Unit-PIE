@@ -1,0 +1,6 @@
+node_modules
+utils_files
+*.env*
+chroma_data
+__pycache__
+encoding_cache

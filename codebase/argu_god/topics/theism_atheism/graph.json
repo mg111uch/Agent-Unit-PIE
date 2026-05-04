@@ -1,0 +1,348 @@
+{
+  "nodes": [
+    {
+      "name": "Cosmological Argument (Kalam)",
+      "side": "pro",
+      "premise": "Everything that begins to exist has a cause; the universe began to exist; therefore, the universe has a cause.",
+      "evidence": [
+        "The principle of causality",
+        "Big Bang theory supports a beginning to the universe"
+      ],
+      "examples": [
+        "A watch must have a watchmaker"
+      ],
+      "sources": [
+        "William Lane Craig"
+      ],
+      "discipline": "Philosophy of Religion, Metaphysics",
+      "confidence": 0.8
+    },
+    {
+      "name": "Fine-Tuning Argument",
+      "side": "pro",
+      "premise": "The fundamental constants of the universe are precisely set to allow for life; this precise tuning is improbable and suggests design.",
+      "evidence": [
+        "Constants like the gravitational constant, cosmological constant, etc., are remarkably specific.",
+        "The anthropic principle (weak and strong versions)"
+      ],
+      "examples": [
+        "If the strong nuclear force were slightly different, stars would not form.",
+        "If the charge of the electron were slightly different, matter as we know it would not exist."
+      ],
+      "sources": [
+        "Richard Swinburne",
+        "Robin Collins"
+      ],
+      "discipline": "Philosophy of Religion, Cosmology",
+      "confidence": 0.75
+    },
+    {
+      "name": "Teleological Argument (Design)",
+      "side": "pro",
+      "premise": "The complexity and apparent purpose in nature suggest an intelligent designer.",
+      "evidence": [
+        "The intricate design of biological organisms",
+        "The order and laws of the universe"
+      ],
+      "examples": [
+        "The eye as a complex organ",
+        "The intricate ecosystems"
+      ],
+      "sources": [
+        "William Paley"
+      ],
+      "discipline": "Philosophy of Religion, Biology",
+      "confidence": 0.65
+    },
+    {
+      "name": "Moral Argument",
+      "side": "pro",
+      "premise": "Objective moral values and duties exist, and the best explanation for their existence is God.",
+      "evidence": [
+        "Universal human moral intuitions",
+        "The nature of moral disagreements and reasoning"
+      ],
+      "examples": [
+        "The inherent wrongness of torture",
+        "The moral obligation to help others"
+      ],
+      "sources": [
+        "C.S. Lewis",
+        "W.L. Craig"
+      ],
+      "discipline": "Philosophy of Religion, Ethics",
+      "confidence": 0.7
+    },
+    {
+      "name": "Ontological Argument",
+      "side": "pro",
+      "premise": "God is defined as the greatest conceivable being; a being that exists is greater than one that does not; therefore, God must exist.",
+      "evidence": [
+        "A priori reasoning, based on the definition of God."
+      ],
+      "examples": [
+        "Anselm's formulation",
+        "Descartes' formulation"
+      ],
+      "sources": [
+        "Anselm of Canterbury",
+        "Ren\u00e9 Descartes"
+      ],
+      "discipline": "Metaphysics, Philosophy of Religion",
+      "confidence": 0.4
+    },
+    {
+      "name": "Problem of Evil",
+      "side": "con",
+      "premise": "The existence of immense suffering and evil in the world is incompatible with the existence of an all-powerful, all-knowing, and all-good God.",
+      "evidence": [
+        "Examples of natural disasters, disease, human cruelty, and undeserved suffering."
+      ],
+      "examples": [
+        "The Holocaust",
+        "Genocides",
+        "Childhood cancer"
+      ],
+      "sources": [
+        "David Hume",
+        "Epicurus (attributed)"
+      ],
+      "discipline": "Philosophy of Religion, Ethics",
+      "confidence": 0.85
+    },
+    {
+      "name": "Argument from Lack of Evidence",
+      "side": "con",
+      "premise": "There is a lack of compelling, verifiable evidence for the existence of God.",
+      "evidence": [
+        "Absence of direct divine intervention or communication.",
+        "Scientific explanations for phenomena previously attributed to God."
+      ],
+      "examples": [
+        "No universally accepted miracles.",
+        "Naturalistic explanations for the origin of life and the universe."
+      ],
+      "sources": [
+        "Bertrand Russell",
+        "Christopher Hitchens"
+      ],
+      "discipline": "Epistemology, Philosophy of Religion",
+      "confidence": 0.8
+    },
+    {
+      "name": "Argument from Inconsistent Revelations",
+      "side": "con",
+      "premise": "The numerous and often contradictory religious claims and scriptures throughout history suggest that they are human constructs rather than divine revelations.",
+      "evidence": [
+        "Diversity of religious beliefs and practices.",
+        "Internal inconsistencies within religious texts."
+      ],
+      "examples": [
+        "Divergent creation stories.",
+        "Conflicting moral commands across different religions."
+      ],
+      "sources": [
+        "David Hume",
+        "Sam Harris"
+      ],
+      "discipline": "Philosophy of Religion, Anthropology",
+      "confidence": 0.75
+    },
+    {
+      "name": "Divine Hiddenness",
+      "side": "con",
+      "premise": "If a loving and personal God exists, and desires a relationship with humanity, then God would make His existence more evident to sincere seekers.",
+      "evidence": [
+        "The lack of clear, undeniable evidence for God's existence for many people.",
+        "The existence of sincere non-believers."
+      ],
+      "examples": [
+        "Agnosticism",
+        "Individuals who have searched for God and not found Him."
+      ],
+      "sources": [
+        "J.L. Schellenberg"
+      ],
+      "discipline": "Philosophy of Religion",
+      "confidence": 0.7
+    },
+    {
+      "name": "Euthyphro Dilemma",
+      "side": "con",
+      "premise": "Is something pious because the gods love it, or do the gods love it because it is pious? This dilemma challenges the basis of divine command ethics.",
+      "evidence": [
+        "Logical analysis of divine commands.",
+        "The arbitrariness problem (if something is good only because God commands it)."
+      ],
+      "examples": [
+        "Would God's commands change if God willed something else to be good?",
+        "The morality of God's actions in scripture."
+      ],
+      "sources": [
+        "Plato"
+      ],
+      "discipline": "Ethics, Philosophy of Religion",
+      "confidence": 0.6
+    },
+    {
+      "name": "Theism as a Hypothesis",
+      "side": "neutral",
+      "premise": "Theism can be evaluated as a scientific or philosophical hypothesis, with the burden of proof on theists to demonstrate its explanatory power and predictive success.",
+      "evidence": [
+        "Principles of scientific method",
+        "Bayesian inference"
+      ],
+      "examples": [
+        "Comparing the explanatory power of theism versus naturalism for cosmic origins.",
+        "The historical trend of scientific explanations replacing theological ones."
+      ],
+      "sources": [
+        "Karl Popper",
+        "Carl Sagan"
+      ],
+      "discipline": "Philosophy of Science, Epistemology",
+      "confidence": 0.7
+    },
+    {
+      "name": "Deism",
+      "side": "neutral",
+      "premise": "A belief in a creator God who does not intervene in the universe or interact with humanity after creation.",
+      "evidence": [
+        "Rejection of miracles and divine revelation.",
+        "Emphasis on reason and natural law."
+      ],
+      "examples": [
+        "The clockmaker analogy",
+        "Enlightenment thinkers"
+      ],
+      "sources": [
+        "Voltaire",
+        "Thomas Paine"
+      ],
+      "discipline": "Philosophy of Religion",
+      "confidence": 0.6
+    }
+  ],
+  "edges": [
+    {
+      "source": "Cosmological Argument (Kalam)",
+      "target": "Theism as a Hypothesis",
+      "relation": "related"
+    },
+    {
+      "source": "Fine-Tuning Argument",
+      "target": "Theism as a Hypothesis",
+      "relation": "related"
+    },
+    {
+      "source": "Teleological Argument (Design)",
+      "target": "Theism as a Hypothesis",
+      "relation": "related"
+    },
+    {
+      "source": "Moral Argument",
+      "target": "Theism as a Hypothesis",
+      "relation": "related"
+    },
+    {
+      "source": "Ontological Argument",
+      "target": "Theism as a Hypothesis",
+      "relation": "related"
+    },
+    {
+      "source": "Problem of Evil",
+      "target": "Cosmological Argument (Kalam)",
+      "relation": "refutes"
+    },
+    {
+      "source": "Problem of Evil",
+      "target": "Fine-Tuning Argument",
+      "relation": "refutes"
+    },
+    {
+      "source": "Problem of Evil",
+      "target": "Teleological Argument (Design)",
+      "relation": "refutes"
+    },
+    {
+      "source": "Problem of Evil",
+      "target": "Moral Argument",
+      "relation": "refutes"
+    },
+    {
+      "source": "Argument from Lack of Evidence",
+      "target": "Cosmological Argument (Kalam)",
+      "relation": "refutes"
+    },
+    {
+      "source": "Argument from Lack of Evidence",
+      "target": "Fine-Tuning Argument",
+      "relation": "refutes"
+    },
+    {
+      "source": "Argument from Lack of Evidence",
+      "target": "Teleological Argument (Design)",
+      "relation": "refutes"
+    },
+    {
+      "source": "Argument from Lack of Evidence",
+      "target": "Moral Argument",
+      "relation": "refutes"
+    },
+    {
+      "source": "Argument from Lack of Evidence",
+      "target": "Ontological Argument",
+      "relation": "refutes"
+    },
+    {
+      "source": "Argument from Inconsistent Revelations",
+      "target": "Moral Argument",
+      "relation": "related"
+    },
+    {
+      "source": "Divine Hiddenness",
+      "target": "Cosmological Argument (Kalam)",
+      "relation": "refutes"
+    },
+    {
+      "source": "Divine Hiddenness",
+      "target": "Moral Argument",
+      "relation": "refutes"
+    },
+    {
+      "source": "Divine Hiddenness",
+      "target": "Teleological Argument (Design)",
+      "relation": "refutes"
+    },
+    {
+      "source": "Euthyphro Dilemma",
+      "target": "Moral Argument",
+      "relation": "refutes"
+    },
+    {
+      "source": "Deism",
+      "target": "Cosmological Argument (Kalam)",
+      "relation": "supports"
+    },
+    {
+      "source": "Deism",
+      "target": "Fine-Tuning Argument",
+      "relation": "supports"
+    },
+    {
+      "source": "Deism",
+      "target": "Teleological Argument (Design)",
+      "relation": "supports"
+    },
+    {
+      "source": "Deism",
+      "target": "Problem of Evil",
+      "relation": "related"
+    },
+    {
+      "source": "Theism as a Hypothesis",
+      "target": "Argument from Lack of Evidence",
+      "relation": "supports"
+    }
+  ]
+}

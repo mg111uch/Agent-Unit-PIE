@@ -1,0 +1,4 @@
+=== RETRIEVED CONTEXT ===
+python/Popula/model.py
+python/Popula/simulation_game.py
+python/Popula/PopuDyn.py
