@@ -76,9 +76,26 @@ def _resolve_path(path: str):
         raise ValueError("Path escapes workspace")
     return full_path
 
-
 def _ensure_dir(path: str):
     os.makedirs(os.path.dirname(path), exist_ok=True)
+
+def parse_command(user_input: str):
+    if not user_input.startswith("/"):
+        return {"type": "default", "input": user_input}
+
+    parts = user_input.strip().split()
+    command = parts[0]
+
+    if command == "/argu":
+        mode = parts[1] if len(parts) > 1 else None
+        topic = parts[2] if len(parts) > 2 else None
+        return {
+            "type": "argu",
+            "mode": mode,
+            "topic": topic
+        }
+
+    return {"type": "unknown", "input": user_input}
 
 # ---- TOOLS ----
 def read_file(path: str):
@@ -304,6 +321,12 @@ if __name__ == "__main__":
             break
 
         log_output(f"\n[User]: {user_input}", flush=True)
-        output = run_agent(user_input)
+        cmd = parse_command(user_input)
+
+        if cmd["type"] == "argu":
+            from argu_god.engine.cli import argu_cli
+            output = argu_cli(cmd["mode"], cmd["topic"])
+        else:
+            output = run_agent(user_input)
 
         log_output(f"\n[Final Output]: {output}", flush=True)

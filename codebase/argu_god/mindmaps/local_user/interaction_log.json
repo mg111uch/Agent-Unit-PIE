@@ -1,0 +1,35 @@
+{
+  "current_topic": "theism_atheism",
+  "seen_arguments": [
+    "Cosmological Argument (Kalam)",
+    "Fine-Tuning Argument",
+    "Teleological Argument (Design)",
+    "Moral Argument"
+  ],
+  "responses": [
+    {
+      "argument": "Cosmological Argument (Kalam)",
+      "choice": 2,
+      "custom_text": null,
+      "timestamp": "2026-05-05T14:00:11.440033"
+    },
+    {
+      "argument": "Fine-Tuning Argument",
+      "choice": 1,
+      "custom_text": null,
+      "timestamp": "2026-05-05T14:00:56.060098"
+    },
+    {
+      "argument": "Teleological Argument (Design)",
+      "choice": 1,
+      "custom_text": null,
+      "timestamp": "2026-05-05T14:01:52.897676"
+    },
+    {
+      "argument": "Moral Argument",
+      "choice": 4,
+      "custom_text": "There are no objective moral values.Every moral value or duty stands true for a given context.",
+      "timestamp": "2026-05-05T14:03:40.706617"
+    }
+  ]
+}

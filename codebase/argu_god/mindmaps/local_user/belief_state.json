@@ -1,0 +1,10 @@
+{
+  "arguments": {
+    "Fine-Tuning Argument": {
+      "stance": "agree | disagree | neutral | custom",
+      "confidence": 0.0,
+      "last_updated": "",
+      "history": []
+    }
+  }
+}

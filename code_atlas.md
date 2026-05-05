@@ -1,7 +1,7 @@
 ## Codebase size
-Total files processed: 69
-Total lines of code: 9421
-Total tokens: 86718
+Total files processed: 75
+Total lines of code: 9722
+Total tokens: 89035
 ## End Codebase size
 
 ## Directory Structure 
@@ -62,6 +62,14 @@ Total tokens: 86718
 │   │   ├── [] phoenix_helper.py [42 LOC, 434 tokens]
 │   │   └── [] orchestrator.md [110 LOC, 1665 tokens]
 │   ├── argu_god/
+│   │   ├── engine/
+│   │   │   ├── [] loop.py [177 LOC, 1123 tokens]
+│   │   │   ├── [] retriever.py [46 LOC, 252 tokens]
+│   │   │   ├── [] analyzer.py [19 LOC, 139 tokens]
+│   │   │   ├── [] question_builder.py [25 LOC, 142 tokens]
+│   │   │   ├── [] storage.py [53 LOC, 333 tokens]
+│   │   │   ├── [] cli.py [12 LOC, 78 tokens]
+│   │   │   └── [] vector_store.py [43 LOC, 227 tokens]
 │   │   ├── static/
 │   │   │   ├── [] graph.js [232 LOC, 1842 tokens]
 │   │   │   └── [] index.html [37 LOC, 407 tokens]
@@ -76,7 +84,9 @@ Total tokens: 86718
 │   │   ├── mindmaps/
 │   │   │   ├── global_aggregated/
 │   │   │   └── local_user/
+│   │   │       ├── [] belief_state.json [10 LOC, 52 tokens]
 │   │   │       ├── [] human_mind_map.md [6 LOC, 41 tokens]
+│   │   │       ├── [] interaction_log.json [35 LOC, 277 tokens]
 │   │   │       └── [] mindmap.json [13 LOC, 89 tokens]
 │   │   ├── [] main.py [57 LOC, 467 tokens]
 │   │   ├── [] AGENTS.md [20 LOC, 234 tokens]
@@ -133,14 +143,16 @@ Total tokens: 86718
 │   │       ├── [] codebase_size.py [119 LOC, 1316 tokens]
 │   │       └── [] codebase_dump.py [47 LOC, 479 tokens]
 │   ├── [] system_instruction.md [99 LOC, 758 tokens]
-│   ├── [] agent.py [309 LOC, 2180 tokens]
+│   ├── [] agent.py [332 LOC, 2356 tokens]
 │   ├── [] Launcher.md [38 LOC, 529 tokens]
 │   ├── [] __init__.py [1 LOC, 5 tokens]
-│   └── [] tui_output.txt [12 LOC, 408 tokens]
+│   └── [] tui_output.txt [10 LOC, 142 tokens]
+├── [] Issues_n_ideas.md [952 LOC, 3434 tokens]
 ├── [] agent_harness.md [30 LOC, 287 tokens]
-├── [] code_atlas.md [147 LOC, 2404 tokens]
-├── [] code_dump.txt [210 LOC, 1636 tokens]
+├── [] code_atlas.md [146 LOC, 2401 tokens]
+├── [] code_dump.txt [0 LOC, 0 tokens]
 ├── [] .gitignore [6 LOC, 19 tokens]
-├── [] README.md [283 LOC, 1283 tokens]
-└── [] project_tools.md [22 LOC, 796 tokens]
+├── [] README.md [428 LOC, 1601 tokens]
+├── [] project_tools.md [22 LOC, 796 tokens]
+└── [] README_old.md [197 LOC, 789 tokens]
 ### End Tree
