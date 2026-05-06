@@ -1,8 +1,6 @@
-# 🧠 Agent_Unit_PIE + ArguGod
+# 🧠 Agent_Unit_PIE
 
-### Pattern Intelligence Engine + Human-in-Loop Argument Intelligence System
-
----
+### Unit Pattern Intelligence Engine (PIE) + Human-in-Loop Argument Intelligence System
 
 # 🚀 Overview
 
@@ -10,6 +8,7 @@
 
 > Observe → Execute → Learn → Store → Evolve
 
+It is designed to **analyze data, execute code, and persist structured knowledge** using markdown files.
 It is extended with **ArguGod**, a reasoning engine that enables:
 
 > Human-in-loop argument exploration, debate, and belief evolution.
@@ -38,22 +37,6 @@ User ↔ Agent_Unit_PIE (LLM + Tools)
 
 ---
 
-# 🧠 Core Philosophy
-
-This system is NOT a chatbot.
-
-It is a:
-
-> **Belief Evolution Engine**
-
-Where:
-
-* LLM = knowledge + reasoning
-* Human = evaluator
-* System = tracks and evolves beliefs over time
-
----
-
 # ⚙️ Agent_Unit_PIE (Core Engine)
 
 ## Features
@@ -67,7 +50,7 @@ Where:
 
 ---
 
-## Agent Loop
+## 🧠 Agent Loop
 
 ```
 User Input
@@ -83,22 +66,65 @@ Loop until final answer
 
 ---
 
-## Available Tools
+## ⚙️ Setup
 
-* `read_file`
-* `list_files`
-* `write_to_file`
-* `execute_command`
+### 1. Install dependencies
+
+```bash
+pip install google-genai python-dotenv
+```
+
+### 2. Set API key
+
+Create `.env`:
+
+```env
+GEMINI_API_KEY=your_api_key_here
+```
 
 ---
 
-## Design Principles
+## ▶️ Run the Agent
+
+```bash
+python agent.py
+```
+
+Then interact:
+
+```bash
+>> analyze files in workspace
+>> build summary of project
+>> create pattern notes
+```
+
+---
+
+## 🛠️ Available Tools
+
+### 1. `read_file`
+### 2. `list_files`
+### 3. `execute_command`
+### 4. `write_to_file`
+
+#### write_to_file Modes:
+
+* `create` – new file
+* `overwrite` – replace file
+* `append` – add content
+* `patch` – find & replace text
+---
+
+## 📌 Design Principles
 
 * Tool-first reasoning
 * Deterministic actions
 * Read before write
 * Structured memory
 * Minimal hallucination
+* File size limits enforced
+* Path traversal (`..`) blocked
+* Sandbox workspace
 
 ---
 
@@ -365,6 +391,14 @@ The system evolves from:
 ```
 Static Knowledge → Interactive Debate → Belief Tracking → Adaptive Intelligence
 ```
+
+Agent_Unit_PIE aims to evolve into a system that:
+
+* Continuously learns from data
+* Builds a structured knowledge base
+* Improves its reasoning over time
+
+> From execution → to intelligence → to pattern awareness
 
 ---
 

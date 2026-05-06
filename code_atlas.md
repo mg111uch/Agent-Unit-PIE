@@ -1,7 +1,7 @@
 ## Codebase size
-Total files processed: 75
-Total lines of code: 9722
-Total tokens: 89035
+Total files processed: 83
+Total lines of code: 11109
+Total tokens: 103952
 ## End Codebase size
 
 ## Directory Structure 
@@ -92,6 +92,21 @@ Total tokens: 89035
 │   │   ├── [] AGENTS.md [20 LOC, 234 tokens]
 │   │   ├── [] global_schema.md [33 LOC, 267 tokens]
 │   │   └── [] llm_compiler.py [100 LOC, 805 tokens]
+│   ├── popula_dyn/
+│   │   ├── static/
+│   │   │   └── [] game.html [486 LOC, 3666 tokens]
+│   │   ├── [] simulation_plot.png [0 LOC, 0 tokens]
+│   │   ├── [] agents.py [331 LOC, 3495 tokens]
+│   │   ├── [] constants.py [42 LOC, 407 tokens]
+│   │   ├── [] simulation_game.py [217 LOC, 1870 tokens]
+│   │   ├── [] Insight.md [33 LOC, 414 tokens]
+│   │   ├── [] base_classes.py [173 LOC, 1585 tokens]
+│   │   ├── [] main.py [29 LOC, 316 tokens]
+│   │   ├── [] model.py [202 LOC, 2444 tokens]
+│   │   ├── [] simulation.py [91 LOC, 1134 tokens]
+│   │   ├── [X] DevptPhases.md [152 LOC, 2959 tokens]
+│   │   ├── [X] README.md [214 LOC, 1484 tokens]
+│   │   └── [] feature_list.md [48 LOC, 1234 tokens]
 │   ├── utils_files/
 │   │   ├── [] recorded_video.mp4 [0 LOC, 0 tokens]
 │   │   ├── [] drift_racer.avi [0 LOC, 0 tokens]
@@ -149,10 +164,10 @@ Total tokens: 89035
 │   └── [] tui_output.txt [10 LOC, 142 tokens]
 ├── [] Issues_n_ideas.md [952 LOC, 3434 tokens]
 ├── [] agent_harness.md [30 LOC, 287 tokens]
-├── [] code_atlas.md [146 LOC, 2401 tokens]
-├── [] code_dump.txt [0 LOC, 0 tokens]
+├── [] code_atlas.md [158 LOC, 2598 tokens]
+├── [] code_dump.txt [1470 LOC, 11056 tokens]
 ├── [] .gitignore [6 LOC, 19 tokens]
-├── [] README.md [428 LOC, 1601 tokens]
+├── [] README.md [462 LOC, 1795 tokens]
 ├── [] project_tools.md [22 LOC, 796 tokens]
-└── [] README_old.md [197 LOC, 789 tokens]
+└── [] README_old.md [0 LOC, 0 tokens]
 ### End Tree

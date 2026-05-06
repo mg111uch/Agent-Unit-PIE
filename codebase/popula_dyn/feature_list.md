@@ -1,0 +1,48 @@
+# Population Dynamics Simulation Development TODO
+
+This TODO list outlines all features from DevptPhases.md in logical development order. Done tasks are at the top, followed by pending tasks. Each task is atomic for testing.
+
+- [x] Implement parameter controls via script arguments for birth/death rates, fertility window, and litter size (1-2 children max)
+- [x] Create spatial grid world (2D grid, e.g., 100x100 cells) for resource distribution
+- [x] Introduce resources: food and tools gathered via labor_skill trait (base productivity 1 unit food/year per agent)
+- [x] Implement economy model: simple supply-demand where scarcity raises death rates, abundance boosts births
+- [x] Add metrics tracking: annual DataFrame with year, total_pop, male/female, births/deaths, productivity, city_count, civ_count
+- [x] Generate graphs: line plots for pop/productivity over time; heatmaps for spatial distribution; pie charts for resource allocation
+- [ ] Add individual traits: fertility (0-1 float, normally distributed) and lifespan (random from Weibull distribution for human-like aging)
+- [ ] Categorize death causes (age-related vs. random accidents) with adjustable probabilities
+- [ ] Implement gender balance tracking and auto-adjustment (e.g., higher fertility in underrepresented gender)
+- [ ] Add environment layers: temperature and food scarcity with random yearly fluctuations (e.g., droughts reduce birth by 20%)
+- [ ] Implement agent migration to better cells if local conditions worsen (based on migration_threshold)
+- [ ] Add adaptation trait: agents gain adaptability, with harsher environments selecting for higher adaptability over generations
+- [ ] Implement carrying capacity: logistic growth limit based on grid resources (e.g., max pop per cell)
+- [ ] Add trade: agents in same cell exchange resources via random bartering
+- [ ] Implement productivity metric: total resources produced/year, tied to pop size and skills (skills improve with age/experience)
+- [ ] Enable grouping: agents form Community if >50 in a cell (threshold param), with shared resources/pools
+- [ ] Implement city formation: communities >500 merge into City with bonuses (e.g., +10% productivity from specialization)
+- [ ] Add leadership: random leader per group influencing decisions (e.g., migration votes)
+- [ ] Introduce cultural traits: groups develop culture_score (cooperation vs. isolationism), affecting trade/fusion rates
+- [ ] Add conflict: groups fight over resources/cells (probability based on size difference; winner absorbs losers with casualties)
+- [ ] Implement expansion: cities colonize empty cells (success based on military_tech trait)
+- [ ] Create civilization stage: >10 cities form Civilization entity with tech tree (e.g., unlock irrigation → +birth rate)
+- [ ] Add diplomacy: alliances via trade; wars via betrayal (random events)
+- [ ] Implement endgame metrics: empire size, tech level
+- [ ] Implement export: save sim data as CSV; add interactive plots via Plotly if desired
+- [ ] Upgrade resource dynamics: introduce seasonal crop yields (sine wave multiplier) and soil degradation (fertility decreases with over-harvesting, recoverable via fallow/fertilizers)
+- [ ] Enhance movement & decision-making: upgrade FarmerAgent move() to prospecting (scan fertility/wealth gradients within vision radius, move toward better patches; add A* pathfinding)
+- [ ] Add social/economic layers: implement inheritance (wealth/skill transfers to children); add markets (barter based on supply/demand)
+- [ ] Introduce environmental feedback: add weather events (droughts/floods reducing fertility) and pollution (waste from toolmaking/healing lowers nearby fertility)
+- [ ] Evolve specialists: allow specialists to reproduce (low birth rate, role inheritance with mutation); add death mechanics (overwork if too many clients)
+- [ ] Add conflict & cooperation: implement raiding (low-wealth agents steal based on power imbalance); add temporary alliances for mega-harvests
+- [ ] Implement Warrior agent: patrols territory (radius=3), raids for wealth/crops, gains strength from tools/meat; interacts by stealing/protecting
+- [ ] Implement Innovator agent: researches upgrades (boosts global rates/skills), consumes wealth for R&D; sells inventions, risks bankruptcy
+- [ ] Implement Merchant Guild (group agent): aggregates traders for caravans, long-distance trade with risks; boosts wealth, funds roads
+- [ ] Implement Ecologist agent: restores degraded patches, predicts weather; charges for services, adds sustainability
+- [ ] Implement Ruler agent: taxes nearby agents, invests in public goods; emerges from richest, reproduces elites
+- [ ] Integrate real-world GIS data (e.g., Natural Earth) for terrain: replace uniform patches with biomes (rivers, mountains, forests)
+- [ ] Scale to continent level (e.g., 1000x1000 km at 1km resolution); use hierarchical zooming; remove toroidal edges, add oceans as barriers
+- [ ] Update agent placement: bootstrap with historical densities (higher in valleys); use realistic paths via networks (Dijkstra)
+- [ ] Subclass MultiGrid to GeoGrid with lat/long coords; simulate climate via real data (e.g., NOAA rainfall modulating fertility)
+- [ ] Integrate libraries for interactive game: use PixiJS/HTML5 for 2D top-down views with zoom/pan; embed Leaflet.js for geospatial overlay
+- [ ] Add UI elements: tech trees, city panels, scenario editor (save/load configs); handle performance for 1000s of agents (aggregate distant ones)
+- [ ] Implement Civ-like features: tech tree unlocks, resource allocation, diplomacy sliders, victory paths (domination/cultural/economic)
+- [ ] Add player agency: mid-game interventions (miracles), multiplayer competition, achievements
