@@ -1,0 +1,35 @@
+{
+  "unit_id": "user_001",
+  "unit_type": "human",
+  "subtype": "body | mind | finance | codebase | organization | city | country | sim_agent",
+  "created_at": "ISO-8601",
+  "state": {
+      "health": 80,
+      "energy": 60,
+      "age": 32
+  },
+  "resources": {
+      "food": 20,
+      "money": 100,
+      "energy": 90,
+      "knowledge": 30,
+      "cpu": 80,
+      "trust": 40
+  },
+  "behaviors": [
+      "move",
+      "consume",
+      "trade",
+      "reproduce"
+  ],
+  "signals": [],
+  "events": [],
+  "metrics": {},
+  "patterns": [],
+  "relations": [],
+  "subunits": [],
+  "timeline": [],
+  "health_score": 0.0,
+  "risk_flags": [],
+  "improvement_suggestions": []
+}

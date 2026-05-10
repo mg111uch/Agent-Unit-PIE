@@ -1,0 +1,15 @@
+simulation:
+  name: agriculture
+
+unit_types:
+  farmer:
+    count: 500
+    behaviors:
+      - move
+      - gather_resource
+      - consume
+      - reproduce
+
+resources:
+  food:
+    regeneration_rate: 0.1

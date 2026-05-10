@@ -1,370 +1,2483 @@
 
-=== Content of codebase/popula_dyn/DevptPhases.md ===
-### Detailed Plan for Building a Realistic Population Dynamics Model in Python
+=== Content of codebase/kernel/ontology/unit_types.py ===
+from dataclasses import dataclass, field
+from typing import Dict, List, Optional
 
-#### Phase 2: Controllable Vital Rates and Individual Variation
-**Objectives**: Make the model tunable via script parameters. Introduce variability for realism (e.g., not all agents reproduce equally).
-
-**Key Components**:
-- Parameter controls: Script args for birth/death rates, fertility window, litter size (1–2 children max).
-- Individual traits: Add `fertility` (0–1 float, normally distributed) and `lifespan` (random from distribution, e.g., Weibull for human-like aging).
-- Death causes: Categorize (e.g., age-related vs. random accidents) with adjustable probabilities.
-- Gender balance: Track ratios; auto-adjust if skewed (e.g., via higher fertility in underrepresented gender).
 
-#### Phase 3: Environmental Conditions
-**Objectives**: Integrate external factors affecting survival/reproduction, making the world dynamic.
+# =========================================================
+# UNIT TYPE DEFINITION
+# =========================================================
+
+@dataclass
+class UnitTypeDefinition:
+    unit_type: str
+
+    category: str
+
+    description: str = ""
+
+    parent_type: Optional[str] = None
+
+    allowed_behaviors: List[str] = field(default_factory=list)
+
+    allowed_resources: List[str] = field(default_factory=list)
+
+    allowed_signals: List[str] = field(default_factory=list)
+
+    allowed_relations: List[str] = field(default_factory=list)
+
+    tags: List[str] = field(default_factory=list)
+
+
+# =========================================================
+# CORE UNIT TYPES
+# =========================================================
+
+UNIT_TYPES: Dict[str, UnitTypeDefinition] = {
+
+    # -----------------------------------------------------
+    # HUMAN SYSTEMS
+    # -----------------------------------------------------
+
+    "human": UnitTypeDefinition(
+        unit_type="human",
+        category="biological",
+
+        description="Individual human entity.",
+
+        allowed_behaviors=[
+            "move",
+            "learn",
+            "communicate",
+            "trade",
+            "consume",
+            "work",
+            "reproduce",
+            "invest",
+            "decide"
+        ],
+
+        allowed_resources=[
+            "money",
+            "food",
+            "energy",
+            "knowledge",
+            "time",
+            "social_capital"
+        ],
+
+        allowed_signals=[
+            "stress",
+            "motivation",
+            "health_change",
+            "wealth_change",
+            "belief_shift",
+            "fatigue"
+        ],
+
+        allowed_relations=[
+            "friend",
+            "family",
+            "employee_of",
+            "member_of",
+            "investor_in"
+        ],
+
+        tags=[
+            "mindmap_supported",
+            "behavior_trackable"
+        ]
+    ),
+
+    # -----------------------------------------------------
+    # ORGANIZATIONS
+    # -----------------------------------------------------
+
+    "company": UnitTypeDefinition(
+        unit_type="company",
+        category="organization",
+
+        description="Business or corporate entity.",
+
+        allowed_behaviors=[
+            "hire",
+            "fire",
+            "invest",
+            "produce",
+            "expand",
+            "trade",
+            "research"
+        ],
+
+        allowed_resources=[
+            "capital",
+            "employees",
+            "infrastructure",
+            "data",
+            "inventory"
+        ],
+
+        allowed_signals=[
+            "revenue_growth",
+            "revenue_decline",
+            "market_expansion",
+            "debt_stress",
+            "innovation_growth"
+        ],
+
+        allowed_relations=[
+            "supplier_of",
+            "partner_of",
+            "competitor_of",
+            "located_in"
+        ],
+
+        tags=[
+            "economic_unit",
+            "market_entity"
+        ]
+    ),
+
+    # -----------------------------------------------------
+    # GEOGRAPHIC SYSTEMS
+    # -----------------------------------------------------
+
+    "city": UnitTypeDefinition(
+        unit_type="city",
+        category="geographic",
+
+        description="Urban settlement and economic-social system.",
+
+        allowed_behaviors=[
+            "expand",
+            "allocate_budget",
+            "develop_infrastructure",
+            "regulate",
+            "trade"
+        ],
+
+        allowed_resources=[
+            "population",
+            "budget",
+            "water",
+            "energy",
+            "land",
+            "infrastructure"
+        ],
+
+        allowed_signals=[
+            "population_growth",
+            "migration",
+            "traffic_stress",
+            "economic_growth",
+            "crime_rise",
+            "pollution"
+        ],
+
+        allowed_relations=[
+            "connected_to",
+            "governed_by",
+            "trades_with"
+        ],
+
+        tags=[
+            "digital_twin_supported",
+            "spatial_unit"
+        ]
+    ),
+
+    "state": UnitTypeDefinition(
+        unit_type="state",
+        category="geographic",
+
+        description="Administrative state-level entity.",
+
+        allowed_behaviors=[
+            "govern",
+            "allocate_budget",
+            "regulate",
+            "invest",
+            "tax"
+        ],
+
+        allowed_resources=[
+            "budget",
+            "population",
+            "infrastructure",
+            "energy"
+        ],
+
+        allowed_signals=[
+            "gdp_growth",
+            "unemployment",
+            "policy_shift",
+            "capital_flow"
+        ],
+
+        allowed_relations=[
+            "contains",
+            "governed_by",
+            "trades_with"
+        ]
+    ),
+
+    "country": UnitTypeDefinition(
+        unit_type="country",
+        category="geographic",
+
+        description="Nation-state level entity.",
+
+        allowed_behaviors=[
+            "govern",
+            "trade",
+            "regulate",
+            "invest",
+            "expand_influence"
+        ],
+
+        allowed_resources=[
+            "gdp",
+            "population",
+            "energy",
+            "military",
+            "technology"
+        ],
+
+        allowed_signals=[
+            "economic_growth",
+            "inflation",
+            "trade_surplus",
+            "political_instability"
+        ],
+
+        allowed_relations=[
+            "allied_with",
+            "trades_with",
+            "conflicts_with"
+        ],
+
+        tags=[
+            "macro_system"
+        ]
+    ),
+
+    # -----------------------------------------------------
+    # FINANCIAL SYSTEMS
+    # -----------------------------------------------------
+
+    "stock": UnitTypeDefinition(
+        unit_type="stock",
+        category="financial",
+
+        description="Tradable market asset.",
+
+        allowed_behaviors=[
+            "rise",
+            "fall",
+            "split",
+            "merge"
+        ],
+
+        allowed_resources=[
+            "market_cap",
+            "volume",
+            "liquidity"
+        ],
+
+        allowed_signals=[
+            "bullish",
+            "bearish",
+            "high_volatility",
+            "accumulation",
+            "distribution"
+        ],
+
+        allowed_relations=[
+            "belongs_to_sector",
+            "issued_by"
+        ],
+
+        tags=[
+            "market_entity"
+        ]
+    ),
+
+    # -----------------------------------------------------
+    # KNOWLEDGE SYSTEMS
+    # -----------------------------------------------------
+
+    "knowledge_domain": UnitTypeDefinition(
+        unit_type="knowledge_domain",
+        category="knowledge",
+
+        description="Structured body of knowledge.",
+
+        allowed_behaviors=[
+            "evolve",
+            "branch",
+            "merge"
+        ],
+
+        allowed_resources=[
+            "documents",
+            "research",
+            "evidence"
+        ],
+
+        allowed_signals=[
+            "consensus_shift",
+            "contradiction_detected",
+            "hypothesis_growth"
+        ],
+
+        allowed_relations=[
+            "related_to",
+            "contradicts",
+            "supports"
+        ]
+    ),
+
+    # -----------------------------------------------------
+    # AI SYSTEMS
+    # -----------------------------------------------------
+
+    "ai_agent": UnitTypeDefinition(
+        unit_type="ai_agent",
+        category="artificial",
+
+        description="Autonomous cognitive agent.",
+
+        allowed_behaviors=[
+            "observe",
+            "reason",
+            "simulate",
+            "debate",
+            "summarize",
+            "predict"
+        ],
+
+        allowed_resources=[
+            "compute",
+            "memory",
+            "knowledge"
+        ],
+
+        allowed_signals=[
+            "confidence_change",
+            "contradiction_detected",
+            "pattern_detected"
+        ],
+
+        allowed_relations=[
+            "collaborates_with",
+            "derived_from"
+        ],
+
+        tags=[
+            "recursive_system"
+        ]
+    )
+}
+
+
+# =========================================================
+# HELPER FUNCTIONS
+# =========================================================
+
+def get_unit_type(unit_type: str) -> Optional[UnitTypeDefinition]:
+    return UNIT_TYPES.get(unit_type)
+
+
+def unit_type_exists(unit_type: str) -> bool:
+    return unit_type in UNIT_TYPES
+
+
+def list_unit_types() -> List[str]:
+    return list(UNIT_TYPES.keys())
+
+
+def get_unit_types_by_category(category: str) -> List[str]:
+
+    return [
+        name
+        for name, definition in UNIT_TYPES.items()
+        if definition.category == category
+    ]
+
+=== Content of codebase/kernel/ontology/behavior_types.py ===
+from dataclasses import dataclass, field
+from typing import Dict, List, Optional
+
+
+# =========================================================
+# BEHAVIOR TYPE DEFINITION
+# =========================================================
+
+@dataclass
+class BehaviorTypeDefinition:
+    behavior_type: str
+
+    category: str
+
+    description: str = ""
+
+    required_resources: List[str] = field(default_factory=list)
+
+    generated_signals: List[str] = field(default_factory=list)
+
+    generated_events: List[str] = field(default_factory=list)
+
+    compatible_unit_types: List[str] = field(default_factory=list)
+
+    tags: List[str] = field(default_factory=list)
+
+
+# =========================================================
+# BEHAVIOR TYPES
+# =========================================================
+
+BEHAVIOR_TYPES: Dict[str, BehaviorTypeDefinition] = {
+
+    # -----------------------------------------------------
+    # HUMAN BEHAVIORS
+    # -----------------------------------------------------
+
+    "move": BehaviorTypeDefinition(
+        behavior_type="move",
+
+        category="physical",
+
+        description="Movement between locations.",
+
+        required_resources=[
+            "energy",
+            "time"
+        ],
+
+        generated_signals=[
+            "location_change"
+        ],
+
+        generated_events=[
+            "movement_event"
+        ],
+
+        compatible_unit_types=[
+            "human",
+            "vehicle",
+            "robot"
+        ],
+
+        tags=[
+            "mobility"
+        ]
+    ),
+
+    "learn": BehaviorTypeDefinition(
+        behavior_type="learn",
+
+        category="cognitive",
+
+        description="Acquisition of knowledge.",
+
+        required_resources=[
+            "time",
+            "energy",
+            "knowledge"
+        ],
+
+        generated_signals=[
+            "knowledge_gain",
+            "belief_shift"
+        ],
+
+        generated_events=[
+            "learning_event"
+        ],
+
+        compatible_unit_types=[
+            "human",
+            "ai_agent"
+        ],
+
+        tags=[
+            "intelligence"
+        ]
+    ),
+
+    "communicate": BehaviorTypeDefinition(
+        behavior_type="communicate",
+
+        category="social",
+
+        description="Exchange of information.",
+
+        required_resources=[
+            "time",
+            "knowledge"
+        ],
+
+        generated_signals=[
+            "information_flow",
+            "belief_shift"
+        ],
+
+        generated_events=[
+            "communication_event"
+        ],
+
+        compatible_unit_types=[
+            "human",
+            "ai_agent",
+            "organization"
+        ]
+    ),
+
+    "work": BehaviorTypeDefinition(
+        behavior_type="work",
+
+        category="economic",
+
+        description="Economic productivity activity.",
+
+        required_resources=[
+            "energy",
+            "time"
+        ],
+
+        generated_signals=[
+            "wealth_change",
+            "fatigue"
+        ],
+
+        generated_events=[
+            "work_event"
+        ],
+
+        compatible_unit_types=[
+            "human"
+        ]
+    ),
+
+    "invest": BehaviorTypeDefinition(
+        behavior_type="invest",
+
+        category="financial",
+
+        description="Capital allocation activity.",
+
+        required_resources=[
+            "money",
+            "knowledge"
+        ],
+
+        generated_signals=[
+            "capital_flow",
+            "risk_exposure"
+        ],
+
+        generated_events=[
+            "investment_event"
+        ],
+
+        compatible_unit_types=[
+            "human",
+            "company",
+            "fund",
+            "country"
+        ],
+
+        tags=[
+            "finance"
+        ]
+    ),
+
+    "trade": BehaviorTypeDefinition(
+        behavior_type="trade",
+
+        category="economic",
+
+        description="Exchange of goods or services.",
+
+        required_resources=[
+            "money",
+            "inventory"
+        ],
+
+        generated_signals=[
+            "capital_flow",
+            "market_activity"
+        ],
+
+        generated_events=[
+            "trade_event"
+        ],
+
+        compatible_unit_types=[
+            "human",
+            "company",
+            "city",
+            "country"
+        ]
+    ),
+
+    # -----------------------------------------------------
+    # ORGANIZATION BEHAVIORS
+    # -----------------------------------------------------
+
+    "hire": BehaviorTypeDefinition(
+        behavior_type="hire",
+
+        category="organizational",
+
+        description="Recruitment of workforce.",
+
+        required_resources=[
+            "capital"
+        ],
+
+        generated_signals=[
+            "employment_growth"
+        ],
+
+        generated_events=[
+            "hiring_event"
+        ],
+
+        compatible_unit_types=[
+            "company",
+            "organization"
+        ]
+    ),
+
+    "produce": BehaviorTypeDefinition(
+        behavior_type="produce",
+
+        category="industrial",
+
+        description="Production of goods/services.",
+
+        required_resources=[
+            "energy",
+            "labor",
+            "infrastructure"
+        ],
+
+        generated_signals=[
+            "inventory_growth",
+            "resource_consumption"
+        ],
+
+        generated_events=[
+            "production_event"
+        ],
+
+        compatible_unit_types=[
+            "company",
+            "factory",
+            "country"
+        ]
+    ),
+
+    "research": BehaviorTypeDefinition(
+        behavior_type="research",
+
+        category="knowledge",
+
+        description="Creation of new knowledge.",
+
+        required_resources=[
+            "knowledge",
+            "time",
+            "compute"
+        ],
+
+        generated_signals=[
+            "innovation_growth",
+            "pattern_detected"
+        ],
+
+        generated_events=[
+            "research_event"
+        ],
+
+        compatible_unit_types=[
+            "company",
+            "organization",
+            "ai_agent"
+        ]
+    ),
+
+    # -----------------------------------------------------
+    # GOVERNANCE BEHAVIORS
+    # -----------------------------------------------------
+
+    "govern": BehaviorTypeDefinition(
+        behavior_type="govern",
+
+        category="governance",
+
+        description="Governance and policy actions.",
+
+        required_resources=[
+            "budget",
+            "authority"
+        ],
+
+        generated_signals=[
+            "policy_shift",
+            "resource_allocation"
+        ],
+
+        generated_events=[
+            "governance_event"
+        ],
+
+        compatible_unit_types=[
+            "state",
+            "country",
+            "government"
+        ]
+    ),
+
+    "allocate_budget": BehaviorTypeDefinition(
+        behavior_type="allocate_budget",
+
+        category="governance",
+
+        description="Budget/resource distribution.",
+
+        required_resources=[
+            "budget"
+        ],
+
+        generated_signals=[
+            "capital_flow",
+            "infrastructure_growth"
+        ],
+
+        generated_events=[
+            "budget_event"
+        ],
+
+        compatible_unit_types=[
+            "city",
+            "state",
+            "country"
+        ],
+
+        tags=[
+            "public_finance"
+        ]
+    ),
+
+    "regulate": BehaviorTypeDefinition(
+        behavior_type="regulate",
+
+        category="governance",
+
+        description="Regulation/control of systems.",
+
+        required_resources=[
+            "authority"
+        ],
+
+        generated_signals=[
+            "policy_shift",
+            "market_restriction"
+        ],
+
+        generated_events=[
+            "regulation_event"
+        ],
+
+        compatible_unit_types=[
+            "state",
+            "country",
+            "government"
+        ]
+    ),
+
+    # -----------------------------------------------------
+    # CITY / COUNTRY BEHAVIORS
+    # -----------------------------------------------------
+
+    "expand": BehaviorTypeDefinition(
+        behavior_type="expand",
+
+        category="growth",
+
+        description="Expansion of influence or territory.",
+
+        required_resources=[
+            "capital",
+            "infrastructure",
+            "population"
+        ],
+
+        generated_signals=[
+            "population_growth",
+            "economic_growth"
+        ],
+
+        generated_events=[
+            "expansion_event"
+        ],
+
+        compatible_unit_types=[
+            "city",
+            "company",
+            "country"
+        ]
+    ),
+
+    "develop_infrastructure": BehaviorTypeDefinition(
+        behavior_type="develop_infrastructure",
+
+        category="infrastructure",
+
+        description="Infrastructure development activity.",
+
+        required_resources=[
+            "budget",
+            "materials",
+            "energy"
+        ],
+
+        generated_signals=[
+            "infrastructure_growth",
+            "traffic_stress"
+        ],
+
+        generated_events=[
+            "infrastructure_event"
+        ],
+
+        compatible_unit_types=[
+            "city",
+            "state",
+            "country"
+        ]
+    ),
+
+    # -----------------------------------------------------
+    # AI / KNOWLEDGE BEHAVIORS
+    # -----------------------------------------------------
+
+    "observe": BehaviorTypeDefinition(
+        behavior_type="observe",
+
+        category="cognitive",
+
+        description="Observation and data ingestion.",
+
+        required_resources=[
+            "compute",
+            "memory"
+        ],
+
+        generated_signals=[
+            "signal_detected"
+        ],
+
+        generated_events=[
+            "observation_event"
+        ],
+
+        compatible_unit_types=[
+            "ai_agent"
+        ]
+    ),
+
+    "reason": BehaviorTypeDefinition(
+        behavior_type="reason",
+
+        category="cognitive",
+
+        description="Inference and reasoning process.",
+
+        required_resources=[
+            "compute",
+            "knowledge"
+        ],
+
+        generated_signals=[
+            "hypothesis_generated",
+            "confidence_change"
+        ],
+
+        generated_events=[
+            "reasoning_event"
+        ],
+
+        compatible_unit_types=[
+            "ai_agent"
+        ]
+    ),
+
+    "simulate": BehaviorTypeDefinition(
+        behavior_type="simulate",
+
+        category="simulation",
+
+        description="Simulation of possible futures.",
+
+        required_resources=[
+            "compute",
+            "knowledge",
+            "memory"
+        ],
+
+        generated_signals=[
+            "prediction_generated",
+            "risk_projection"
+        ],
+
+        generated_events=[
+            "simulation_event"
+        ],
+
+        compatible_unit_types=[
+            "ai_agent"
+        ],
+
+        tags=[
+            "digital_twin"
+        ]
+    ),
+
+    "debate": BehaviorTypeDefinition(
+        behavior_type="debate",
+
+        category="cognitive",
+
+        description="Argumentative reasoning process.",
+
+        required_resources=[
+            "knowledge",
+            "compute"
+        ],
+
+        generated_signals=[
+            "contradiction_detected",
+            "hypothesis_revision"
+        ],
+
+        generated_events=[
+            "debate_event"
+        ],
+
+        compatible_unit_types=[
+            "ai_agent"
+        ],
+
+        tags=[
+            "argumentation"
+        ]
+    ),
 
-**Key Components**:
-- Grid world: Spatialize population on a 2D grid (e.g., 100x100 cells) for resource distribution.
-- Environment layers: Temperature, food scarcity (random yearly fluctuations, e.g., droughts reduce birth by 20%). Agents migrate to better cells if local conditions worsen.
-- Adaptation: Agents gain `adaptability` trait; harsher environments select for higher adaptability over generations.
-- Carrying capacity: Logistic growth limit based on grid resources (e.g., max pop per cell).
-
-**Data Structures**:
-- `Environment` class: 2D NumPy array for conditions (e.g., food_level[ x ][ y ]).
-- Extend `Agent`: Add `location` (x,y tuple), `migration_threshold` (e.g., if local death_rate > 0.05, move).
-
-**Simulation Loop**:
-- Yearly: Update environment (e.g., random weather) → Adjust local rates → Simulate aging/deaths/births per cell → Migration (random walk to adjacent cells).
-
-**Validation/Testing**:
-- Scenarios: Famine year → pop drop; mild climate → steady growth. Visualize heatmaps of pop density.
-
-#### Phase 4: Economic Parameters
-**Objectives**: Add resource gathering and trade to influence productivity and population.
-
-**Key Components**:
-- Resources: Food, tools (gathered via `labor_skill` trait). Base productivity per agent (e.g., 1 unit food/year).
-- Economy model: Simple supply-demand; scarcity raises death rates, abundance boosts births.
-- Trade: Agents in same cell exchange resources (random bartering).
-- Productivity metric: Total resources produced/year, tied to pop size and skills (skills improve with age/experience).
-
-**Data Structures**:
-- `Resource` class: Types like food (perishable) vs. tools (durable).
-- Extend `Environment`: Resource grids updated by agent actions.
-- Extend `Agent`: Add `resources_inventory` (dict), `labor_skill` (0–1, inherited + learned).
-
-**Simulation Loop**:
-- Per year: Agents gather (success ~ skill * local resources) → Consume (unmet needs → death) → Trade/mate → Log total productivity.
+    "predict": BehaviorTypeDefinition(
+        behavior_type="predict",
 
-**Validation/Testing**:
-- Growth curves: High resources → pop boom; depletion → collapse. Track GDP-like metric (resources * pop efficiency).
+        category="prediction",
 
-#### Phase 5: Social Structures (Communities and Cities)
-**Objectives**: Enable grouping, leading to emergent societies.
+        description="Prediction of future states.",
 
-**Key Components**:
-- Grouping: Agents form `Community` if >50 in a cell (threshold param). Communities have shared resources/pools.
-- City formation: Communities >500 merge into `City` with bonuses (e.g., +10% productivity from specialization).
-- Leadership: Random `leader` per group; influences decisions (e.g., migration votes).
-- Cultural traits: Groups develop `culture_score` (e.g., cooperation vs. isolationism), affecting trade/fusion rates.
+        required_resources=[
+            "knowledge",
+            "compute",
+            "memory"
+        ],
 
-**Data Structures**:
-- `Group` class (inherits Community/City): Members list, shared_resources, culture.
-- Extend `Agent`: `group_id`, `loyalty` (0–1).
+        generated_signals=[
+            "forecast",
+            "risk_projection"
+        ],
 
-**Simulation Loop**:
-- After individual actions: Check for group formation/merges → Group-level decisions (e.g., resource allocation) → Update logs.
+        generated_events=[
+            "prediction_event"
+        ],
 
-**Validation/Testing**:
-- Emergent behavior: Isolated pops → small villages; dense → megacities. Simulate 200 years for city counts.
+        compatible_unit_types=[
+            "ai_agent"
+        ]
+    )
+}
 
-#### Phase 6: Conflict, Expansion, and Civilization
-**Objectives**: Add competition for full realism, evolving to civilizations.
 
-**Key Components**:
-- Conflict: Groups fight over resources/cells (probability ~ size difference; winner absorbs losers, casualties via death rate spike).
-- Expansion: Cities colonize empty cells (success ~ military_tech, a new trait).
-- Civilization stage: >10 cities → `Civilization` entity with tech tree (e.g., unlock irrigation → +birth rate).
-- Diplomacy: Alliances via trade; wars via betrayal (random events).
-- Endgame: Global metrics like empire size, tech level.
+# =========================================================
+# HELPER FUNCTIONS
+# =========================================================
 
-**Data Structures**:
-- `Civilization` class: City list, tech_tree (dict of unlocked nodes).
-- Extend `Group`: `military_strength` (pop * skill), `diplomacy_status` (dict of relations).
+def get_behavior_type(
+    behavior_type: str
+) -> Optional[BehaviorTypeDefinition]:
 
-**Simulation Loop**:
-- Late in year: Resolve conflicts/diplomacy → Expansion attempts → Tech progress (e.g., R&D pool from productivity).
+    return BEHAVIOR_TYPES.get(behavior_type)
 
-**Validation/Testing**:
-- War scenarios: Aggressive civs dominate. Compare to historical patterns (e.g., Roman expansion).
 
-#### Phase 7: Visualization and Output
-**Objectives**: Generate graphs for analysis.
+def behavior_type_exists(
+    behavior_type: str
+) -> bool:
 
-**Key Components**:
-- Metrics tracking: Annual DataFrame with columns: year, total_pop, male/female, births/deaths, productivity, city_count, civ_count.
-- Graphs: Line plots for pop/productivity over time; heatmaps for spatial distribution; pie charts for resource allocation.
-- Export: Save sim data as CSV; interactive plots via Plotly if desired.
+    return behavior_type in BEHAVIOR_TYPES
 
-### Adapting to a Game: Civilization-Style Control
 
-**Incorporating Civ-Like Features** (Scaled to Your Model):
-- **Tech Tree** (from Civ): Unlock via productivity points (Phase 6). Player chooses branches (e.g., Agriculture → +birth rate; Military → better fights). Include 20–30 nodes, like Writing (boosts trade).
-- **Resources & Economy** (from Civ/AoE): Hex/tile map with yields (food, production). Player allocates (e.g., build farms → env bonus). Track happiness (low → rebellions, pop loss).
-- **Cities & Units** (from Civ): Your cities as hubs; spawn "units" (agents with roles: farmers, warriors). Player designs builds (e.g., walls → defense +20%).
-- **Diplomacy & Events** (from Humankind): Random events (plagues, discoveries). Player negotiates alliances (set relations sliders) or declares war (boost military params).
-- **Victory Paths** (from Civ): Domination (conquer all), Cultural (high culture_score), Economic (max productivity graphs).
-- **Player Agency**: Mid-game interventions (e.g., "miracle" boosts birth rate). Multiplayer: Compete by controlling rival civs' params.
-- **UI/Polish**: Zoomable map (Matplotlib or Pygame), scenario editor (save/load configs), achievements (e.g., "Sustainable Utopia" for stable pop 1000 years).
+def list_behavior_types() -> List[str]:
 
-- ---------------------------------------------------
+    return list(BEHAVIOR_TYPES.keys())
 
-### Recommendations for Feature and Agent Upgrades
-To enhance realism, focus on emergent behaviors like specialization, trade networks, conflict, and environmental feedback. Below are targeted upgrades, prioritized by impact on realism (high/medium/low) and ease of implementation (easy/medium/hard).
 
-| Upgrade Category | Specific Recommendation | Rationale for Realism | Priority/Ease |
-|------------------|--------------------------|-----------------------|---------------|
-| **Resource Dynamics** | Introduce seasonal crop yields (e.g., multiplier based on sine wave for summer/winter) and soil degradation (fertility decreases with over-harvesting, recoverable via fallow periods or fertilizers). | Prevents constant regrowth; mirrors real agriculture's vulnerability to climate and overuse, leading to famines or migrations. | High/Easy |
-| **Movement & Decision-Making** | Upgrade `move()` in FarmerAgent to prospecting: scan for fertility/wealth gradients within vision radius, move toward better patches if wealth < threshold. Add pathfinding (A* via NetworkX). | Agents act rationally (e.g., migration to fertile lands), creating settlements and trade routes organically. | High/Medium |
-| **Social/Economic Layers** | Add inheritance: On death, wealth/skill transfers to children (weighted by gender/age). Implement markets: Agents barter based on supply/demand (e.g., excess crops for tools). | Builds family lineages, inequality, and economic cycles; explains wealth concentration and class emergence. | High/Medium |
-| **Environmental Feedback** | Add weather events (random droughts/floods reducing fertility grid-wide) and pollution (toolmaking/healing produces waste that lowers nearby fertility). | Introduces shocks like historical plagues or industrial pollution, forcing adaptation or collapse. | Medium/Medium |
-| **Specialist Evolution** | Allow specialists to reproduce (low birth rate, offspring inherit role with mutation chance to switch roles). Add death mechanics for them (e.g., overwork if too many clients). | Prevents static counts; enables guilds or dynasties, with roles emerging based on fitness. | Medium/Hard |
-| **Conflict & Cooperation** | Add raiding: Low-wealth agents steal from neighbors with probability based on power imbalance (skill x population). Cooperation: Form temporary alliances for mega-harvests. | Captures tribal wars or alliances; realism from resource scarcity driving violence/cooperation. | Low/Hard |
-
-These upgrades would amplify the Malthusian dynamics while adding resilience pathways (e.g., tech diffusion via tools reduces death rates).
+def get_behaviors_by_category(
+    category: str
+) -> List[str]:
 
-### Suggested New Agents
-To expand beyond basic roles, introduce agents that foster complexity like technology, governance, and ecology. Start with 5-10 initial instances each, placed randomly or near high-density areas. Suggestions in a table for clarity:
-
-| New Agent Type | Key Behaviors | Interactions/Impacts | Realism Tie-In |
-|----------------|---------------|----------------------|---------------|
-| **Warrior** | Patrols territory (radius=3), raids low-wealth neighbors for wealth/crops. Gains "strength" from tools/meat (new resource). | Steals from Farmers/Traders; protects settlements if "hired" by wealth threshold. Increases deaths during conflicts. | Military castes in agrarian societies; prevents unchecked expansion. |
-| **Innovator** | Researches upgrades (e.g., 1% chance/step to boost global birth_rate or skill cap). Consumes extra wealth for "R&D". | Sells inventions to Toolmakers; failure drains wealth, risking bankruptcy/death. | Technological progress (e.g., irrigation); counters stagnation in insights. |
-| **Merchant Guild** (Group Agent) | Aggregates Traders: Coordinates multi-agent caravans across grid, enabling long-distance trade with risk (e.g., bandit encounters). | Boosts wealth_traded 2x; fees fund roads (fertility bonuses on paths). Tracks via graph network. | Historical trade networks (Silk Road); fixes zero trades in insights. |
-| **Ecologist** (or Druid) | Restores degraded patches (heals fertility at cost); predicts weather via simple ML (e.g., track past yields). | Charges Farmers for services; low interaction if fertility is high. | Environmental stewardship; adds sustainability to avoid endless decline. |
-| **Ruler** (Elite Agent) | Taxes nearby agents (5% wealth/step), invests in public goods (e.g., +10% harvest in "domain"). Over-taxing sparks revolts (mass deaths). | Emerges from richest Farmer; reproduces elites with higher skill. | Governance/hierarchy; explains inequality and state formation. |
-
-These agents would create feedback loops (e.g., Warriors protect Innovators, enabling tech booms that reduce poverty).
-
-### Adapting to a Realistic World Map
-The current toroidal 50x50 grid is abstract; for a world-scale sim, shift to geospatial realism:
-
-- **Data Integration**: Use real-world GIS data (e.g., from Natural Earth or OpenStreetMap) for terrain. Replace uniform LandPatches with varied biomes: rivers (high fertility, linear), mountains (low harvest, barriers to movement), forests (wood resource for tools). Load via GeoPandas/Shapely for irregular polygons instead of square cells.
-  
-- **Scaling**: Start with a continent (e.g., Europe ~1000x1000 km at 1km resolution = 1M cells, feasible with sparse agents). Use hierarchical zooming: Global view for migrations, local for interactions. Toroidal edges off; add oceans as impassable barriers.
+    return [
+        name
+        for name, definition in BEHAVIOR_TYPES.items()
+        if definition.category == category
+    ]
 
-- **Agent Placement**: Bootstrap with historical densities (e.g., higher in river valleys). Movement: Realistic paths via river/road networks (Dijkstra on graph).
-
-- **Implementation Tip**: Subclass MultiGrid to GeoGrid, using lat/long coords. Simulate climate via NOAA data (e.g., annual rainfall modulates fertility).
-
-This evolves the sim from toy grid to Civ-like world-builder, where geography drives history (e.g., Nile fertility enables Egyptian booms).
-
-### Visualization Libraries for a Playable Civilization Game
-To transform this into an interactive, turn-based (or real-time) game like Civilization, prioritize libraries supporting maps, agents, UI (e.g., tech trees, city panels), and performance for 1000s of agents. Focus on 2D top-down views with zoom/pan.For geospatial realism, embed Leaflet.js (open-source maps) to overlay agent sim on Google Earth-like tiles. Challenges: Agent count caps (~10k for smooth play); solution: Aggregate distant agents into "city" blobs. 
-
-=== Content of codebase/popula_dyn/README.md ===
-# Population Dynamics Simulation
-
-A comprehensive simulation system modeling human societies with multiple agent types, featuring a real-time playable browser game. Target of this project is to make simulation as realistic as possible by taking population growth data from real human history starting from the primitive agricultutal societies to the complexities and technologies of modern world.
-
-## 🎯 Overview
-
-This project simulates the dynamics of agricultural populations using agent-based modeling. It includes farmers, healers, toolmakers, and traders interacting in a spatial environment, demonstrating concepts like Malthusian traps, economic specialization, and population dynamics.
-
-## 🛠️ Technology Stack
-
-### Backend
-- **Python 3.12**: Core simulation logic
-- **NumPy**: Numerical computations and random number generation
-- **Pandas**: Data collection and analysis
-- **Matplotlib**: Static visualization and plotting
-- **FastAPI**: REST API and WebSocket server
-- **Uvicorn**: ASGI server for FastAPI
-
-### Frontend
-- **PixiJS**: 2D graphics rendering for game visualization
-- **HTML5/CSS3**: UI styling and layout
-- **JavaScript (ES6+)**: Game logic and WebSocket communication
-- **WebSockets**: Real-time bidirectional communication
-
-### Architecture
-- **Agent-Based Modeling**: Mesa-inspired framework
-- **Spatial Grid**: Toroidal multi-agent grid system
-- **Real-time Updates**: WebSocket broadcasting for live simulation
-
-## 🚀 Getting Started
-
-### Prerequisites
-```bash
-# Activate conda environment
-cd python/Popula
-eval "$(conda shell.bash hook)" && conda activate myenv
-
-# Install dependencies
-pip install fastapi uvicorn pydantic
-```
-
-### Running the System
-
-1. **Start the Server:**
-```bash
-python server.py
-```
-
-2. **Access Interfaces:**
-   - **Simulation Game**: http://localhost:8000/game
-   - **API Documentation**: http://localhost:8000/docs
-
-## 🎮 Game Controls
-
-### Simulation Controls
-- **Start**: Begin continuous simulation with real-time updates
-- **Stop**: Pause the simulation
-- **Reset**: Clear all agents and reset to initial state
-- **Step**: Advance simulation by one year manually
-
-### Parameter Controls
-- **Initial Population**: Set starting farmer count (100-5000)
-- **Birth Rate**: Probability of successful mating (0-0.2)
-- **Death Rate**: Base mortality probability (0-0.1)
-- **Healers**: Number of healer agents (0-50)
-- **Toolmakers**: Number of toolmaker agents (0-50)
-- **Traders**: Number of trader agents (0-50)
-- **Grid Size**: World dimensions (10x10 to 100x100)
-
-### Visual Elements
-- **Green squares**: Fertile land patches
-- **Red circles**: Farmers
-- **Purple circles**: Healers
-- **Orange circles**: Toolmakers
-- **Teal circles**: Traders
-
-## 📈 Real-time Statistics
-
-The game displays live metrics:
-- **Year**: Current simulation time
-- **Population**: Active farmer count
-- **Total Wealth**: Aggregate economic value
-- **Average Skill**: Mean farming efficiency
-- **Births/Deaths**: Cumulative counts per year
-- **Specialist Counts**: Current numbers of each agent type
-
-
-## 🏗️ Project Structure
-
-```
-python/Popula/
-├── README.md                # This documentation
-├── feature_list.md                  # Todo list of features to be added
-├── constants.py             # Simulation parameters
-├── base_classes.py          # Core agent and grid classes
-├── agents.py                # Agent implementations
-├── model.py                 # Agricultural model
-├── simulation.py            # Simulation runner and plotting
-├── PopuDyn.py               # Main entry point for simulation
-├── devpt_log.md             # Log of features addition in project
-├── Insight.md               # Insight from analysing the simulation plot
-├── simulation_game.py       # Game server entry point 
-├── simulation_plot.png      # Plot obtained after running the main simulation
-├── static/
-│   └── game.html           # Simulation game script
-└── DevptPhases.md               # Development phases
-```
-
-## 🎯 Agent Behaviors
-
-### Farmers
-- **Movement**: Random adjacent cell movement
-- **Harvesting**: Collect crops based on skill and land fertility
-- **Consumption**: Use wealth for survival
-- **Mating**: Reproduce with nearby fertile partners
-- **Death**: Age and starvation-based mortality
-
-### Specialists
-- **Healers**: Reduce farmer death probability for payment
-- **Toolmakers**: Produce and sell tools to improve farmer skills
-- **Traders**: Facilitate wealth transfer between agents
-
-## 🔬 Simulation Mechanics
-
-### Economic System
-- Farmers earn wealth through harvesting
-- Specialists provide services for payment
-- Wealth affects survival and reproduction
-- Tools increase farming efficiency over time
-
-### Spatial Dynamics
-- Toroidal grid prevents edge effects
-- Vision radius limits agent interactions
-- Random movement with fertility preferences (TODO)
-
-### Population Control
-- Age-based fertility windows
-- Starvation multipliers on death rates
-- Maximum age limits
-- Specialist healing modifiers
-
-## 🎨 Visualization Features
-
-
-### Game Interface
-- Real-time grid rendering
-- Live statistics dashboard
-- Parameter adjustment sliders
-- WebSocket synchronization
-- Responsive design
-
-## 🚀 Advanced Features
-
-
-### Real-time Collaboration
-- WebSocket broadcasting
-- Multi-client synchronization
-- Parameter sharing
-- Live result comparison
-
-## 📝 API Endpoints
-
-### REST API
-- `GET /game`: Simulation game page
-
-### Simulation API
-- `POST /simulation/start`: Start simulation
-- `POST /simulation/stop`: Stop simulation
-- `POST /simulation/reset`: Reset simulation
-- `POST /simulation/step`: Single step
-- `POST /simulation/params`: Update parameters
-- `GET /simulation/state`: Get current state
-
-### WebSocket
-- `ws://localhost:8000/ws/simulation`: Real-time updates
-
-## 🔧 Development Notes
-
-### Performance Considerations
-- Grid rendering optimized for 100x100 maximum
-- WebSocket broadcasting every 1 second
-
-### Extensibility
-- Modular agent system for easy addition
-- Parameter-driven configuration
-- Plugin-ready architecture
-
-### Future Enhancements
-- Advanced movement algorithms (fertility-based)
-- More agent types and interactions
-- Multiplayer collaboration
-- Historical data persistence
-- Advanced visualization modes
-
-## 📚 Educational Value
-
-This simulation demonstrates:
-- **Economic Theory**: Supply/demand, specialization
-- **Population Dynamics**: Malthusian constraints
-- **Agent-Based Modeling**: Emergent behavior
-- **Spatial Analysis**: Geographic influences
-- **Real-time Systems**: WebSocket architecture
-
-## 🤝 Contributing
-
-The modular architecture makes it easy to:
-- Add new agent types
-- Implement different movement strategies
-- Create new visualization modes
-- Add multiplayer features
-
-## 📄 License
-
-This project is open-source and available for educational and research purposes.
+
+def get_behaviors_for_unit_type(
+    unit_type: str
+) -> List[str]:
+
+    results = []
+
+    for name, definition in BEHAVIOR_TYPES.items():
+
+        if unit_type in definition.compatible_unit_types:
+            results.append(name)
+
+    return results
+
+=== Content of codebase/kernel/ontology/relation_types.py ===
+from dataclasses import dataclass, field
+from typing import Dict, List, Optional
+
+
+# =========================================================
+# RELATION TYPE DEFINITION
+# =========================================================
+
+@dataclass
+class RelationTypeDefinition:
+    relation_type: str
+
+    category: str
+
+    description: str = ""
+
+    directed: bool = False
+
+    symmetric: bool = False
+
+    source_unit_types: List[str] = field(default_factory=list)
+
+    target_unit_types: List[str] = field(default_factory=list)
+
+    inverse_relation: Optional[str] = None
+
+    tags: List[str] = field(default_factory=list)
+
+
+# =========================================================
+# RELATION TYPES
+# =========================================================
+
+RELATION_TYPES: Dict[str, RelationTypeDefinition] = {
+
+    # -----------------------------------------------------
+    # HUMAN RELATIONS
+    # -----------------------------------------------------
+
+    "friend": RelationTypeDefinition(
+        relation_type="friend",
+
+        category="social",
+
+        description="Mutual friendship relation.",
+
+        directed=False,
+
+        symmetric=True,
+
+        source_unit_types=["human"],
+
+        target_unit_types=["human"],
+
+        tags=[
+            "social",
+            "human_network"
+        ]
+    ),
+
+    "family": RelationTypeDefinition(
+        relation_type="family",
+
+        category="social",
+
+        description="Family relationship.",
+
+        directed=False,
+
+        symmetric=True,
+
+        source_unit_types=["human"],
+
+        target_unit_types=["human"],
+
+        tags=[
+            "kinship"
+        ]
+    ),
+
+    "employee_of": RelationTypeDefinition(
+        relation_type="employee_of",
+
+        category="organizational",
+
+        description="Human employed by organization.",
+
+        directed=True,
+
+        symmetric=False,
+
+        source_unit_types=[
+            "human"
+        ],
+
+        target_unit_types=[
+            "company",
+            "organization"
+        ],
+
+        inverse_relation="employs",
+
+        tags=[
+            "workforce"
+        ]
+    ),
+
+    "employs": RelationTypeDefinition(
+        relation_type="employs",
+
+        category="organizational",
+
+        description="Organization employs human.",
+
+        directed=True,
+
+        symmetric=False,
+
+        source_unit_types=[
+            "company",
+            "organization"
+        ],
+
+        target_unit_types=[
+            "human"
+        ],
+
+        inverse_relation="employee_of"
+    ),
+
+    "member_of": RelationTypeDefinition(
+        relation_type="member_of",
+
+        category="organizational",
+
+        description="Membership relation.",
+
+        directed=True,
+
+        source_unit_types=[
+            "human"
+        ],
+
+        target_unit_types=[
+            "organization",
+            "community",
+            "group"
+        ]
+    ),
+
+    # -----------------------------------------------------
+    # ECONOMIC RELATIONS
+    # -----------------------------------------------------
+
+    "supplier_of": RelationTypeDefinition(
+        relation_type="supplier_of",
+
+        category="economic",
+
+        description="Supplies goods/services to another unit.",
+
+        directed=True,
+
+        source_unit_types=[
+            "company"
+        ],
+
+        target_unit_types=[
+            "company"
+        ],
+
+        inverse_relation="customer_of",
+
+        tags=[
+            "supply_chain"
+        ]
+    ),
+
+    "customer_of": RelationTypeDefinition(
+        relation_type="customer_of",
+
+        category="economic",
+
+        description="Purchases from supplier.",
+
+        directed=True,
+
+        source_unit_types=[
+            "company"
+        ],
+
+        target_unit_types=[
+            "company"
+        ],
+
+        inverse_relation="supplier_of"
+    ),
+
+    "competitor_of": RelationTypeDefinition(
+        relation_type="competitor_of",
+
+        category="economic",
+
+        description="Competes in same market.",
+
+        directed=False,
+
+        symmetric=True,
+
+        source_unit_types=[
+            "company"
+        ],
+
+        target_unit_types=[
+            "company"
+        ],
+
+        tags=[
+            "market"
+        ]
+    ),
+
+    "investor_in": RelationTypeDefinition(
+        relation_type="investor_in",
+
+        category="financial",
+
+        description="Investment relation.",
+
+        directed=True,
+
+        source_unit_types=[
+            "human",
+            "company",
+            "fund"
+        ],
+
+        target_unit_types=[
+            "company",
+            "stock",
+            "startup"
+        ],
+
+        inverse_relation="funded_by",
+
+        tags=[
+            "capital_flow"
+        ]
+    ),
+
+    "funded_by": RelationTypeDefinition(
+        relation_type="funded_by",
+
+        category="financial",
+
+        description="Entity funded by another entity.",
+
+        directed=True,
+
+        source_unit_types=[
+            "company",
+            "startup",
+            "stock"
+        ],
+
+        target_unit_types=[
+            "human",
+            "company",
+            "fund"
+        ],
+
+        inverse_relation="investor_in"
+    ),
+
+    # -----------------------------------------------------
+    # GEOGRAPHIC RELATIONS
+    # -----------------------------------------------------
+
+    "located_in": RelationTypeDefinition(
+        relation_type="located_in",
+
+        category="geographic",
+
+        description="Unit located inside geographic unit.",
+
+        directed=True,
+
+        source_unit_types=[
+            "human",
+            "company",
+            "organization"
+        ],
+
+        target_unit_types=[
+            "city",
+            "state",
+            "country"
+        ],
+
+        inverse_relation="contains",
+
+        tags=[
+            "spatial"
+        ]
+    ),
+
+    "contains": RelationTypeDefinition(
+        relation_type="contains",
+
+        category="geographic",
+
+        description="Geographic containment relation.",
+
+        directed=True,
+
+        source_unit_types=[
+            "city",
+            "state",
+            "country"
+        ],
+
+        target_unit_types=[
+            "human",
+            "company",
+            "organization",
+            "city"
+        ],
+
+        inverse_relation="located_in"
+    ),
+
+    "connected_to": RelationTypeDefinition(
+        relation_type="connected_to",
+
+        category="infrastructure",
+
+        description="Infrastructure or transport linkage.",
+
+        directed=False,
+
+        symmetric=True,
+
+        source_unit_types=[
+            "city",
+            "state",
+            "country"
+        ],
+
+        target_unit_types=[
+            "city",
+            "state",
+            "country"
+        ],
+
+        tags=[
+            "transport",
+            "network"
+        ]
+    ),
+
+    # -----------------------------------------------------
+    # GOVERNANCE RELATIONS
+    # -----------------------------------------------------
+
+    "governed_by": RelationTypeDefinition(
+        relation_type="governed_by",
+
+        category="governance",
+
+        description="Governance/control relation.",
+
+        directed=True,
+
+        source_unit_types=[
+            "city",
+            "state",
+            "organization"
+        ],
+
+        target_unit_types=[
+            "state",
+            "country",
+            "government"
+        ],
+
+        inverse_relation="governs"
+    ),
+
+    "governs": RelationTypeDefinition(
+        relation_type="governs",
+
+        category="governance",
+
+        description="Governing authority relation.",
+
+        directed=True,
+
+        source_unit_types=[
+            "government",
+            "country",
+            "state"
+        ],
+
+        target_unit_types=[
+            "city",
+            "state",
+            "organization"
+        ],
+
+        inverse_relation="governed_by"
+    ),
+
+    # -----------------------------------------------------
+    # MARKET RELATIONS
+    # -----------------------------------------------------
+
+    "belongs_to_sector": RelationTypeDefinition(
+        relation_type="belongs_to_sector",
+
+        category="market",
+
+        description="Stock/company sector classification.",
+
+        directed=True,
+
+        source_unit_types=[
+            "stock",
+            "company"
+        ],
+
+        target_unit_types=[
+            "sector"
+        ]
+    ),
+
+    "issued_by": RelationTypeDefinition(
+        relation_type="issued_by",
+
+        category="market",
+
+        description="Stock issued by company.",
+
+        directed=True,
+
+        source_unit_types=[
+            "stock"
+        ],
+
+        target_unit_types=[
+            "company"
+        ]
+    ),
+
+    # -----------------------------------------------------
+    # KNOWLEDGE RELATIONS
+    # -----------------------------------------------------
+
+    "supports": RelationTypeDefinition(
+        relation_type="supports",
+
+        category="knowledge",
+
+        description="Supports a hypothesis or claim.",
+
+        directed=True,
+
+        tags=[
+            "evidence"
+        ]
+    ),
+
+    "contradicts": RelationTypeDefinition(
+        relation_type="contradicts",
+
+        category="knowledge",
+
+        description="Contradicts another entity.",
+
+        directed=True,
+
+        tags=[
+            "debate",
+            "logic"
+        ]
+    ),
+
+    "related_to": RelationTypeDefinition(
+        relation_type="related_to",
+
+        category="knowledge",
+
+        description="Generic semantic relation.",
+
+        directed=False,
+
+        symmetric=True
+    ),
+
+    # -----------------------------------------------------
+    # AI SYSTEM RELATIONS
+    # -----------------------------------------------------
+
+    "collaborates_with": RelationTypeDefinition(
+        relation_type="collaborates_with",
+
+        category="artificial",
+
+        description="Collaboration between AI agents.",
+
+        directed=False,
+
+        symmetric=True,
+
+        source_unit_types=[
+            "ai_agent"
+        ],
+
+        target_unit_types=[
+            "ai_agent"
+        ]
+    ),
+
+    "derived_from": RelationTypeDefinition(
+        relation_type="derived_from",
+
+        category="knowledge",
+
+        description="Knowledge/model derivation relation.",
+
+        directed=True
+    )
+}
+
+
+# =========================================================
+# HELPER FUNCTIONS
+# =========================================================
+
+def get_relation_type(
+    relation_type: str
+) -> Optional[RelationTypeDefinition]:
+
+    return RELATION_TYPES.get(relation_type)
+
+
+def relation_type_exists(
+    relation_type: str
+) -> bool:
+
+    return relation_type in RELATION_TYPES
+
+
+def list_relation_types() -> List[str]:
+
+    return list(RELATION_TYPES.keys())
+
+
+def get_relation_types_by_category(
+    category: str
+) -> List[str]:
+
+    return [
+        name
+        for name, definition in RELATION_TYPES.items()
+        if definition.category == category
+    ]
+
+
+def get_inverse_relation(
+    relation_type: str
+) -> Optional[str]:
+
+    definition = RELATION_TYPES.get(relation_type)
+
+    if not definition:
+        return None
+
+    return definition.inverse_relation
+
+=== Content of codebase/kernel/ontology/signal_types.py ===
+from dataclasses import dataclass, field
+from typing import Dict, List, Optional
+
+
+# =========================================================
+# SIGNAL TYPE DEFINITION
+# =========================================================
+
+@dataclass
+class SignalTypeDefinition:
+    signal_type: str
+
+    category: str
+
+    description: str = ""
+
+    data_type: str = "float"
+
+    default_unit: Optional[str] = None
+
+    valid_range: Optional[tuple] = None
+
+    related_patterns: List[str] = field(default_factory=list)
+
+    tags: List[str] = field(default_factory=list)
+
+
+# =========================================================
+# SIGNAL TYPES
+# =========================================================
+
+SIGNAL_TYPES: Dict[str, SignalTypeDefinition] = {
+
+    # -----------------------------------------------------
+    # HUMAN SIGNALS
+    # -----------------------------------------------------
+
+    "stress": SignalTypeDefinition(
+        signal_type="stress",
+
+        category="human_behavior",
+
+        description="Measures stress level of a human unit.",
+
+        data_type="float",
+
+        valid_range=(0.0, 1.0),
+
+        related_patterns=[
+            "burnout_risk",
+            "conflict_behavior",
+            "fatigue_cycle"
+        ],
+
+        tags=[
+            "psychological",
+            "behavioral"
+        ]
+    ),
+
+    "motivation": SignalTypeDefinition(
+        signal_type="motivation",
+
+        category="human_behavior",
+
+        description="Represents motivation or drive level.",
+
+        data_type="float",
+
+        valid_range=(0.0, 1.0),
+
+        related_patterns=[
+            "goal_persistence",
+            "productivity_growth"
+        ]
+    ),
+
+    "belief_shift": SignalTypeDefinition(
+        signal_type="belief_shift",
+
+        category="human_behavior",
+
+        description="Represents change in beliefs or ideology.",
+
+        data_type="dict",
+
+        related_patterns=[
+            "ideological_transition"
+        ]
+    ),
+
+    # -----------------------------------------------------
+    # ECONOMIC SIGNALS
+    # -----------------------------------------------------
+
+    "revenue_growth": SignalTypeDefinition(
+        signal_type="revenue_growth",
+
+        category="economic",
+
+        description="Represents increase in revenue.",
+
+        data_type="float",
+
+        default_unit="percentage",
+
+        related_patterns=[
+            "market_expansion",
+            "growth_cycle"
+        ],
+
+        tags=[
+            "financial"
+        ]
+    ),
+
+    "debt_stress": SignalTypeDefinition(
+        signal_type="debt_stress",
+
+        category="economic",
+
+        description="Represents financial debt pressure.",
+
+        data_type="float",
+
+        valid_range=(0.0, 1.0),
+
+        related_patterns=[
+            "bankruptcy_risk",
+            "capital_instability"
+        ]
+    ),
+
+    "capital_flow": SignalTypeDefinition(
+        signal_type="capital_flow",
+
+        category="economic",
+
+        description="Represents movement of capital.",
+
+        data_type="float",
+
+        default_unit="currency",
+
+        related_patterns=[
+            "investment_shift",
+            "economic_growth"
+        ]
+    ),
+
+    # -----------------------------------------------------
+    # CITY / COUNTRY SIGNALS
+    # -----------------------------------------------------
+
+    "population_growth": SignalTypeDefinition(
+        signal_type="population_growth",
+
+        category="demographic",
+
+        description="Population growth trend.",
+
+        data_type="float",
+
+        default_unit="percentage",
+
+        related_patterns=[
+            "urban_expansion",
+            "resource_stress"
+        ]
+    ),
+
+    "migration": SignalTypeDefinition(
+        signal_type="migration",
+
+        category="demographic",
+
+        description="Movement of people between regions.",
+
+        data_type="dict",
+
+        related_patterns=[
+            "urbanization",
+            "economic_shift"
+        ]
+    ),
+
+    "traffic_stress": SignalTypeDefinition(
+        signal_type="traffic_stress",
+
+        category="infrastructure",
+
+        description="Traffic congestion intensity.",
+
+        data_type="float",
+
+        valid_range=(0.0, 1.0),
+
+        related_patterns=[
+            "infrastructure_failure",
+            "economic_delay"
+        ]
+    ),
+
+    "pollution": SignalTypeDefinition(
+        signal_type="pollution",
+
+        category="environment",
+
+        description="Environmental pollution level.",
+
+        data_type="float",
+
+        related_patterns=[
+            "health_risk",
+            "urban_decay"
+        ]
+    ),
+
+    # -----------------------------------------------------
+    # MARKET SIGNALS
+    # -----------------------------------------------------
+
+    "bullish": SignalTypeDefinition(
+        signal_type="bullish",
+
+        category="market",
+
+        description="Positive market sentiment.",
+
+        data_type="float",
+
+        valid_range=(0.0, 1.0),
+
+        related_patterns=[
+            "market_rally"
+        ]
+    ),
+
+    "bearish": SignalTypeDefinition(
+        signal_type="bearish",
+
+        category="market",
+
+        description="Negative market sentiment.",
+
+        data_type="float",
+
+        valid_range=(0.0, 1.0),
+
+        related_patterns=[
+            "market_decline"
+        ]
+    ),
+
+    "high_volatility": SignalTypeDefinition(
+        signal_type="high_volatility",
+
+        category="market",
+
+        description="High fluctuation in market movement.",
+
+        data_type="float",
+
+        valid_range=(0.0, 1.0),
+
+        related_patterns=[
+            "market_instability"
+        ]
+    ),
+
+    # -----------------------------------------------------
+    # AI / KNOWLEDGE SIGNALS
+    # -----------------------------------------------------
+
+    "pattern_detected": SignalTypeDefinition(
+        signal_type="pattern_detected",
+
+        category="cognitive",
+
+        description="New pattern identified by system.",
+
+        data_type="dict",
+
+        related_patterns=[
+            "knowledge_growth"
+        ]
+    ),
+
+    "contradiction_detected": SignalTypeDefinition(
+        signal_type="contradiction_detected",
+
+        category="cognitive",
+
+        description="Contradiction found in knowledge.",
+
+        data_type="dict",
+
+        related_patterns=[
+            "hypothesis_revision"
+        ]
+    ),
+
+    "confidence_change": SignalTypeDefinition(
+        signal_type="confidence_change",
+
+        category="cognitive",
+
+        description="Confidence score updated.",
+
+        data_type="float",
+
+        valid_range=(0.0, 1.0),
+
+        related_patterns=[
+            "belief_update"
+        ]
+    )
+}
+
+
+# =========================================================
+# HELPER FUNCTIONS
+# =========================================================
+
+def get_signal_type(
+    signal_type: str
+) -> Optional[SignalTypeDefinition]:
+
+    return SIGNAL_TYPES.get(signal_type)
+
+
+def signal_type_exists(signal_type: str) -> bool:
+
+    return signal_type in SIGNAL_TYPES
+
+
+def list_signal_types() -> List[str]:
+
+    return list(SIGNAL_TYPES.keys())
+
+
+def get_signal_types_by_category(
+    category: str
+) -> List[str]:
+
+    return [
+        name
+        for name, definition in SIGNAL_TYPES.items()
+        if definition.category == category
+    ]
+
+=== Content of codebase/kernel/ontology/resource_types.py ===
+from dataclasses import dataclass, field
+from typing import Dict, List, Optional
+
+
+# =========================================================
+# RESOURCE TYPE DEFINITION
+# =========================================================
+
+@dataclass
+class ResourceTypeDefinition:
+    resource_type: str
+
+    category: str
+
+    description: str = ""
+
+    unit: Optional[str] = None
+
+    renewable: bool = False
+
+    transferable: bool = True
+
+    measurable: bool = True
+
+    related_signals: List[str] = field(default_factory=list)
+
+    tags: List[str] = field(default_factory=list)
+
+
+# =========================================================
+# RESOURCE TYPES
+# =========================================================
+
+RESOURCE_TYPES: Dict[str, ResourceTypeDefinition] = {
+
+    # -----------------------------------------------------
+    # FINANCIAL RESOURCES
+    # -----------------------------------------------------
+
+    "money": ResourceTypeDefinition(
+        resource_type="money",
+
+        category="financial",
+
+        description="Liquid financial resource.",
+
+        unit="currency",
+
+        renewable=False,
+
+        transferable=True,
+
+        related_signals=[
+            "wealth_change",
+            "capital_flow"
+        ],
+
+        tags=[
+            "economic"
+        ]
+    ),
+
+    "capital": ResourceTypeDefinition(
+        resource_type="capital",
+
+        category="financial",
+
+        description="Investment or productive capital.",
+
+        unit="currency",
+
+        transferable=True,
+
+        related_signals=[
+            "investment_shift",
+            "debt_stress"
+        ]
+    ),
+
+    "budget": ResourceTypeDefinition(
+        resource_type="budget",
+
+        category="financial",
+
+        description="Allocated public/private spending pool.",
+
+        unit="currency",
+
+        transferable=False,
+
+        related_signals=[
+            "resource_allocation",
+            "public_spending"
+        ],
+
+        tags=[
+            "governance"
+        ]
+    ),
+
+    # -----------------------------------------------------
+    # HUMAN RESOURCES
+    # -----------------------------------------------------
+
+    "time": ResourceTypeDefinition(
+        resource_type="time",
+
+        category="human",
+
+        description="Finite temporal resource.",
+
+        unit="hours",
+
+        renewable=True,
+
+        transferable=False,
+
+        related_signals=[
+            "fatigue",
+            "productivity_change"
+        ]
+    ),
+
+    "energy": ResourceTypeDefinition(
+        resource_type="energy",
+
+        category="human",
+
+        description="Physical or cognitive energy.",
+
+        unit="energy_units",
+
+        renewable=True,
+
+        transferable=False,
+
+        related_signals=[
+            "fatigue",
+            "stress"
+        ]
+    ),
+
+    "knowledge": ResourceTypeDefinition(
+        resource_type="knowledge",
+
+        category="cognitive",
+
+        description="Structured informational resource.",
+
+        unit="knowledge_units",
+
+        renewable=True,
+
+        transferable=True,
+
+        related_signals=[
+            "knowledge_gain",
+            "pattern_detected"
+        ],
+
+        tags=[
+            "intelligence"
+        ]
+    ),
+
+    "social_capital": ResourceTypeDefinition(
+        resource_type="social_capital",
+
+        category="social",
+
+        description="Trust and network influence.",
+
+        renewable=True,
+
+        transferable=False,
+
+        related_signals=[
+            "influence_growth",
+            "relationship_strength"
+        ]
+    ),
+
+    # -----------------------------------------------------
+    # ORGANIZATIONAL RESOURCES
+    # -----------------------------------------------------
+
+    "employees": ResourceTypeDefinition(
+        resource_type="employees",
+
+        category="organizational",
+
+        description="Human workforce resource.",
+
+        unit="people",
+
+        transferable=False,
+
+        related_signals=[
+            "employment_growth"
+        ]
+    ),
+
+    "inventory": ResourceTypeDefinition(
+        resource_type="inventory",
+
+        category="industrial",
+
+        description="Stored goods/materials.",
+
+        unit="inventory_units",
+
+        transferable=True,
+
+        related_signals=[
+            "inventory_growth",
+            "supply_shortage"
+        ]
+    ),
+
+    "infrastructure": ResourceTypeDefinition(
+        resource_type="infrastructure",
+
+        category="physical",
+
+        description="Built structural systems.",
+
+        unit="infrastructure_units",
+
+        renewable=False,
+
+        transferable=False,
+
+        related_signals=[
+            "infrastructure_growth",
+            "traffic_stress"
+        ]
+    ),
+
+    "compute": ResourceTypeDefinition(
+        resource_type="compute",
+
+        category="digital",
+
+        description="Computational processing capability.",
+
+        unit="compute_units",
+
+        renewable=True,
+
+        transferable=True,
+
+        related_signals=[
+            "compute_load",
+            "processing_latency"
+        ],
+
+        tags=[
+            "ai"
+        ]
+    ),
+
+    "memory": ResourceTypeDefinition(
+        resource_type="memory",
+
+        category="digital",
+
+        description="Data storage and retrieval capacity.",
+
+        unit="memory_units",
+
+        renewable=True,
+
+        transferable=False,
+
+        related_signals=[
+            "memory_pressure",
+            "retrieval_efficiency"
+        ],
+
+        tags=[
+            "ai"
+        ]
+    ),
+
+    "data": ResourceTypeDefinition(
+        resource_type="data",
+
+        category="digital",
+
+        description="Raw or processed informational data.",
+
+        unit="data_units",
+
+        renewable=True,
+
+        transferable=True,
+
+        related_signals=[
+            "information_flow",
+            "knowledge_growth"
+        ]
+    ),
+
+    # -----------------------------------------------------
+    # GEOGRAPHIC / NATURAL RESOURCES
+    # -----------------------------------------------------
+
+    "land": ResourceTypeDefinition(
+        resource_type="land",
+
+        category="geographic",
+
+        description="Physical land area resource.",
+
+        unit="sq_km",
+
+        renewable=False,
+
+        transferable=False,
+
+        related_signals=[
+            "urban_expansion",
+            "resource_stress"
+        ]
+    ),
+
+    "water": ResourceTypeDefinition(
+        resource_type="water",
+
+        category="natural",
+
+        description="Water resource availability.",
+
+        unit="liters",
+
+        renewable=True,
+
+        transferable=True,
+
+        related_signals=[
+            "water_shortage",
+            "pollution"
+        ]
+    ),
+
+    "population": ResourceTypeDefinition(
+        resource_type="population",
+
+        category="demographic",
+
+        description="Population count resource.",
+
+        unit="people",
+
+        renewable=True,
+
+        transferable=False,
+
+        related_signals=[
+            "population_growth",
+            "migration"
+        ]
+    ),
+
+    "materials": ResourceTypeDefinition(
+        resource_type="materials",
+
+        category="industrial",
+
+        description="Raw material resource.",
+
+        unit="material_units",
+
+        transferable=True,
+
+        related_signals=[
+            "resource_consumption",
+            "supply_shortage"
+        ]
+    ),
+
+    # -----------------------------------------------------
+    # NATIONAL / MACRO RESOURCES
+    # -----------------------------------------------------
+
+    "gdp": ResourceTypeDefinition(
+        resource_type="gdp",
+
+        category="macro_economic",
+
+        description="Gross domestic product measure.",
+
+        unit="currency",
+
+        transferable=False,
+
+        related_signals=[
+            "economic_growth",
+            "inflation"
+        ]
+    ),
+
+    "technology": ResourceTypeDefinition(
+        resource_type="technology",
+
+        category="innovation",
+
+        description="Technological capability resource.",
+
+        renewable=True,
+
+        transferable=True,
+
+        related_signals=[
+            "innovation_growth"
+        ]
+    ),
+
+    "authority": ResourceTypeDefinition(
+        resource_type="authority",
+
+        category="governance",
+
+        description="Administrative or governing authority.",
+
+        renewable=True,
+
+        transferable=False,
+
+        related_signals=[
+            "policy_shift",
+            "governance_change"
+        ]
+    ),
+
+    "military": ResourceTypeDefinition(
+        resource_type="military",
+
+        category="defense",
+
+        description="Military capability resource.",
+
+        transferable=False,
+
+        related_signals=[
+            "conflict_risk",
+            "power_projection"
+        ]
+    )
+}
+
+
+# =========================================================
+# HELPER FUNCTIONS
+# =========================================================
+
+def get_resource_type(
+    resource_type: str
+) -> Optional[ResourceTypeDefinition]:
+
+    return RESOURCE_TYPES.get(resource_type)
+
+
+def resource_type_exists(
+    resource_type: str
+) -> bool:
+
+    return resource_type in RESOURCE_TYPES
+
+
+def list_resource_types() -> List[str]:
+
+    return list(RESOURCE_TYPES.keys())
+
+
+def get_resources_by_category(
+    category: str
+) -> List[str]:
+
+    return [
+        name
+        for name, definition in RESOURCE_TYPES.items()
+        if definition.category == category
+    ]
+
+
+def get_related_signals(
+    resource_type: str
+) -> List[str]:
+
+    definition = RESOURCE_TYPES.get(resource_type)
+
+    if not definition:
+        return []
+
+    return definition.related_signals
