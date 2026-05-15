@@ -1,0 +1,22 @@
+{
+  "episode_id": "episode_e5ff1ebffb52",
+  "episode_type": "action",
+  "timestamp": 1778844818.964132,
+  "summary": "test description",
+  "entities": [
+    "agent"
+  ],
+  "events": [
+    "action_da516f041311"
+  ],
+  "signals": [],
+  "patterns": [],
+  "relations": [],
+  "tags": [],
+  "importance": 0.5,
+  "emotional_weight": 0.0,
+  "confidence": 1.0,
+  "metadata": {
+    "event_category": "general"
+  }
+}

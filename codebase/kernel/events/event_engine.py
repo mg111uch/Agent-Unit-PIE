@@ -77,7 +77,8 @@ class EventEngine:
         # -------------------------------------------------
 
         if add_to_working_memory:
-
+            # Get source_id from event.source if available
+            source_id = getattr(event.source, 'source_id', 'unknown') if hasattr(event, 'source') else 'unknown'
             working_memory.add_memory(
                 memory_id=event.event_id,
                 memory_type="event",
@@ -89,8 +90,7 @@ class EventEngine:
                     event.category
                 ],
                 metadata={
-                    "source_unit_id":
-                    event.source_unit_id
+                    "source_id": source_id
                 },
                 ttl_seconds=7200,
             )
@@ -111,16 +111,16 @@ class EventEngine:
                 summary=event.description,
 
                 entities=[
-                    event.source_unit_id
-                ] if event.source_unit_id else [],
+                    getattr(event.source, 'source_id', 'unknown') if hasattr(event, 'source') else 'unknown'
+                ],
 
                 events=[
                     event.event_id
                 ],
 
-                signals=event.signal_references,
+                signals=list(getattr(event, 'evidence', [])),
 
-                patterns=event.pattern_references,
+                patterns=[],
 
                 tags=event.metadata.tags,
 
@@ -193,20 +193,23 @@ class EventEngine:
             event_type=event_type,
             title=title,
             description=description,
-            source_unit_id=source_unit_id,
             category=category,
             subtype=subtype,
+            source_type="agent",
+            source_id=source_unit_id or "agent",
+            source_name=title,
         )
 
         event.metrics.confidence = confidence
 
         event.metrics.importance = importance
 
-        event.metrics.urgency = urgency
-
-        event.metadata.tags.extend(
-            tags or []
-        )
+        # Handle tags safely (EventMetadata uses 'labels' not 'tags')
+        if tags:
+            try:
+                event.metadata.labels.update({f"tag_{i}": t for i, t in enumerate(tags)})
+            except Exception:
+                pass
 
         event.metadata.extra.update(
             metadata or {}
@@ -243,9 +246,10 @@ class EventEngine:
             event_type=event_type,
             title=title,
             description=description,
-            source_unit_id=signal.source_unit_id,
             category=signal.category,
             subtype=signal.subtype,
+            source_type="signal",
+            source_id=getattr(signal, 'signal_id', 'unknown'),
         )
 
         event.metrics.confidence = (
@@ -379,8 +383,7 @@ class EventEngine:
             event
             for event in self.recent_events
             if (
-                event.source_unit_id
-                == source_unit_id
+                getattr(event.source, 'source_id', None) == source_unit_id
             )
         ]
 

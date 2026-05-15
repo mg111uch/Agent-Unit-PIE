@@ -7,11 +7,11 @@
 - **Codebase size:** `cd /home/manigupt/Hello/python/Agentic_Unit_PIE/codebase/atlas_output/tools && conda run -n myenv python codebase_size.py --directory /home/manigupt/Hello/python/Agentic_Unit_PIE/codebase --extensions .py .js .html --output-file /home/manigupt/Hello/python/Agentic_Unit_PIE/code_atlas.md --start-marker "## Codebase size" --end-marker "## End Codebase size"`
 
 - **Make directory:** 
-`cd /home/manigupt/Hello/python/Agentic_Unit_PIE/codebase/atlas_output/tools && conda run -n myenv python make_directree.py --reverse --base_path /home/manigupt/Hello/python/Agentic_Unit_PIE --md_file /home/manigupt/Hello/python/Agentic_Unit_PIE/code_atlas.md --ignore_dir chroma_data .adk encoding_cache .git --ignore_files .env --start_marker '### FILE_MAP Tree' --end_marker '### End Tree'`
+`cd /home/manigupt/Hello/python/Agentic_Unit_PIE/codebase/atlas_output/tools && conda run -n myenv python make_directree.py --reverse --no_stats --base_path /home/manigupt/Hello/python/Agentic_Unit_PIE --md_file /home/manigupt/Hello/python/Agentic_Unit_PIE/code_atlas.md --ignore_dir chroma_data .adk encoding_cache .git .pytest_cache agent_tools atlas_output rag_pipeline ralph_loop skills sloperator utils_files --ignore_files .env --start_marker '### FILE_MAP Tree' --end_marker '### End Tree'`
 
 - **Copy Content:** `cd /home/manigupt/Hello/python/Agentic_Unit_PIE/codebase/atlas_output/tools && conda run -n myenv python copyContent.py --mode dump --md_file /home/manigupt/Hello/python/Agentic_Unit_PIE/code_atlas.md --base_path /home/manigupt/Hello/python/Agentic_Unit_PIE --output_file /home/manigupt/Hello/python/Agentic_Unit_PIE/code_dump.txt --start_marker '### FILE_MAP Tree' --end_marker '### End Tree'`
 
-- **Count Tokens in file:** `cd /home/manigupt/Hello/python/Agentic_Unit_PIE/codebase/atlas_output/tools && conda run -n myenv python token_count.py /home/manigupt/Hello/python/Agentic_Unit_PIE/agent_harness.md`
+- **Count Tokens in file:** `cd /home/manigupt/Hello/python/Agentic_Unit_PIE/codebase/atlas_output/tools && conda run -n myenv python token_count.py /home/manigupt/Hello/python/Agentic_Unit_PIE/code_atlas.md`
 
 - **Check if file exists:** `cd /home/manigupt/Hello/python/Agentic_Unit_PIE/codebase/atlas_output/tools && conda run -n myenv python path_file_exists.py /home/manigupt/Hello/python/Agentic_Unit_PIE/code_atlas.md`
 

@@ -4,14 +4,18 @@ This script can operate in two modes:
 1. Create directory structure: Reads a Markdown file, scans for a specific section between start and end markers,parses the directory tree structure from that section, and creates the corresponding directories and empty files in the specified base path. It only creates files that do not already exist.
 
 2. Generate directory tree in MD file: Scans a given directory and generates the directory tree structure
-in the specified MD file between the start and end markers, including for each file the lines of code (LOC) and token count in brackets.
+in the specified MD file between the start and end markers. Use --show_stats/--no_stats to toggle 
+counting and displaying LOC and token counts.
 
 Usage:
 - **Create structure:** 
 python make_directree.py --md_file <path> --start_marker <line> --end_marker <line> --base_path <path>
 
-- **Generate tree:** 
-python make_directree.py --reverse --base_path <path> --md_file <path> --start_marker <line> --end_marker <line>
+- **Generate tree (with stats):** 
+python make_directree.py --reverse --base_path <path> --md_file <path> --start_marker <line> --end_marker <line> --show_stats
+
+- **Generate tree (without stats):** 
+python make_directree.py --reverse --base_path <path> --md_file <path> --start_marker <line> --end_marker <line> --no_stats
 """
 
 import os
@@ -29,6 +33,8 @@ def parse_args():
     parser.add_argument('--end_marker', default=my_end_marker, help='End marker line content')
     parser.add_argument('--base_path', help='Base path for operation')
     parser.add_argument('--reverse', action='store_true', help='Generate tree from directory instead of creating structure')
+    parser.add_argument('--show_stats', action='store_true', default=True, help='Show LOC and token counts in reverse mode (default: True)')
+    parser.add_argument('--no_stats', action='store_true', help='Hide LOC and token counts in reverse mode')
     parser.add_argument('--ignore_dir', nargs='*', default=ignore_dir, help='List of directory names to ignore')
     parser.add_argument('--ignore_files', nargs='*', default=ignore_files, help='List of file names to ignore')
     return parser.parse_args()
@@ -92,7 +98,7 @@ def create_structure(base_path, tree):
             os.makedirs(path, exist_ok=True)
             create_structure(path, subtree)
 
-def generate_tree(directory, ignored_dirs=[], ignored_files=[]):
+def generate_tree(directory, ignored_dirs=[], ignored_files=[], show_stats=True):
     from token_count import count_tokens
 
     def count_lines(path):
@@ -118,9 +124,12 @@ def generate_tree(directory, ignored_dirs=[], ignored_files=[]):
             current[d] = {}
         for f in files:
             full_path = os.path.join(root, f)
-            loc = count_lines(full_path)
-            tokens = count_tokens(full_path)
-            current[f] = {'loc': loc, 'tokens': tokens}
+            if show_stats:
+                loc = count_lines(full_path)
+                tokens = count_tokens(full_path)
+                current[f] = {'loc': loc, 'tokens': tokens}
+            else:
+                current[f] = None
     return tree
 
 def prune_tree(tree, ignored_dirs):
@@ -130,7 +139,7 @@ def prune_tree(tree, ignored_dirs):
         elif isinstance(tree[name], dict):
             prune_tree(tree[name], ignored_dirs)
 
-def write_tree_to_md(md_file, start_marker, end_marker, tree, directory):
+def write_tree_to_md(md_file, start_marker, end_marker, tree, directory, show_stats=True):
     lines = []
     if os.path.exists(md_file):
         with open(md_file, 'r') as f:
@@ -158,6 +167,8 @@ def write_tree_to_md(md_file, start_marker, end_marker, tree, directory):
             is_last_item = (i == len(items) - 1)
             if isinstance(subtree, dict) and 'loc' in subtree:
                 tree_lines.append(f"{prefix}{'└── ' if is_last_item else '├── '}[] {name} [{subtree['loc']} LOC, {subtree['tokens']} tokens]\n")
+            elif subtree is None:
+                tree_lines.append(f"{prefix}{'└── ' if is_last_item else '├── '}{name}\n")
             else:
                 tree_lines.append(f"{prefix}{'└── ' if is_last_item else '├── '}{name}/\n")
                 new_prefix = prefix + ('    ' if is_last_item else '│   ')
@@ -169,12 +180,13 @@ def write_tree_to_md(md_file, start_marker, end_marker, tree, directory):
 
 if __name__ == '__main__':
     args = parse_args()
+    show_stats = args.show_stats and not args.no_stats
     if args.reverse:
         if not args.base_path:
             raise ValueError("--base_path is required when using --reverse")
-        tree = generate_tree(args.base_path, args.ignore_dir, args.ignore_files)
+        tree = generate_tree(args.base_path, args.ignore_dir, args.ignore_files, show_stats)
         prune_tree(tree, args.ignore_dir)
-        write_tree_to_md(args.md_file, args.start_marker, args.end_marker, tree, args.base_path)
+        write_tree_to_md(args.md_file, args.start_marker, args.end_marker, tree, args.base_path, show_stats)
         print("Directory tree written to MD file.")
     else:
         structure_lines = read_structure(args.md_file, args.start_marker, args.end_marker)

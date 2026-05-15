@@ -1,0 +1,39 @@
+{
+  "signal_id": "observation_d450ee60c695",
+  "signal_type": "observation",
+  "value": "test value",
+  "category": "general",
+  "subtype": "generic",
+  "timestamp": "2026-05-15T11:12:33.110426",
+  "source": {
+    "source_type": "agent",
+    "source_id": "test",
+    "source_name": ""
+  },
+  "context": {
+    "unit_id": null,
+    "unit_type": null,
+    "location": null,
+    "timeline_ref": null,
+    "related_units": [],
+    "related_events": [],
+    "tags": []
+  },
+  "metrics": {
+    "strength": 0.0,
+    "intensity": 0.0,
+    "frequency": 0.0,
+    "volatility": 0.0,
+    "confidence": 1.0
+  },
+  "evidence": [],
+  "metadata": {
+    "created_at": "2026-05-15T11:12:33.110456",
+    "updated_at": "2026-05-15T11:12:33.110462",
+    "created_by": "system",
+    "version": 1,
+    "labels": {},
+    "extra": {}
+  },
+  "active": true
+}

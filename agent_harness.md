@@ -2,9 +2,11 @@
 
 ## TASK
 
-In `python/Agentic_Unit_PIE/codebase/main.py` , can we move instruction to a separate system_instruction.md file and load it in main file.
+For population simulation, old non behaviour based hard coded simulation agents is given in `python/Agentic_Unit_PIE/codebase/modules/simulators/popula_dyn/old_str`. Suggest how this could be modified to behaviour based unit_agents given in `python/Agentic_Unit_PIE/codebase/modules/simulators/popula_dyn/core`.
 
-Do not give code, just a concise plan or answer.
+Start by reading `README.md` and `code_atlas.md` in project root to understand the project first.
+
+Do not give code or make any changes, just a concise plan or answer.
 
 ## Project Paths
 
@@ -13,7 +15,7 @@ Do not give code, just a concise plan or answer.
 
 ## Code Execution & Validation Environment
 
-- **Command to run project:** `cd /home/manigupt/Hello/python/Agentic_Unit_PIE/codebase && conda run -n myenv python main.py`
+- **Command to run project:** `cd /home/manigupt/Hello/python/Agentic_Unit_PIE/codebase && conda run -n myenv python agent.py`
 
 ## Core principles
 

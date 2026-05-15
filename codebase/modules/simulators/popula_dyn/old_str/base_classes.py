@@ -1,7 +1,3 @@
-"""
-metadata:
-  summary: "This Python file provides base classes for multi-agent simulations, including Agent for entity behavior, MultiGrid for toroidal spatial positioning, Model for simulation orchestration, and DataCollector for tracking metrics."
-"""  
 import numpy as np
 import pandas as pd
 from typing import Dict, List, Tuple, Optional, Any, Set

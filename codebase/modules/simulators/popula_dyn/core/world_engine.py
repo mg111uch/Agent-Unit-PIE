@@ -91,6 +91,7 @@ class WorldEngine:
         timeline_engine=None,
         pattern_engine=None,
         relation_engine=None,
+        simulation_model=None,
         config: Optional[
             Dict[str, Any]
         ] = None,
@@ -122,6 +123,10 @@ class WorldEngine:
 
         self.relation_engine = (
             relation_engine
+        )
+
+        self.simulation_model = (
+            simulation_model
         )
 
         self.config = config or {}
@@ -229,6 +234,12 @@ class WorldEngine:
         ] = self.utc_now()
 
         # --------------------------------------------------------
+        # PROCESS SIMULATION MODEL
+        # --------------------------------------------------------
+
+        simulation_results = self.process_simulation()
+
+        # --------------------------------------------------------
         # PROCESS SYSTEMS
         # --------------------------------------------------------
 
@@ -270,6 +281,9 @@ class WorldEngine:
             "timestamp": (
                 self.utc_now()
             ),
+            "simulation_results": (
+                simulation_results
+            ),
             "behavior_results": (
                 behavior_results
             ),
@@ -292,6 +306,55 @@ class WorldEngine:
         )
 
         return snapshot
+
+    # ============================================================
+    # PROCESS SIMULATION
+    # ============================================================
+
+    def process_simulation(
+        self,
+    ) -> Dict[str, Any]:
+        """
+        Advance the agricultural simulation model.
+        """
+
+        if self.simulation_model is None:
+
+            return {
+                "status": "no_simulation_model"
+            }
+
+        try:
+
+            self.simulation_model.step()
+
+            return {
+                "population": (
+                    self.simulation_model.get_population_count()
+                ),
+                "total_wealth": (
+                    self.simulation_model.get_total_wealth()
+                ),
+                "births": (
+                    self.simulation_model.births
+                ),
+                "deaths": (
+                    self.simulation_model.deaths
+                ),
+                "total_units": (
+                    len(self.simulation_model.units)
+                ),
+            }
+
+        except Exception:
+
+            logger.exception(
+                "Simulation step failed."
+            )
+
+            return {
+                "status": "error"
+            }
 
     # ============================================================
     # PROCESS BEHAVIORS
@@ -765,7 +828,47 @@ class WorldEngine:
                 self.relation_engine
                 is not None
             ),
+            "simulation_model": (
+                self.simulation_model
+                is not None
+            ),
         }
+
+    # ============================================================
+    # CONVENIENCE FACTORY
+    # ============================================================
+
+    @classmethod
+    def with_agricultural_simulation(
+        cls,
+        params: Optional[Dict[str, Any]] = None,
+    ) -> "WorldEngine":
+        """
+        Create WorldEngine with agricultural simulation.
+
+        Usage:
+            world = WorldEngine.with_agricultural_simulation(params)
+            world.start()
+            for _ in range(100):
+                world.tick()
+        """
+
+        from modules.simulators.popula_dyn.constants import PARAMS
+        from modules.simulators.popula_dyn.core.simulation_model import (
+            SimulationModel,
+        )
+        from modules.simulators.popula_dyn.behavior_registry import (
+            BehaviorRegistry,
+        )
+
+        params = params or PARAMS
+
+        sim_model = SimulationModel(params)
+
+        return cls(
+            simulation_model=sim_model,
+            behavior_registry=BehaviorRegistry(),
+        )
 
     # ============================================================
     # HELPERS

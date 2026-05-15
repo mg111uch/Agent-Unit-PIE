@@ -1,0 +1,39 @@
+{
+  "event_id": "action_da516f041311",
+  "event_type": "action",
+  "title": "test event",
+  "description": "test description",
+  "category": "general",
+  "subtype": "generic",
+  "timestamp": "2026-05-15T11:33:38.962790",
+  "start_time": null,
+  "end_time": null,
+  "source": {
+    "source_type": "agent",
+    "source_id": "agent",
+    "source_name": "test event",
+    "confidence": 1.0
+  },
+  "participants": [],
+  "location": null,
+  "metrics": {
+    "severity": 0.0,
+    "importance": 0.5,
+    "confidence": 1.0,
+    "economic_impact": 0.0,
+    "social_impact": 0.0,
+    "political_impact": 0.0
+  },
+  "evidence": [],
+  "relations": [],
+  "generated_signals": [],
+  "metadata": {
+    "created_at": "2026-05-15T11:33:38.962831",
+    "updated_at": "2026-05-15T11:33:38.962841",
+    "created_by": "system",
+    "labels": {},
+    "tags": [],
+    "extra": {}
+  },
+  "active": true
+}

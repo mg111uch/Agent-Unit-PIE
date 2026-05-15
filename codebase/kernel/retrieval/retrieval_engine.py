@@ -25,7 +25,7 @@ from kernel.patterns.pattern_engine import (
     pattern_engine
 )
 
-from kernel.timeline.timeline_engine import (
+from kernel.events.timeline_engine import (
     timeline_engine
 )
 

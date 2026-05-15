@@ -4,3 +4,4 @@ utils_files
 chroma_data
 __pycache__
 encoding_cache
+.pytest_cache

@@ -92,7 +92,8 @@ class SignalEngine:
         # -------------------------------------------------
 
         if add_to_working_memory:
-
+            # Get source_id from signal.source if available
+            source_id = getattr(signal.source, 'source_id', 'unknown') if hasattr(signal, 'source') else 'unknown'
             working_memory.add_memory(
                 memory_id=signal.signal_id,
                 memory_type="signal",
@@ -104,8 +105,7 @@ class SignalEngine:
                     signal.category
                 ],
                 metadata={
-                    "source_unit_id":
-                    signal.source_unit_id
+                    "source_id": source_id
                 },
                 ttl_seconds=3600,
             )
@@ -164,21 +164,24 @@ class SignalEngine:
 
         signal = SignalSchema.create(
             signal_type=signal_type,
-            source_unit_id=source_unit_id,
             value=value,
             category=category,
             subtype=subtype,
-            title=title,
-            description=description,
+            source_type="agent",
+            source_id=source_unit_id,
+            source_name=title,
         )
 
         signal.metrics.confidence = confidence
 
         signal.metrics.importance = importance
 
-        signal.metadata.tags.extend(
-            tags or []
-        )
+        # Handle tags safely (SignalMetadata uses 'labels' not 'tags')
+        if tags:
+            try:
+                signal.metadata.labels.update({f"tag_{i}": t for i, t in enumerate(tags)})
+            except Exception:
+                pass
 
         signal.metadata.extra.update(
             metadata or {}
