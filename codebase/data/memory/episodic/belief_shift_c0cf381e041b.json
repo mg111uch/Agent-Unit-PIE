@@ -1,0 +1,49 @@
+{
+  "signal_id": "belief_shift_c0cf381e041b",
+  "signal_type": "belief_shift",
+  "value": {
+    "argument": "test_argument",
+    "stance": "agree",
+    "topic": "test_topic"
+  },
+  "category": "cognitive",
+  "subtype": "belief",
+  "timestamp": "2026-05-17T12:05:31.940614",
+  "source": {
+    "source_type": "agent",
+    "source_id": "argu_god",
+    "source_name": "Belief shift: test_argument"
+  },
+  "context": {
+    "unit_id": null,
+    "unit_type": null,
+    "location": null,
+    "timeline_ref": null,
+    "related_units": [],
+    "related_events": [],
+    "tags": []
+  },
+  "metrics": {
+    "strength": 0.0,
+    "intensity": 0.0,
+    "frequency": 0.0,
+    "volatility": 0.0,
+    "confidence": 0.7
+  },
+  "evidence": [],
+  "metadata": {
+    "created_at": "2026-05-17T12:05:31.940652",
+    "updated_at": "2026-05-17T12:05:31.940660",
+    "created_by": "system",
+    "version": 1,
+    "labels": {
+      "tag_0": "argu_god",
+      "tag_1": "belief"
+    },
+    "extra": {
+      "argument_name": "test_argument",
+      "topic": "test_topic"
+    }
+  },
+  "active": true
+}

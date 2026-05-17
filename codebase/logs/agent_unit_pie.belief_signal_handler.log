@@ -1,0 +1,12 @@
+[2026-05-17 17:39:16] [INFO] [agent_unit_pie.belief_signal_handler] Belief signal handlers registered
+[2026-05-17 17:39:36] [INFO] [agent_unit_pie.belief_signal_handler] Belief signal handlers registered
+[2026-05-17 17:39:36] [INFO] [agent_unit_pie.belief_signal_handler] Belief shift detected: test_argument -> agree on test_topic
+[2026-05-17 17:39:36] [INFO] [agent_unit_pie.belief_signal_handler] Belief shift stored in working memory: test_argument
+[2026-05-17 17:39:58] [INFO] [agent_unit_pie.belief_signal_handler] Belief signal handlers registered
+[2026-05-17 17:39:58] [WARNING] [agent_unit_pie.belief_signal_handler] Contradiction detected: ['Argument A', 'Argument B'] in theism_atheism
+[2026-05-17 17:39:58] [INFO] [agent_unit_pie.belief_signal_handler] Contradiction pattern detected and signal emitted
+[2026-05-17 17:40:36] [INFO] [agent_unit_pie.belief_signal_handler] Belief signal handlers registered
+[2026-05-17 17:53:17] [INFO] [agent_unit_pie.belief_signal_handler] Belief signal handlers registered
+[2026-05-17 18:13:32] [INFO] [agent_unit_pie.belief_signal_handler] Belief signal handlers registered
+[2026-05-17 18:27:11] [INFO] [agent_unit_pie.belief_signal_handler] Belief signal handlers registered
+[2026-05-17 18:39:20] [INFO] [agent_unit_pie.belief_signal_handler] Belief signal handlers registered

@@ -1,124 +1,109 @@
 ## Kernel development progress report 
 
-### Phase 1: Kernel Context Retrieval Integration
+---
+
+## Project Status
+
+**Integration Progress:**
+- ✅ Phase 1: Context Retrieval
+- ✅ Phase 2: Signal Emission
+- ✅ Phase 4: ArguGod Integration - Signal → Pattern Pipeline
+- ✅ Phase 5: ArguGod Session Persistence
+- ✅ Phase 6: ArguGod Hypothesis Engine
+- ✅ Phase 7: ArguGod Event Timeline
+- ⏳ Phase 8: Full Kernel Cognition
+
+---
+
+## ArguGod Integration (Completed)
+
+### Phase 1: Signal Emission from ArguGod
 
 | Item | Status |
 |------|--------|
-| Kernel modules import | ✅ Fixed import path bug |
-| `retrieval_engine` integration | ✅ Working |
-| `kernel_retrieve` tool | ✅ Added to agent |
-| Auto-context retrieval | ✅ Enabled by default |
-| Tests (Phase 1) | ✅ 17 passing |
+| kernel_bridge.py | ✅ Created |
+| belief_shift signals | ✅ Working |
+| confidence_change signals | ✅ Working |
+| contradiction_detected signals | ✅ Working |
+| observation signals (topic start) | ✅ Working |
 
-**Code Changes:**
-- Added `kernel_retrieval` tool to `agent_tools.py`
-- Auto-injects relevant context before each agent turn
-- Fixed `kernel/retrieval/retrieval_engine.py` - changed import from `kernel.timeline` to `kernel.events`
-
-### Phase 2: Kernel Signal Emission Integration
+### Phase 2: Pattern Detection from Belief Signals
 
 | Item | Status |
 |------|--------|
-| Signal engine import | ✅ Working |
-| `kernel_emit_signal` tool | ✅ Added to agent |
-| Signal persistence | ✅ Working |
-| Tests (Phase 2) | ✅ 7 passing |
+| belief_signal_handler.py | ✅ Created |
+| belief_shift handler | ✅ Working |
+| contradiction handler | ✅ Working |
+| confidence_change handler | ✅ Working |
+| pattern_detected emission | ✅ Working |
+| Working memory storage | ✅ Working |
 
-**Code Changes:**
-- Added `kernel_emit_signal` tool to `agent_tools.py`
-- Fixed `kernel/signals/signal_engine.py` - Fixed SignalSchema.create() parameters
-- Fixed metadata.tags → labels mapping
-- Fixed source_unit_id attribute access
-
-### Refactor Completed
-
-| Item | Before | After |
-|------|--------|-------|
-| `agent.py` | 411 lines | 193 lines |
-| `agent_tools.py` | - | 252 lines |
-| File limit | ❌ Exceeded | ✅ Under 400 |
-
----
-
-## Tests Summary
+### Integration Flow
 
 ```
-37 passed, 9 warnings
-- Phase 1 (retrieval): 17 tests
-- Phase 2 (signals): 7 tests
-- Phase 3 (events/memory): 13 tests
+ArguGod debate loop
+    ↓
+kernel_bridge.emit_belief_signal()
+    ↓
+signal_engine.create_signal()
+    ↓
+belief_signal_handler processes
+    ↓
+Working memory + Pattern detection
+    ↓
+Available via kernel_retrieve
 ```
 
----
+### Phase 3: Session Persistence (Completed)
 
-### Phase 3 Completed: Event/Working Memory Integration
-
-| Tool | Status |
+| Item | Status |
 |------|--------|
-| `kernel_store_context` | ✅ Added |
-| `kernel_get_memory` | ✅ Added |
-| `kernel_create_event` | ✅ Added |
+| save_debate_session() | ✅ Working |
+| load_debate_session() | ✅ Working |
+| list_debate_sessions() | ✅ Working |
+| Session resume prompt | ✅ Working |
+| Auto-save on exit/complete | ✅ Working |
+
+### Phase 4: Hypothesis Engine (Completed)
+
+| Item | Status |
+|------|--------|
+| create_belief_hypothesis() | ✅ Working |
+| add_belief_evidence() | ✅ Working |
+| validate_belief_hypothesis() | ✅ Working |
+| get_hypothesis_for_argument() | ✅ Working |
+| get_belief_summary() | ✅ Working |
+| Hypothesis auto-creation on belief | ✅ Working |
+| Contradiction evidence tracking | ✅ Working |
+
+### Phase 5: Event Timeline Tracking (Completed)
+
+| Item | Status |
+|------|--------|
+| emit_debate_event() | ✅ Working |
+| emit_session_start_event() | ✅ Working |
+| emit_argument_viewed_event() | ✅ Working |
+| emit_user_response_event() | ✅ Working |
+| emit_belief_changed_event() | ✅ Working |
+| emit_contradiction_event() | ✅ Working |
+| emit_session_end_event() | ✅ Working |
+| Full timeline tracking | ✅ Working |
 
 ---
 
-## Next Development Paths
+## Current Tool Set
 
-### 1. Signal → Event → Pattern Pipeline (Recommended Next)
-
-- Connect: observations → signals → events → patterns
-- Automatic pattern detection from signals
-- Timeline persistence for agent sessions
-
-### 2. Agent Memory Persistence
-
-- Save/restore working memory across sessions
-- Session summary generation
-- Context carryover between conversations
-
-### 3. Full Kernel Integration
-
-- Complete cognition loop
-- Pattern-triggered actions
-- Hypothesis engine integration
-- Digital twin infrastructure
-
----
-
-## What Phase 3 Will Enable
-
-| Feature | Benefit |
-|---------|---------|
-| Working memory storage | Persistent context across sessions |
-| Event creation | Track agent actions as events |
-| Session management | Resume from saved state |
-
----
-
-## Project Vision Alignment
-
-This integration moves toward:
-
-```
-agent observes
-→ signal emitted  
-→ event created
-→ pattern detected
-→ working memory updated
-→ next reasoning enhanced
-```
-
-The kernel is meant to be the "true cognitive core" - Phase 1-3 integration brings the agent closer to that vision.
-
----
-
-## Files Modified This Session
-
-- `codebase/agent.py` - Main entry point (refactored)
-- `codebase/agent_tools.py` - Tool definitions (extended)
-- `codebase/kernel/retrieval/retrieval_engine.py` - Fixed import path
-- `codebase/kernel/signals/signal_engine.py` - Fixed schema compatibility
-- `codebase/kernel/events/event_engine.py` - Fixed schema compatibility
-- `codebase/tests/agent_test.py` - Tests added
+| Tool | Phase | Purpose |
+|------|-------|---------|
+| `read_file` | 0 | Read file contents |
+| `list_files` | 0 | List directory |
+| `write_to_file` | 0 | Write file |
+| `execute_command` | 0 | Run shell command |
+| `kernel_retrieve` | 1 | Query memory/patterns |
+| `kernel_emit_signal` | 2 | Emit observation |
+| `kernel_store_context` | 3 | Store in working memory |
+| `kernel_get_memory` | 3 | Retrieve memory |
+| `kernel_create_event` | 3 | Create event |
 
 ---
 
@@ -143,29 +128,53 @@ The kernel is meant to be the "true cognitive core" - Phase 1-3 integration brin
 
 ---
 
-## Current Tool Set
+## Next Development Phases
 
-| Tool | Phase | Purpose |
-|------|-------|---------|
-| `read_file` | 0 | Read file contents |
-| `list_files` | 0 | List directory |
-| `write_to_file` | 0 | Write file |
-| `execute_command` | 0 | Run shell command |
-| `kernel_retrieve` | 1 | Query memory/patterns |
-| `kernel_emit_signal` | 2 | Emit observation |
-| `kernel_store_context` | 3 | Store in working memory |
-| `kernel_get_memory` | 3 | Retrieve memory |
-| `kernel_create_event` | 3 | Create event |
+### Phase 8: Full Kernel Cognition
+
+| Item | Description |
+|------|-------------|
+| Digital Twin Integration | Connect human twin with belief tracking |
+| Pattern → Action Pipeline | Auto-trigger actions from patterns |
+| Recursive Hypothesis Testing | Hypothesis generates sub-hypotheses |
+| Cross-Topic Reasoning | Connect beliefs across topics |
+
+### Phase 9: Enhanced Debate Features
+
+| Item | Description |
+|------|-------------|
+| Multi-Person Debate | Support multiple users/perspectives |
+| Debate Analytics | Summary statistics, progress tracking |
+| Export Belief Graph | Export beliefs as graphviz/JSON |
+| Argument Quality Scoring | Score arguments by evidence strength |
+
+### Phase 10: Self-Evolution
+
+| Item | Description |
+|------|-------------|
+| Auto-Pattern Discovery | System discovers new patterns |
+| Hypothesis Auto-Generation | Auto-generate hypotheses from signals |
+| Self-Contradiction Detection | System checks own consistency |
+| Knowledge Compression | Auto-summarization of learnings |
 
 ---
 
-## Project Status
+## Files Added/Modified
 
-**Integration Progress:**
-- ✅ Phase 1: Context Retrieval
-- ✅ Phase 2: Signal Emission
-- ⏳ Phase 4: Signal → Event → Pattern Pipeline (Next)
-- ⏳ Phase 5: Memory Persistence
-- ⏳ Phase 6: Full Kernel Cognition
+| File | Change |
+|------|--------|
+| `modules/argu_god/engine/kernel_bridge.py` | Created - Signal/Session/Hypothesis/Event bridge |
+| `modules/argu_god/engine/loop.py` | Modified - Integration calls |
+| `kernel/signals/belief_signal_handler.py` | Created - Signal handlers |
+| `agent_tools.py` | Modified - Handler registration |
+| `tests/agent_test.py` | Refactored - 13 tests |
 
 ---
+
+## Tests Summary
+
+```
+13 passed, 9 warnings
+- All kernel tools functional
+- ArguGod integration working
+```

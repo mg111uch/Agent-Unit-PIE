@@ -1,0 +1,49 @@
+{
+  "event_id": "contradiction_detected_9506dfac3a83",
+  "event_type": "contradiction_detected",
+  "title": "Debate: contradiction_detected",
+  "description": "Contradiction: ['Arg A', 'Arg B']",
+  "category": "debate",
+  "subtype": "test_topic",
+  "timestamp": "2026-05-17T13:09:00.968814",
+  "start_time": null,
+  "end_time": null,
+  "source": {
+    "source_type": "agent",
+    "source_id": "argu_god",
+    "source_name": "Debate: contradiction_detected",
+    "confidence": 1.0
+  },
+  "participants": [],
+  "location": null,
+  "metrics": {
+    "severity": 0.0,
+    "importance": 0.6,
+    "confidence": 0.9,
+    "economic_impact": 0.0,
+    "social_impact": 0.0,
+    "political_impact": 0.0
+  },
+  "evidence": [],
+  "relations": [],
+  "generated_signals": [],
+  "metadata": {
+    "created_at": "2026-05-17T13:09:00.968827",
+    "updated_at": "2026-05-17T13:09:00.968830",
+    "created_by": "system",
+    "labels": {
+      "tag_0": "argu_god",
+      "tag_1": "debate",
+      "tag_2": "test_topic"
+    },
+    "tags": [],
+    "extra": {
+      "contradicted": [
+        "Arg A",
+        "Arg B"
+      ],
+      "topic": "test_topic"
+    }
+  },
+  "active": true
+}

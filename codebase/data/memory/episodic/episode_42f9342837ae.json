@@ -1,0 +1,22 @@
+{
+  "episode_id": "episode_42f9342837ae",
+  "episode_type": "user_responded",
+  "timestamp": 1779023340.9663053,
+  "summary": "User responded: 1 (agree) to Test Argument",
+  "entities": [
+    "argu_god"
+  ],
+  "events": [
+    "user_responded_b096f9dad8b8"
+  ],
+  "signals": [],
+  "patterns": [],
+  "relations": [],
+  "tags": [],
+  "importance": 0.6,
+  "emotional_weight": 0.0,
+  "confidence": 0.9,
+  "metadata": {
+    "event_category": "debate"
+  }
+}

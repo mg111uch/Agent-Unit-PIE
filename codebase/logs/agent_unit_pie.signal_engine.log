@@ -20,3 +20,59 @@
 [2026-05-15 17:03:38] [INFO] [agent_unit_pie.signal_engine] Signal emitted: observation_3dd72bc77d32
 [2026-05-15 17:03:38] [WARNING] [agent_unit_pie.signal_engine] Unknown signal type: observation
 [2026-05-15 17:03:38] [INFO] [agent_unit_pie.signal_engine] Signal emitted: observation_a879e5b9449e
+[2026-05-17 17:35:31] [INFO] [agent_unit_pie.signal_engine] Signal emitted: belief_shift_c0cf381e041b
+[2026-05-17 17:35:56] [WARNING] [agent_unit_pie.signal_engine] Unknown signal type: observation
+[2026-05-17 17:35:56] [INFO] [agent_unit_pie.signal_engine] Signal emitted: observation_0cc4f40d044e
+[2026-05-17 17:35:56] [WARNING] [agent_unit_pie.signal_engine] Unknown signal type: observation
+[2026-05-17 17:35:56] [INFO] [agent_unit_pie.signal_engine] Signal emitted: observation_d74f6f3d04bc
+[2026-05-17 17:39:16] [INFO] [agent_unit_pie.signal_engine] Registered signal handler: belief_shift
+[2026-05-17 17:39:16] [INFO] [agent_unit_pie.signal_engine] Registered signal handler: contradiction_detected
+[2026-05-17 17:39:16] [INFO] [agent_unit_pie.signal_engine] Registered signal handler: confidence_change
+[2026-05-17 17:39:36] [INFO] [agent_unit_pie.signal_engine] Registered signal handler: belief_shift
+[2026-05-17 17:39:36] [INFO] [agent_unit_pie.signal_engine] Registered signal handler: contradiction_detected
+[2026-05-17 17:39:36] [INFO] [agent_unit_pie.signal_engine] Registered signal handler: confidence_change
+[2026-05-17 17:39:36] [INFO] [agent_unit_pie.signal_engine] Signal emitted: belief_shift_2c62322d302d
+[2026-05-17 17:39:58] [INFO] [agent_unit_pie.signal_engine] Registered signal handler: belief_shift
+[2026-05-17 17:39:58] [INFO] [agent_unit_pie.signal_engine] Registered signal handler: contradiction_detected
+[2026-05-17 17:39:58] [INFO] [agent_unit_pie.signal_engine] Registered signal handler: confidence_change
+[2026-05-17 17:39:58] [INFO] [agent_unit_pie.signal_engine] Signal emitted: contradiction_detected_0f0cd3ed3de5
+[2026-05-17 17:39:58] [INFO] [agent_unit_pie.signal_engine] Signal emitted: pattern_detected_1d5d95bf958b
+[2026-05-17 17:40:36] [INFO] [agent_unit_pie.signal_engine] Registered signal handler: belief_shift
+[2026-05-17 17:40:36] [INFO] [agent_unit_pie.signal_engine] Registered signal handler: contradiction_detected
+[2026-05-17 17:40:36] [INFO] [agent_unit_pie.signal_engine] Registered signal handler: confidence_change
+[2026-05-17 17:40:36] [WARNING] [agent_unit_pie.signal_engine] Unknown signal type: observation
+[2026-05-17 17:40:36] [INFO] [agent_unit_pie.signal_engine] Signal emitted: observation_2086537db4f8
+[2026-05-17 17:40:36] [WARNING] [agent_unit_pie.signal_engine] Unknown signal type: observation
+[2026-05-17 17:40:36] [INFO] [agent_unit_pie.signal_engine] Signal emitted: observation_4b9de27de49a
+[2026-05-17 17:53:17] [INFO] [agent_unit_pie.signal_engine] Registered signal handler: belief_shift
+[2026-05-17 17:53:17] [INFO] [agent_unit_pie.signal_engine] Registered signal handler: contradiction_detected
+[2026-05-17 17:53:17] [INFO] [agent_unit_pie.signal_engine] Registered signal handler: confidence_change
+[2026-05-17 17:53:17] [WARNING] [agent_unit_pie.signal_engine] Unknown signal type: observation
+[2026-05-17 17:53:17] [INFO] [agent_unit_pie.signal_engine] Signal emitted: observation_1d8b00feb48c
+[2026-05-17 17:53:17] [WARNING] [agent_unit_pie.signal_engine] Unknown signal type: observation
+[2026-05-17 17:53:17] [INFO] [agent_unit_pie.signal_engine] Signal emitted: observation_c5f70f68174e
+[2026-05-17 18:13:03] [WARNING] [agent_unit_pie.signal_engine] Unknown signal type: observation
+[2026-05-17 18:13:03] [INFO] [agent_unit_pie.signal_engine] Signal emitted: observation_7ed3741b3632
+[2026-05-17 18:13:32] [INFO] [agent_unit_pie.signal_engine] Registered signal handler: belief_shift
+[2026-05-17 18:13:32] [INFO] [agent_unit_pie.signal_engine] Registered signal handler: contradiction_detected
+[2026-05-17 18:13:32] [INFO] [agent_unit_pie.signal_engine] Registered signal handler: confidence_change
+[2026-05-17 18:13:32] [WARNING] [agent_unit_pie.signal_engine] Unknown signal type: observation
+[2026-05-17 18:13:32] [INFO] [agent_unit_pie.signal_engine] Signal emitted: observation_c2bf35c2047d
+[2026-05-17 18:13:32] [WARNING] [agent_unit_pie.signal_engine] Unknown signal type: observation
+[2026-05-17 18:13:32] [INFO] [agent_unit_pie.signal_engine] Signal emitted: observation_fe0998ed8e69
+[2026-05-17 18:26:55] [WARNING] [agent_unit_pie.signal_engine] Unknown signal type: observation
+[2026-05-17 18:26:55] [INFO] [agent_unit_pie.signal_engine] Signal emitted: observation_4abf011fb542
+[2026-05-17 18:27:11] [INFO] [agent_unit_pie.signal_engine] Registered signal handler: belief_shift
+[2026-05-17 18:27:11] [INFO] [agent_unit_pie.signal_engine] Registered signal handler: contradiction_detected
+[2026-05-17 18:27:11] [INFO] [agent_unit_pie.signal_engine] Registered signal handler: confidence_change
+[2026-05-17 18:27:11] [WARNING] [agent_unit_pie.signal_engine] Unknown signal type: observation
+[2026-05-17 18:27:11] [INFO] [agent_unit_pie.signal_engine] Signal emitted: observation_f3bc2de34010
+[2026-05-17 18:27:11] [WARNING] [agent_unit_pie.signal_engine] Unknown signal type: observation
+[2026-05-17 18:27:11] [INFO] [agent_unit_pie.signal_engine] Signal emitted: observation_77821502da3d
+[2026-05-17 18:39:20] [INFO] [agent_unit_pie.signal_engine] Registered signal handler: belief_shift
+[2026-05-17 18:39:20] [INFO] [agent_unit_pie.signal_engine] Registered signal handler: contradiction_detected
+[2026-05-17 18:39:20] [INFO] [agent_unit_pie.signal_engine] Registered signal handler: confidence_change
+[2026-05-17 18:39:20] [WARNING] [agent_unit_pie.signal_engine] Unknown signal type: observation
+[2026-05-17 18:39:20] [INFO] [agent_unit_pie.signal_engine] Signal emitted: observation_58e47751375a
+[2026-05-17 18:39:20] [WARNING] [agent_unit_pie.signal_engine] Unknown signal type: observation
+[2026-05-17 18:39:20] [INFO] [agent_unit_pie.signal_engine] Signal emitted: observation_837626d98a06

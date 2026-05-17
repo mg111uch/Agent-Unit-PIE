@@ -1,0 +1,46 @@
+{
+  "signal_id": "observation_4abf011fb542",
+  "signal_type": "observation",
+  "value": {
+    "action": "hypothesis_created",
+    "hypothesis_id": "hyp_test_argument_1779022615",
+    "argument": "test_argument"
+  },
+  "category": "cognitive",
+  "subtype": "hypothesis",
+  "timestamp": "2026-05-17T12:56:55.645541",
+  "source": {
+    "source_type": "agent",
+    "source_id": "argu_god",
+    "source_name": "Hypothesis created"
+  },
+  "context": {
+    "unit_id": null,
+    "unit_type": null,
+    "location": null,
+    "timeline_ref": null,
+    "related_units": [],
+    "related_events": [],
+    "tags": []
+  },
+  "metrics": {
+    "strength": 0.0,
+    "intensity": 0.0,
+    "frequency": 0.0,
+    "volatility": 0.0,
+    "confidence": 0.7
+  },
+  "evidence": [],
+  "metadata": {
+    "created_at": "2026-05-17T12:56:55.645576",
+    "updated_at": "2026-05-17T12:56:55.645584",
+    "created_by": "system",
+    "version": 1,
+    "labels": {},
+    "extra": {
+      "hypothesis_id": "hyp_test_argument_1779022615",
+      "argument": "test_argument"
+    }
+  },
+  "active": true
+}

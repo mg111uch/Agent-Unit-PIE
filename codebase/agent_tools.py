@@ -26,6 +26,8 @@ try:
     from kernel.ontology_registry import OntologyRegistry
     from kernel.signals.signal_engine import signal_engine
     from kernel.events.event_engine import event_engine
+    from kernel.signals.belief_signal_handler import register_handlers
+    register_handlers()
     KERNEL_AVAILABLE = True
 except ImportError:
     KERNEL_AVAILABLE = False
