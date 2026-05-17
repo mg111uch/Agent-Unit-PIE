@@ -1,29 +1,15 @@
 # 🧠 Agent_Unit_PIE
 
-# Agent Unit Pattern Intelligence Engine
+## Universal Unit Pattern Intelligence Engine (PIE) 
 
-## A Recursive World Modeling, Simulation, and Cognitive Intelligence Infrastructure
-
----
+### A Recursive World Modeling, Simulation, and Cognitive Intelligence Infrastructure + Human-in-Loop Argument Intelligence System + A filesystem-backed LLM-powered Pattern Intelligence System.
 
 # 🚀 Core Vision
 
-Agent_Unit_PIE is intended to become:
-
-# A Universal Cognitive Infrastructure
-
-capable of:
+Agent_Unit_PIE is intended to become **A Universal Cognitive Infrastructure** capable of:
 
 ```text
-observe
-→ structure
-→ compress
-→ connect
-→ detect patterns
-→ generate hypotheses
-→ simulate futures
-→ evolve knowledge
-→ optimize systems
+observe → structure → compress → connect → detect patterns → generate hypotheses → simulate futures → evolve knowledge → optimize systems
 ```
 
 across:
@@ -41,17 +27,11 @@ across:
 * AI societies
 * knowledge systems
 
-The project aims to build persistent evolving world models and digital twins for all kinds of systems.
+The project aims to build persistent evolving world models and digital twins for all kinds of systems.The system transforms raw observations into evolving structured knowledgebases using a signal-centric architecture that scales beyond LLM context limits.
 
----
+## 🧭 Long-Term Goal
 
-# 🧭 Long-Term Goal
-
-The final goal of Agent_Unit_PIE is to create:
-
-# A Self-Evolving Intelligence Operating System
-
-that continuously:
+The final goal of Agent_Unit_PIE is to create **A Self-Evolving Intelligence Operating System** that continuously:
 
 * ingests information
 * organizes knowledge
@@ -71,9 +51,7 @@ while maintaining:
 * adaptive compression
 * persistent cognition
 
----
-
-# 🧩 Fundamental Philosophy
+## 🧩 Fundamental Philosophy
 
 Traditional AI systems are:
 
@@ -84,22 +62,10 @@ query → retrieve → answer
 Agent_Unit_PIE is designed around:
 
 ```text
-observation
-→ signal extraction
-→ pattern formation
-→ world modeling
-→ simulation
-→ prediction
-→ refinement
+observation → signal extraction → pattern formation → world modeling → simulation → prediction → refinement
 ```
 
-The project is fundamentally:
-
-# Signal-Centric and Pattern-Centric
-
-NOT document-centric.
-
-Documents are evidence sources.
+The project is fundamentally **Signal-Centric and Pattern-Centric**, NOT document-centric. Documents are evidence sources.
 
 True intelligence emerges from:
 
@@ -111,62 +77,140 @@ True intelligence emerges from:
 * abstractions
 * evolving world models
 
+## Key Principles
+
+1. **Signals, not documents** — Everything eventually becomes signal → pattern → hypothesis
+2. **Schema-first** — Define structure before building
+3. **Self-compressing** — System must recursively compress itself to scale
+4. **Modular** — Core kernel + independent domain modules
+5. **Evolutionary** — KB evolves from LLM latent prior → evidence-grounded model
+6. **Confidence-tracked** — Every claim needs evidence, source, confidence, counterarguments
+
+---
+
+# 🚀 Agent Orchestrator Overview
+
+It is a tool-driven autonomous AI agent designed to :
+
+> Observe → Execute → Learn → Store → Evolve
+
+It is designed to **analyze data, execute code, and persist structured knowledge** using markdown files.
+
+## 📌 Design Principles
+
+* 🔁 Multi-step tool reasoning loop
+* 🛠️ Tool execution (filesystem + shell)
+* 🧠 Persistent structured memory via markdown
+* 🧾 Structured knowledge extraction
+* ⚙️ Safe file editing ( Read before write )
+* 📂 Workspace sandboxing
+* Deterministic actions
+* File size limits enforced
+* Path traversal (`..`) blocked
+
+---
+
+## ⚙️ Setup
+
+### 1. Install dependencies
+
+```bash
+pip install google-genai python-dotenv
+```
+
+### 2. Set API key
+
+Create `.env`:
+
+```env
+GEMINI_API_KEY=your_api_key_here
+```
+
+## ▶️ Run the Agent
+
+```bash
+python agent.py
+```
+
+## 🛠️ Available Tools
+
+### 1. `read_file`
+### 2. `list_files`
+### 3. `execute_command`
+### 4. `write_to_file` with modes
+  * `create` – new file
+  * `overwrite` – replace file
+  * `append` – add content
+  * `patch` – find & replace text
+
 ---
 
 # 🌍 Core Concept: Universal Units
 
-Everything in the system is represented as a:
+Everything in the system is represented as a **Unit**. A Unit is any entity that has: state, signals, behaviors, relations, patterns, and a timeline.
 
-# Unit
+### Supported Unit Types
 
-Examples:
-
-```text
-human
-company
-organization
-city
-country
-stock
-market
-religion
-social movement
-AI agent
-software project
-ecosystem
-knowledge domain
-civilization
-```
+| Category | Examples |
+|----------|----------|
+| Human | body, mind, behavior, psychology |
+| Organization | company, agency, institution |
+| Geographic | city, state, country, civilization |
+| Digital | codebase, server, software project |
+| Abstract | stocks, market, economy, policy |
+| Society | ideology, religion, social movement |
+| Simulated | population agents, digital twins |
 
 All units share a universal schema.
 
----
-
-# 🧬 Universal Unit Schema
+## 🧬 Universal Unit Schema
 
 Every unit may contain:
 
 ```python
 {
+    "unit_id": "user_001",
+    "unit_type": "human",
+    "subtype": "body | mind | finance | codebase | organization | city | country | sim_agent",
+    "created_at": "ISO-8601",
     "identity": {},
-    "state": {},
+    "state": {
+      "health": 80,
+      "energy": 60,
+      "age": 32
+    },
     "traits": {},
-    "resources": {},
+    "resources": {
+      "food": 20,
+      "money": 100,
+      "energy": 90,
+      "knowledge": 30,
+      "cpu": 80,
+      "trust": 40
+    },
     "signals": [],
     "events": [],
     "patterns": [],
     "relations": [],
-    "behaviors": [],
+    "behaviors": [
+      "move",
+      "consume",
+      "trade",
+      "reproduce"
+    ],
     "beliefs": [],
     "hypotheses": [],
     "metrics": {},
+    "subunits": [],
     "timeline": [],
     "memory": {},
     "digital_twin": {},
     "simulations": [],
     "predictions": [],
     "risks": [],
-    "strategies": []
+    "strategies": [],
+    "health_score": 0.0,
+    "improvement_suggestions": []
 }
 ```
 
@@ -183,11 +227,9 @@ using the same core architecture.
 
 ---
 
-# ⚙️ Core Engines
+# Core Engines
 
----
-
-# 1. Kernel
+# ⚙️ Kernel
 
 The kernel becomes the true cognitive core.
 
@@ -206,9 +248,7 @@ The kernel owns cognition.
 
 All other systems become modules around the kernel.
 
----
-
-# 2. Ontology Engine
+## Ontology Engine
 
 Defines:
 
@@ -226,9 +266,64 @@ The ontology layer prevents chaos as the project scales.
 
 Everything in the project must map to ontology definitions.
 
+## Signal Engine
+
+Converts raw observations into structured signals.
+
+**Universal Signal Format:**
+```json
+{
+  "signal_id": "sig_xxx",
+  "unit_id": "unit_xxx",
+  "signal_type": "pain|bug_frequency|cpu_spike|...",
+  "category": "body|code|devops|economic|...",
+  "location": "body_region|file|server|...",
+  "intensity": 0-10,
+  "timestamp": "ISO8601",
+  "metadata": {},
+  "source": "conversation|pdf|website|...",
+  "confidence": 0.0-1.0,
+  "trend": "increasing|decreasing|stable"
+}
+```
+
+**Signal Extraction Examples:**
+
+| Unit Type | Observation | Signal Generated |
+|-----------|-------------|------------------|
+| Human Body | "knee hurts after running" | pain, intensity=3, trigger=running |
+| Codebase | repeated auth failures | error_frequency, increasing |
+| City | newspaper reports | economic_stress, infrastructure_gap |
+| Stock | quarterly filing | revenue_growth, debt_pressure |
+
+## Pattern Engine
+
+Detects patterns from signals across temporal, correlation, trend, and structural dimensions.
+
+**Pattern Types:**
+
+| Type | Description | Example |
+|------|-------------|---------|
+| Temporal | Repeated over time | knee pain every Monday |
+| Trend | Increasing/decreasing | bug frequency rising |
+| Correlation | A correlates with B | stress → headaches |
+| Contradiction | A and not-A both true | contradictory beliefs |
+| Structural | Missing data/weak coverage | no test coverage |
+| Recursive | Self-reinforcing loops | stress → poor sleep → more stress |
+
 ---
 
-# 3. Ingestion Engine
+## Ingestion Engine
+
+Needed before city/company intelligence. Converts raw data into observations/signals.
+
+Files in `ingestion/`:
+* document_ingestor.py
+* pdf_ingestor.py
+* web_ingestor.py
+* news_ingestor.py
+* transcript_ingestor.py
+* observation_extractor.py
 
 Responsible for ingesting:
 
@@ -263,17 +358,24 @@ ingest
 
 ---
 
-# 4. Memory Engine
+# 🧠 Memory Engine - Multi-Layer Cognitive Memory
 
-The project uses hierarchical self-compressing memory.
-
+The project uses **hierarchical self-compressing memory**.
 The system is designed specifically to overcome LLM context limitations.
 
----
+## Self-Compressing Memory (7 Layers)
 
-# 🧠 Multi-Layer Cognitive Memory
+| Layer | Purpose | Size | LLM Access |
+|-------|---------|------|------------|
+| 1. Raw Observation | Documents, podcasts, reports | Unlimited | Never direct |
+| 2. Signal Memory | Structured observations | Large | Rare |
+| 3. Event Memory | Important events only | Medium | Selective |
+| 4. Pattern Memory | Detected patterns | Small | Frequent |
+| 5. Knowledge Memory | Abstract models | Tiny | Regular |
+| 6. Hypothesis Memory | Evolving theories | Very small | When testing |
+| 7. Working Memory | Active context | 5-50 KB | Always |
 
-## Layer 1 — Raw Observation Memory
+### Layer 1 — Raw Observation Memory
 
 Stores:
 
@@ -287,9 +389,7 @@ Stores:
 
 This layer is archival only.
 
----
-
-## Layer 2 — Signal Memory
+### Layer 2 — Signal Memory
 
 Stores structured observations.
 
@@ -304,9 +404,7 @@ Example:
 }
 ```
 
----
-
-## Layer 3 — Event Memory
+### Layer 3 — Event Memory
 
 Stores important events.
 
@@ -318,9 +416,7 @@ Examples:
 * market crashes
 * infrastructure launches
 
----
-
-## Layer 4 — Pattern Memory
+### Layer 4 — Pattern Memory
 
 Stores discovered patterns.
 
@@ -331,9 +427,7 @@ migration rises after drought cycles
 rapid urbanization correlates with crime growth
 ```
 
----
-
-## Layer 5 — Abstract Knowledge Memory
+### Layer 5 — Abstract Knowledge Memory
 
 Stores compressed mental models.
 
@@ -343,9 +437,7 @@ Example:
 Lucknow is a historically administrative and education-centric city with uneven modernization patterns.
 ```
 
----
-
-## Layer 6 — Hypothesis Memory
+### Layer 6 — Hypothesis Memory
 
 Stores uncertain evolving ideas.
 
@@ -355,9 +447,7 @@ Example:
 River-connected cities show stronger cultural continuity.
 ```
 
----
-
-## Layer 7 — Working Memory
+### Layer 7 — Working Memory
 
 This is the only layer fully loaded into LLM context.
 
@@ -371,83 +461,52 @@ Contains:
 
 This architecture allows infinite-scale knowledge while using finite LLM context.
 
----
+## Cognitive Compilation Pipeline:
 
-# 🧠 Cognitive Compilation
-
-The project treats raw knowledge like source code.
-
-Raw data is compiled into higher-order cognition.
-
-Pipeline:
+The project treats raw knowledge like source code.Raw data is compiled into higher-order cognition.
 
 ```text
-raw observations
-→ signals
-→ events
-→ relations
-→ patterns
-→ abstractions
-→ world models
-→ working memory packets
+raw observations → signals → events → relations → patterns → abstractions → compressed_world_models → working_memory_packets
 ```
 
-This process is called:
+## Retrieval Philosophy
 
-# Cognitive Compilation
-
----
-
-# 🔍 Retrieval Philosophy
-
-The project is NOT vector-first.
-
-Vector retrieval alone is insufficient because:
+The project is NOT vector-first. Vector retrieval alone is insufficient because:
 
 ```text
-semantic similarity
-≠ causal relevance
-≠ temporal relevance
-≠ strategic relevance
+semantic similarity ≠ causal relevance ≠ temporal relevance ≠ strategic relevance
 ```
 
-Instead the project uses:
+Instead the project uses **Hierarchical Cognitive Retrieval**. Layered retrieval instead of pure vector similarity.Retrieval order:
 
-# Hierarchical Cognitive Retrieval
+1. **Unit relevance** — Is this unit relevant?
+2. **Relation relevance** — Are units connected?
+3. **Temporal relevance** — Is timing relevant?
+4. **Pattern relevance** — Are patterns relevant?
+5. **Semantic similarity** — Vector comparison (secondary)
 
-Retrieval order:
+**Important:** Vector DB is secondary — NOT primary cognition. Vector databases are optional supporting systems.
 
-```text
-1. unit relevance
-2. relation relevance
-3. temporal relevance
-4. pattern relevance
-5. hypothesis relevance
-6. semantic similarity
-```
+## Storage Architecture
 
-Vector databases are optional supporting systems.
+| Layer | Technology | Purpose |
+|-------|------------|---------|
+| Source of Truth | Markdown + JSON | Human-readable, LLM-editable |
+| Machine State | Structured JSON | Fast parsing |
+| Relations | Graph (internal) | Causality, dependencies |
+| Semantic Index | Vector DB (optional) | Discovery only |
+| Patterns | Pattern DB | Emergent abstractions |
+| Timeline | Time-series | Temporal evolution |
 
-Primary cognition uses:
-
-* ontology
-* hierarchy
-* patterns
-* relations
-* timelines
-* causal structures
+**Small modular files instead of giant documents** — enables structural retrieval.
 
 ---
 
-# 🧠 Debate and Epistemic Engine
+# 🧠 Debate Engine - Argu_God 
 
-Originally called ArguGod.
+`Argu_God` is a working debate-graph explorer. It compiles topics into a `graph.json` via an LLM (currently broken — the file-based subprocess pipeline is commented out), renders the graph with Three.js over WebSocket, tracks the user's belief state in a JSON file, detects simple logical contradictions, and indexes argument nodes in ChromaDB for semantic retrieval. The mindmap layer exists only as a schema stub.
 
-Final role:
-
-# Epistemic Validation Engine
-
-Responsibilities:
+Final role **Epistemic Validation Engine** with responsibilities:
 
 * contradiction detection
 * counterargument generation
@@ -458,36 +517,21 @@ Responsibilities:
 * perspective exploration
 * simulation of alternative viewpoints
 
-The system evolves from simple debate into:
-
-# Recursive Epistemic Intelligence
+The system evolves from simple debate into **Recursive Epistemic Intelligence**
 
 ---
 
 # 🧬 Behavioral Intelligence Engine
 
-Builds:
-
-# Human Behavior Maps
-
-Tracks:
-
-* speech patterns
-* emotional cycles
-* habits
-* risk tendencies
-* motivation patterns
-* learning styles
-* decision patterns
-* conflict tendencies
-* belief evolution
-* productivity trends
+Builds and Tracks **Human Behavior Maps** including:
+- speech patterns, decision patterns, emotional cycles
+- social tendencies, conflict tendencies, learning style
+- belief evolution, risk behavior, goal persistence
+- habits, motivation patterns, productivity trends
 
 The system continuously updates behavioral models during interaction.
 
----
-
-# 🔮 Soft Sciences Layer
+## Soft Sciences Layer
 
 The system may include:
 
@@ -496,13 +540,9 @@ The system may include:
 * palmistry
 * symbolic archetype systems
 
-These are NEVER treated as truth.
+These are NEVER treated as truth.Instead they are treated as **Hypothesis Systems**
 
-Instead they are treated as:
-
-# Hypothesis Systems
-
-Example:
+Cross-references behavior maps with astrology/soft science hypotheses:
 
 ```json
 {
@@ -516,48 +556,43 @@ Example:
 
 The system continuously compares symbolic claims against observed behavior maps.
 
+## Hypothesis Engine
+
+The system automatically generates and tests hypotheses:
+
+```json
+{
+  "hypothesis": "Cities near river systems maintain stronger cultural continuity",
+  "evidence_count": 45,
+  "contradiction_count": 12,
+  "confidence": 0.65,
+  "test_results": []
+}
+```
+
+```text
+transport stress increases political polarization
+sleep deprivation increases impulsive investing behavior
+```
+
+The system then:
+
+* searches evidence
+* finds contradictions
+* updates confidence
+* refines models
+
+This creates **evolving machine-assisted scientific reasoning**.
+
 ---
 
 # 🌍 Digital Twin Engine
 
-One of the most important systems.
+Digital twins are continuously evolving synthetic models of real systems units.
 
-Digital twins are continuously evolving synthetic models of real systems.
+**Human Twin Tracks:** behavior, speech, beliefs, habits, psychology, health, astrology, social patterns, decision trends, finances, goals, learning patterns
 
----
-
-# Human Digital Twin
-
-Tracks:
-
-* psychology
-* finances
-* goals
-* behavior
-* habits
-* social dynamics
-* learning patterns
-* decision tendencies
-* belief systems
-* personal growth
-
----
-
-# City Digital Twin
-
-Tracks:
-
-* economy
-* transport
-* crime
-* migration
-* infrastructure
-* demographics
-* politics
-* culture
-* capital flow
-* environmental patterns
-* spatial structure
+**City Twin Tracks:** economy, population, migration, crime, infrastructure, culture, transport, spatial patterns, historical events, politics, capital flow, environment patterns
 
 The system should be able to ingest:
 
@@ -570,26 +605,11 @@ The system should be able to ingest:
 
 and generate evolving city models.
 
----
+**Country Twin Tracks:** GDP dynamics, trade flows, governance systems, public spending, infrastructure, innovation systems, corruption patterns, capital allocation, demographic changes, market activity
 
-# Country Digital Twin
+**Company Twin Tracks:** revenue, org structure, capital allocation, risk, market position, leadership behavior
 
-Tracks:
-
-* GDP dynamics
-* trade flows
-* governance systems
-* public spending
-* infrastructure
-* innovation systems
-* corruption patterns
-* capital allocation
-* demographic changes
-* market activity
-
----
-
-# 🗺️ Spatial Intelligence Engine
+## 🗺️ Spatial Intelligence Engine
 
 Responsible for:
 
@@ -602,227 +622,13 @@ Responsible for:
 * economic geography
 * urban evolution analysis
 
-The spatial engine allows the system to build:
-
-# spatially aware digital twins.
-
----
-
-# 📈 Economic Intelligence Engine
-
-One of the largest future modules.
-
-Responsibilities:
-
-* capital flow tracking
-* opportunity discovery
-* GDP modeling
-* wealth generation analysis
-* market structure analysis
-* corruption detection
-* investment analysis
-* sector growth prediction
-* productivity bottleneck detection
-
----
-
-# 💰 Personal Wealth Intelligence
-
-The project should act as a:
-
-# Strategic Economic Advisor
-
-using:
-
-* behavioral models
-* mindmaps
-* psychology
-* risk profile
-* skills
-* economic data
-* market trends
-* simulation outputs
-
-to suggest:
-
-* business opportunities
-* investment strategies
-* wealth pathways
-* high-leverage domains
-* company creation ideas
-* career strategies
-
----
-
-# 🏛️ Corruption and Public Flow Analysis
-
-The project aims to model:
-
-```text
-public budgets
-→ departments
-→ contractors
-→ subcontractors
-→ outcomes
-```
-
-and detect:
-
-* anomalies
-* inefficiencies
-* leakage
-* suspicious fund routing
-* procurement irregularities
-* capital concentration patterns
-
-The goal is:
-
-# civilization optimization through systemic transparency.
-
----
-
-# 📊 Stock Market Intelligence
-
-Stocks become units.
-
-Each stock tracks:
-
-* financials
-* market signals
-* leadership changes
-* capital allocation
-* sector relations
-* macroeconomic exposure
-* historical patterns
-* behavioral market trends
-
-The system should:
-
-* analyze historical stock behavior
-* simulate market dynamics
-* discover hidden patterns
-* identify opportunities
-* generate investment hypotheses
-
----
-
-# 🧠 Pattern Intelligence Engine
-
-This becomes the true heart of the system.
-
-The project continuously extracts:
-
-* behavioral patterns
-* economic patterns
-* social patterns
-* organizational patterns
-* political patterns
-* market patterns
-* spatial patterns
-* psychological patterns
-* civilizational patterns
-
-Patterns become first-class entities in the system.
-
----
-
-# 🧪 Hypothesis Engine
-
-The system continuously generates hypotheses.
-
-Examples:
-
-```text
-transport stress increases political polarization
-sleep deprivation increases impulsive investing behavior
-river-connected cities maintain stronger long-term continuity
-```
-
-The system then:
-
-* searches evidence
-* finds contradictions
-* updates confidence
-* refines models
-
-This creates:
-
-# evolving machine-assisted scientific reasoning.
-
----
-
-# 🌐 Global Knowledge Base
-
-The system maintains:
-
-* local unit knowledge bases
-* global pattern repositories
-* cross-domain causal graphs
-* temporal knowledge evolution
-
-The knowledge base is:
-
-* hierarchical
-* recursive
-* temporal
-* evolving
-* self-organizing
-
----
-
-# 🧠 Self-Evolving Intelligence
-
-The project is intended to evolve itself over time.
-
----
-
-# Self-Evolution Mechanisms
-
-## 1. Self-Summarization
-
-```text
-1000 observations
-→ 100 signals
-→ 20 patterns
-→ 5 mental models
-```
-
----
-
-## 2. Self-Reorganization
-
-The system restructures its own knowledge hierarchy as patterns emerge.
-
----
-
-## 3. Self-Hypothesis Generation
-
-The system creates new hypotheses automatically.
-
----
-
-## 4. Self-Contradiction Detection
-
-The system continuously audits itself.
-
----
-
-## 5. Self-Prioritization
-
-The system decides:
-
-* what matters
-* what is noise
-* what should be compressed
-* what should be archived
-
----
+The spatial engine allows the system to build **spatially aware digital twins**.
 
 # 🧠 Simulation Engine
 
-The simulation engine evolves from a civilization simulator into:
+**`popula_dyn`** is a fully working Mesa-inspired agricultural ABM. It has a clean model/agent/grid separation, a FastAPI + WebSocket game server, real-time PixiJS rendering, and a good data-collection layer.
 
-# Universal Emergent Simulation Infrastructure
+The simulation engine evolves from a civilization simulator into **Universal Emergent Simulation Infrastructure**
 
 The simulation engine models:
 
@@ -846,31 +652,16 @@ using:
 * relations
 * environments
 
----
-
-# 🔄 Simulation Philosophy
+## 🔄 Simulation Philosophy
 
 Simulation is based on:
-
-```text
-resource flows
-+
-signal propagation
-+
-behavioral interaction
-+
-emergent dynamics
-```
+resource flows + signal propagation + behavioral interaction + emergent dynamics
 
 NOT hardcoded civilization roles.
 
----
-
-# 🧩 Modular Behavior System
+## 🧩 Modular Behavior System
 
 Behaviors are composable modules.
-
-Examples:
 
 ```text
 move
@@ -886,69 +677,169 @@ invest
 coordinate
 ```
 
-Units dynamically attach behaviors.
+Units dynamically attach behaviors.This enables universal simulation.
 
-This enables universal simulation.
+# 📈 Economic Intelligence Engine
+
+| Component | Purpose |
+|-----------|---------|
+| capital_flow_engine | Track fund movements, detect anomalies |
+| opportunity_engine | Find underserved sectors, high-leverage industries |
+| corruption_engine | Detect abnormal routing, budget mismatches |
+| gdp_engine | Model productivity, bottleneck detection |
+| investment_engine | Personal advisor, wealth generation |
+
+## 💰 Personal Wealth Intelligence
+
+The project should act as a **Strategic Economic Advisor**
+using:
+
+* behavioral models
+* mindmaps
+* psychology
+* risk profile
+* skills
+* economic data
+* market trends
+* simulation outputs
+
+to suggest:
+
+* business opportunities
+* investment strategies
+* wealth pathways
+* high-leverage domains
+* company creation ideas
+* career strategies
+
+## 🏛️ Corruption and Public Flow Analysis
+
+The project aims to model:
+
+```text
+public budgets
+→ departments
+→ contractors
+→ subcontractors
+→ outcomes
+```
+
+and detect:
+
+* anomalies
+* inefficiencies
+* leakage
+* suspicious fund routing
+* procurement irregularities
+* capital concentration patterns
+
+The goal is **civilization optimization through systemic transparency**.
 
 ---
 
-# 🧠 LLM Philosophy
+## 📊 Stock Market Intelligence
 
-LLMs are NOT permanent memory.
+Stocks become units.
 
-LLMs are used as:
+Each stock tracks:
 
-* ontology generators
-* summarizers
-* extractors
-* pattern detectors
-* hypothesis generators
-* simulators
-* explanation engines
-* cognitive workers
+* financials
+* market signals
+* leadership changes
+* capital allocation
+* sector relations
+* macroeconomic exposure
+* historical patterns
+* behavioral market trends
 
-The project should support multiple LLM providers.
+The system should:
+
+* analyze historical stock behavior
+* simulate market dynamics
+* discover hidden patterns
+* identify opportunities
+* generate investment hypotheses
+
+
+# 🧠 Pattern Intelligence Engine
+
+This becomes the true heart of the system.
+
+The project continuously extracts:
+
+* behavioral patterns
+* economic patterns
+* social patterns
+* organizational patterns
+* political patterns
+* market patterns
+* spatial patterns
+* psychological patterns
+* civilizational patterns
+
+Patterns become first-class entities in the system.
+
+# 🌐 Global Knowledge Base
+
+The system maintains:
+
+* local unit knowledge bases
+* global pattern repositories
+* cross-domain causal graphs
+* temporal knowledge evolution
+
+The knowledge base is:
+
+* hierarchical
+* recursive
+* temporal
+* evolving
+* self-organizing
+
+# 🧠 Self-Evolving Intelligence
+
+The project is intended to evolve itself over time using **Self-Evolution Mechanisms**:
+
+## 1. Self-Summarization
+1000 observations → 100 signals → 20 patterns → 5 mental models
+
+## 2. Self-Reorganization
+The system restructures its own knowledge hierarchy as patterns emerge.
+
+## 3. Self-Hypothesis Generation
+The system creates new hypotheses automatically.
+
+## 4. Self-Contradiction Detection
+The system continuously audits itself.
+
+## 5. Self-Prioritization
+The system decides:
+
+* what matters
+* what is noise
+* what should be compressed
+* what should be archived
 
 ---
 
 # 🧱 Core Design Principles
 
----
-
 ## 1. Ontology First
-
 All systems must map to explicit ontology definitions.
 
----
-
 ## 2. Signal-Centric Architecture
-
-Signals and patterns are primary.
-
-Documents are secondary.
-
----
+Signals and patterns are primary.Documents are secondary.
 
 ## 3. Hierarchical Memory
-
 Infinite knowledge through recursive compression.
 
----
-
 ## 4. Self-Compression
-
 The system continuously summarizes and restructures itself.
 
----
-
 ## 5. Temporal Awareness
-
 All knowledge is time-aware.
 
----
-
 ## 6. Confidence Tracking
-
 Every claim should track:
 
 * evidence
@@ -957,18 +848,12 @@ Every claim should track:
 * contradictions
 * source chains
 
----
-
 ## 7. Modular Cognition
-
 Every engine is modular and composable.
 
----
-
 ## 8. Human-in-the-Loop Intelligence
-
 The system augments human reasoning.
-
+It is about **Improving how humans think.**
 It does not replace human judgment.
 
 ---
@@ -992,70 +877,34 @@ The project prioritizes:
 * recursive refinement
 * modular intelligence
 
----
+Limitations:
 
-# 🚧 Current Development Direction
-
-The current focus is:
-
-```text
-1. Kernel refactor
-2. Universal ontology
-3. Unit-centric architecture
-4. Signal/event/pattern pipeline
-5. Hierarchical memory
-6. Universal simulation engine
-7. Digital twin infrastructure
-8. Economic intelligence systems
-9. Self-evolving cognition
-```
+* No parallel execution
+* Basic contradiction logic
+* Limited reasoning depth (Phase 3)
+* Requires clean graph data
 
 ---
 
 # 🔮 Final Vision
 
-Agent_Unit_PIE aims to become:
-
-# A Recursive Intelligence Infrastructure
-
-capable of:
+Agent_Unit_PIE is ultimately about **Building Persistent Machine Cognition** that builds **A Recursive World Modeling Infrastructure** which continuously:
 
 ```text
+observe reality
 understanding systems
+compress knowledge
+finds hidden patterns
+extract meaning
 modeling reality
-finding hidden patterns
-simulating futures
+simulate future possibilities
+generates strategies
+recursively evolve understanding
+improves itself
 improving civilizations
 augmenting human intelligence
 ```
 
-through:
-
-* persistent cognition
-* evolving world models
-* digital twins
-* simulations
-* pattern intelligence
-* recursive self-improvement
-
----
-
-# 🧠 Final Insight
-
-This project is ultimately about:
-
-# Building Persistent Machine Cognition
-
-that can:
-
-```text
-observe reality
-compress knowledge
-extract meaning
-simulate possibilities
-and recursively evolve understanding
-```
-
-across all scales of systems.
+across all scales of systems and across every type of unit — human, organization, city, country, codebase, market, simulation.
 
 ---

@@ -1,16 +1,28 @@
 ## Codebase size
-Total files processed: 158
+Total files processed: 186
 Total lines of code: 33423
 Total tokens: 221363
 ## End Codebase size
 
 ## Directory Structure 
-- **Project path:** `python/Agentic_Unit_PIE`
+- **Project path:** `/home/manigupt/Hello/python/Agentic_Unit_PIE`
 ### FILE_MAP Tree
 ├── codebase/
 │   ├── storage/
+│   │   ├── raw_observation_storage.py
 │   │   ├── unit_storage.py
-│   │   └── pattern_storage.py
+│   │   ├── timeline_storage.py
+│   │   ├── pattern_storage.py
+│   │   └── hypothesis_storage.py
+│   ├── ingestion/
+│   ├── sub-agents/
+│   │   ├── improvement_agent.py
+│   │   ├── debate_agent.py
+│   │   ├── observer_agent.py
+│   │   ├── summarizer_agent.py
+│   │   ├── simulation_agent.py
+│   │   └── pattern_agent.py
+│   ├── visualization/
 │   ├── temp/
 │   ├── logs/
 │   │   ├── agent_unit_pie.pattern_engine.log
@@ -27,6 +39,8 @@ Total tokens: 221363
 │   ├── cache/
 │   ├── kernel/
 │   │   ├── config/
+│   │   │   ├── kernel_config.py
+│   │   │   └── ontology_config.py
 │   │   ├── working_memory/
 │   │   ├── utils/
 │   │   │   ├── logger.py
@@ -34,7 +48,9 @@ Total tokens: 221363
 │   │   │   ├── paths.py
 │   │   │   └── ids.py
 │   │   ├── schemas/
-│   │   │   ├── unit_schema.json
+│   │   │   ├── hypothesis_schema.py
+│   │   │   ├── simulation_schema.py
+│   │   │   ├── memory_schema.py
 │   │   │   ├── pattern_schema.py
 │   │   │   ├── event_schema.py
 │   │   │   ├── unit_schema.py
@@ -42,6 +58,7 @@ Total tokens: 221363
 │   │   │   └── relation_schema.py
 │   │   ├── hypothesis/
 │   │   │   ├── hypothesis_engine.py
+│   │   │   ├── validation_engine.py
 │   │   │   └── confidence_engine.py
 │   │   ├── ontology/
 │   │   │   ├── event_types.py
@@ -50,12 +67,14 @@ Total tokens: 221363
 │   │   │   ├── pattern_types.py
 │   │   │   ├── relation_types.py
 │   │   │   ├── signal_types.py
+│   │   │   ├── hypothesis_types.py
 │   │   │   └── resource_types.py
 │   │   ├── memory/
 │   │   │   ├── working_memory.py
 │   │   │   ├── memory_engine.py
 │   │   │   ├── episodic_memory.py
-│   │   │   └── semantic_memory.py
+│   │   │   ├── semantic_memory.py
+│   │   │   └── pattern_memory.py
 │   │   ├── retrieval/
 │   │   │   ├── timeline_retriever.py
 │   │   │   ├── semantic_retriever.py
@@ -65,15 +84,20 @@ Total tokens: 221363
 │   │   │   ├── hierarchy_retriever.py
 │   │   │   └── relation_retriever.py
 │   │   ├── signals/
+│   │   │   ├── signal_extractor.py
 │   │   │   ├── signal_engine.py
+│   │   │   ├── signal_router.py
 │   │   │   └── signal_validator.py
 │   │   ├── events/
+│   │   │   ├── event_extractor.py
 │   │   │   ├── timeline_engine.py
 │   │   │   └── event_engine.py
 │   │   ├── patterns/
 │   │   │   ├── anomaly_detector.py
+│   │   │   ├── contradiction_detector.py
 │   │   │   ├── trend_detector.py
-│   │   │   └── pattern_engine.py
+│   │   │   ├── pattern_engine.py
+│   │   │   └── causal_engine.py
 │   │   ├── observation_pipeline.py
 │   │   ├── compression_engine.py
 │   │   ├── unit_registry.py
@@ -96,6 +120,9 @@ Total tokens: 221363
 │   │       ├── lucknow/
 │   │       ├── delhi/
 │   │       ├── kanpur/
+│   │       ├── city_summary_generator.py
+│   │       ├── city_signal_mapper.py
+│   │       ├── city_pattern_detector.py
 │   │       └── city_initializer.py
 │   ├── data/
 │   │   ├── simulations/
@@ -136,14 +163,14 @@ Total tokens: 221363
 │   ├── modules/
 │   │   ├── simulators/
 │   │   │   ├── popula_dyn/
-│   │   │   │   ├── simulations/
+│   │   │   │   ├── static/
+│   │   │   │   │   └── game.html
+│   │   │   │   ├── simulations_config/
 │   │   │   │   │   ├── city_growth.yaml
 │   │   │   │   │   ├── startup_company.yaml
 │   │   │   │   │   ├── agriculture.yaml
 │   │   │   │   │   ├── ecosystem.yaml
 │   │   │   │   │   └── ai_society.yaml
-│   │   │   │   ├── static/
-│   │   │   │   │   └── game.html
 │   │   │   │   ├── old_str/
 │   │   │   │   │   ├── agents.py
 │   │   │   │   │   ├── base_classes.py
@@ -218,6 +245,10 @@ Total tokens: 221363
 │   │   ├── __init__.py
 │   │   └── agent_test.py
 │   ├── llm/
+│   │   ├── extractors/
+│   │   │   ├── signal_extractor.py
+│   │   │   ├── pattern_extractor.py
+│   │   │   └── hypothesis_extractor.py
 │   │   ├── context_builder.py
 │   │   └── llm_orchestrator.py
 │   ├── system_instruction.md
@@ -226,15 +257,17 @@ Total tokens: 221363
 │   ├── Launcher.md
 │   ├── __init__.py
 │   └── tui_output.txt
+├── system_devpt_reports/
+│   ├── kernel.md
+│   ├── debate_engine.md
+│   └── simulation_engine.md
+├── GPT_5-5_Chat.md
 ├── Issues_n_ideas.md
 ├── agent_harness.md
 ├── code_atlas.md
-├── devpt_report.md
-├── Minimax_Plan.md
+├── Devpt_phases.md
 ├── code_dump.txt
 ├── .gitignore
 ├── README.md
-├── project_tools.md
-├── Claude_Plan.md
-└── README_old.md
+└── project_tools.md
 ### End Tree

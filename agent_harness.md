@@ -2,9 +2,9 @@
 
 ## TASK
 
-For population simulation, old non behaviour based hard coded simulation agents is given in `python/Agentic_Unit_PIE/codebase/modules/simulators/popula_dyn/old_str`. Suggest how this could be modified to behaviour based unit_agents given in `python/Agentic_Unit_PIE/codebase/modules/simulators/popula_dyn/core`.
+How debate engine `Argu_god` can be integrated to main kernel. Current state of argu_god is given in `python/Agentic_Unit_PIE/system_devpt_reports/debate_engine.md`. Current state of kernel os given in `python/Agentic_Unit_PIE/system_devpt_reports/kernel.md`. Do not start reading all files from argu_god or kernel directory. Ask user first for the files which you want to read.
 
-Start by reading `README.md` and `code_atlas.md` in project root to understand the project first.
+Start by reading `README.md`, `code_atlas.md` in project root to understand the project first.
 
 Do not give code or make any changes, just a concise plan or answer.
 
