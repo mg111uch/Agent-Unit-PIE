@@ -11,7 +11,8 @@
 - ✅ Phase 5: ArguGod Session Persistence
 - ✅ Phase 6: ArguGod Hypothesis Engine
 - ✅ Phase 7: ArguGod Event Timeline
-- ⏳ Phase 8: Full Kernel Cognition
+- ✅ Phase 8: Simulation Integration
+- ⏳ Phase 9: Full Kernel Cognition
 
 ---
 
@@ -41,17 +42,23 @@
 ### Integration Flow
 
 ```
-ArguGod debate loop
+User responds in debate
     ↓
-kernel_bridge.emit_belief_signal()
+ArguGod updates belief state
     ↓
-signal_engine.create_signal()
+kernel_bridge emits signals:
+  - belief_shift
+  - confidence_change
+  - contradiction_detected
     ↓
-belief_signal_handler processes
+signal_engine persists → episodic memory
     ↓
-Working memory + Pattern detection
+belief_signal_handler:
+  - stores in working memory
+  - detects patterns
+  - emits pattern_detected
     ↓
-Available via kernel_retrieve
+Kernel: patterns available for retrieval
 ```
 
 ### Phase 3: Session Persistence (Completed)
@@ -91,71 +98,46 @@ Available via kernel_retrieve
 
 ---
 
-## Current Tool Set
+## Development paths
 
-| Tool | Phase | Purpose |
-|------|-------|---------|
-| `read_file` | 0 | Read file contents |
-| `list_files` | 0 | List directory |
-| `write_to_file` | 0 | Write file |
-| `execute_command` | 0 | Run shell command |
-| `kernel_retrieve` | 1 | Query memory/patterns |
-| `kernel_emit_signal` | 2 | Emit observation |
-| `kernel_store_context` | 3 | Store in working memory |
-| `kernel_get_memory` | 3 | Retrieve memory |
-| `kernel_create_event` | 3 | Create event |
-
----
-
-## Usage Examples
-
-```python
-# Phase 1: Retrieve context
-{"action": "kernel_retrieve", "input": "{\"query\": \"pattern analysis\", \"limit\": 5}"}
-
-# Phase 2: Emit signal
-{"action": "kernel_emit_signal", "input": "{\"signal_type\": \"observation\", \"value\": \"important finding\", \"title\": \"Analysis\"}"}
-
-# Phase 3: Store context in working memory
-{"action": "kernel_store_context", "input": "{\"memory_type\": \"context\", \"content\": \"session summary\", \"importance\": 0.8}"}
-
-# Phase 3: Retrieve specific memory
-{"action": "kernel_get_memory", "input": "{\"memory_id\": \"mem_abc123\"}"}
-
-# Phase 3: Create event
-{"action": "kernel_create_event", "input": "{\"event_type\": \"action\", \"title\": \"agent completed task\", \"description\": \"task description\"}"}
-```
-
----
-
-## Next Development Phases
-
-### Phase 8: Full Kernel Cognition
+### Full Kernel Cognition
 
 | Item | Description |
 |------|-------------|
-| Digital Twin Integration | Connect human twin with belief tracking |
-| Pattern → Action Pipeline | Auto-trigger actions from patterns |
-| Recursive Hypothesis Testing | Hypothesis generates sub-hypotheses |
-| Cross-Topic Reasoning | Connect beliefs across topics |
+| Simulation → Pattern Pipeline | Trigger patterns from sim signals |
+| Digital Twin + Simulation | Run scenarios from twin data |
+| Policy Injection | Test policies via simulation |
+| Recursive Hypothesis Testing | Generate sims from hypotheses |
 
-### Phase 9: Enhanced Debate Features
-
-| Item | Description |
-|------|-------------|
-| Multi-Person Debate | Support multiple users/perspectives |
-| Debate Analytics | Summary statistics, progress tracking |
-| Export Belief Graph | Export beliefs as graphviz/JSON |
-| Argument Quality Scoring | Score arguments by evidence strength |
-
-### Phase 10: Self-Evolution
+### Enhanced Debate Features
 
 | Item | Description |
 |------|-------------|
-| Auto-Pattern Discovery | System discovers new patterns |
-| Hypothesis Auto-Generation | Auto-generate hypotheses from signals |
-| Self-Contradiction Detection | System checks own consistency |
-| Knowledge Compression | Auto-summarization of learnings |
+| Multi-Person Debate | Multiple users/perspectives |
+| Debate Analytics | Show session stats (arguments seen, time, belief changes) |
+| Multiple Perspectives | Store beliefs per user/persona |
+| Side Tracking | Track which side user favors |
+| Argument Quality | Score arguments by evidence strength |
+| Debate Summary | Generate summary report |
+| Progress Indicator | "5/23 arguments explored" |
+| Export Belief Graph | Export as JSON |
+| Argument Quality Scoring | Score by evidence |
+| Topic Browser | List and select from available topics |
+| Cross-Topic Linking | Connect beliefs across topics |
+| Recursive Counterarguments | Explore counter-counterarguments |
+| Evidence Search | Auto-find supporting evidence |
+| belief_graph Visualization | Render belief network |
+
+### Self-Evolution
+
+| Item | Description |
+|------|-------------|
+| Auto-Pattern Discovery | Discover new patterns |
+| Hypothesis Auto-Generation | Auto-generate from signals |
+| Auto-Topic Generation | Generate new topics from knowledge |
+| Self-Contradiction Detection | Check consistency |
+| Knowledge Compression | Auto-summarization |
+| System Self-Check | Detect internal contradictions |
 
 ---
 

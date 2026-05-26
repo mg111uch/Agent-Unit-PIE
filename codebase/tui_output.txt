@@ -8,3 +8,15 @@
 [2026-05-05 14:04:49] 
 [Final Output]: Exited.
 [2026-05-05 14:04:57] User requested to exit. Shutting down agent.
+Traceback (most recent call last):
+  File "<string>", line 2, in <module>
+  File "/home/manigupt/Hello/python/Agentic_Unit_PIE/codebase/agent.py", line 190, in <module>
+    user_input = input(">> ")
+                 ^^^^^^^^^^^^
+EOFError: EOF when reading a line
+Traceback (most recent call last):
+  File "<string>", line 2, in <module>
+  File "/home/manigupt/Hello/python/Agentic_Unit_PIE/codebase/agent.py", line 190, in <module>
+    user_input = input(">> ")
+                 ^^^^^^^^^^^^
+EOFError: EOF when reading a line

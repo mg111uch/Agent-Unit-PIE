@@ -5,9 +5,11 @@ Exports:
 - TOOLS: Dictionary of available tools
 - log_output: Logging function
 - KERNEL_AVAILABLE: Kernel integration status
+- SIMULATION_AVAILABLE: Simulation module status
 - AUTO_RETRIEVE_CONTEXT: Auto context retrieval flag
 - retrieval_engine: Kernel retrieval engine (if available)
 - signal_engine: Kernel signal engine (if available)
+- simulation_connector: Simulation connector (if available)
 """
 
 import os, subprocess, json, re
@@ -36,6 +38,15 @@ except ImportError:
     OntologyRegistry = None
     signal_engine = None
     event_engine = None
+
+# ----- SIMULATION IMPORTS -----
+try:
+    from modules.simulators.simulation_connector import SimulationConnector
+    simulation_connector = SimulationConnector()
+    SIMULATION_AVAILABLE = True
+except ImportError:
+    simulation_connector = None
+    SIMULATION_AVAILABLE = False
 
 # ----- KERNEL CONFIG -----
 AUTO_RETRIEVE_CONTEXT = True
@@ -464,7 +475,115 @@ def kernel_create_event(input_data) -> str:
         return f"Error in kernel_create_event: {str(e)}"
 
 
-# ----- TOOLS REGISTRY -----
+# ----- SIMULATION TOOLS -----
+def simulation_run(input_data) -> str:
+    """Run simulation and extract signals.
+    
+    Input: {
+        "params": {...},    # simulation parameters (optional, uses defaults)
+        "run_id": "unique_id"   # required
+    }
+    Returns: Simulation summary and signal list.
+    """
+    if not SIMULATION_AVAILABLE:
+        return "Error: Simulation module not available."
+    
+    try:
+        if isinstance(input_data, str):
+            input_data = json.loads(input_data)
+        
+        run_id = input_data.get("run_id")
+        params = input_data.get("params", {})
+        
+        if not run_id:
+            return "Error: 'run_id' is required"
+        
+        result = simulation_connector.run_and_extract(params, run_id)
+        
+        signals = simulation_connector.get_signals(run_id)
+        output = {
+            "status": "completed",
+            "run_id": run_id,
+            "summary": result,
+            "signals_emitted": len(signals),
+            "signals": signals,
+        }
+        
+        return json.dumps(output, indent=2)
+    
+    except Exception as e:
+        return f"Error in simulation_run: {str(e)}"
+
+
+def simulation_compare(input_data) -> str:
+    """Compare simulation runs.
+    
+    Input: {
+        "run_ids": ["run_001", "run_002"]
+    }
+    Returns: Comparison table.
+    """
+    if not SIMULATION_AVAILABLE:
+        return "Error: Simulation module not available."
+    
+    try:
+        if isinstance(input_data, str):
+            input_data = json.loads(input_data)
+        
+        run_ids = input_data.get("run_ids", [])
+        
+        if not run_ids:
+            return "Error: 'run_ids' is required"
+        
+        result = simulation_connector.compare_runs(run_ids)
+        return result
+    
+    except Exception as e:
+        return f"Error in simulation_compare: {str(e)}"
+
+
+def simulation_list(input_data) -> str:
+    """List simulation runs.
+    
+    Input: {}  (no params needed)
+    Returns: List of run IDs.
+    """
+    if not SIMULATION_AVAILABLE:
+        return "Error: Simulation module not available."
+    
+    try:
+        runs = simulation_connector.list_runs()
+        return json.dumps({"runs": runs})
+    
+    except Exception as e:
+        return f"Error in simulation_list: {str(e)}"
+
+
+def simulation_get_signals(input_data) -> str:
+    """Get signals from a simulation run.
+    
+    Input: {
+        "run_id": "run_001"
+    }
+    Returns: Signals list.
+    """
+    if not SIMULATION_AVAILABLE:
+        return "Error: Simulation module not available."
+    
+    try:
+        if isinstance(input_data, str):
+            input_data = json.loads(input_data)
+        
+        run_id = input_data.get("run_id")
+        
+        if not run_id:
+            return "Error: 'run_id' is required"
+        
+        signals = simulation_connector.get_signals(run_id)
+        return json.dumps({"run_id": run_id, "signals": signals}, indent=2)
+    
+    except Exception as e:
+        return f"Error in simulation_get_signals: {str(e)}"
 TOOLS: Dict[str, Callable] = {
     "read_file": read_file,
     "list_files": list_files,
@@ -475,4 +594,8 @@ TOOLS: Dict[str, Callable] = {
     "kernel_store_context": kernel_store_context,
     "kernel_get_memory": kernel_get_memory,
     "kernel_create_event": kernel_create_event,
+    "simulation_run": simulation_run,
+    "simulation_compare": simulation_compare,
+    "simulation_list": simulation_list,
+    "simulation_get_signals": simulation_get_signals,
 }

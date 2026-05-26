@@ -1,7 +1,7 @@
 ## Codebase size
-Total files processed: 188
-Total lines of code: 33822
-Total tokens: 224212
+Total files processed: 184
+Total lines of code: 33697
+Total tokens: 221135
 ## End Codebase size
 
 ## Directory Structure 
@@ -108,6 +108,21 @@ Total tokens: 224212
 │   │   └── __init__.py
 │   ├── units/
 │   │   ├── simulations/
+│   │   │   ├── test_run_003/
+│   │   │   │   ├── params.yaml
+│   │   │   │   ├── summary.json
+│   │   │   │   ├── data.csv
+│   │   │   │   └── signals.json
+│   │   │   ├── test_run_001/
+│   │   │   │   ├── params.yaml
+│   │   │   │   ├── summary.json
+│   │   │   │   ├── data.csv
+│   │   │   │   └── signals.json
+│   │   │   └── kernel_test_001/
+│   │   │       ├── params.yaml
+│   │   │       ├── summary.json
+│   │   │       ├── data.csv
+│   │   │       └── signals.json
 │   │   ├── countries/
 │   │   ├── codebases/
 │   │   ├── humans/
@@ -130,82 +145,42 @@ Total tokens: 224212
 │   ├── data/
 │   │   ├── simulations/
 │   │   │   ├── countries/
-│   │   │   ├── markets/
 │   │   │   ├── humans/
 │   │   │   └── cities/
 │   │   ├── memory/
 │   │   │   ├── semantic/
-│   │   │   ├── episodic/
-│   │   │   │   ├── episode_e5ff1ebffb52.json
-│   │   │   │   ├── observation_a1f1c6cedad1.json
-│   │   │   │   ├── observation_a879e5b9449e.json
-│   │   │   │   ├── observation_f3bc2de34010.json
-│   │   │   │   ├── observation_e5aad657d748.json
-│   │   │   │   ├── pattern_detected_1d5d95bf958b.json
-│   │   │   │   ├── observation_7ed3741b3632.json
-│   │   │   │   ├── belief_shift_c0cf381e041b.json
-│   │   │   │   ├── episode_eafc4ade2857.json
-│   │   │   │   ├── action_a16ba8343c37.json
-│   │   │   │   ├── observation_837626d98a06.json
-│   │   │   │   ├── observation_58e47751375a.json
-│   │   │   │   ├── contradiction_detected_0f0cd3ed3de5.json
-│   │   │   │   ├── observation_90164269668c.json
-│   │   │   │   ├── session_start_e20ab0068dc0.json
-│   │   │   │   ├── episode_244bc5322987.json
-│   │   │   │   ├── episode_d5f153a6d921.json
-│   │   │   │   ├── belief_changed_6da37c937e3d.json
-│   │   │   │   ├── observation_0cc4f40d044e.json
-│   │   │   │   ├── episode_42f9342837ae.json
-│   │   │   │   ├── observation_737eb999ee33.json
-│   │   │   │   ├── episode_d7c48c6f0455.json
-│   │   │   │   ├── user_responded_b096f9dad8b8.json
-│   │   │   │   ├── observation_c2bf35c2047d.json
-│   │   │   │   ├── action_da516f041311.json
-│   │   │   │   ├── observation_d450ee60c695.json
-│   │   │   │   ├── episode_ce5c291d2b39.json
-│   │   │   │   ├── episode_8ea19425461b.json
-│   │   │   │   ├── observation_1613108eeb97.json
-│   │   │   │   ├── episode_9cf144f2e5ff.json
-│   │   │   │   ├── action_1d0261ba8784.json
-│   │   │   │   ├── episode_93e6572ce14d.json
-│   │   │   │   ├── action_2e448ed957c8.json
-│   │   │   │   ├── observation_4b9de27de49a.json
-│   │   │   │   ├── observation_1d8b00feb48c.json
-│   │   │   │   ├── session_end_f373879fd0d1.json
-│   │   │   │   ├── episode_05fd1371567f.json
-│   │   │   │   ├── argument_viewed_f92f452170d8.json
-│   │   │   │   ├── observation_29aea45766ca.json
-│   │   │   │   ├── observation_77821502da3d.json
-│   │   │   │   ├── belief_shift_2c62322d302d.json
-│   │   │   │   ├── observation_c5f70f68174e.json
-│   │   │   │   ├── contradiction_detected_9506dfac3a83.json
-│   │   │   │   ├── action_4acd8d43da08.json
-│   │   │   │   ├── episode_30446768a692.json
-│   │   │   │   ├── observation_2d6b0eb915b1.json
-│   │   │   │   ├── observation_2086537db4f8.json
-│   │   │   │   ├── observation_d74f6f3d04bc.json
-│   │   │   │   ├── action_6205b1137f7a.json
-│   │   │   │   ├── action_fb7739b42d01.json
-│   │   │   │   ├── action_bf7b03bf483a.json
-│   │   │   │   ├── observation_3dd72bc77d32.json
-│   │   │   │   ├── episode_675afbbf280f.json
-│   │   │   │   ├── observation_fe0998ed8e69.json
-│   │   │   │   ├── action_2eaf80adb982.json
-│   │   │   │   ├── observation_4abf011fb542.json
-│   │   │   │   ├── observation_434f282628f1.json
-│   │   │   │   └── observation_7381166169b2.json
 │   │   │   ├── working/
 │   │   │   ├── hypotheses/
 │   │   │   └── patterns/
 │   │   └── kb/
-│   │       ├── countries/
-│   │       ├── companies/
-│   │       ├── global/
-│   │       ├── markets/
-│   │       ├── humans/
-│   │       ├── cities/
-│   │       └── patterns/
 │   ├── modules/
+│   │   ├── codebase_atlas/
+│   │   │   ├── generators/
+│   │   │   │   ├── detail_generator.py
+│   │   │   │   ├── base_generator.py
+│   │   │   │   └── __init__.py
+│   │   │   ├── utils/
+│   │   │   │   ├── __init__.py
+│   │   │   │   ├── formatting.py
+│   │   │   │   └── io_helpers.py
+│   │   │   ├── analyzers/
+│   │   │   │   ├── entry_point_detector.py
+│   │   │   │   ├── __init__.py
+│   │   │   │   ├── dependency_analyzer.py
+│   │   │   │   └── impact_analyzer.py
+│   │   │   ├── parsers/
+│   │   │   │   ├── html_parser.py
+│   │   │   │   ├── config_parser.py
+│   │   │   │   ├── __init__.py
+│   │   │   │   ├── javascript_parser.py
+│   │   │   │   ├── base_parser.py
+│   │   │   │   └── python_parser.py
+│   │   │   ├── models.py
+│   │   │   ├── scanner.py
+│   │   │   ├── config.py
+│   │   │   ├── main.py
+│   │   │   ├── __init__.py
+│   │   │   └── README.md
 │   │   ├── simulators/
 │   │   │   ├── popula_dyn/
 │   │   │   │   ├── static/
@@ -216,11 +191,6 @@ Total tokens: 224212
 │   │   │   │   │   ├── agriculture.yaml
 │   │   │   │   │   ├── ecosystem.yaml
 │   │   │   │   │   └── ai_society.yaml
-│   │   │   │   ├── old_str/
-│   │   │   │   │   ├── agents.py
-│   │   │   │   │   ├── base_classes.py
-│   │   │   │   │   ├── model.py
-│   │   │   │   │   └── simulation.py
 │   │   │   │   ├── core/
 │   │   │   │   │   ├── unit_agent.py
 │   │   │   │   │   ├── resource_engine.py
@@ -308,7 +278,8 @@ Total tokens: 224212
 ├── system_devpt_reports/
 │   ├── kernel.md
 │   ├── debate_engine.md
-│   └── simulation_engine.md
+│   ├── simulation_engine.md
+│   └── orchestrator.md
 ├── GPT_5-5_Chat.md
 ├── Issues_n_ideas.md
 ├── agent_harness.md

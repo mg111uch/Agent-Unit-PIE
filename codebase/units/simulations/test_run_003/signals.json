@@ -1,0 +1,26 @@
+[
+  {
+    "signal_type": "prosperity",
+    "value": 51.20398006412019,
+    "category": "economic",
+    "subtype": "wealth",
+    "intensity": 5.0,
+    "trend": "increasing"
+  },
+  {
+    "signal_type": "healthcare_gap",
+    "value": 0,
+    "category": "social",
+    "subtype": "services",
+    "intensity": 6.0,
+    "trend": "deficit"
+  },
+  {
+    "signal_type": "trade_gap",
+    "value": 0,
+    "category": "economic",
+    "subtype": "services",
+    "intensity": 4.0,
+    "trend": "deficit"
+  }
+]

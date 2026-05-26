@@ -111,12 +111,8 @@ It is designed to **analyze data, execute code, and persist structured knowledge
 
 ## 📌 Design Principles
 
-* 🔁 Multi-step tool reasoning loop
-* 🛠️ Tool execution (filesystem + shell)
-* 🧠 Persistent structured memory via markdown
-* 🧾 Structured knowledge extraction
-* ⚙️ Safe file editing ( Read before write )
-* 📂 Workspace sandboxing
+* Persistent structured memory via markdown
+* Structured knowledge extraction
 * Deterministic actions
 * File size limits enforced
 * Path traversal (`..`) blocked
@@ -147,10 +143,15 @@ python agent.py
 
 ## 🛠️ Available Tools
 
-### 1. `read_file`
-### 2. `list_files`
-### 3. `execute_command`
-### 4. `write_to_file` with modes
+### File Operations
+| Tool | Purpose |
+|------|---------|
+| `read_file` | Read file |
+| `list_files` | List directory |
+| `write_to_file` | Write file |
+| `execute_command` | Run shell |
+
+### `write_to_file` with modes
   * `create` – new file
   * `overwrite` – replace file
   * `append` – add content
@@ -260,6 +261,15 @@ Responsibilities:
 The kernel owns cognition.
 
 All other systems become modules around the kernel.
+
+### Kernel Tools
+| Tool | Purpose |
+|------|---------|
+| `kernel_retrieve` | Query memory |
+| `kernel_emit_signal` | Emit observation |
+| `kernel_store_context` | Store in memory |
+| `kernel_get_memory` | Retrieve memory |
+| `kernel_create_event` | Create event |
 
 ## Ontology Engine
 
@@ -515,6 +525,20 @@ Instead the project uses **Hierarchical Cognitive Retrieval**. Layered retrieval
 
 # 🧠 Debate Engine - Argu_God 
 
+ArguGod transforms the agent into a system that:
+
+* Continuously learns from data
+* Builds a structured knowledge base
+* Improves its reasoning over time
+
+> From execution → to intelligence → to pattern awareness
+
+> **Interactive reasoning + debate + belief tracking system** with:
+* 🧠 AI reasoning engine
+* ⚖️ Debate simulator
+* 📚 Knowledge explorer
+* 🧬 Belief evolution tracker 
+
 `Argu_God` is a working debate-graph explorer. It compiles topics into a `graph.json` via an LLM (currently broken — the file-based subprocess pipeline is commented out), renders the graph with Three.js over WebSocket, tracks the user's belief state in a JSON file, detects simple logical contradictions, and indexes argument nodes in ChromaDB for semantic retrieval. The mindmap layer exists only as a schema stub.
 
 Final role **Epistemic Validation Engine** with responsibilities:
@@ -529,6 +553,25 @@ Final role **Epistemic Validation Engine** with responsibilities:
 * simulation of alternative viewpoints
 
 The system evolves from simple debate into **Recursive Epistemic Intelligence**
+
+## Key Constraints
+
+* Only **4 options per question**
+* Always include **custom response option**
+* Break complex reasoning into multiple steps
+* Never overwrite user history
+* Maintain separation:
+
+  * LLM knowledge
+  * Human beliefs
+
+## System Evolution
+
+The system evolves from:
+
+```
+Static Knowledge → Interactive Debate → Belief Tracking → Adaptive Intelligence
+```
 
 ---
 
@@ -693,6 +736,14 @@ coordinate
 ```
 
 Units dynamically attach behaviors.This enables universal simulation.
+
+### Simulation Tools
+| Tool | Purpose |
+|------|---------|
+| `simulation_run` | Run simulation |
+| `simulation_compare` | Compare runs |
+| `simulation_list` | List runs |
+| `simulation_get_signals` | Get signals |
 
 # 📈 Economic Intelligence Engine
 

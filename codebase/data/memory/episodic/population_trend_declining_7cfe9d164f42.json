@@ -1,0 +1,42 @@
+{
+  "signal_id": "population_trend_declining_7cfe9d164f42",
+  "signal_type": "population_trend_declining",
+  "value": 40,
+  "category": "demographic",
+  "subtype": "generic",
+  "timestamp": "2026-05-26T11:32:52.252613",
+  "source": {
+    "source_type": "agent",
+    "source_id": "simulation_run_001",
+    "source_name": "Sim run_001: population_trend_declining"
+  },
+  "context": {
+    "unit_id": null,
+    "unit_type": null,
+    "location": null,
+    "timeline_ref": null,
+    "related_units": [],
+    "related_events": [],
+    "tags": []
+  },
+  "metrics": {
+    "strength": 0.0,
+    "intensity": 0.0,
+    "frequency": 0.0,
+    "volatility": 0.0,
+    "confidence": 0.8
+  },
+  "evidence": [],
+  "metadata": {
+    "created_at": "2026-05-26T11:32:52.252628",
+    "updated_at": "2026-05-26T11:32:52.252632",
+    "created_by": "system",
+    "version": 1,
+    "labels": {
+      "tag_0": "simulation",
+      "tag_1": "run_001"
+    },
+    "extra": {}
+  },
+  "active": true
+}

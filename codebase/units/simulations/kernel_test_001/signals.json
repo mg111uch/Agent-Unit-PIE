@@ -1,0 +1,18 @@
+[
+  {
+    "signal_type": "prosperity",
+    "value": 57.81328088043266,
+    "category": "economic",
+    "subtype": "wealth",
+    "intensity": 5.0,
+    "trend": "increasing"
+  },
+  {
+    "signal_type": "population_trend_declining",
+    "value": 15,
+    "category": "demographic",
+    "subtype": "trend",
+    "intensity": 5.0,
+    "trend": "declining"
+  }
+]

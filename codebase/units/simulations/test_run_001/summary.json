@@ -1,0 +1,18 @@
+{
+  "step_count": 20,
+  "total_units": 2551,
+  "population": 21,
+  "total_wealth": 1104.5782449500502,
+  "avg_skill": 0.5,
+  "births": 0,
+  "deaths": 0,
+  "spatial": {
+    "width": 50,
+    "height": 50,
+    "total_units": 2551,
+    "occupied_cells": 2500,
+    "torus": true
+  },
+  "run_id": "test_run_001",
+  "timestamp": "2026-05-26T10:16:35.562918"
+}

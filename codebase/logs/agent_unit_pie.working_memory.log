@@ -54,3 +54,13 @@
 [2026-05-17 18:39:20] [INFO] [agent_unit_pie.working_memory] Working memory added: observation_837626d98a06
 [2026-05-17 18:39:20] [INFO] [agent_unit_pie.working_memory] Working memory added: mem_a4c7e2d24e06
 [2026-05-17 18:39:20] [INFO] [agent_unit_pie.working_memory] Working memory added: action_a16ba8343c37
+[2026-05-26 16:21:56] [INFO] [agent_unit_pie.working_memory] Working memory added: prosperity_5c2e30e43673
+[2026-05-26 16:21:56] [INFO] [agent_unit_pie.working_memory] Working memory added: population_trend_declining_26193e7f05cc
+[2026-05-26 17:01:20] [INFO] [agent_unit_pie.working_memory] Working memory added: prosperity_56a40ae67190
+[2026-05-26 17:01:20] [INFO] [agent_unit_pie.working_memory] Working memory added: healthcare_gap_921ace06b0db
+[2026-05-26 17:01:20] [INFO] [agent_unit_pie.working_memory] Working memory added: trade_gap_9343810f613c
+[2026-05-26 17:02:52] [INFO] [agent_unit_pie.working_memory] Working memory added: mortality_event_d7cad7d0ca06
+[2026-05-26 17:02:52] [INFO] [agent_unit_pie.working_memory] Working memory added: prosperity_f67db472c644
+[2026-05-26 17:02:52] [INFO] [agent_unit_pie.working_memory] Working memory added: healthcare_gap_e71aa55b11ba
+[2026-05-26 17:02:52] [INFO] [agent_unit_pie.working_memory] Working memory added: trade_gap_1475be8966f7
+[2026-05-26 17:02:52] [INFO] [agent_unit_pie.working_memory] Working memory added: population_trend_declining_7cfe9d164f42

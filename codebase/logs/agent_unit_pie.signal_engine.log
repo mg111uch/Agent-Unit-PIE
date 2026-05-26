@@ -76,3 +76,35 @@
 [2026-05-17 18:39:20] [INFO] [agent_unit_pie.signal_engine] Signal emitted: observation_58e47751375a
 [2026-05-17 18:39:20] [WARNING] [agent_unit_pie.signal_engine] Unknown signal type: observation
 [2026-05-17 18:39:20] [INFO] [agent_unit_pie.signal_engine] Signal emitted: observation_837626d98a06
+[2026-05-26 15:55:17] [INFO] [agent_unit_pie.signal_engine] Registered signal handler: belief_shift
+[2026-05-26 15:55:17] [INFO] [agent_unit_pie.signal_engine] Registered signal handler: contradiction_detected
+[2026-05-26 15:55:17] [INFO] [agent_unit_pie.signal_engine] Registered signal handler: confidence_change
+[2026-05-26 16:21:56] [WARNING] [agent_unit_pie.signal_engine] Unknown signal type: prosperity
+[2026-05-26 16:21:56] [INFO] [agent_unit_pie.signal_engine] Signal emitted: prosperity_5c2e30e43673
+[2026-05-26 16:21:56] [WARNING] [agent_unit_pie.signal_engine] Unknown signal type: population_trend_declining
+[2026-05-26 16:21:56] [INFO] [agent_unit_pie.signal_engine] Signal emitted: population_trend_declining_26193e7f05cc
+[2026-05-26 16:41:45] [INFO] [agent_unit_pie.signal_engine] Registered signal handler: belief_shift
+[2026-05-26 16:41:45] [INFO] [agent_unit_pie.signal_engine] Registered signal handler: contradiction_detected
+[2026-05-26 16:41:45] [INFO] [agent_unit_pie.signal_engine] Registered signal handler: confidence_change
+[2026-05-26 16:42:31] [INFO] [agent_unit_pie.signal_engine] Registered signal handler: belief_shift
+[2026-05-26 16:42:31] [INFO] [agent_unit_pie.signal_engine] Registered signal handler: contradiction_detected
+[2026-05-26 16:42:31] [INFO] [agent_unit_pie.signal_engine] Registered signal handler: confidence_change
+[2026-05-26 16:44:12] [INFO] [agent_unit_pie.signal_engine] Registered signal handler: belief_shift
+[2026-05-26 16:44:12] [INFO] [agent_unit_pie.signal_engine] Registered signal handler: contradiction_detected
+[2026-05-26 16:44:12] [INFO] [agent_unit_pie.signal_engine] Registered signal handler: confidence_change
+[2026-05-26 17:01:20] [WARNING] [agent_unit_pie.signal_engine] Unknown signal type: prosperity
+[2026-05-26 17:01:20] [INFO] [agent_unit_pie.signal_engine] Signal emitted: prosperity_56a40ae67190
+[2026-05-26 17:01:20] [WARNING] [agent_unit_pie.signal_engine] Unknown signal type: healthcare_gap
+[2026-05-26 17:01:20] [INFO] [agent_unit_pie.signal_engine] Signal emitted: healthcare_gap_921ace06b0db
+[2026-05-26 17:01:20] [WARNING] [agent_unit_pie.signal_engine] Unknown signal type: trade_gap
+[2026-05-26 17:01:20] [INFO] [agent_unit_pie.signal_engine] Signal emitted: trade_gap_9343810f613c
+[2026-05-26 17:02:52] [WARNING] [agent_unit_pie.signal_engine] Unknown signal type: mortality_event
+[2026-05-26 17:02:52] [INFO] [agent_unit_pie.signal_engine] Signal emitted: mortality_event_d7cad7d0ca06
+[2026-05-26 17:02:52] [WARNING] [agent_unit_pie.signal_engine] Unknown signal type: prosperity
+[2026-05-26 17:02:52] [INFO] [agent_unit_pie.signal_engine] Signal emitted: prosperity_f67db472c644
+[2026-05-26 17:02:52] [WARNING] [agent_unit_pie.signal_engine] Unknown signal type: healthcare_gap
+[2026-05-26 17:02:52] [INFO] [agent_unit_pie.signal_engine] Signal emitted: healthcare_gap_e71aa55b11ba
+[2026-05-26 17:02:52] [WARNING] [agent_unit_pie.signal_engine] Unknown signal type: trade_gap
+[2026-05-26 17:02:52] [INFO] [agent_unit_pie.signal_engine] Signal emitted: trade_gap_1475be8966f7
+[2026-05-26 17:02:52] [WARNING] [agent_unit_pie.signal_engine] Unknown signal type: population_trend_declining
+[2026-05-26 17:02:52] [INFO] [agent_unit_pie.signal_engine] Signal emitted: population_trend_declining_7cfe9d164f42

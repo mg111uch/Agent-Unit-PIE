@@ -1,0 +1,42 @@
+{
+  "signal_id": "prosperity_56a40ae67190",
+  "signal_type": "prosperity",
+  "value": 51.20398006412019,
+  "category": "economic",
+  "subtype": "generic",
+  "timestamp": "2026-05-26T11:31:20.330292",
+  "source": {
+    "source_type": "agent",
+    "source_id": "simulation_test_run_003",
+    "source_name": "Sim test_run_003: prosperity"
+  },
+  "context": {
+    "unit_id": null,
+    "unit_type": null,
+    "location": null,
+    "timeline_ref": null,
+    "related_units": [],
+    "related_events": [],
+    "tags": []
+  },
+  "metrics": {
+    "strength": 0.0,
+    "intensity": 0.0,
+    "frequency": 0.0,
+    "volatility": 0.0,
+    "confidence": 0.8
+  },
+  "evidence": [],
+  "metadata": {
+    "created_at": "2026-05-26T11:31:20.330312",
+    "updated_at": "2026-05-26T11:31:20.330317",
+    "created_by": "system",
+    "version": 1,
+    "labels": {
+      "tag_0": "simulation",
+      "tag_1": "test_run_003"
+    },
+    "extra": {}
+  },
+  "active": true
+}
