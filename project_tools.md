@@ -1,6 +1,8 @@
 ## Project specific tool usage commands
 
-- **Make Codebase_atlas:** `cd /home/manigupt/Hello/python/Agentic_Unit_PIE/codebase/atlas_output && conda run -n myenv python -m codebase_atlas.main --project-dir /home/manigupt/Hello/python/Agentic_Unit_PIE/codebase --output-dir /home/manigupt/Hello/python/Agentic_Unit_PIE`
+- **Make Codebase_atlas:** `cd /home/manigupt/Hello/python/Agentic_Unit_PIE/codebase/modules && conda run -n myenv python -m codebase_atlas.main --project-dir /home/manigupt/Hello/python/Agentic_Unit_PIE/codebase --output-dir /home/manigupt/Hello/python/Agentic_Unit_PIE/atlas_output --ignore-dirs agent_tools cache data ingestion logs rag_pipeline ralph_loop skills sloperator temp tests units visualization topics mindmaps --serve --port 9090`
+
+- **Load saved atlas and serve** `python -m codebase_atlas.main --output-dir /home/manigupt/Hello/python/Agentic_Unit_PIE/atlas_output --load`
 
 - **Add markers:** `cd /home/manigupt/Hello/python/Agentic_Unit_PIE/codebase/agent_tools/atlas_tools && python add_markers.py --md_file /home/manigupt/Hello/python/Agentic_Unit_PIE/code_atlas.md --project_path "/home/manigupt/Hello/python/Agentic_Unit_PIE"`
 

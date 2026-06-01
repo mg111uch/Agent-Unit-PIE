@@ -3,11 +3,9 @@ Utility modules for Codebase Atlas.
 """
 
 from .formatting import (
-    format_compact,
-    format_verbose,
+    format_file,
     format_function_signature,
     format_dependency_list,
-    format_impact_analysis,
     truncate_text,
 )
 
@@ -16,20 +14,24 @@ from .io_helpers import (
     write_file,
     read_file,
     get_timestamp,
+    clean_directory,
+    save_atlas_data,
+    load_atlas_data,
 )
 
 __all__ = [
     # Formatting
-    'format_compact',
-    'format_verbose',
+    'format_file',
     'format_function_signature',
     'format_dependency_list',
-    'format_impact_analysis',
     'truncate_text',
-    
+
     # I/O
     'ensure_directory',
     'write_file',
     'read_file',
     'get_timestamp',
+    'clean_directory',
+    'save_atlas_data',
+    'load_atlas_data',
 ]

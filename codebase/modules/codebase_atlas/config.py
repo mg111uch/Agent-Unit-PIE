@@ -64,14 +64,9 @@ class AtlasConfig:
     risk_threshold_medium: int = 2  # 2 dependents = MEDIUM risk
     
     # -------------------------------------------------------------------------
-    # Formatting Settings
+    # Notation Symbols
     # -------------------------------------------------------------------------
-    verbose_mode: bool = False  # False = compact, True = verbose
-    use_emoji: bool = True  # Use emoji symbols in output
-    use_color_codes: bool = False  # Terminal color codes (future)
-    
-    # Compact notation symbols
-    compact_symbols: Dict[str, str] = field(default_factory=lambda: {
+    symbols: Dict[str, str] = field(default_factory=lambda: {
         'separator': '│',
         'internal_dep': '►',
         'external_dep': '●',

@@ -2,9 +2,9 @@
 
 ## TASK
 
-We refactored old simulation agents to new behavipur based agent in last task given in `python/Agentic_Unit_PIE/system_devpt_reports/simulation_engine.md`. Check if old files are still needed. And also suggest should we develop more features first in simulation or work in integrating simulation to kernel first.
+Check why in module `python/Agentic_Unit_PIE/codebase/modules/codebase_atlas` , the serve.py file is not moving the connected edges of the nodes as the nodes are being dragged to relocate by the user.
 
-Start by reading `README.md`, `code_atlas.md` in project root to understand the project first.
+Start by knowing module details by reading `python/Agentic_Unit_PIE/codebase/modules/codebase_atlas/README.md`.
 
 Do not give code or make any changes, just a concise plan or answer.
 
@@ -30,4 +30,4 @@ Do not give code or make any changes, just a concise plan or answer.
 - Max **400–500 lines** per file (including tests & comments).
 - **One public class/struct/interface** per file (ECS: one component OR one system).
 - Split large files ruthlessly when they exceed 500 LOC or violate single responsibility.
-- Keep all files in `/system_development_report` under 200 lines.
+- Keep all files in `/system_development_report` under 500 lines.

@@ -23,7 +23,8 @@ from .analyzers import (
     DependencyAnalyzer, ImpactAnalyzer, EntryPointDetector
 )
 from .generators import BaseGenerator, DetailGenerator
-from .utils import ensure_directory
+from .utils import clean_directory, ensure_directory, save_atlas_data, load_atlas_data
+from .serve import serve_atlas
 
 
 def generate_atlas(
@@ -66,7 +67,6 @@ def generate_atlas(
     print("=" * 60)
     print(f"Project: {project_dir}")
     print(f"Output:  {output_dir}")
-    print(f"Mode:    {'Verbose' if config.verbose_mode else 'Compact'}")
     print("=" * 60)
     print()
     
@@ -123,6 +123,9 @@ def generate_atlas(
         print(f"✓ Parsed {parse_count} files")
         if error_count > 0:
             print(f"⚠️  {error_count} files had parse errors")
+        
+        # Recalculate total_loc now that parsers have populated it
+        atlas_data.total_loc = sum(f.loc for f in atlas_data.files)
         print()
         
         # Phase 3: Analyze dependencies
@@ -146,6 +149,9 @@ def generate_atlas(
         # Phase 4: Generate output files
         print("📋 PHASE 4: Atlas Generation")
         print("-" * 60)
+        
+        # Clean output directory for fresh start
+        clean_directory(output_dir)
         
         # Ensure output directory exists
         ensure_directory(output_dir)
@@ -197,9 +203,6 @@ Examples:
   # Generate atlas for specific project
   python -m codebase_atlas.main --project-dir /path/to/project
   
-  # Use verbose mode
-  python -m codebase_atlas.main --verbose
-  
   # Custom output directory
   python -m codebase_atlas.main --output-dir ./my_atlas
         """
@@ -220,32 +223,87 @@ Examples:
     )
     
     parser.add_argument(
-        '--verbose',
-        action='store_true',
-        help='Use verbose output format (default: compact)'
-    )
-    
-    parser.add_argument(
         '--max-files-per-child',
         type=int,
         default=10,
         help='Maximum files per children file (default: 10)'
     )
     
+    parser.add_argument(
+        '--serve',
+        action='store_true',
+        help='Start local graph explorer server after analysis'
+    )
+    
+    parser.add_argument(
+        '--port',
+        type=int,
+        default=8080,
+        help='Port for graph explorer server (default: 8080)'
+    )
+    
+    parser.add_argument(
+        '--host',
+        type=str,
+        default='127.0.0.1',
+        help='Host for graph explorer server (default: 127.0.0.1)'
+    )
+    
+    parser.add_argument(
+        '--ignore-dirs',
+        nargs='+',
+        default=[],
+        help='Directory names to ignore (e.g. --ignore-dirs data logs temp)'
+    )
+    
+    parser.add_argument(
+        '--load',
+        action='store_true',
+        help='Load previously generated atlas from output-dir and serve it (skips generation)'
+    )
+    
     args = parser.parse_args()
     
-    # Create config from arguments
-    config = get_default_config()
-    config.verbose_mode = args.verbose
-    config.max_files_per_child = args.max_files_per_child
-    
     try:
+        if args.load:
+            atlas_data = load_atlas_data(args.output_dir)
+            config = get_default_config()
+            print("=" * 60)
+            print("🗺️  LOADED PRE-GENERATED ATLAS")
+            print("=" * 60)
+            print(f"Loaded from: {args.output_dir}")
+            print()
+            serve_atlas(
+                atlas_data=atlas_data,
+                config=config,
+                host=args.host,
+                port=args.port,
+            )
+            return 0
+        
+        # Create config from arguments
+        config = get_default_config()
+        config.max_files_per_child = args.max_files_per_child
+        config.ignore_dirs.update(args.ignore_dirs or [])
+        
         # Generate atlas
-        generate_atlas(
+        atlas_data = generate_atlas(
             project_dir=args.project_dir,
             output_dir=args.output_dir,
             config=config
         )
+        
+        # Save atlas data for future --load use
+        save_atlas_data(atlas_data, args.output_dir)
+        
+        # Start graph explorer if requested
+        if args.serve:
+            serve_atlas(
+                atlas_data=atlas_data,
+                config=config,
+                host=args.host,
+                port=args.port,
+            )
         
         return 0
         

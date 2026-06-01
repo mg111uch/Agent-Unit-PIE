@@ -5,6 +5,8 @@ This module provides file I/O functions with error handling and convenience feat
 """
 
 import os
+import pickle
+import shutil
 from pathlib import Path
 from datetime import datetime
 from typing import Optional
@@ -147,7 +149,7 @@ def list_files_in_directory(dir_path: str, pattern: str = "*") -> list:
 
 def clean_directory(dir_path: str, keep_files: Optional[list] = None):
     """
-    Remove all files in directory except specified ones.
+    Remove all files and subdirectories in directory except specified ones.
     
     Args:
         dir_path: Directory to clean
@@ -160,8 +162,28 @@ def clean_directory(dir_path: str, keep_files: Optional[list] = None):
         return
     
     for item in path.iterdir():
-        if item.is_file() and item.name not in keep_files:
+        if item.name in keep_files:
+            continue
+        if item.is_dir():
+            shutil.rmtree(item)
+        else:
             item.unlink()
+
+
+def save_atlas_data(atlas_data, dir_path: str):
+    """Serialize atlas data to pickle file."""
+    path = Path(dir_path) / "atlas_data.pkl"
+    with open(path, 'wb') as f:
+        pickle.dump(atlas_data, f)
+
+
+def load_atlas_data(dir_path: str):
+    """Load atlas data from pickle file."""
+    path = Path(dir_path) / "atlas_data.pkl"
+    if not path.exists():
+        raise FileNotFoundError(f"No saved atlas data found at {path}")
+    with open(path, 'rb') as f:
+        return pickle.load(f)
 
 
 def append_to_file(file_path: str, content: str, encoding: str = 'utf-8'):
