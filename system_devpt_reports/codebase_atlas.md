@@ -1,4 +1,4 @@
-### Phase 1 — Foundation (Highest Priority)
+### Phase 1 — Foundation 
 
 #### 1. `graph_models.py`
 Single source of truth for graph structure.
@@ -83,43 +83,55 @@ User preferences
 
 ---
 
-#### Stage 1 — Composition (✅ Completed)
+#### Stage 1 — Graph Backend (✅ Completed)
 
-* graph/backend/
+graph/backend/
+    ├── renderers/
+    │   ├── mermaid_renderer.py
+    │   └── interactive_renderer.py
     ├── graph_models.py
     ├── graph_builder.py
     ├── graph_serializer.py
     └── serve.py
+   
+#### Stage 2 — Graph Web Frontend (✅ Completed)
 
-* graph/backend/renderers/
-    ├── mermaid_renderer.py
-    └── interactive_renderer.py
+graph/web/
+├── core/
+│   ├── types.js
+│   ├── state.js
+│   ├── events.js
+│   ├── constants.js
+│   └── storage.js
+│
+├── render/
+│   ├── renderer.js
+│   ├── nodes.js
+│   ├── edges.js
+│   ├── clusters.js
+│   └── styles.js
+│
+├── viewport/
+│   ├── viewport.js [Provides: mouse wheel zoom,trackpad zoom,middle mouse pan,space+drag pan,fit to view,center on node, coordinate transforms]
+│   └── navigation.js  [Responsibilities:focus node, go to node, jump to cluster, zoom to selection, zoom to bounds, fitGraph. Consumes: viewport, state, renderer]
+│
+├── interaction/  [Reason: These consume renderer + viewport + state.]
+│   ├── drag.js  [Provides: node dragging,multi-node dragging,position updates,state updates. Uses:events,selection,viewport,state]
+│   ├── selection.js  [Almost every interaction starts with selection.Purpose: click node, shift-click, ctrl-click, multi-select, box selection, clear selection]
+│   ├── events.js  [Unified DOM→State event translation.Handles: SVG click, node click,edge click,cluster click,background click,hover,selection, pointerdown, pointermove, pointerup, wheel, keyboard]
+│   └── interaction.js  [Composition layer. Wires together: selection, drag, navigation, viewport, events]
+│
+├── layout/
+│   └── layout.js  [Only if backend positions are missing or poor. Provides: force layout, hierarchical layout, cluster layout]
+│
+├── utils/
+│   └── geometry.js
+│
+├── graph_viewer.js
+└── graph_viewer.html
 
-* graph/web/
-    ├── graph_viewer.html
-    └── graph_viewer.js
-
-#### Stage 2 — Core Engine (✅ Completed)
-
-* graph/web/core/
-    ├── types.js
-    ├── state.js
-    ├── storage.js
-    ├── constants.js
-    └── events.js
-
-#### Stage 3 — Rendering (✅ Completed)
-
-* graph/web/render/
-    ├── renderer.js
-    ├── nodes.js
-    ├── edges.js
-    ├── clusters.js
-    └── styles.js
-
-You already have a formal backend graph model. 
 The frontend is no longer merely rendering SVG.
-You have a complete vertical slice::
+You have a complete vertical slice:
 
 ```text
   Backend Graph Model
@@ -135,41 +147,289 @@ You have a complete vertical slice::
          SVG
 ```
 
-#### Stage 4 — Navigation
-
-```text
-9. graph_viewport.js
-10. graph_navigation.js
-```
-
-Reason: Zoom/pan must exist before interactions.
-
-#### Stage 5 — Interaction
-
-```text
-11. graph_drag.js
-12. graph_selection.js
-13. graph_events.js
-14. graph_interaction.js
-```
-
-Reason: These consume renderer + viewport + state.
-
-#### Stage 6 — Search & Filtering
-
-```text
-15. graph_search.js
-16. graph_filters.js
-17. graph_algorithms.js
-```
-
-Reason: Need state already available.
-
-#### Stage 7 — UI
-
-```text
-18. graph_toolbar.js
-19. graph_sidebar.js
-```
 
 ---
+
+
+## Advanced Features 
+
+### Search and filter
+
+* `web/search/search.js`
+For large graphs. Provides: find node,jump to node,highlight matches
+
+* `search/filters.js`
+
+* `search/algorithms.js`
+
+### UI
+
+* `web/sidebar/sidebar.js`
+Display: selected node details, metadata, neighbors, incoming edges, outgoing edges, cluster info
+
+* `web/toolbar/toolbar.js`
+Provides: fit view, zoom in, zoom out, reset, toggle clusters, search button
+
+### Intelligence
+
+* `web/interaction/highlight.js`
+Very useful for code graphs.Provides: upstream path, downstream path, shortest path, dependency chain, impact analysis
+
+* `web/interaction/focus.js`
+Provides: focus mode, hide unrelated nodes, show neighborhood, dependency cone
+
+### Performance
+
+* `web/render/virtual_renderer.js`
+Provides: viewport culling, lazy rendering
+
+* `web/render/lod.js`
+Level of detail:
+far zoom: hide labels
+mid zoom: show labels
+close zoom: full metadata
+
+-----------------------------------
+
+# serve.py Refactor
+
+The new `serve.py` should have a very different responsibility than the old Mermaid-based version.
+
+The old flow was approximately:
+
+```text
+Mindmap
+   ↓
+Mermaid text
+   ↓
+Mermaid SVG
+   ↓
+Inject JS
+   ↓
+Manipulate SVG
+```
+
+The new flow should be:
+
+```text
+Mindmap
+   ↓
+interactive_renderer.py
+   ↓
+Graph JSON
+   ↓
+serve.py
+   ↓
+graph_viewer.html
+   ↓
+GraphViewer
+   ↓
+SVG Renderers
+```
+
+# Even Better Architecture
+
+For long-term maintainability, I would split serving into:
+
+```text
+serve.py
+    ↓
+
+routes/
+├── graph_api.py
+├── page_routes.py
+└── static_routes.py
+```
+
+because your project is already evolving beyond a simple graph viewer into:
+
+```text
+agent_unit_pie
+    ↓
+simulation
+    ↓
+knowledge graph
+    ↓
+interactive explorer
+```
+
+and `serve.py` will otherwise become another 1500-3000 line file like the original implementation.
+
+-----------
+
+At this stage, `serve.py` should become extremely small.
+
+Its job is only:
+
+```text
+Build Graph
+      ↓
+InteractiveRenderer
+      ↓
+JSON API
+      ↓
+graph_viewer.html
+```
+
+Recommended flow:
+
+```python
+graph = GraphBuilder.build(...)
+
+interactive_json =
+    InteractiveRenderer.render(graph)
+
+return jsonify(interactive_json)
+```
+
+Routes:
+
+```text
+/
+    -> graph_viewer.html
+
+/api/graph
+    -> InteractiveRenderer JSON
+
+/api/health
+    -> status
+```
+
+No SVG generation.
+
+No Mermaid.
+
+No DOM injection.
+
+No JavaScript string generation.
+
+No SVG patching.
+
+No graph interaction logic.
+
+---
+
+## Composition After Refactor
+
+```text
+serve.py
+    ↓
+
+/api/graph
+    ↓
+
+graph_viewer.js
+    ↓
+
+GraphState
+    ↓
+
+GraphRenderer
+    ↓
+
+viewport/
+    ↓
+
+interaction/
+    ↓
+
+SVG
+```
+
+## One Architecture Improvement Before `interaction.js`
+
+Currently `drag.js` performs:
+
+```javascript
+renderer.render();
+```
+
+on every pointer move.
+
+That is acceptable for:
+
+```text
+100–300 nodes
+```
+
+but becomes expensive later.
+
+A better future direction is:
+
+```text
+DragController
+      ↓
+state update
+      ↓
+renderer.updateNode(...)
+renderer.updateEdge(...)
+renderer.updateCluster(...)
+```
+
+instead of full rerender.
+
+For now, keep the full rerender until the interaction stack is complete.
+
+## `web/interaction/interaction.js`
+
+Responsibility:
+
+```text
+ViewportController
+      +
+GraphNavigation
+      +
+SelectionManager
+      +
+GraphEventController
+      +
+DragController
+      ↓
+GraphInteractionManager
+```
+
+This becomes the single object created by `graph_viewer.js` to wire the entire graph engine together.
+
+### At this point the graph engine contains
+
+```text
+Backend
+    ↓
+Graph JSON
+    ↓
+GraphState
+    ↓
+GraphLayoutEngine
+    ↓
+GraphStorage
+    ↓
+NodeRenderer
+EdgeRenderer
+ClusterRenderer
+    ↓
+GraphRenderer
+    ↓
+ViewportController
+    ↓
+GraphNavigation
+    ↓
+SelectionManager
+    ↓
+GraphEventController
+    ↓
+DragController
+    ↓
+GraphInteractionManager
+```
+
+This is a complete non-advanced interactive graph engine. The next work should be integration/refactoring:
+
+```text
+1. Refactor graph_viewer.js
+2. Refactor graph_viewer.html
+3. Refactor serve.py
+4. Verify InteractiveRenderer JSON compatibility
+5. End-to-end test
+```
+
+before adding any new features.

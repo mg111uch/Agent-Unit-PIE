@@ -1,330 +1,219 @@
+// web/core/constants.js
+
 /**
- * graph_layout.js
+ * ============================================================================
+ * Graph Engine Constants
+ * ============================================================================
  *
- * Layout engine for Interactive Graph Viewer.
+ * Engine-wide configuration values.
  *
- * Responsibilities:
- *   - Calculate node positions
- *   - Fit graph into viewport
- *   - Re-layout graph
+ * Do NOT put:
+ *   - Colors
+ *   - Fonts
+ *   - SVG styles
  *
- * Does NOT:
- *   - Render SVG
- *   - Handle events
- *   - Perform search
- *   - Manage graph state
+ * Those belong in render/styles.js
+ *
+ * ============================================================================
  */
 
-export class GraphLayoutEngine {
+/* ============================================================================
+ * Viewport
+ * ============================================================================
+ */
 
-    static hierarchical(graph, options = {}) {
+export const VIEWPORT = Object.freeze({
 
-        const levelSpacing = options.levelSpacing ?? 220;
-        const nodeSpacing = options.nodeSpacing ?? 140;
+    DEFAULT_ZOOM: 1.0,
 
-        const incoming = new Map();
+    MIN_ZOOM: 0.10,
 
-        graph.nodes.forEach(node => {
-            incoming.set(node.id, 0);
-        });
+    MAX_ZOOM: 8.0,
 
-        graph.edges.forEach(edge => {
-            incoming.set(
-                edge.target,
-                (incoming.get(edge.target) || 0) + 1
-            );
-        });
+    ZOOM_STEP: 1.15,
 
-        const roots = graph.nodes.filter(
-            node => (incoming.get(node.id) || 0) === 0
-        );
+    FIT_PADDING: 100,
 
-        const levels = new Map();
-        const queue = [];
+    ANIMATION_DURATION_MS: 250,
+});
 
-        roots.forEach(root => {
-            levels.set(root.id, 0);
-            queue.push(root.id);
-        });
+/* ============================================================================
+ * Navigation
+ * ============================================================================
+ */
 
-        while (queue.length) {
+export const NAVIGATION = Object.freeze({
 
-            const current = queue.shift();
-            const currentLevel = levels.get(current);
+    CENTER_ANIMATION_MS: 250,
 
-            graph.edges.forEach(edge => {
+    ZOOM_TO_NODE_SCALE: 1.5,
 
-                if (edge.source !== current) {
-                    return;
-                }
+    ZOOM_TO_CLUSTER_SCALE: 1.2,
+});
 
-                const nextLevel = currentLevel + 1;
+/* ============================================================================
+ * Dragging
+ * ============================================================================
+ */
 
-                if (
-                    !levels.has(edge.target) ||
-                    nextLevel > levels.get(edge.target)
-                ) {
-                    levels.set(edge.target, nextLevel);
-                    queue.push(edge.target);
-                }
-            });
-        }
+export const DRAG = Object.freeze({
 
-        const buckets = new Map();
+    START_THRESHOLD_PX: 3,
 
-        graph.nodes.forEach(node => {
+    AUTO_SCROLL_MARGIN: 40,
 
-            const level = levels.get(node.id) ?? 0;
+    GRID_SNAP_SIZE: 0,
 
-            if (!buckets.has(level)) {
-                buckets.set(level, []);
-            }
+    ENABLE_GRID_SNAP: false,
+});
 
-            buckets.get(level).push(node);
-        });
+/* ============================================================================
+ * Selection
+ * ============================================================================
+ */
 
-        buckets.forEach((nodes, level) => {
+export const SELECTION = Object.freeze({
 
-            const totalHeight =
-                (nodes.length - 1) * nodeSpacing;
+    MULTI_SELECT_KEY: "Control",
 
-            nodes.forEach((node, index) => {
+    ALTERNATE_MULTI_SELECT_KEY: "Meta",
 
-                node.position = {
-                    x: level * levelSpacing,
-                    y: index * nodeSpacing - totalHeight / 2
-                };
-            });
-        });
+    BOX_SELECT_THRESHOLD_PX: 5,
 
-        return graph;
-    }
+    CLEAR_ON_BACKGROUND_CLICK: true,
+});
 
-    static circular(graph, options = {}) {
+/* ============================================================================
+ * Double Click
+ * ============================================================================
+ */
 
-        const radius = options.radius ?? 500;
+export const INPUT = Object.freeze({
 
-        const count = graph.nodes.length;
+    DOUBLE_CLICK_MS: 300,
 
-        if (count === 0) {
-            return graph;
-        }
+    LONG_PRESS_MS: 500,
+});
 
-        graph.nodes.forEach((node, index) => {
+/* ============================================================================
+ * Storage
+ * ============================================================================
+ */
 
-            const angle =
-                (Math.PI * 2 * index) / count;
+export const STORAGE = Object.freeze({
 
-            node.position = {
-                x: Math.cos(angle) * radius,
-                y: Math.sin(angle) * radius
-            };
-        });
+    DEFAULT_NAMESPACE:
+        "interactive-graph",
 
-        return graph;
-    }
+    VIEWPORT_KEY:
+        "viewport",
 
-    static grid(graph, options = {}) {
+    SELECTION_KEY:
+        "selection",
 
-        const spacing = options.spacing ?? 180;
+    CLUSTER_STATE_KEY:
+        "clusters",
+});
 
-        const cols =
-            options.columns ??
-            Math.ceil(Math.sqrt(graph.nodes.length));
+/* ============================================================================
+ * Renderer
+ * ============================================================================
+ */
 
-        graph.nodes.forEach((node, index) => {
+export const RENDER = Object.freeze({
 
-            const row = Math.floor(index / cols);
-            const col = index % cols;
+    FULL_RENDER: "full",
 
-            node.position = {
-                x: col * spacing,
-                y: row * spacing
-            };
-        });
+    PARTIAL_RENDER: "partial",
 
-        return graph;
-    }
+    NODE_RENDER: "node",
 
-    static forceDirected(graph, options = {}) {
+    EDGE_RENDER: "edge",
 
-        const iterations = options.iterations ?? 200;
-        const repulsion = options.repulsion ?? 12000;
-        const attraction = options.attraction ?? 0.04;
-        const idealLength = options.idealLength ?? 220;
+    CLUSTER_RENDER: "cluster",
+});
 
-        graph.nodes.forEach((node, index) => {
+/* ============================================================================
+ * Layers
+ * ============================================================================
+ */
 
-            if (!node.position) {
-                node.position = {
-                    x: Math.cos(index) * 100,
-                    y: Math.sin(index) * 100
-                };
-            }
-        });
+export const LAYERS = Object.freeze({
 
-        for (let step = 0; step < iterations; step++) {
+    CLUSTERS:
+        "cluster-layer",
 
-            const forces = new Map();
+    EDGES:
+        "edge-layer",
 
-            graph.nodes.forEach(node => {
-                forces.set(node.id, { x: 0, y: 0 });
-            });
+    NODES:
+        "node-layer",
 
-            //
-            // Repulsion
-            //
+    OVERLAY:
+        "overlay-layer",
 
-            for (let i = 0; i < graph.nodes.length; i++) {
+    VIEWPORT:
+        "viewport",
+});
 
-                for (let j = i + 1; j < graph.nodes.length; j++) {
+/* ============================================================================
+ * Node Defaults
+ * ============================================================================
+ */
 
-                    const a = graph.nodes[i];
-                    const b = graph.nodes[j];
+export const NODE = Object.freeze({
 
-                    let dx =
-                        b.position.x - a.position.x;
+    DEFAULT_WIDTH: 180,
 
-                    let dy =
-                        b.position.y - a.position.y;
+    DEFAULT_HEIGHT: 48,
+});
 
-                    let dist =
-                        Math.sqrt(dx * dx + dy * dy);
+/* ============================================================================
+ * Cluster Defaults
+ * ============================================================================
+ */
 
-                    dist = Math.max(dist, 1);
+export const CLUSTER = Object.freeze({
 
-                    const force =
-                        repulsion / (dist * dist);
+    PADDING: 30,
 
-                    dx /= dist;
-                    dy /= dist;
+    LABEL_MARGIN_X: 12,
 
-                    forces.get(a.id).x -= dx * force;
-                    forces.get(a.id).y -= dy * force;
+    LABEL_MARGIN_Y: 20,
+});
 
-                    forces.get(b.id).x += dx * force;
-                    forces.get(b.id).y += dy * force;
-                }
-            }
+/* ============================================================================
+ * Engine Version
+ * ============================================================================
+ */
 
-            //
-            // Attraction
-            //
+export const ENGINE = Object.freeze({
 
-            graph.edges.forEach(edge => {
+    NAME: "interactive-graph",
 
-                const source =
-                    graph.nodeMap.get(edge.source);
+    VERSION: "1.0.0",
+});
 
-                const target =
-                    graph.nodeMap.get(edge.target);
+/* ============================================================================
+ * Helpers
+ * ============================================================================
+ */
 
-                if (!source || !target) {
-                    return;
-                }
+export function clampZoom(value) {
 
-                let dx =
-                    target.position.x -
-                    source.position.x;
+    return Math.max(
+        VIEWPORT.MIN_ZOOM,
+        Math.min(
+            VIEWPORT.MAX_ZOOM,
+            value
+        )
+    );
+}
 
-                let dy =
-                    target.position.y -
-                    source.position.y;
+export function isMultiSelectKey(event) {
 
-                let dist =
-                    Math.sqrt(dx * dx + dy * dy);
-
-                dist = Math.max(dist, 1);
-
-                const force =
-                    (dist - idealLength) *
-                    attraction;
-
-                dx /= dist;
-                dy /= dist;
-
-                forces.get(source.id).x += dx * force;
-                forces.get(source.id).y += dy * force;
-
-                forces.get(target.id).x -= dx * force;
-                forces.get(target.id).y -= dy * force;
-            });
-
-            //
-            // Apply
-            //
-
-            graph.nodes.forEach(node => {
-
-                if (node.visual?.pinned) {
-                    return;
-                }
-
-                const f = forces.get(node.id);
-
-                node.position.x += f.x;
-                node.position.y += f.y;
-            });
-        }
-
-        return graph;
-    }
-
-    static fitToViewport(
-        graph,
-        width,
-        height,
-        padding = 100
-    ) {
-
-        if (!graph.nodes.length) {
-            return graph;
-        }
-
-        const xs =
-            graph.nodes.map(
-                n => n.position?.x ?? 0
-            );
-
-        const ys =
-            graph.nodes.map(
-                n => n.position?.y ?? 0
-            );
-
-        const minX = Math.min(...xs);
-        const maxX = Math.max(...xs);
-
-        const minY = Math.min(...ys);
-        const maxY = Math.max(...ys);
-
-        const graphWidth =
-            Math.max(maxX - minX, 1);
-
-        const graphHeight =
-            Math.max(maxY - minY, 1);
-
-        const scaleX =
-            (width - padding * 2) /
-            graphWidth;
-
-        const scaleY =
-            (height - padding * 2) /
-            graphHeight;
-
-        const scale =
-            Math.min(scaleX, scaleY);
-
-        graph.nodes.forEach(node => {
-
-            node.position.x =
-                (node.position.x - minX) *
-                scale + padding;
-
-            node.position.y =
-                (node.position.y - minY) *
-                scale + padding;
-        });
-
-        return graph;
-    }
+    return (
+        event.ctrlKey ||
+        event.metaKey
+    );
 }

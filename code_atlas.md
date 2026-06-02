@@ -1,7 +1,7 @@
 ## Codebase size
-Total files processed: 206
-Total lines of code: 38661
-Total tokens: 248950
+Total files processed: 212
+Total lines of code: 40418
+Total tokens: 256153
 ## End Codebase size
 
 ## Directory Structure 
@@ -142,19 +142,19 @@ Total tokens: 248950
 │   │   │   │   │   │   └── [] mermaid_renderer.py [274 LOC, 1176 tokens]
 │   │   │   │   │   ├── [] graph_models.py [237 LOC, 1127 tokens]
 │   │   │   │   │   ├── [] graph_builder.py [347 LOC, 1655 tokens]
-│   │   │   │   │   ├── [] serve.py [546 LOC, 5201 tokens]
+│   │   │   │   │   ├── [X] serve.py [121 LOC, 373 tokens]
 │   │   │   │   │   └── [] graph_serializer.py [354 LOC, 1382 tokens]
 │   │   │   │   └── web/
-│   │   │   │       ├── search/
 │   │   │   │       ├── utils/
 │   │   │   │       │   └── [] geometry.js [355 LOC, 1277 tokens]
 │   │   │   │       ├── layouts/
-│   │   │   │       │   └── [] layout.js [330 LOC, 1508 tokens]
+│   │   │   │       │   └── [X] layout.js [330 LOC, 1508 tokens]
 │   │   │   │       ├── viewport/
-│   │   │   │       ├── ui/
+│   │   │   │       │   ├── [] navigation.js [305 LOC, 959 tokens]
+│   │   │   │       │   └── [] viewport.js [344 LOC, 1216 tokens]
 │   │   │   │       ├── core/
 │   │   │   │       │   ├── [] events.js [226 LOC, 836 tokens]
-│   │   │   │       │   ├── [] constants.js [330 LOC, 1508 tokens]
+│   │   │   │       │   ├── [] constants.js [219 LOC, 667 tokens]
 │   │   │   │       │   ├── [] types.js [337 LOC, 1278 tokens]
 │   │   │   │       │   ├── [] storage.js [337 LOC, 1097 tokens]
 │   │   │   │       │   └── [] state.js [421 LOC, 1725 tokens]
@@ -165,8 +165,11 @@ Total tokens: 248950
 │   │   │   │       │   ├── [] nodes.js [447 LOC, 1400 tokens]
 │   │   │   │       │   └── [] styles.js [269 LOC, 992 tokens]
 │   │   │   │       ├── interaction/
-│   │   │   │       │   └── [] interaction.js [0 LOC, 0 tokens]
-│   │   │   │       ├── [] graph_viewer.js [278 LOC, 841 tokens]
+│   │   │   │       │   ├── [] events.js [520 LOC, 1729 tokens]
+│   │   │   │       │   ├── [] interaction.js [328 LOC, 1010 tokens]
+│   │   │   │       │   ├── [] drag.js [346 LOC, 1114 tokens]
+│   │   │   │       │   └── [] selection.js [432 LOC, 1331 tokens]
+│   │   │   │       ├── [X] graph_viewer.js [363 LOC, 1153 tokens]
 │   │   │   │       └── [] graph_viewer.html [409 LOC, 1703 tokens]
 │   │   │   ├── parsers/
 │   │   │   │   ├── [] html_parser.py [110 LOC, 728 tokens]
@@ -180,6 +183,7 @@ Total tokens: 248950
 │   │   │   ├── [] config.py [293 LOC, 1853 tokens]
 │   │   │   ├── [] main.py [320 LOC, 2012 tokens]
 │   │   │   ├── [] __init__.py [61 LOC, 299 tokens]
+│   │   │   ├── [] serve.py [546 LOC, 5201 tokens]
 │   │   │   └── [] README.md [426 LOC, 3463 tokens]
 │   │   ├── simulators/
 │   │   │   ├── popula_dyn/
@@ -280,13 +284,13 @@ Total tokens: 248950
 │   ├── [] debate_engine.md [323 LOC, 1739 tokens]
 │   ├── [] simulation_engine.md [217 LOC, 1380 tokens]
 │   ├── [] orchestrator.md [172 LOC, 816 tokens]
-│   └── [] codebase_atlas.md [511 LOC, 1614 tokens]
+│   └── [] codebase_atlas.md [1312 LOC, 4427 tokens]
 ├── [] GPT_5-5_Chat.md [4962 LOC, 18724 tokens]
-├── [] Issues_n_ideas.md [2 LOC, 22 tokens]
+├── [] Issues_n_ideas.md [3 LOC, 22 tokens]
 ├── [] agent_harness.md [33 LOC, 346 tokens]
-├── [] code_atlas.md [313 LOC, 5298 tokens]
+├── [] code_atlas.md [294 LOC, 5001 tokens]
 ├── [] Devpt_phases.md [330 LOC, 2917 tokens]
-├── [] code_dump.txt [3014 LOC, 17797 tokens]
+├── [] code_dump.txt [730 LOC, 6774 tokens]
 ├── [] .gitignore [7 LOC, 23 tokens]
 ├── [] README.md [953 LOC, 4763 tokens]
 └── [] project_tools.md [24 LOC, 906 tokens]

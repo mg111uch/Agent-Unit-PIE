@@ -18,6 +18,31 @@ import { EdgeRenderer }
 import { ClusterRenderer }
     from "./render/clusters.js";
 
+import { ViewportController }
+    from "./viewport/viewport.js";
+
+import { GraphNavigation }
+    from "./viewport/navigation.js";
+
+import {
+    SelectionManager
+} from "./interaction/selection.js";
+
+import {
+    GraphEventController
+} from "./interaction/events.js";
+
+import {
+    DragController
+} from "./interaction/drag.js";
+
+import {
+    GraphInteractionManager
+} from "./interaction/interaction.js";
+
+import { GraphLayoutEngine }
+    from "./layout/layout.js";
+
 /**
  * ============================================================================
  * GraphViewer
@@ -64,6 +89,11 @@ export class GraphViewer {
             new GraphState(
                 this.graphData
             );
+        
+        this.layout =
+            GraphLayoutEngine;
+
+        this.applyInitialLayout();
 
         this.storage =
             new GraphStorage(
@@ -132,6 +162,66 @@ export class GraphViewer {
 
         this._unsubscribeStorage =
             null;
+
+        this.viewport =
+            new ViewportController({
+                state: this.state,
+                renderer: this.renderer,
+            });
+
+        this.navigation =
+            new GraphNavigation({
+
+                state:
+                    this.state,
+
+                viewport:
+                    this.viewport,
+
+                renderer:
+                    this.renderer,
+            });
+
+        this.selection =
+            new SelectionManager({
+                state: this.state,
+            });
+
+        this.events =
+            new GraphEventController({
+                svg: "graph-svg",
+                state: this.state,
+                viewport: this.viewport,
+            });
+
+        this.drag =
+            new DragController({
+                state: this.state,
+                renderer: this.renderer,
+                selection: this.selection,
+                events: this.events,
+                viewport: this.viewport,
+            });
+
+        this.interaction =
+            new GraphInteractionManager({
+
+                state: this.state,
+
+                renderer: this.renderer,
+
+                viewport: this.viewport,
+
+                navigation: this.navigation,
+
+                selection: this.selection,
+
+                events: this.events,
+
+                drag: this.drag,
+            });
+
+        this.events.initialize();
     }
 
     /**
@@ -147,6 +237,10 @@ export class GraphViewer {
         this.attachStorage();
 
         this.renderer.initialize();
+
+        this.renderer.render();
+
+        this.navigation.fitGraph();
 
         return this;
     }
@@ -172,6 +266,28 @@ export class GraphViewer {
                 error
             );
         }
+    }
+
+    applyInitialLayout() {
+
+        const nodes =
+            this.state.graph?.nodes ?? [];
+
+        const missing =
+            nodes.some(
+                node =>
+                    !node.position ||
+                    node.position.x == null ||
+                    node.position.y == null
+            );
+
+        if (!missing) {
+            return;
+        }
+
+        this.layout.hierarchical(
+            this.state.graph
+        );
     }
 
     attachStorage() {
@@ -207,7 +323,7 @@ export class GraphViewer {
 
     fitToView() {
 
-        this.renderer.fitToViewport();
+        this.navigation.fitGraph();
     }
 
     /**
@@ -217,28 +333,31 @@ export class GraphViewer {
      */
 
     getState() {
-
         return this.state;
     }
 
     getRenderer() {
-
         return this.renderer;
     }
 
     getNodeRenderer() {
-
         return this.nodeRenderer;
     }
 
     getEdgeRenderer() {
-
         return this.edgeRenderer;
     }
 
     getClusterRenderer() {
-
         return this.clusterRenderer;
+    }
+
+    getViewport() {
+        return this.viewport;
+    }
+
+    getNavigation() {
+        return this.navigation;
     }
 
     /**
