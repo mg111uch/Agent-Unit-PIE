@@ -368,7 +368,7 @@ input[type="text"] {
 ======================================================= -->
 
 <script>
-window.GRAPH_DATA = null;
+window.GRAPH_DATA = {{ dep_json | safe }};
 window.GRAPH_CONFIG = {};
 </script>
 
@@ -376,32 +376,23 @@ window.GRAPH_CONFIG = {};
      Modules
 ======================================================= -->
 
-<script type="module" src="graph_constants.js"></script>
+<script type="module" src="core/constants.js"></script>
+<script type="module" src="core/types.js"></script>
+<script type="module" src="core/state.js"></script>
+<script type="module" src="core/storage.js"></script>
 
-<script type="module" src="graph_types.js"></script>
-<script type="module" src="graph_state.js"></script>
-<script type="module" src="graph_storage.js"></script>
+<script type="module" src="render/renderer.js"></script>
+<script type="module" src="render/nodes.js"></script>
+<script type="module" src="render/edges.js"></script>
+<script type="module" src="render/clusters.js"></script>
 
-<script type="module" src="graph_renderer.js"></script>
-<script type="module" src="graph_nodes.js"></script>
-<script type="module" src="graph_edges.js"></script>
-<script type="module" src="graph_clusters.js"></script>
+<script type="module" src="viewport/viewport.js"></script>
+<script type="module" src="viewport/navigation.js"></script>
 
-<script type="module" src="graph_viewport.js"></script>
-<script type="module" src="graph_navigation.js"></script>
-
-<script type="module" src="graph_drag.js"></script>
-<script type="module" src="graph_selection.js"></script>
-
-<script type="module" src="graph_events.js"></script>
-<script type="module" src="graph_interaction.js"></script>
-
-<script type="module" src="graph_search.js"></script>
-<script type="module" src="graph_filters.js"></script>
-<script type="module" src="graph_algorithms.js"></script>
-
-<script type="module" src="graph_toolbar.js"></script>
-<script type="module" src="graph_sidebar.js"></script>
+<script type="module" src="interaction/drag.js"></script>
+<script type="module" src="interaction/selection.js"></script>
+<script type="module" src="interaction/events.js"></script>
+<script type="module" src="interaction/interaction.js"></script>
 
 <script type="module" src="graph_viewer.js"></script>
 

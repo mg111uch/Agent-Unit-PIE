@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mermaid Graph View</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #1a1a2e; color: #e0e0e0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+  #toolbar { background: #16213e; padding: 12px 24px; display: flex; align-items: center; gap: 16px; border-bottom: 1px solid #0f3460; flex-wrap: wrap; }
+  #toolbar h1 { font-size: 18px; color: #e94560; }
+  #toolbar select { background: #0f3460; color: #e0e0e0; border: 1px solid #1a1a4e; padding: 6px 12px; border-radius: 4px; font-size: 13px; cursor: pointer; }
+  #toolbar select:hover { background: #1a1a4e; }
+  #toolbar a { color: #4f8cff; font-size: 13px; margin-left: auto; text-decoration: none; }
+  #toolbar a:hover { text-decoration: underline; }
+  #toolbar #status-msg { font-size: 12px; color: #888; }
+  #container { width: 100vw; height: calc(100vh - 52px); overflow: auto; padding: 24px; }
+  .mermaid { display: flex; justify-content: center; }
+  .mermaid svg { max-width: none; }
+  #mermaid-src { min-height: 100px; }
+  #error-msg { display: none; text-align: center; padding: 48px; font-size: 14px; color: #f44336; }
+</style>
+</head>
+<body>
+<div id="toolbar">
+  <h1>Mermaid Graph</h1>
+  <select id="graph-type">
+    <option value="dependency">Dependency Graph</option>
+    <option value="call">Call Graph</option>
+  </select>
+  <span id="status-msg"></span>
+  <a href="/view/mermaid" id="permalink">Permalink</a>
+</div>
+<div id="container">
+  <div id="error-msg"></div>
+  <div class="mermaid" id="mermaid-src"></div>
+</div>
+<script>
+  const DEP_MERMAID = {{ dep_mermaid | tojson | safe }};
+  const CALL_MERMAID = {{ call_mermaid | tojson | safe }};
+
+  mermaid.initialize({ theme: 'dark', startOnLoad: false, flowchart: { useMaxWidth: false, htmlLabels: true } });
+
+  const currentType = '{{ graph_type }}';
+  document.getElementById('graph-type').value = currentType;
+  document.getElementById('permalink').href = '/view/mermaid/' + currentType;
+
+  async function renderGraph(type) {
+    const el = document.getElementById('mermaid-src');
+    const error = document.getElementById('error-msg');
+    const status = document.getElementById('status-msg');
+
+    error.style.display = 'none';
+    el.innerHTML = '';
+
+    const text = type === 'call' ? CALL_MERMAID : DEP_MERMAID;
+    el.textContent = text;
+    document.getElementById('permalink').href = '/view/mermaid/' + type;
+    status.textContent = text.length + ' chars';
+
+    try {
+      await mermaid.run({ nodes: [el] });
+    } catch (err) {
+      error.style.display = 'block';
+      error.textContent = 'Failed to render graph: ' + err.message;
+    }
+  }
+
+  document.getElementById('graph-type').addEventListener('change', function() {
+    renderGraph(this.value);
+  });
+
+  renderGraph(currentType);
+</script>
+</body>
+</html>

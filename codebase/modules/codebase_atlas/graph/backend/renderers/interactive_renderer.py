@@ -19,7 +19,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from backend.graph_models import (
+from ..graph_models import (
     GraphData,
     GraphNode,
     GraphEdge,

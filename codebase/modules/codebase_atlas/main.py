@@ -24,7 +24,6 @@ from .analyzers import (
 )
 from .generators import BaseGenerator, DetailGenerator
 from .utils import clean_directory, ensure_directory, save_atlas_data, load_atlas_data
-from .serve import serve_atlas
 
 
 def generate_atlas(
@@ -267,18 +266,21 @@ Examples:
     try:
         if args.load:
             atlas_data = load_atlas_data(args.output_dir)
-            config = get_default_config()
             print("=" * 60)
             print("🗺️  LOADED PRE-GENERATED ATLAS")
             print("=" * 60)
             print(f"Loaded from: {args.output_dir}")
             print()
-            serve_atlas(
-                atlas_data=atlas_data,
-                config=config,
-                host=args.host,
-                port=args.port,
-            )
+            from .graph.backend.graph_builder import GraphBuilder
+            from .graph.backend.serve import create_app
+            builder = GraphBuilder(atlas_data)
+            dep_graph = builder.build_dependency_graph()
+            call_graph = builder.build_call_graph()
+            app = create_app(dep_graph, call_graph)
+            print(f"  Graph explorer at http://{args.host}:{args.port}")
+            print(f"    Interactive:  http://{args.host}:{args.port}/")
+            print(f"    Mermaid:      http://{args.host}:{args.port}/view/mermaid")
+            app.run(host=args.host, port=args.port, debug=False)
             return 0
         
         # Create config from arguments
@@ -298,12 +300,16 @@ Examples:
         
         # Start graph explorer if requested
         if args.serve:
-            serve_atlas(
-                atlas_data=atlas_data,
-                config=config,
-                host=args.host,
-                port=args.port,
-            )
+            from .graph.backend.graph_builder import GraphBuilder
+            from .graph.backend.serve import create_app
+            builder = GraphBuilder(atlas_data)
+            dep_graph = builder.build_dependency_graph()
+            call_graph = builder.build_call_graph()
+            app = create_app(dep_graph, call_graph)
+            print(f"  Graph explorer at http://{args.host}:{args.port}")
+            print(f"    Interactive:  http://{args.host}:{args.port}/")
+            print(f"    Mermaid:      http://{args.host}:{args.port}/view/mermaid")
+            app.run(host=args.host, port=args.port, debug=False)
         
         return 0
         

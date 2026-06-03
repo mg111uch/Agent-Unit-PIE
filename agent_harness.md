@@ -2,9 +2,9 @@
 
 ## TASK
 
-Check why in module `python/Agentic_Unit_PIE/codebase/modules/codebase_atlas` , the serve.py file is not moving the connected edges of the nodes as the nodes are being dragged to relocate by the user.
+In module `python/Agentic_Unit_PIE/codebase/modules/codebase_atlas` , check why in `python/Agentic_Unit_PIE/codebase/modules/codebase_atlas/graph/backend/serve.py` interactive graph is served but it only displays loading graph using `python/Agentic_Unit_PIE/codebase/modules/codebase_atlas/graph/web/graph_viewer.html` in browser while mermaid graph `python/Agentic_Unit_PIE/codebase/modules/codebase_atlas/graph/web/mermaid_view.html` is rendering correctly using same graph data from backend as interactive graph.
 
-Start by knowing module details by reading `python/Agentic_Unit_PIE/codebase/modules/codebase_atlas/README.md`.
+Start by knowing module details and current development status by reading `python/Agentic_Unit_PIE/system_devpt_reports/codebase_atlas.md`.
 
 Do not give code or make any changes, just a concise plan or answer.
 
@@ -30,4 +30,4 @@ Do not give code or make any changes, just a concise plan or answer.
 - Max **400–500 lines** per file (including tests & comments).
 - **One public class/struct/interface** per file (ECS: one component OR one system).
 - Split large files ruthlessly when they exceed 500 LOC or violate single responsibility.
-- Keep all files in `/system_development_report` under 500 lines.
+- Keep all files in `/system_development_report` under 1000 lines.

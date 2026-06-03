@@ -1,118 +1,83 @@
+from __future__ import annotations
+
+import json
 from pathlib import Path
 from flask import (
     Flask,
-    jsonify,
     render_template,
     send_from_directory,
 )
 
-from renderers.interactive_renderer import InteractiveRenderer
+from .renderers.interactive_renderer import InteractiveRenderer
+from .renderers.mermaid_renderer import MermaidRenderer
+from .graph_models import GraphData
 
-# ============================================================================
-# Config
-# ============================================================================
 
-ROOT_DIR = Path(__file__).parent
+ROOT_DIR = Path(__file__).parent.parent
 
 WEB_DIR = ROOT_DIR / "web"
 
-app = Flask(
-    __name__,
-    static_folder=str(WEB_DIR),
-    template_folder=str(WEB_DIR),
-)
 
-# ============================================================================
-# Renderer
-# ============================================================================
+def create_app(
+    dep_graph: GraphData,
+    call_graph: GraphData,
+) -> Flask:
 
-renderer = InteractiveRenderer()
-
-# ============================================================================
-# Graph Source
-# ============================================================================
-
-CURRENT_GRAPH = None
-
-
-def load_graph():
-    """
-    Replace with your actual graph source.
-
-    Examples:
-        mindmap.json
-        graph_state.json
-        live project graph
-    """
-
-    global CURRENT_GRAPH
-
-    if CURRENT_GRAPH is not None:
-        return CURRENT_GRAPH
-
-    CURRENT_GRAPH = {
-        "nodes": [],
-        "edges": [],
-        "clusters": [],
-    }
-
-    return CURRENT_GRAPH
-
-
-# ============================================================================
-# Routes
-# ============================================================================
-
-@app.route("/")
-def index():
-
-    return render_template(
-        "graph_viewer.html"
+    app = Flask(
+        __name__,
+        static_folder=str(WEB_DIR),
+        template_folder=str(WEB_DIR),
     )
 
+    interactive_renderer = InteractiveRenderer()
+    mermaid_renderer = MermaidRenderer()
 
-@app.route("/api/graph")
-def graph_data():
+    dep_json = json.dumps(interactive_renderer.render(dep_graph))
+    call_json = json.dumps(interactive_renderer.render(call_graph))
 
-    graph = load_graph()
+    dep_mermaid = mermaid_renderer.render(dep_graph)
+    call_mermaid = mermaid_renderer.render(call_graph)
 
-    interactive_json = (
-        renderer.render(graph)
-    )
+    @app.route("/")
+    def index():
 
-    return jsonify(interactive_json)
+        return render_template(
+            "graph_viewer.html",
+            dep_json=dep_json,
+            call_json=call_json,
+        )
 
+    @app.route("/view/mermaid")
+    @app.route("/view/mermaid/<graph_type>")
+    def mermaid_view(graph_type: str = "dependency"):
 
-# ============================================================================
-# Static Files
-# ============================================================================
+        return render_template(
+            "mermaid_view.html",
+            graph_type=graph_type,
+            dep_mermaid=dep_mermaid,
+            call_mermaid=call_mermaid,
+        )
 
-@app.route("/web/<path:path>")
-def web_assets(path):
+    @app.route("/web/<path:path>")
+    def web_assets(path: str):
 
-    return send_from_directory(
-        WEB_DIR,
-        path,
-    )
+        return send_from_directory(
+            WEB_DIR,
+            path,
+        )
 
+    return app
 
-# ============================================================================
-# Health
-# ============================================================================
-
-@app.route("/api/health")
-def health():
-
-    return jsonify({
-        "status": "ok"
-    })
-
-
-# ============================================================================
-# Main
-# ============================================================================
 
 if __name__ == "__main__":
+
+    dep_graph = GraphData()
+    call_graph = GraphData()
+
+    app = create_app(
+        dep_graph,
+        call_graph,
+    )
 
     app.run(
         host="0.0.0.0",

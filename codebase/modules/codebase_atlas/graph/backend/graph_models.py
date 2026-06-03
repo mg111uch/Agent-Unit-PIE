@@ -102,9 +102,9 @@ class GraphEdge:
     source: str
     target: str
 
-    label: str | None = None
-
     edge_type: EdgeType
+
+    label: str | None = None
 
     weight: float = 1.0
     strength: float = 1.0
@@ -150,7 +150,7 @@ class GraphData:
     All renderers and algorithms consume this object.
     """
 
-    graph_type: GraphType
+    graph_type: GraphType = GraphType.DEPENDENCY
 
     nodes: Dict[str, GraphNode] = field(default_factory=dict)
     edges: Dict[str, GraphEdge] = field(default_factory=dict)

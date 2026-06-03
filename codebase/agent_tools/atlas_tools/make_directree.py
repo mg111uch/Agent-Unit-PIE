@@ -103,9 +103,9 @@ def generate_tree(directory, ignored_dirs=[], ignored_files=[], show_stats=True)
 
     def count_lines(path):
         try:
-            with open(path, 'r') as f:
+            with open(path, 'r', errors='ignore') as f:
                 return len(f.readlines())
-        except:
+        except Exception:
             return 0
 
     tree = {}
@@ -130,6 +130,23 @@ def generate_tree(directory, ignored_dirs=[], ignored_files=[], show_stats=True)
                 current[f] = {'loc': loc, 'tokens': tokens}
             else:
                 current[f] = None
+    def aggregate_dir_stats(node):
+        total_loc = 0
+        total_tokens = 0
+        for name, child in list(node.items()):
+            if name == '_stats':
+                continue
+            if isinstance(child, dict) and 'loc' in child:
+                total_loc += child['loc']
+                total_tokens += child['tokens']
+            elif isinstance(child, dict):
+                child_stats = aggregate_dir_stats(child)
+                total_loc += child_stats['loc']
+                total_tokens += child_stats['tokens']
+                child['_stats'] = child_stats
+        node['_stats'] = {'loc': total_loc, 'tokens': total_tokens}
+        return node['_stats']
+    aggregate_dir_stats(tree)
     return tree
 
 def prune_tree(tree, ignored_dirs):
@@ -162,15 +179,23 @@ def write_tree_to_md(md_file, start_marker, end_marker, tree, directory, show_st
         end_idx = start_idx + 1
     tree_lines = []
     def build_tree_lines(node, prefix='', is_last=True):
-        items = list(node.items())
+        if not isinstance(node, dict):
+            return
+        items = [(name, child) for name, child in node.items() if name != '_stats']
         for i, (name, subtree) in enumerate(items):
             is_last_item = (i == len(items) - 1)
             if isinstance(subtree, dict) and 'loc' in subtree:
-                tree_lines.append(f"{prefix}{'└── ' if is_last_item else '├── '}[] {name} [{subtree['loc']} LOC, {subtree['tokens']} tokens]\n")
+                if subtree['loc'] > 0:
+                    tree_lines.append(f"{prefix}{'└── ' if is_last_item else '├── '}[] {name} [{subtree['loc']} LOC, {subtree['tokens']} tokens]\n")
+                else:
+                    tree_lines.append(f"{prefix}{'└── ' if is_last_item else '├── '}{name}\n")
             elif subtree is None:
                 tree_lines.append(f"{prefix}{'└── ' if is_last_item else '├── '}{name}\n")
             else:
-                tree_lines.append(f"{prefix}{'└── ' if is_last_item else '├── '}{name}/\n")
+                prefix_text = ''
+                if isinstance(subtree, dict) and subtree.get('_stats', {}).get('loc', 0) > 0:
+                    prefix_text = f" [{subtree['_stats']['loc']} LOC, {subtree['_stats']['tokens']} tokens]"
+                tree_lines.append(f"{prefix}{'└── ' if is_last_item else '├── '}{name}/{prefix_text}\n")
                 new_prefix = prefix + ('    ' if is_last_item else '│   ')
                 build_tree_lines(subtree, new_prefix, is_last_item)
     build_tree_lines(tree)

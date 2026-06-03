@@ -12,7 +12,7 @@ from __future__ import annotations
 
 from typing import Optional
 
-from ..models import AtlasData, RiskLevel as AtlasRiskLevel
+from ...models import AtlasData, RiskLevel as AtlasRiskLevel
 
 from .graph_models import (
     EdgeType,
@@ -20,6 +20,7 @@ from .graph_models import (
     GraphData,
     GraphEdge,
     GraphNode,
+    GraphType,
     NodeType,
     RiskLevel,
 )
@@ -52,7 +53,7 @@ class GraphBuilder:
         """
         Build file-level dependency graph.
         """
-        graph = GraphData()
+        graph = GraphData(graph_type=GraphType.DEPENDENCY)
 
         self._add_file_nodes(graph)
         self._add_dependency_edges(graph)
@@ -65,7 +66,7 @@ class GraphBuilder:
         """
         Build function-level call graph.
         """
-        graph = GraphData()
+        graph = GraphData(graph_type=GraphType.CALL)
 
         self._add_function_clusters(graph)
         self._add_function_nodes(graph)

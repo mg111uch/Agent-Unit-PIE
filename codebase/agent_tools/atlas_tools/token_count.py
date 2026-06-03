@@ -113,7 +113,7 @@ def count_tokens(file_path, encoding_name="cl100k_base"):
         encoding = load_encoding_locally(encoding_name)
         
         # Read the file content
-        with open(file_path, 'r', encoding='utf-8') as file:
+        with open(file_path, 'r', encoding='utf-8', errors='ignore') as file:
             content = file.read()
         
         # Tokenize the content and count tokens
