@@ -178,6 +178,7 @@ export const GRAPH_EVENTS = Object.freeze({
 
     SELECTION_CHANGED: "selectionChanged",
     MULTI_SELECTION_CHANGED: "multiSelectionChanged",
+    PREVIEW_CHANGED: "previewChanged",
 
     // ------------------------------------------------------------------------
     // Viewport

@@ -35,11 +35,14 @@ export class NodeRenderer {
      * ------------------------------------------------------------------------
      */
 
-    render(layer, state) {
+    render(layer, state, items = null) {
 
         this.nodeElements.clear();
 
-        const nodes = state.graph.nodes;
+        const nodes = items ?? state.graph.nodes;
+
+        const fragment =
+            document.createDocumentFragment();
 
         for (const node of nodes) {
 
@@ -57,13 +60,15 @@ export class NodeRenderer {
             const element =
                 this.createNode(node, state);
 
-            layer.appendChild(element);
+            fragment.appendChild(element);
 
             this.nodeElements.set(
                 node.id,
                 element
             );
         }
+
+        layer.appendChild(fragment);
     }
 
     /**
@@ -74,6 +79,13 @@ export class NodeRenderer {
 
     createNode(node, state) {
 
+        const lod =
+            node._lod ?? "full";
+
+        if (lod === "dot") {
+            return this.createDotNode(node, state);
+        }
+
         const group =
             document.createElementNS(
                 SVG_NS,
@@ -81,6 +93,14 @@ export class NodeRenderer {
             );
 
         group.classList.add("graph-node");
+
+        if (state.isPinned(node.id)) {
+            group.classList.add("pinned");
+        }
+
+        if (state.selectedNodeId === node.id) {
+            group.classList.add("selected");
+        }
 
         group.dataset.nodeId = node.id;
 
@@ -111,39 +131,81 @@ export class NodeRenderer {
                 state
             );
 
-        const label =
-            this.createLabel(
-                node,
-                width,
-                height
-            );
-
         group.appendChild(rect);
-        group.appendChild(label);
 
-        if (node.entry_point) {
+        if (lod !== "simple") {
 
-            const badge =
-                this.createEntryPointBadge(
-                    width
-                );
-
-            group.appendChild(badge);
-        }
-
-        if (node.risk_level) {
-
-            const risk =
-                this.createRiskIndicator(
-                    node.risk_level,
+            const label =
+                this.createLabel(
+                    node,
                     width,
                     height
                 );
 
-            group.appendChild(risk);
+            group.appendChild(label);
+        }
+
+        if (lod === "full") {
+
+            if (node.entry_point) {
+
+                const badge =
+                    this.createEntryPointBadge(
+                        width
+                    );
+
+                group.appendChild(badge);
+            }
+
+            if (node.risk_level) {
+
+                const risk =
+                    this.createRiskIndicator(
+                        node.risk_level,
+                        width,
+                        height
+                    );
+
+                group.appendChild(risk);
+            }
         }
 
         return group;
+    }
+
+    createDotNode(node, state) {
+
+        const circle =
+            document.createElementNS(
+                SVG_NS,
+                "circle"
+            );
+
+        circle.setAttribute(
+            "cx",
+            node.position?.x ?? 0
+        );
+
+        circle.setAttribute(
+            "cy",
+            node.position?.y ?? 0
+        );
+
+        circle.setAttribute("r", 3);
+
+        const fill =
+            node.visual?.color ??
+            TYPOGRAPHY[node.type] ??
+            TYPOGRAPHY.unknown;
+
+        circle.setAttribute("fill", fill);
+
+        circle.classList.add("graph-node");
+        circle.classList.add("graph-node-dot");
+
+        circle.dataset.nodeId = node.id;
+
+        return circle;
     }
 
     /**
@@ -443,5 +505,12 @@ export class NodeRenderer {
         return this.nodeElements.get(
             nodeId
         );
+    }
+
+    // Generic accessor matching the renderer's
+    // updateSelection() expectations.
+    getElement(nodeId) {
+
+        return this.getNodeElement(nodeId);
     }
 }

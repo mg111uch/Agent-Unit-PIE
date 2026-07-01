@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
+<base href="/web/">
+
 <title>Interactive Graph Viewer</title>
 
 <link rel="icon" href="data:,">
@@ -109,6 +111,19 @@ input[type="text"] {
     color: var(--text);
 }
 
+select {
+    background: #202634;
+    color: var(--text);
+    border: 1px solid #343c4f;
+    border-radius: 6px;
+    padding: 6px 10px;
+    cursor: pointer;
+}
+
+select:hover {
+    background: #2a3142;
+}
+
 /* =======================================================
    Main Area
 ======================================================= */
@@ -169,10 +184,38 @@ input[type="text"] {
     overflow-y: auto;
 
     flex-shrink: 0;
+
+    display: flex;
+    flex-direction: column;
+}
+
+#sidebar-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--panel-border);
+    flex-shrink: 0;
+}
+
+#graph-summary {
+    font-size: 13px;
+    color: var(--muted);
+    white-space: nowrap;
 }
 
 #sidebar-content {
+    flex: 1;
+    overflow-y: auto;
     padding: 16px;
+}
+
+#sidebar.hidden {
+    width: 0;
+    padding: 0;
+    border: none;
+    overflow: hidden;
 }
 
 .sidebar-section {
@@ -238,6 +281,100 @@ input[type="text"] {
 .hidden {
     display: none !important;
 }
+
+/* =======================================================
+   Box Selection
+======================================================= */
+
+#selection-box {
+    fill: none;
+    stroke: #00e676;
+    stroke-width: 2.5;
+    stroke-dasharray: 2 4;
+    stroke-linecap: round;
+    pointer-events: none;
+}
+
+/* =======================================================
+   Node / Edge / Cluster State Styling
+   ---------------------------------------------------------
+   These CSS rules override the presentation attributes
+   set inline by the renderers, so toggling a class on
+   the existing SVG group is enough to update visual
+   state without a full re-render.
+
+   Specificity is equal for .pinned and .selected
+   (both 0,2,0), so source order resolves it: .selected
+   comes after .pinned and wins for the combined case.
+======================================================= */
+
+.graph-node.pinned > rect {
+    stroke: #ffd666;
+    stroke-width: 2;
+}
+
+.graph-node.selected > rect {
+    stroke: #ffffff;
+    stroke-width: 3;
+}
+
+.graph-edge.selected > line {
+    stroke: #ffffff;
+    stroke-width: 3;
+}
+
+.graph-edge-badge {
+    pointer-events: none;
+    user-select: none;
+}
+
+.graph-cluster.selected > rect {
+    stroke: #ffffff;
+    stroke-width: 3;
+}
+
+/* =======================================================
+   Control Panel
+======================================================= */
+
+#control-panel {
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+.control-group {
+    margin-bottom: 14px;
+}
+
+.control-group-title {
+    color: var(--accent);
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 6px;
+    padding-bottom: 4px;
+    border-bottom: 1px solid var(--panel-border);
+}
+
+.control-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 3px;
+}
+
+.control-action {
+    color: var(--text);
+}
+
+.control-keys {
+    color: var(--muted);
+    text-align: right;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 11px;
+    white-space: nowrap;
+}
 </style>
 </head>
 
@@ -269,10 +406,17 @@ input[type="text"] {
             >
         </div>
 
+        <div class="toolbar-group">
+            <select id="graph-type">
+                <option value="dependency">Dependency</option>
+                <option value="call">Call</option>
+            </select>
+        </div>
+
         <div class="toolbar-spacer"></div>
 
-        <div id="graph-summary">
-            0 nodes · 0 edges
+        <div class="toolbar-group">
+            <button id="sidebar-toggle" title="Toggle sidebar">☰</button>
         </div>
 
     </div>
@@ -314,6 +458,9 @@ input[type="text"] {
         <!-- Sidebar -->
 
         <aside id="sidebar">
+            <div id="sidebar-header">
+                <span id="graph-summary">0 nodes · 0 edges</span>
+            </div>
             <div id="sidebar-content">
 
                 <div class="sidebar-section">
@@ -348,6 +495,175 @@ input[type="text"] {
 
                 </div>
 
+                <div class="sidebar-section">
+
+                    <div class="sidebar-title">
+                        Controls
+                    </div>
+
+                    <div id="control-panel">
+
+                        <div class="control-group">
+
+                            <div class="control-group-title">
+                                Pan
+                            </div>
+
+                            <div class="control-row">
+                                <span class="control-action">
+                                    Pan view
+                                </span>
+                                <span class="control-keys">
+                                    Drag background
+                                </span>
+                            </div>
+
+                            <div class="control-row">
+                                <span class="control-action">
+                                    Pan view
+                                </span>
+                                <span class="control-keys">
+                                    Middle mouse
+                                </span>
+                            </div>
+
+                            <div class="control-row">
+                                <span class="control-action">
+                                    Pan view
+                                </span>
+                                <span class="control-keys">
+                                    Space + drag
+                                </span>
+                            </div>
+
+                        </div>
+
+                        <div class="control-group">
+
+                            <div class="control-group-title">
+                                Zoom
+                            </div>
+
+                            <div class="control-row">
+                                <span class="control-action">
+                                    Zoom in / out
+                                </span>
+                                <span class="control-keys">
+                                    Mouse wheel
+                                </span>
+                            </div>
+
+                            <div class="control-row">
+                                <span class="control-action">
+                                    Zoom
+                                </span>
+                                <span class="control-keys">
+                                    + / &minus;
+                                </span>
+                            </div>
+
+                            <div class="control-row">
+                                <span class="control-action">
+                                    Fit / reset
+                                </span>
+                                <span class="control-keys">
+                                    Buttons
+                                </span>
+                            </div>
+
+                        </div>
+
+                        <div class="control-group">
+
+                            <div class="control-group-title">
+                                Select
+                            </div>
+
+                            <div class="control-row">
+                                <span class="control-action">
+                                    Select node
+                                </span>
+                                <span class="control-keys">
+                                    Click
+                                </span>
+                            </div>
+
+                            <div class="control-row">
+                                <span class="control-action">
+                                    Toggle node
+                                </span>
+                                <span class="control-keys">
+                                    Ctrl / Cmd + click
+                                </span>
+                            </div>
+
+                            <div class="control-row">
+                                <span class="control-action">
+                                    Box select
+                                </span>
+                                <span class="control-keys">
+                                    Shift + drag
+                                </span>
+                            </div>
+
+                            <div class="control-row">
+                                <span class="control-action">
+                                    Clear selection
+                                </span>
+                                <span class="control-keys">
+                                    Click background
+                                </span>
+                            </div>
+
+                        </div>
+
+                        <div class="control-group">
+
+                            <div class="control-group-title">
+                                Move
+                            </div>
+
+                            <div class="control-row">
+                                <span class="control-action">
+                                    Move selected
+                                </span>
+                                <span class="control-keys">
+                                    Drag any selected
+                                </span>
+                            </div>
+
+                            <div class="control-row">
+                                <span class="control-action">
+                                    Deselect after move
+                                </span>
+                                <span class="control-keys">
+                                    Auto
+                                </span>
+                            </div>
+
+                        </div>
+
+                        <div class="control-group">
+
+                            <div class="control-group-title">
+                                Navigate
+                            </div>
+
+                            <div class="control-row">
+                                <span class="control-action">
+                                    Zoom to node
+                                </span>
+                                <span class="control-keys">
+                                    Double-click
+                                </span>
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
             </div>
         </aside>
 
@@ -369,7 +685,36 @@ input[type="text"] {
 
 <script>
 window.GRAPH_DATA = {{ dep_json | safe }};
+window.CALL_GRAPH_DATA = {{ call_json | safe }};
 window.GRAPH_CONFIG = {};
+
+(function() {
+    var sidebar = document.getElementById('sidebar');
+    var toggleBtn = document.getElementById('sidebar-toggle');
+    var KEY = 'graph-sidebar-hidden';
+
+    function apply(state) {
+        sidebar.classList.toggle('hidden', state);
+        toggleBtn.textContent = state ? '\u2630' : '\u2715';
+    }
+
+    try {
+        apply(localStorage.getItem(KEY) === 'true');
+    } catch (_) {}
+
+    toggleBtn.addEventListener('click', function() {
+        var hidden = !sidebar.classList.contains('hidden');
+        apply(hidden);
+        try { localStorage.setItem(KEY, hidden); } catch (_) {}
+    });
+
+    document.addEventListener('keydown', function(e) {
+        if ((e.ctrlKey || e.metaKey) && e.key === 'b') {
+            e.preventDefault();
+            toggleBtn.click();
+        }
+    });
+})();
 </script>
 
 <!-- =======================================================
@@ -390,11 +735,10 @@ window.GRAPH_CONFIG = {};
 <script type="module" src="viewport/navigation.js"></script>
 
 <script type="module" src="interaction/drag.js"></script>
-<script type="module" src="interaction/selection.js"></script>
-<script type="module" src="interaction/events.js"></script>
 <script type="module" src="interaction/interaction.js"></script>
 
 <script type="module" src="graph_viewer.js"></script>
+<script type="module" src="bootstrap.js"></script>
 
 </body>
 </html>

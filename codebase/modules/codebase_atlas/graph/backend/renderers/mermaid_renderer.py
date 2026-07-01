@@ -48,9 +48,13 @@ class MermaidRenderer:
 
         lines = ["flowchart TD"]
 
+        nodes_with_edges = self._nodes_with_edges(graph)
+
         for node in graph.nodes.values():
 
-            node_line = self._render_node(node)
+            is_orphan = node.id not in nodes_with_edges
+
+            node_line = self._render_node(node, is_orphan)
 
             if node_line:
                 lines.append(f"    {node_line}")
@@ -160,6 +164,7 @@ class MermaidRenderer:
     def _render_node(
         self,
         node: GraphNode,
+        is_orphan: bool = False,
     ) -> str:
 
         label = self._sanitize_label(node.label)
@@ -168,7 +173,7 @@ class MermaidRenderer:
             f'{node.id}["{label}"]'
         )
 
-        style_class = self._node_style(node)
+        style_class = self._node_style(node, is_orphan)
 
         if style_class:
             return f"{mermaid_node}:::{style_class}"
@@ -178,6 +183,7 @@ class MermaidRenderer:
     def _node_style(
         self,
         node: GraphNode,
+        is_orphan: bool = False,
     ) -> str | None:
 
         #
@@ -186,6 +192,13 @@ class MermaidRenderer:
 
         if node.entry_point:
             return "entry"
+
+        #
+        # Orphan (no incoming or outgoing edges)
+        #
+
+        if is_orphan:
+            return "orphan"
 
         #
         # Risk styles.
@@ -212,6 +225,17 @@ class MermaidRenderer:
     # =========================================================================
     # Helpers
     # =========================================================================
+
+    @staticmethod
+    def _nodes_with_edges(graph: GraphData) -> set:
+
+        nodes = set()
+
+        for edge in graph.edges.values():
+            nodes.add(edge.source)
+            nodes.add(edge.target)
+
+        return nodes
 
     @staticmethod
     def _sanitize_id(text: str) -> str:
@@ -270,5 +294,12 @@ class MermaidRenderer:
                 "stroke:#9C27B0,"
                 "stroke-width:3px,"
                 "stroke-dasharray: 5 5;"
+            ),
+            (
+                "    classDef orphan "
+                "fill:#1a1a2e,"
+                "stroke:#555,"
+                "stroke-width:1px,"
+                "stroke-dasharray: 3 3;"
             ),
         ]

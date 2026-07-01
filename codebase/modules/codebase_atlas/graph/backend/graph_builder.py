@@ -81,22 +81,10 @@ class GraphBuilder:
     # =========================================================================
 
     def _add_file_nodes(self, graph: GraphData) -> None:
-        used_refs = set()
-
-        for edge in self.atlas_data.dependency_graph.edges:
-            if self._is_valid_file(edge.source) and self._is_valid_file(edge.target):
-                used_refs.add(edge.source)
-                used_refs.add(edge.target)
 
         for file_info in self.atlas_data.files:
 
             if self._is_init_py(file_info):
-                continue
-
-            if (
-                file_info.ref_id not in used_refs
-                and not file_info.entry_point
-            ):
                 continue
 
             graph.add_node(

@@ -1,0 +1,9 @@
+flowchart TD
+    F001["calculator.py"]:::entry
+    F002["fabonacci.py"]:::orphan
+    classDef entry fill:none,stroke:#4CAF50,stroke-width:3px,stroke-dasharray: 5 3;
+    classDef high fill:none,stroke:#f44336,stroke-width:3px;
+    classDef medium fill:none,stroke:#FF9800,stroke-width:3px;
+    classDef low fill:none,stroke:#FFEB3B,stroke-width:3px;
+    classDef circular fill:none,stroke:#9C27B0,stroke-width:3px,stroke-dasharray: 5 5;
+    classDef orphan fill:#1a1a2e,stroke:#555,stroke-width:1px,stroke-dasharray: 3 3;

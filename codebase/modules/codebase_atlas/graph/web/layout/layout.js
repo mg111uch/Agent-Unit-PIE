@@ -22,53 +22,65 @@ export class GraphLayoutEngine {
         const levelSpacing = options.levelSpacing ?? 220;
         const nodeSpacing = options.nodeSpacing ?? 140;
 
-        const incoming = new Map();
-
-        graph.nodes.forEach(node => {
-            incoming.set(node.id, 0);
-        });
-
-        graph.edges.forEach(edge => {
-            incoming.set(
-                edge.target,
-                (incoming.get(edge.target) || 0) + 1
-            );
-        });
-
-        const roots = graph.nodes.filter(
-            node => (incoming.get(node.id) || 0) === 0
+        const adjacency = new Map();
+        graph.nodes.forEach(n =>
+            adjacency.set(n.id, [])
         );
+        graph.edges.forEach(e => {
+            if (adjacency.has(e.source)) {
+                adjacency.get(e.source).push(e.target);
+            }
+        });
 
         const levels = new Map();
-        const queue = [];
+        const visiting = new Set();
+        const visited = new Set();
 
-        roots.forEach(root => {
-            levels.set(root.id, 0);
-            queue.push(root.id);
+        const assignLevel = (nodeId, depth) => {
+            if (visiting.has(nodeId)) return;
+            if (visited.has(nodeId) &&
+                (levels.get(nodeId) ?? 0) >= depth) return;
+
+            levels.set(
+                nodeId,
+                Math.max(levels.get(nodeId) ?? 0, depth)
+            );
+
+            visiting.add(nodeId);
+            visited.add(nodeId);
+
+            for (const next of adjacency.get(nodeId) ?? []) {
+                assignLevel(next, depth + 1);
+            }
+
+            visiting.delete(nodeId);
+        };
+
+        const incoming = new Map();
+        graph.nodes.forEach(n =>
+            incoming.set(n.id, 0)
+        );
+        graph.edges.forEach(e =>
+            incoming.set(
+                e.target,
+                (incoming.get(e.target) || 0) + 1
+            )
+        );
+
+        const roots = graph.nodes.filter(
+            n => (incoming.get(n.id) || 0) === 0
+        );
+
+        (roots.length
+            ? roots
+            : graph.nodes.slice(0, 1)
+        ).forEach(r => assignLevel(r.id, 0));
+
+        graph.nodes.forEach(n => {
+            if (!levels.has(n.id)) {
+                assignLevel(n.id, 0);
+            }
         });
-
-        while (queue.length) {
-
-            const current = queue.shift();
-            const currentLevel = levels.get(current);
-
-            graph.edges.forEach(edge => {
-
-                if (edge.source !== current) {
-                    return;
-                }
-
-                const nextLevel = currentLevel + 1;
-
-                if (
-                    !levels.has(edge.target) ||
-                    nextLevel > levels.get(edge.target)
-                ) {
-                    levels.set(edge.target, nextLevel);
-                    queue.push(edge.target);
-                }
-            });
-        }
 
         const buckets = new Map();
 
@@ -147,6 +159,18 @@ export class GraphLayoutEngine {
     }
 
     static forceDirected(graph, options = {}) {
+
+        const MAX_FD_NODES = 200;
+
+        if (graph.nodes.length > MAX_FD_NODES) {
+
+            console.warn(
+                `forceDirected: graph has ${graph.nodes.length} nodes ` +
+                `(max ${MAX_FD_NODES}), falling back to grid layout`
+            );
+
+            return GraphLayoutEngine.grid(graph, options);
+        }
 
         const iterations = options.iterations ?? 200;
         const repulsion = options.repulsion ?? 12000;

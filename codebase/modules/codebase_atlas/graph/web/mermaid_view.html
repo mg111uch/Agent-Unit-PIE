@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Mermaid Graph View</title>
 <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/svg-pan-zoom@3.6.1/dist/svg-pan-zoom.min.js"></script>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body { background: #1a1a2e; color: #e0e0e0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
@@ -15,8 +16,11 @@
   #toolbar a { color: #4f8cff; font-size: 13px; margin-left: auto; text-decoration: none; }
   #toolbar a:hover { text-decoration: underline; }
   #toolbar #status-msg { font-size: 12px; color: #888; }
-  #container { width: 100vw; height: calc(100vh - 52px); overflow: auto; padding: 24px; }
-  .mermaid { display: flex; justify-content: center; }
+  #toolbar .zoom-btn { background: #0f3460; color: #e0e0e0; border: 1px solid #1a1a4e; padding: 4px 10px; border-radius: 4px; font-size: 14px; cursor: pointer; }
+  #toolbar .zoom-btn:hover { background: #1a1a4e; }
+  #container { width: 100vw; height: calc(100vh - 52px); overflow: hidden; padding: 0; cursor: grab; }
+  #container:active { cursor: grabbing; }
+  .mermaid { display: flex; justify-content: center; min-height: 100%; }
   .mermaid svg { max-width: none; }
   #mermaid-src { min-height: 100px; }
   #error-msg { display: none; text-align: center; padding: 48px; font-size: 14px; color: #f44336; }
@@ -31,6 +35,10 @@
   </select>
   <span id="status-msg"></span>
   <a href="/view/mermaid" id="permalink">Permalink</a>
+  <button class="zoom-btn" id="zoom-in" title="Zoom In">+</button>
+  <button class="zoom-btn" id="zoom-out" title="Zoom Out">−</button>
+  <button class="zoom-btn" id="zoom-reset" title="Reset">Reset</button>
+  <button class="zoom-btn" id="zoom-fit" title="Fit to View">Fit</button>
 </div>
 <div id="container">
   <div id="error-msg"></div>
@@ -46,6 +54,27 @@
   document.getElementById('graph-type').value = currentType;
   document.getElementById('permalink').href = '/view/mermaid/' + currentType;
 
+  let panZoomInstance = null;
+
+  function initPanZoom(svg) {
+    if (panZoomInstance) panZoomInstance.destroy();
+    panZoomInstance = svgPanZoom(svg, {
+      zoomEnabled: true,
+      controlIconsEnabled: false,
+      fit: true,
+      center: true,
+      minZoom: 0.1,
+      maxZoom: 10,
+    });
+  }
+
+  function wireZoomButtons() {
+    document.getElementById('zoom-in').onclick = () => panZoomInstance?.zoomIn();
+    document.getElementById('zoom-out').onclick = () => panZoomInstance?.zoomOut();
+    document.getElementById('zoom-reset').onclick = () => panZoomInstance?.reset();
+    document.getElementById('zoom-fit').onclick = () => panZoomInstance?.fit();
+  }
+
   async function renderGraph(type) {
     const el = document.getElementById('mermaid-src');
     const error = document.getElementById('error-msg');
@@ -53,6 +82,7 @@
 
     error.style.display = 'none';
     el.innerHTML = '';
+    el.removeAttribute('data-processed');
 
     const text = type === 'call' ? CALL_MERMAID : DEP_MERMAID;
     el.textContent = text;
@@ -61,6 +91,8 @@
 
     try {
       await mermaid.run({ nodes: [el] });
+      const svg = el.querySelector('svg');
+      if (svg) initPanZoom(svg);
     } catch (err) {
       error.style.display = 'block';
       error.textContent = 'Failed to render graph: ' + err.message;
@@ -71,6 +103,7 @@
     renderGraph(this.value);
   });
 
+  wireZoomButtons();
   renderGraph(currentType);
 </script>
 </body>

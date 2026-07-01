@@ -1,0 +1,44 @@
+{
+  "graph_type": "dependency",
+  "metadata": {
+    "graph_type": "dependency"
+  },
+  "nodes": [
+    {
+      "id": "F001",
+      "label": "calculator.py",
+      "node_type": "file",
+      "color": null,
+      "size": null,
+      "risk_level": "none",
+      "entry_point": true,
+      "cluster_id": null,
+      "metadata": {
+        "path": "/home/manigupt/Hello/python/Agentic_Unit_PIE/codebase/rag_pipeline/dummy/calculator.py"
+      },
+      "x": null,
+      "y": null,
+      "pinned": false,
+      "hidden": false
+    },
+    {
+      "id": "F002",
+      "label": "fabonacci.py",
+      "node_type": "file",
+      "color": null,
+      "size": null,
+      "risk_level": "none",
+      "entry_point": false,
+      "cluster_id": null,
+      "metadata": {
+        "path": "/home/manigupt/Hello/python/Agentic_Unit_PIE/codebase/rag_pipeline/dummy/fabo/fabonacci.py"
+      },
+      "x": null,
+      "y": null,
+      "pinned": false,
+      "hidden": false
+    }
+  ],
+  "edges": [],
+  "clusters": []
+}

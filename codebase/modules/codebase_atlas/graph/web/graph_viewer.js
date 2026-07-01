@@ -43,6 +43,8 @@ import {
 import { GraphLayoutEngine }
     from "./layout/layout.js";
 
+const LARGE_GRAPH_THRESHOLD = 200;
+
 /**
  * ============================================================================
  * GraphViewer
@@ -95,10 +97,14 @@ export class GraphViewer {
 
         this.applyInitialLayout();
 
+        const graphType =
+            this.graphData?.graph_type ??
+            "unknown";
+
         this.storage =
             new GraphStorage(
                 options.storageNamespace ??
-                "interactive-graph"
+                `interactive-graph:${graphType}`
             );
 
         // -------------------------------------------------------------
@@ -113,6 +119,12 @@ export class GraphViewer {
 
         this.clusterRenderer =
             new ClusterRenderer();
+
+        const nodeCount =
+            this.graphData?.nodes?.length ?? 0;
+
+        this.useViewportCulling =
+            nodeCount >= LARGE_GRAPH_THRESHOLD;
 
         this.renderer =
             new GraphRenderer({
@@ -143,6 +155,9 @@ export class GraphViewer {
                 overlayLayer:
                     options.overlayLayer ??
                     "overlay-layer",
+
+                cullOnRender:
+                    this.useViewportCulling,
             });
 
         this.renderer
@@ -238,6 +253,100 @@ export class GraphViewer {
 
         this.renderer.initialize();
 
+        this.renderer.whenMeasured(
+            () => this._initialRender()
+        );
+
+        return this;
+    }
+
+    _initialRender() {
+
+        const nodeCount =
+            this.state.graph?.nodes?.length ?? 0;
+
+        if (nodeCount >= LARGE_GRAPH_THRESHOLD) {
+
+            return this.renderer
+                .renderChunked()
+                .then(() => {
+
+                    this.navigation.fitGraph();
+                    return this;
+                });
+        }
+
+        this.renderer.render();
+
+        this.navigation.fitGraph();
+
+        return this;
+    }
+
+    /**
+     * ========================================================================
+     * Graph Swap
+     * ========================================================================
+     */
+
+    setGraphData(graphData) {
+
+        if (!graphData) {
+
+            throw new Error(
+                "graphData is required"
+            );
+        }
+
+        this.graphData = graphData;
+
+        const graphType =
+            graphData?.graph_type ??
+            "unknown";
+
+        const newNamespace =
+            `interactive-graph:${graphType}`;
+
+        if (
+            this.storage.namespace !==
+            newNamespace
+        ) {
+
+            this.storage.namespace =
+                newNamespace;
+        }
+
+        this.storage.suspend();
+
+        try {
+
+            this.state.setGraph(graphData);
+
+            this.selection.clear();
+
+            this.applyInitialLayout();
+
+        } finally {
+
+            this.storage.resume();
+        }
+
+        this.restoreState();
+
+        const nodeCount =
+            graphData?.nodes?.length ?? 0;
+
+        if (nodeCount >= LARGE_GRAPH_THRESHOLD) {
+
+            return this.renderer
+                .renderChunked()
+                .then(() => {
+
+                    this.navigation.fitGraph();
+                    return this;
+                });
+        }
+
         this.renderer.render();
 
         this.navigation.fitGraph();
@@ -285,6 +394,18 @@ export class GraphViewer {
             return;
         }
 
+        if (
+            nodes.length >= LARGE_GRAPH_THRESHOLD
+        ) {
+
+            this.layout.grid(
+                this.state.graph,
+                { spacing: 180 }
+            );
+
+            return;
+        }
+
         this.layout.hierarchical(
             this.state.graph
         );
@@ -296,6 +417,56 @@ export class GraphViewer {
             this.storage.attach(
                 this.state
             );
+
+        this._unsubscribeServerSave =
+            this.state.subscribe(
+                "nodes:moved",
+                () => this._savePositionsToServer()
+            );
+    }
+
+    _savePositionsToServer() {
+
+        if (!this.state?.graph?.nodes) {
+            return;
+        }
+
+        const graphType =
+            this.graphData?.graph_type ??
+            "unknown";
+
+        const positions = {};
+
+        for (const node of this.state.graph.nodes) {
+
+            if (
+                node.position &&
+                Number.isFinite(
+                    node.position.x
+                ) &&
+                Number.isFinite(
+                    node.position.y
+                )
+            ) {
+
+                positions[node.id] = {
+                    x: node.position.x,
+                    y: node.position.y,
+                };
+            }
+        }
+
+        fetch("/api/save-positions", {
+            method: "POST",
+            headers: {
+                "Content-Type":
+                    "application/json",
+            },
+            body: JSON.stringify({
+                graph_type: graphType,
+                positions,
+            }),
+        }).catch(() => {});
     }
 
     save() {
@@ -373,6 +544,13 @@ export class GraphViewer {
         ) {
 
             this._unsubscribeStorage();
+        }
+
+        if (
+            this._unsubscribeServerSave
+        ) {
+
+            this._unsubscribeServerSave();
         }
     }
 }

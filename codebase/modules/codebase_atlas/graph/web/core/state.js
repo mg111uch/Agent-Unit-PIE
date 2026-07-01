@@ -53,6 +53,9 @@ export class GraphState extends EventEmitter {
         // Multi-select support
         this.selectedNodes = new Set();
 
+        // Live preview of nodes under the box-select rectangle
+        this.previewSelectedNodes = new Set();
+
         // ---------------------------------------------------------------------
         // Viewport State
         // ---------------------------------------------------------------------
@@ -170,13 +173,14 @@ export class GraphState extends EventEmitter {
 
         const listeners = this.listeners.get(eventName);
 
-        if (!listeners) {
-            return;
+        if (listeners) {
+
+            for (const callback of listeners) {
+                callback(payload);
+            }
         }
 
-        for (const callback of listeners) {
-            callback(payload);
-        }
+        super.emit(eventName, payload);
     }
 
     // =========================================================================
@@ -262,7 +266,75 @@ export class GraphState extends EventEmitter {
         this.selectedNodes.clear();
 
         this.emit("multiSelectionChanged", {
-            selectedNodes: [],
+            selectedNodes: [...this.selectedNodes],
+        });
+    }
+
+    /* =======================================================================
+       Graph Swap
+       ======================================================================= */
+
+    setGraph(graphData) {
+
+        if (!graphData) {
+            return;
+        }
+
+        this.graph = graphData;
+
+        this.selectedNodeId = null;
+        this.selectedNodes = new Set();
+        this.previewSelectedNodes = new Set();
+        this.hiddenNodes = new Set();
+        this.hiddenEdges = new Set();
+        this.collapsedClusters = new Set();
+        this.pinnedNodes = new Set();
+
+        this.zoom = 1.0;
+        this.panX = 0;
+        this.panY = 0;
+
+        this.nodeMap = new Map();
+        this.edgeMap = new Map();
+        this.clusterMap = new Map();
+        this._buildIndexes();
+
+        this.incomingEdges = new Map();
+        this.outgoingEdges = new Map();
+        this.clusterNodes = new Map();
+        this._buildRelationships();
+
+        this.emit("graphChanged", {});
+    }
+
+    /* =======================================================================
+       Box-Select Preview
+       ======================================================================= */
+
+    setPreviewSelectedNodes(nodeIds) {
+
+        this.previewSelectedNodes =
+            new Set(nodeIds || []);
+
+        this.emit("previewChanged", {
+            ids: Array.from(
+                this.previewSelectedNodes
+            ),
+        });
+    }
+
+    clearPreviewSelectedNodes() {
+
+        if (
+            this.previewSelectedNodes.size === 0
+        ) {
+            return;
+        }
+
+        this.previewSelectedNodes.clear();
+
+        this.emit("previewChanged", {
+            ids: [],
         });
     }
 

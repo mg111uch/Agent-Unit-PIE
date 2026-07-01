@@ -37,11 +37,16 @@ export class ClusterRenderer {
      * ========================================================================
      */
 
-    render(layer, state) {
+    render(layer, state, items = null) {
 
         this.clusterElements.clear();
 
-        for (const cluster of state.graph.clusters) {
+        const clusters = items ?? state.graph.clusters;
+
+        const fragment =
+            document.createDocumentFragment();
+
+        for (const cluster of clusters) {
 
             const element =
                 this.createCluster(
@@ -53,15 +58,15 @@ export class ClusterRenderer {
                 continue;
             }
 
-            layer.appendChild(
-                element
-            );
+            fragment.appendChild(element);
 
             this.clusterElements.set(
                 cluster.id,
                 element
             );
         }
+
+        layer.appendChild(fragment);
     }
 
     /**
@@ -102,6 +107,13 @@ export class ClusterRenderer {
         group.classList.add(
             "graph-cluster"
         );
+
+        if (
+            state.selectedClusterId ===
+            cluster.id
+        ) {
+            group.classList.add("selected");
+        }
 
         group.dataset.clusterId =
             cluster.id;
@@ -364,5 +376,12 @@ export class ClusterRenderer {
         return this.clusterElements.get(
             clusterId
         );
+    }
+
+    // Generic accessor matching the renderer's
+    // updateSelection() expectations.
+    getElement(clusterId) {
+
+        return this.getClusterElement(clusterId);
     }
 }

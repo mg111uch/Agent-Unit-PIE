@@ -3,6 +3,32 @@
 import { EventEmitter, GRAPH_EVENTS }
     from "../core/events.js";
 
+import { ViewportCuller }
+    from "./viewport_culler.js";
+
+function yieldToBrowser() {
+
+    return new Promise(resolve => {
+
+        if (
+            typeof requestAnimationFrame ===
+            "function"
+        ) {
+
+            requestAnimationFrame(
+                () => resolve()
+            );
+
+        } else {
+
+            setTimeout(
+                () => resolve(),
+                16
+            );
+        }
+    });
+}
+
 /**
  * ============================================================================
  * GraphRenderer
@@ -62,11 +88,30 @@ export class GraphRenderer extends EventEmitter {
                 options.overlayLayer ?? "overlay-layer"
             );
 
+        this.culler = new ViewportCuller({
+            svg: this.svg,
+            state: this.state,
+        });
+
+        this.cullOnRender =
+            options.cullOnRender ?? true;
+
         this.nodeRenderer = null;
         this.edgeRenderer = null;
         this.clusterRenderer = null;
 
         this.renderCount = 0;
+
+        // Tracks the previous selection so we can
+        // toggle classes on both the old and the new
+        // selected element on a SELECTION_CHANGED event.
+        // The state event payload only carries the new
+        // id; we have to remember the old one ourselves.
+        this._lastSelection = {
+            nodeId: null,
+            edgeId: null,
+            clusterId: null,
+        };
 
         this._bindStateEvents();
     }
@@ -99,12 +144,12 @@ export class GraphRenderer extends EventEmitter {
 
         this.state.on(
             GRAPH_EVENTS.VIEWPORT_CHANGED,
-            () => this.updateViewport()
+            () => this.applyViewport()
         );
 
         this.state.on(
             GRAPH_EVENTS.SELECTION_CHANGED,
-            () => this.render()
+            () => this.updateSelection()
         );
 
         this.state.on(
@@ -131,9 +176,70 @@ export class GraphRenderer extends EventEmitter {
 
         this.updateViewport();
 
-        this.render();
-
         return this;
+    }
+
+    /**
+     * Run `callback` once the SVG has a non-zero
+     * on-screen size.  The first call to `render()`
+     * happens before the browser has measured the
+     * SVG, which makes `ViewportCuller` fall back to
+     * the full graph and defeats culling for the
+     * very paint that matters most.  Defer until the
+     * SVG has real width/height.
+     *
+     * Yields to the browser between polls so we do
+     * not spin.  Caps the number of polls to avoid
+     * hanging if the SVG never gets a size.
+     */
+    whenMeasured(callback) {
+
+        const MAX_POLLS = 30;
+
+        let polls = 0;
+
+        const check = () => {
+
+            if (!this.svg) {
+
+                callback();
+                return;
+            }
+
+            const rect =
+                this.svg.getBoundingClientRect();
+
+            if (
+                rect.width > 0 &&
+                rect.height > 0
+            ) {
+
+                callback();
+                return;
+            }
+
+            polls += 1;
+
+            if (polls >= MAX_POLLS) {
+
+                callback();
+                return;
+            }
+
+            if (
+                typeof requestAnimationFrame ===
+                "function"
+            ) {
+
+                requestAnimationFrame(check);
+
+            } else {
+
+                setTimeout(check, 16);
+            }
+        };
+
+        check();
     }
 
     // =====================================================================
@@ -151,11 +257,13 @@ export class GraphRenderer extends EventEmitter {
 
         this.clearLayers();
 
-        this.renderClusters();
+        const culled = this._cullForRender();
 
-        this.renderEdges();
+        this.renderClusters(culled.clusters);
 
-        this.renderNodes();
+        this.renderEdges(culled.edges);
+
+        this.renderNodes(culled.nodes);
 
         this.renderOverlays();
 
@@ -171,22 +279,217 @@ export class GraphRenderer extends EventEmitter {
     }
 
     // =====================================================================
-    // Render Delegation
+    // Targeted Selection Update
     // =====================================================================
+    //
+    // Replaces a full re-render on SELECTION_CHANGED.
+    // Toggles a CSS class on the previously selected
+    // element (if any) and on the newly selected element
+    // (if any). The actual visual change is driven by
+    // CSS rules in graph_viewer.html that override the
+    // presentation attributes set during initial render.
+    //
+    // Cost: O(1) DOM mutations, no SVG element creation,
+    // no layout, no attribute writes for the rest of the
+    // graph.
 
-    renderClusters() {
+    updateSelection() {
 
-        if (!this.clusterRenderer) {
+        if (!this.state) {
             return;
         }
 
-        this.clusterRenderer.render(
-            this.clusterLayer,
-            this.state
+        const current = {
+            nodeId: this.state.selectedNodeId,
+            edgeId: this.state.selectedEdgeId,
+            clusterId: this.state.selectedClusterId,
+        };
+
+        const previous = this._lastSelection;
+
+        this._toggleSelectedClass(
+            this.nodeRenderer,
+            previous.nodeId,
+            current.nodeId
+        );
+
+        this._toggleSelectedClass(
+            this.edgeRenderer,
+            previous.edgeId,
+            current.edgeId
+        );
+
+        this._toggleSelectedClass(
+            this.clusterRenderer,
+            previous.clusterId,
+            current.clusterId
+        );
+
+        this._lastSelection = current;
+    }
+
+    _toggleSelectedClass(
+        renderer,
+        previousId,
+        currentId
+    ) {
+
+        if (!renderer || typeof renderer.getElement !== "function") {
+            return;
+        }
+
+        if (previousId && previousId !== currentId) {
+
+            const oldElement =
+                renderer.getElement(previousId);
+
+            if (oldElement) {
+                oldElement.classList.remove(
+                    "selected"
+                );
+            }
+        }
+
+        if (currentId) {
+
+            const newElement =
+                renderer.getElement(currentId);
+
+            if (newElement) {
+                newElement.classList.add(
+                    "selected"
+                );
+            }
+        }
+    }
+
+    // =====================================================================
+    // Viewport Culling
+    // =====================================================================
+
+    /**
+     * Returns the subset of nodes, edges, and
+     * clusters that intersect the visible graph
+     * region.  Falls back to the full graph when
+     * the SVG has no measured size yet (e.g. before
+     * first layout).
+     */
+    _cullForRender() {
+
+        if (!this.state?.graph) {
+
+            return {
+                nodes: [],
+                edges: [],
+                clusters: [],
+                culled: false,
+            };
+        }
+
+        if (
+            !this.cullOnRender ||
+            !this.culler
+        ) {
+
+            return {
+                nodes:
+                    this.state.graph.nodes ?? [],
+                edges:
+                    this.state.graph.edges ?? [],
+                clusters:
+                    this.state.graph.clusters ?? [],
+                culled: false,
+            };
+        }
+
+        return this.culler.cull(
+            this.state.graph
         );
     }
 
-    renderEdges() {
+    /**
+     * Updates the SVG viewport transform and re-renders
+     * the visible subset.  Bound to VIEWPORT_CHANGED,
+     * which fires on pan and zoom.
+     *
+     * Work per call is O(visible), not O(total graph),
+     * so panning stays responsive even for graphs that
+     * have tens of thousands of nodes/edges.
+     */
+    applyViewport() {
+
+        this.updateViewport();
+
+        if (!this.state?.graph) {
+            return;
+        }
+
+        this.render();
+    }
+
+    // =====================================================================
+    // Chunked Render (yields to the browser between batches)
+    // =====================================================================
+
+    async renderChunked(chunkSize = 200) {
+
+        this.emit(
+            GRAPH_EVENTS.BEFORE_RENDER,
+            {
+                renderer: this,
+            }
+        );
+
+        this.clearLayers();
+
+        const culled = this._cullForRender();
+
+        this.renderClusters(culled.clusters);
+
+        const edges = culled.edges;
+
+        for (
+            let i = 0;
+            i < edges.length;
+            i += chunkSize
+        ) {
+
+            this.renderEdgesSubset(
+                edges.slice(i, i + chunkSize)
+            );
+
+            await yieldToBrowser();
+        }
+
+        const nodes = culled.nodes;
+
+        for (
+            let i = 0;
+            i < nodes.length;
+            i += chunkSize
+        ) {
+
+            this.renderNodesSubset(
+                nodes.slice(i, i + chunkSize)
+            );
+
+            await yieldToBrowser();
+        }
+
+        this.renderOverlays();
+
+        this.renderCount += 1;
+
+        this.emit(
+            GRAPH_EVENTS.AFTER_RENDER,
+            {
+                renderer: this,
+                renderCount: this.renderCount,
+            }
+        );
+    }
+
+    renderEdgesSubset(edges) {
 
         if (!this.edgeRenderer) {
             return;
@@ -194,11 +497,12 @@ export class GraphRenderer extends EventEmitter {
 
         this.edgeRenderer.render(
             this.edgeLayer,
-            this.state
+            this.state,
+            edges
         );
     }
 
-    renderNodes() {
+    renderNodesSubset(nodes) {
 
         if (!this.nodeRenderer) {
             return;
@@ -206,7 +510,51 @@ export class GraphRenderer extends EventEmitter {
 
         this.nodeRenderer.render(
             this.nodeLayer,
-            this.state
+            this.state,
+            nodes
+        );
+    }
+
+    // =====================================================================
+    // Render Delegation
+    // =====================================================================
+
+    renderClusters(items) {
+
+        if (!this.clusterRenderer) {
+            return;
+        }
+
+        this.clusterRenderer.render(
+            this.clusterLayer,
+            this.state,
+            items
+        );
+    }
+
+    renderEdges(items) {
+
+        if (!this.edgeRenderer) {
+            return;
+        }
+
+        this.edgeRenderer.render(
+            this.edgeLayer,
+            this.state,
+            items
+        );
+    }
+
+    renderNodes(items) {
+
+        if (!this.nodeRenderer) {
+            return;
+        }
+
+        this.nodeRenderer.render(
+            this.nodeLayer,
+            this.state,
+            items
         );
     }
 

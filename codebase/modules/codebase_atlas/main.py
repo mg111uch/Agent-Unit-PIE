@@ -23,7 +23,7 @@ from .analyzers import (
     DependencyAnalyzer, ImpactAnalyzer, EntryPointDetector
 )
 from .generators import BaseGenerator, DetailGenerator
-from .utils import clean_directory, ensure_directory, save_atlas_data, load_atlas_data
+from .utils import clean_directory, ensure_directory
 
 
 def generate_atlas(
@@ -265,20 +265,40 @@ Examples:
     
     try:
         if args.load:
-            atlas_data = load_atlas_data(args.output_dir)
+            from .graph.backend.graph_serializer import GraphSerializer
+            from .graph.backend.serve import create_app
+
+            output_path = Path(args.output_dir)
+            dep_json_path = output_path / "graphdata_dep.json"
+            call_json_path = output_path / "graphdata_call.json"
+
+            if not dep_json_path.exists() or not call_json_path.exists():
+                print("=" * 60)
+                print("❌ GRAPHDATA JSON NOT FOUND")
+                print("=" * 60)
+                print(f"Expected graphdata JSON files in: {args.output_dir}")
+                print()
+                print("Run with --serve first to generate graph data:")
+                print(f"  python -m codebase_atlas.main --serve --project-dir <path>")
+                print()
+                return 1
+
+            dep_graph = GraphSerializer.load_json(dep_json_path)
+            call_graph = GraphSerializer.load_json(call_json_path)
+
             print("=" * 60)
-            print("🗺️  LOADED PRE-GENERATED ATLAS")
+            print("🗺️  LOADED GRAPHDATA JSON")
             print("=" * 60)
             print(f"Loaded from: {args.output_dir}")
             print()
-            from .graph.backend.graph_builder import GraphBuilder
-            from .graph.backend.serve import create_app
-            builder = GraphBuilder(atlas_data)
-            dep_graph = builder.build_dependency_graph()
-            call_graph = builder.build_call_graph()
-            app = create_app(dep_graph, call_graph)
-            print(f"  Graph explorer at http://{args.host}:{args.port}")
-            print(f"    Interactive:  http://{args.host}:{args.port}/")
+
+            app = create_app(
+                dep_graph,
+                call_graph,
+                output_dir=output_path,
+            )
+            print(f"  Graph explorer")
+            print(f"    Interactive:  http://{args.host}:{args.port}/view/interactive")
             print(f"    Mermaid:      http://{args.host}:{args.port}/view/mermaid")
             app.run(host=args.host, port=args.port, debug=False)
             return 0
@@ -295,19 +315,62 @@ Examples:
             config=config
         )
         
-        # Save atlas data for future --load use
-        save_atlas_data(atlas_data, args.output_dir)
-        
         # Start graph explorer if requested
         if args.serve:
             from .graph.backend.graph_builder import GraphBuilder
-            from .graph.backend.serve import create_app
+            from .graph.backend.serve import create_app_from_dir
+            from .graph.backend.graph_serializer import GraphSerializer
+            from .graph.backend.renderers.interactive_renderer import InteractiveRenderer
+            from .graph.backend.renderers.mermaid_renderer import MermaidRenderer
+            import json
+
             builder = GraphBuilder(atlas_data)
             dep_graph = builder.build_dependency_graph()
             call_graph = builder.build_call_graph()
-            app = create_app(dep_graph, call_graph)
-            print(f"  Graph explorer at http://{args.host}:{args.port}")
-            print(f"    Interactive:  http://{args.host}:{args.port}/")
+
+            output_dir = Path(args.output_dir)
+
+            # Save canonical GraphData JSON (both renderers can consume)
+            GraphSerializer.save_json(
+                dep_graph,
+                output_dir / "graphdata_dep.json",
+            )
+            GraphSerializer.save_json(
+                call_graph,
+                output_dir / "graphdata_call.json",
+            )
+
+            # Save frontend-ready InteractiveRenderer JSON
+            interactive = InteractiveRenderer()
+            (output_dir / "interactive_dep.json").write_text(
+                json.dumps(
+                    interactive.render(dep_graph),
+                    indent=2,
+                ),
+                encoding="utf-8",
+            )
+            (output_dir / "interactive_call.json").write_text(
+                json.dumps(
+                    interactive.render(call_graph),
+                    indent=2,
+                ),
+                encoding="utf-8",
+            )
+
+            # Save Mermaid text
+            mermaid = MermaidRenderer()
+            (output_dir / "mermaid_dep.txt").write_text(
+                mermaid.render(dep_graph),
+                encoding="utf-8",
+            )
+            (output_dir / "mermaid_call.txt").write_text(
+                mermaid.render(call_graph),
+                encoding="utf-8",
+            )
+
+            app = create_app_from_dir(output_dir)
+            print(f"  Graph explorer")
+            print(f"    Interactive:  http://{args.host}:{args.port}/view/interactive")
             print(f"    Mermaid:      http://{args.host}:{args.port}/view/mermaid")
             app.run(host=args.host, port=args.port, debug=False)
         

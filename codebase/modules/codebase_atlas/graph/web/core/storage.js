@@ -34,6 +34,7 @@ export class GraphStorage {
 
         this.namespace = namespace;
         this.version = STORAGE_VERSION;
+        this._suspendCount = 0;
     }
 
     // =========================================================================
@@ -285,7 +286,14 @@ export class GraphStorage {
 
     attach(state) {
 
-        const save = () => this.save(state);
+        const save = () => {
+
+            if (this._suspendCount > 0) {
+                return;
+            }
+
+            this.save(state);
+        };
 
         const unsubscribers = [
 
@@ -313,6 +321,11 @@ export class GraphStorage {
                 "selectionChanged",
                 save
             ),
+
+            state.subscribe(
+                "nodes:moved",
+                save
+            ),
         ];
 
         return () => {
@@ -322,6 +335,22 @@ export class GraphStorage {
                 unsubscribe();
             }
         };
+    }
+
+    // =====================================================================
+    // Suspend / Resume
+    // =====================================================================
+
+    suspend() {
+
+        this._suspendCount += 1;
+    }
+
+    resume() {
+
+        if (this._suspendCount > 0) {
+            this._suspendCount -= 1;
+        }
     }
 }
 

@@ -32,15 +32,56 @@ export class EdgeRenderer {
      * ========================================================================
      */
 
-    render(layer, state) {
+    render(layer, state, items = null) {
 
         this.edgeElements.clear();
 
-        for (const edge of state.graph.edges) {
+        const edges = items ?? state.graph.edges;
+
+        // -----------------------------------------------------------
+        // Deduplicate by (source, target) pair.
+        //
+        // Call graphs in particular repeat the same
+        // (caller, callee) edge many times because each
+        // call site is a separate edge.  Drawing N lines
+        // for N identical pairs is wasted DOM, wasted
+        // compositing, and a confusing visual.
+        //
+        // The first edge in each group is the
+        // representative: it owns the rendered id and
+        // selection state.  The count is shown as a
+        // small badge when > 1.
+        // -----------------------------------------------------------
+
+        const groups = new Map();
+
+        for (const edge of edges) {
 
             if (state.hiddenEdges?.has(edge.id)) {
                 continue;
             }
+
+            const key =
+                edge.source + "\u0000" +
+                edge.target;
+
+            if (groups.has(key)) {
+                groups.get(key).count += 1;
+                continue;
+            }
+
+            groups.set(key, {
+                representative: edge,
+                count: 1,
+            });
+        }
+
+        const fragment =
+            document.createDocumentFragment();
+
+        for (const group of groups.values()) {
+
+            const edge = group.representative;
 
             const source =
                 state.getNode(edge.source);
@@ -64,16 +105,19 @@ export class EdgeRenderer {
                     edge,
                     source,
                     target,
-                    state
+                    state,
+                    group.count
                 );
 
-            layer.appendChild(element);
+            fragment.appendChild(element);
 
             this.edgeElements.set(
                 edge.id,
                 element
             );
         }
+
+        layer.appendChild(fragment);
     }
 
     /**
@@ -86,7 +130,8 @@ export class EdgeRenderer {
         edge,
         source,
         target,
-        state
+        state,
+        count = 1
     ) {
 
         const group =
@@ -97,7 +142,16 @@ export class EdgeRenderer {
 
         group.classList.add("graph-edge");
 
+        if (state.selectedEdgeId === edge.id) {
+            group.classList.add("selected");
+        }
+
         group.dataset.edgeId = edge.id;
+
+        if (count > 1) {
+            group.classList.add("merged");
+            group.dataset.edgeCount = count;
+        }
 
         const line =
             this.createLine(
@@ -107,9 +161,39 @@ export class EdgeRenderer {
                 state
             );
 
+        // Thicker stroke for merged edges so the
+        // visual weight matches the duplicate count.
+        if (count > 1) {
+
+            line.setAttribute(
+                "stroke-width",
+                Math.min(
+                    1 + Math.log2(count),
+                    6
+                ).toString()
+            );
+        }
+
         group.appendChild(line);
 
-        if (edge.label) {
+        if (count > 1) {
+
+            const badge =
+                this.createCountBadge(
+                    source,
+                    target,
+                    count
+                );
+
+            if (badge) {
+                group.appendChild(badge);
+            }
+        }
+
+        if (
+            edge.label &&
+            this.shouldRenderLabel(state)
+        ) {
 
             const label =
                 this.createLabel(
@@ -122,6 +206,31 @@ export class EdgeRenderer {
         }
 
         return group;
+    }
+
+    /**
+     * Edge labels are extremely expensive in SVG
+     * (text layout dominates cost above a few
+     * thousand nodes).
+     *
+     * Call graphs are the worst case: edges are
+     * almost always the same opaque "calls"
+     * relation, and labels add no information.
+     *
+     * Dependency graphs keep their labels because
+     * the edge type (imports, inherits, references)
+     * is actually useful when read.
+     */
+    shouldRenderLabel(state) {
+
+        const graphType =
+            state?.graph?.metadata?.graph_type;
+
+        if (graphType === "call") {
+            return false;
+        }
+
+        return true;
     }
 
     /**
@@ -208,6 +317,80 @@ export class EdgeRenderer {
      * Label
      * ========================================================================
      */
+
+    createCountBadge(
+        source,
+        target,
+        count
+    ) {
+
+        const sourcePos =
+            this.getNodeCenter(source);
+
+        const targetPos =
+            this.getNodeCenter(target);
+
+        const cx =
+            (sourcePos.x + targetPos.x) / 2;
+
+        const cy =
+            (sourcePos.y + targetPos.y) / 2 - 4;
+
+        const text =
+            document.createElementNS(
+                SVG_NS,
+                "text"
+            );
+
+        text.textContent = `x${count}`;
+
+        text.setAttribute("x", cx);
+        text.setAttribute("y", cy);
+
+        text.setAttribute(
+            "text-anchor",
+            "middle"
+        );
+
+        text.setAttribute(
+            "font-family",
+            "ui-monospace, SFMono-Regular, Menlo, monospace"
+        );
+
+        text.setAttribute(
+            "font-size",
+            "9"
+        );
+
+        text.setAttribute(
+            "font-weight",
+            "600"
+        );
+
+        text.setAttribute(
+            "fill",
+            "#ffffff"
+        );
+
+        text.setAttribute(
+            "stroke",
+            "#0f1117"
+        );
+
+        text.setAttribute(
+            "stroke-width",
+            "3"
+        );
+
+        text.setAttribute(
+            "paint-order",
+            "stroke"
+        );
+
+        text.classList.add("graph-edge-badge");
+
+        return text;
+    }
 
     createLabel(
         edge,
@@ -378,20 +561,44 @@ export class EdgeRenderer {
             targetPos.y
         );
 
-        const label =
-            group.querySelector("text");
+        const midX =
+            (sourcePos.x + targetPos.x) / 2;
 
-        if (label) {
+        const midY =
+            (sourcePos.y + targetPos.y) / 2 - 4;
 
-            label.setAttribute(
-                "x",
-                (sourcePos.x + targetPos.x) / 2
+        const badge =
+            group.querySelector(
+                ".graph-edge-badge"
             );
 
-            label.setAttribute(
-                "y",
-                (sourcePos.y + targetPos.y) / 2 - 4
-            );
+        if (badge) {
+
+            badge.setAttribute("x", midX);
+            badge.setAttribute("y", midY);
+        }
+
+        // The label (if present) is a text node
+        // without the badge class.  querySelector
+        // returns the first match; the badge is
+        // first in DOM order, so look for any
+        // additional text element.
+        const textNodes =
+            group.querySelectorAll("text");
+
+        for (const node of textNodes) {
+
+            if (
+                node.classList &&
+                node.classList.contains(
+                    "graph-edge-badge"
+                )
+            ) {
+                continue;
+            }
+
+            node.setAttribute("x", midX);
+            node.setAttribute("y", midY);
         }
     }
 
@@ -406,5 +613,12 @@ export class EdgeRenderer {
         return this.edgeElements.get(
             edgeId
         );
+    }
+
+    // Generic accessor matching the renderer's
+    // updateSelection() expectations.
+    getElement(edgeId) {
+
+        return this.getEdgeElement(edgeId);
     }
 }

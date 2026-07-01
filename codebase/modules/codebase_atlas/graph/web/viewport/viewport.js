@@ -310,6 +310,15 @@ export class ViewportController {
 
             this.state.panY =
                 this.panY;
+
+            this.state.emit(
+                "viewportChanged",
+                {
+                    zoom: this.zoom,
+                    panX: this.panX,
+                    panY: this.panY,
+                }
+            );
         }
 
         this.updateTransform();
