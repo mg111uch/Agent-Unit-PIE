@@ -1,166 +1,5 @@
 # Current Development status
 
-## Phase 1 — Backend (✅ Completed)
-
-* `graph_models.py`
-Single source of truth for graph structure.
-Contains: GraphData,Node,Edge,Cluster,NodeType,EdgeType
-
-* `graph_builder.py`
-AtlasData -> GraphBuilder -> GraphData
-Moves graph extraction logic out of renderers.
-
-* `mermaid_renderer.py`
-GraphData -> Mermaid text
-
-* `graph_serializer.py`
-GraphData ↔ JSON
-Needed for browser interactive view.
-Example:
-```json
-{
-  "nodes": [],
-  "edges": [],
-  "clusters": []
-}
-```
-
-* `interactive_renderer.py`
-GraphData -> InteractiveGraphJSON
-Produces browser-consumable graph data.
-
-* `serve.py`
-AtlasData -> GraphBuilder-> GraphData -> MermaidRenderer or InteractiveRenderer
-
-## Phase 2 — Graph Web Frontend (✅ Completed)
-
-The frontend is no longer merely rendering SVG.
-
-```text
-  Backend Graph Model
-          ↓
-      graph JSON
-          ↓
-     GraphState
-          ↓
-    GraphRenderer
-       /  |  \
- Cluster Edge Node
-          ↓
-         SVG
-```
-
-### Performance
-
-* `web/render/virtual_renderer.js`
-Provides: lazy rendering
-* `web/render/viewport_culler.js`
-* `web/render/lod.js`
-Level of detail:
-far zoom: hide labels
-mid zoom: show labels
-close zoom: full metadata
-
------------------------------------
-
-# serve.py Refactor
-
-The new flow should be:
-
-```text
-Build Graph
-   ↓
-interactive_renderer.py
-   ↓
-Graph JSON
-   ↓
-serve.py
-   ↓
-graph_viewer.html
-   ↓
-GraphViewer
-   ↓
-SVG Renderers
-```
-
-## Composition After Refactor
-
-```text
-serve.py
-    ↓
-/api/graph
-    ↓
-graph_viewer.js
-    ↓
-GraphState
-    ↓
-GraphRenderer
-    ↓
-viewport/
-    ↓
-interaction/
-    ↓
-SVG
-```
-
----
-
-# One Architecture Improvement Before `interaction.js`
-
-Currently `drag.js` performs:
-
-```javascript
-renderer.render();
-```
-
-on every pointer move.
-
-That is acceptable for:
-
-```text
-100–300 nodes
-```
-
-but becomes expensive later.
-
-A better future direction is:
-
-```text
-DragController
-      ↓
-state update
-      ↓
-renderer.updateNode(...)
-renderer.updateEdge(...)
-renderer.updateCluster(...)
-```
-
-instead of full rerender.
-
-For now, keep the full rerender until the interaction stack is complete.
-
-## `web/interaction/interaction.js`
-
-Responsibility:
-
-```text
-ViewportController
-      +
-GraphNavigation
-      +
-SelectionManager
-      +
-GraphEventController
-      +
-DragController
-      ↓
-GraphInteractionManager
-```
-
-This becomes the single object created by `graph_viewer.js` to wire the entire graph engine together.
-
----
-
 # Graph engine contains
 
 ```text
@@ -194,22 +33,135 @@ GraphInteractionManager
 ```
 
 ## Interactive engine
-GraphData ──→ InteractiveRenderer ──→ JSON ──→ graph_viewer.html (server-injected)
+GraphData ─> InteractiveRenderer ─> JSON ─> graph_viewer.html (server-injected)
 
 ## Mermaid engine  
-GraphData ──→ MermaidRenderer ──→ text ──→ mermaid_view.html (server-injected)
+GraphData ─> MermaidRenderer ─> text ─> mermaid_view.html (server-injected)
 
-## Interactive Call graph loading issue
+---
 
-Browser shows alert that page is consuming too much resources. One cpu core running at 100% while call graph loading. Takes too much time. How to fix and render call graph using less resources so that it loads fast.
+## Phase 1 — Backend (✅ Completed)
 
-### Files for context to solve call graph loading bottleneck
-* web/core/storage.js
-* web/graph_viewer.js
-* web/render/clusters.js
-* web/render/edges.js
-* web/render/nodes.js
-* web/render/renderer.js
+* `graph_models.py`
+Single source of truth for graph structure.
+Contains: GraphData,Node,Edge,Cluster,NodeType,EdgeType
+
+* `graph_builder.py`
+AtlasData -> GraphBuilder -> GraphData
+Moves graph extraction logic out of renderers.
+
+* `mermaid_renderer.py`
+GraphData -> Mermaid text
+
+* `graph_serializer.py`
+GraphData ↔ JSON
+Needed for browser interactive view.
+Example:
+```json
+{
+  "nodes": [],
+  "edges": [],
+  "clusters": []
+}
+```
+
+* `interactive_renderer.py`
+GraphData -> InteractiveGraphJSON
+Produces browser-consumable graph data.
+
+* `serve.py`
+AtlasData -> GraphBuilder-> GraphData -> MermaidRenderer or InteractiveRenderer
+
+New flow is:
+
+```text
+Build Graph
+   ↓
+interactive_renderer.py
+   ↓
+Graph JSON
+   ↓
+serve.py (/api/graph)
+   ↓
+graph_viewer.html
+   ↓
+graph_viewer.js
+    ↓
+GraphState
+    ↓
+GraphRenderer
+    ↓
+viewport/
+    ↓
+interaction/
+    ↓
+SVG Renderers
+```
+
+---
+
+## Phase 2 — Graph Web Frontend (✅ Completed)
+
+The frontend is no longer merely rendering SVG.
+
+```text
+  Backend Graph Model
+          ↓
+      graph JSON
+          ↓
+     GraphState
+          ↓
+    GraphRenderer
+       /  |  \
+ Cluster Edge Node
+          ↓
+         SVG
+```
+
+* `web/interaction/drag.js`
+Currently performs `renderer.render();` on every pointer move.That is acceptable for 100–300 nodes but becomes expensive later.
+
+Instead of full rerender, a better future direction is:
+
+```text
+DragController
+      ↓
+state update
+      ↓
+renderer.updateNode(...)
+renderer.updateEdge(...)
+renderer.updateCluster(...)
+```
+
+* `web/interaction/interaction.js`
+Responsibility:
+
+```text
+ViewportController
+      +
+GraphNavigation
+      +
+SelectionManager
+      +
+GraphEventController
+      +
+DragController
+      ↓
+GraphInteractionManager
+```
+
+This becomes the single object created by `graph_viewer.js` to wire the entire graph engine together.
+
+* `web/render/virtual_renderer.js`
+Provides: lazy rendering
+
+* `web/render/viewport_culler.js`
+
+* `web/render/lod.js`
+Level of detail:
+far zoom: hide labels
+mid zoom: show labels
+close zoom: full metadata
 
 ---
 
@@ -228,8 +180,6 @@ Browser shows alert that page is consuming too much resources. One cpu core runn
 ---
 
 # Session Summary — 2026-07-01
-
-## Problems fixed
 
 ### 1. Call graph infinite loop in `hierarchical()` layout
 - **Root cause**: BFS level-assignment loop never terminated on cyclic call graphs (recursion, mutual recursion). 50-node graph with one cycle hung indefinitely.
@@ -265,23 +215,24 @@ Browser shows alert that page is consuming too much resources. One cpu core runn
 ### 9. `forceDirected()` O(n²) landmine
 - **Fix**: Added size guard — falls back to `grid` layout if >200 nodes (`layout/layout.js`).
 
-### 10. Removed PixiJS viewer
-- Removed `pixi_view.html`, `pixi_viewer.js`, `pixi_renderer.js`, and all route/print references (`serve.py`, `main.py`).
+---
 
-## Files modified
-- `graph/backend/serve.py`
-- `graph/web/core/state.js`
-- `graph/web/core/storage.js`
-- `graph/web/graph_viewer.js`
-- `graph/web/render/renderer.js`
-- `graph/web/render/nodes.js`
-- `graph/web/render/viewport_culler.js`
-- `graph/web/render/edges.js`
-- `graph/web/viewport/viewport.js`
-- `graph/web/viewport/navigation.js`
-- `graph/web/layout/layout.js`
-- `graph/web/interaction/drag.js`
-- `graph/web/interaction/events.js`
-- `graph/web/interaction/interaction.js`
-- `codebase_atlas/main.py`
+# Session Summary — 2026-07-02
 
+### 1. Removed duplicate node-position storage from `localStorage`
+- **Root cause**: `GraphStorage` persisted/restored `nodePositions` to/from browser `localStorage`, causing coordinates from deleted layout experiments to stick even after deleting `node_pos_*.json`.
+- **Fix**: Removed `nodePositions` extraction in `createSnapshot()`, removed `nodePositions` restoration in `restore()`, and removed `nodes:moved` auto-save. Bumped `STORAGE_VERSION` from `1` to `2`. Node positions are now authoritative only in server-side JSON files.
+
+### 2. Cluster-aware initial layout for call graphs
+- **Fix**: Added `GraphLayoutEngine.clusterGrid()` in `layout/layout.js`. It treats each `cluster_id` as a macro-node, runs `hierarchical()` on the cluster graph, then lays out member nodes locally within each cluster. Added `_resolveClusterOverlaps()` to push intersecting cluster bounding boxes apart. Wired `graph_viewer.js` to use `clusterGrid` automatically when `graph_type === "call"` and clusters exist.
+
+### 3. Project-scoped position files
+- **Root cause**: `node_pos_dep.json` / `node_pos_call.json` were keyed only by graph type, so reusing `atlas_output` for a different project leaked stale positions.
+- **Fix**: Added `atlas_meta.json` with `project_id` (resolved absolute path). Position files now store `{"project_id": "...", "positions": {...}}`. Save and merge paths validate the embedded `project_id`. Legacy plain-dict files are accepted once, then upgraded on next save.
+
+### 4. Removed mermaid renderer, viewer, and intermediate artifacts
+- **Removed**: `graph/backend/renderers/mermaid_renderer.py`, `graph/web/mermaid_view.html`, `create_app_from_dir()`, `_merge_positions_into_json()`.
+- **Removed writes**: `interactive_dep.json`, `interactive_call.json`, `mermaid_dep.txt`, `mermaid_call.txt` are no longer generated. `--serve` and `--load` now rely exclusively on canonical `graphdata_*.json` plus project-scoped persistent positions.
+
+### 5. Preserved position files across atlas regeneration
+- Updated `clean_directory()` call in `main.py` to keep `node_pos_dep.json` and `node_pos_call.json` during output-directory cleanup, so manual rearrangements survive atlas regeneration.

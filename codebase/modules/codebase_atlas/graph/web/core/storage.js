@@ -11,20 +11,22 @@
  *   - zoom
  *   - pan
  *   - hidden nodes
+ *   - hidden edges
  *   - pinned nodes
  *   - collapsed clusters
- *   - custom node positions
+ *   - selected node
  *
  * Does NOT store:
  *   - graph JSON
  *   - nodes/edges/clusters
+ *   - node positions
  *   - SVG state
  *   - renderer state
  *
  * ============================================================================
  */
 
-const STORAGE_VERSION = 1;
+const STORAGE_VERSION = 2;
 
 const DEFAULT_NAMESPACE = "interactive-graph";
 
@@ -52,23 +54,6 @@ export class GraphStorage {
 
     createSnapshot(state) {
 
-        const nodePositions = {};
-
-        for (const node of state.graph.nodes) {
-
-            if (
-                node.position &&
-                Number.isFinite(node.position.x) &&
-                Number.isFinite(node.position.y)
-            ) {
-
-                nodePositions[node.id] = {
-                    x: node.position.x,
-                    y: node.position.y,
-                };
-            }
-        }
-
         return {
 
             version: this.version,
@@ -88,8 +73,6 @@ export class GraphStorage {
             collapsedClusters: [...state.collapsedClusters],
 
             selectedNodeId: state.selectedNodeId,
-
-            nodePositions,
         };
     }
 
@@ -218,30 +201,6 @@ export class GraphStorage {
             state.selectedNodeId =
                 snapshot.selectedNodeId || null;
 
-            // -------------------------------------------------------------
-            // Node Positions
-            // -------------------------------------------------------------
-
-            const positions =
-                snapshot.nodePositions || {};
-
-            for (const node of state.graph.nodes) {
-
-                const pos =
-                    positions[node.id];
-
-                if (!pos) {
-                    continue;
-                }
-
-                if (!node.position) {
-                    node.position = {};
-                }
-
-                node.position.x = pos.x;
-                node.position.y = pos.y;
-            }
-
             return true;
 
         } catch (error) {
@@ -319,11 +278,6 @@ export class GraphStorage {
 
             state.subscribe(
                 "selectionChanged",
-                save
-            ),
-
-            state.subscribe(
-                "nodes:moved",
                 save
             ),
         ];

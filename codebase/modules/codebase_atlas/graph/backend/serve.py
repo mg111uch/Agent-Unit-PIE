@@ -11,7 +11,6 @@ from flask import (
 )
 
 from .renderers.interactive_renderer import InteractiveRenderer
-from .renderers.mermaid_renderer import MermaidRenderer
 from .graph_models import GraphData
 
 
@@ -25,6 +24,47 @@ _POS_FILE = {
 }
 
 
+def _read_project_id(output_dir: Path) -> str | None:
+
+    meta_file = output_dir / "atlas_meta.json"
+
+    if not meta_file.exists():
+        return None
+
+    try:
+        return json.loads(
+            meta_file.read_text(encoding="utf-8")
+        ).get("project_id")
+    except Exception:
+        return None
+
+
+def _load_positions_with_meta(
+    output_dir: Path,
+    graph_type: str,
+) -> tuple[str | None, dict | None]:
+
+    pos_file = output_dir / _POS_FILE[graph_type]
+
+    if not pos_file.exists():
+        return None, None
+
+    try:
+        data = json.loads(
+            pos_file.read_text(encoding="utf-8")
+        )
+    except Exception:
+        return None, None
+
+    if not isinstance(data, dict):
+        return None, None
+
+    if "positions" in data:
+        return data.get("project_id"), data.get("positions")
+
+    return "legacy", data
+
+
 def _merge_positions(
     graph: GraphData,
     output_dir: Path,
@@ -32,16 +72,22 @@ def _merge_positions(
 ) -> None:
     """Overwrite node.x / node.y from saved positions file if it exists."""
 
-    pos_file = output_dir / _POS_FILE[graph_type]
+    current_project_id = _read_project_id(output_dir)
 
-    if not pos_file.exists():
+    if current_project_id is None:
         return
 
-    try:
-        positions = json.loads(
-            pos_file.read_text(encoding="utf-8")
-        )
-    except Exception:
+    file_project_id, positions = _load_positions_with_meta(
+        output_dir,
+        graph_type,
+    )
+
+    if positions is None:
+        return
+
+    if file_project_id == "legacy":
+        pass
+    elif file_project_id != current_project_id:
         return
 
     for node in graph.nodes.values():
@@ -55,10 +101,34 @@ def _merge_positions(
         node.y = pos.get("y", node.y)
 
 
+def _write_positions(
+    output_dir: Path,
+    graph_type: str,
+    positions: dict,
+    project_id: str,
+) -> None:
+
+    payload = {
+        "project_id": project_id,
+        "positions": positions,
+    }
+
+    pos_file = (
+        Path(output_dir) /
+        _POS_FILE[graph_type]
+    )
+
+    pos_file.write_text(
+        json.dumps(payload, indent=2),
+        encoding="utf-8",
+    )
+
+
 def create_app(
     dep_graph: GraphData,
     call_graph: GraphData,
     output_dir: str | Path | None = None,
+    project_id: str | None = None,
 ) -> Flask:
     """Create app from GraphData objects (renders at startup)."""
 
@@ -68,105 +138,23 @@ def create_app(
         _merge_positions(call_graph, output_dir, "call")
 
     interactive_renderer = InteractiveRenderer()
-    mermaid_renderer = MermaidRenderer()
 
     dep_json = json.dumps(interactive_renderer.render(dep_graph))
     call_json = json.dumps(interactive_renderer.render(call_graph))
-    dep_mermaid = mermaid_renderer.render(dep_graph)
-    call_mermaid = mermaid_renderer.render(call_graph)
 
     return _build_app(
         dep_json,
         call_json,
-        dep_mermaid,
-        call_mermaid,
         output_dir=output_dir,
-    )
-
-
-def _merge_positions_into_json(
-    json_str: str,
-    output_dir: Path,
-    graph_type: str,
-) -> str:
-    """Parse JSON, merge saved positions into each node, re-serialize."""
-
-    pos_file = output_dir / _POS_FILE[graph_type]
-
-    if not pos_file.exists():
-        return json_str
-
-    try:
-        positions = json.loads(
-            pos_file.read_text(encoding="utf-8")
-        )
-    except Exception:
-        return json_str
-
-    try:
-        data = json.loads(json_str)
-    except Exception:
-        return json_str
-
-    for node in data.get("nodes", []):
-
-        pos = positions.get(node["id"])
-
-        if pos is None:
-            continue
-
-        node["position"] = {
-            "x": pos.get("x", node.get("position", {}).get("x")),
-            "y": pos.get("y", node.get("position", {}).get("y")),
-        }
-
-    return json.dumps(data)
-
-
-def create_app_from_dir(output_dir: str | Path) -> Flask:
-    """Create app from pre-saved JSON/text files in output_dir.
-
-    Expects these files:
-        interactive_dep.json
-        interactive_call.json
-        mermaid_dep.txt
-        mermaid_call.txt
-    """
-
-    output_dir = Path(output_dir)
-
-    dep_json_path = output_dir / "interactive_dep.json"
-    call_json_path = output_dir / "interactive_call.json"
-
-    dep_json = dep_json_path.read_text(encoding="utf-8")
-    call_json = call_json_path.read_text(encoding="utf-8")
-
-    dep_json = _merge_positions_into_json(dep_json, output_dir, "dependency")
-    call_json = _merge_positions_into_json(call_json, output_dir, "call")
-
-    dep_mermaid = (
-        output_dir / "mermaid_dep.txt"
-    ).read_text(encoding="utf-8")
-
-    call_mermaid = (
-        output_dir / "mermaid_call.txt"
-    ).read_text(encoding="utf-8")
-
-    return _build_app(
-        dep_json,
-        call_json,
-        dep_mermaid,
-        call_mermaid,
-        output_dir=output_dir,
+        project_id=project_id,
     )
 
 
 def _build_app(
     dep_json: str,
     call_json: str,
-    dep_mermaid: str,
-    call_mermaid: str,
     output_dir: str | Path | None = None,
+    project_id: str | None = None,
 ) -> Flask:
 
     app = Flask(
@@ -184,17 +172,6 @@ def _build_app(
             call_json=call_json,
         )
 
-    @app.route("/view/mermaid")
-    @app.route("/view/mermaid/<graph_type>")
-    def mermaid_view(graph_type: str = "dependency"):
-
-        return render_template(
-            "mermaid_view.html",
-            graph_type=graph_type,
-            dep_mermaid=dep_mermaid,
-            call_mermaid=call_mermaid,
-        )
-
     @app.route("/web/<path:path>")
     def web_assets(path: str):
 
@@ -209,6 +186,11 @@ def _build_app(
         if output_dir is None:
             return jsonify(
                 {"error": "output_dir not configured"}
+            ), 400
+
+        if project_id is None:
+            return jsonify(
+                {"error": "project_id not configured"}
             ), 400
 
         data = request.get_json(silent=True)
@@ -241,14 +223,11 @@ def _build_app(
                "x" in pos and "y" in pos
         }
 
-        pos_file = (
-            Path(output_dir) /
-            _POS_FILE[graph_type]
-        )
-
-        pos_file.write_text(
-            json.dumps(rounded, indent=2),
-            encoding="utf-8",
+        _write_positions(
+            output_dir,
+            graph_type,
+            rounded,
+            project_id,
         )
 
         return jsonify({"saved": True})

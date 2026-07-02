@@ -5,6 +5,24 @@
   },
   "nodes": [
     {
+      "id": "F001_subtract",
+      "label": "subtract()",
+      "node_type": "function",
+      "color": null,
+      "size": null,
+      "risk_level": "low",
+      "entry_point": false,
+      "cluster_id": "F001",
+      "metadata": {
+        "file_ref": "F001",
+        "function_name": "subtract"
+      },
+      "x": null,
+      "y": null,
+      "pinned": false,
+      "hidden": false
+    },
+    {
       "id": "F001_divide",
       "label": "divide()",
       "node_type": "function",
@@ -16,6 +34,24 @@
       "metadata": {
         "file_ref": "F001",
         "function_name": "divide"
+      },
+      "x": null,
+      "y": null,
+      "pinned": false,
+      "hidden": false
+    },
+    {
+      "id": "F001_add",
+      "label": "add()",
+      "node_type": "function",
+      "color": null,
+      "size": null,
+      "risk_level": "low",
+      "entry_point": false,
+      "cluster_id": "F001",
+      "metadata": {
+        "file_ref": "F001",
+        "function_name": "add"
       },
       "x": null,
       "y": null,
@@ -57,49 +93,13 @@
       "y": null,
       "pinned": false,
       "hidden": false
-    },
-    {
-      "id": "F001_add",
-      "label": "add()",
-      "node_type": "function",
-      "color": null,
-      "size": null,
-      "risk_level": "low",
-      "entry_point": false,
-      "cluster_id": "F001",
-      "metadata": {
-        "file_ref": "F001",
-        "function_name": "add"
-      },
-      "x": null,
-      "y": null,
-      "pinned": false,
-      "hidden": false
-    },
-    {
-      "id": "F001_subtract",
-      "label": "subtract()",
-      "node_type": "function",
-      "color": null,
-      "size": null,
-      "risk_level": "low",
-      "entry_point": false,
-      "cluster_id": "F001",
-      "metadata": {
-        "file_ref": "F001",
-        "function_name": "subtract"
-      },
-      "x": null,
-      "y": null,
-      "pinned": false,
-      "hidden": false
     }
   ],
   "edges": [
     {
-      "id": "call:F001_calculator->F001_add",
+      "id": "call:F001_calculator->F001_subtract",
       "source": "F001_calculator",
-      "target": "F001_add",
+      "target": "F001_subtract",
       "edge_type": "calls",
       "label": null,
       "weight": 1.0,
@@ -119,9 +119,9 @@
       "hidden": false
     },
     {
-      "id": "call:F001_calculator->F001_subtract",
+      "id": "call:F001_calculator->F001_add",
       "source": "F001_calculator",
-      "target": "F001_subtract",
+      "target": "F001_add",
       "edge_type": "calls",
       "label": null,
       "weight": 1.0,

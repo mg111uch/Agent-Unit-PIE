@@ -1,5 +1,5 @@
 # 📂 dummy
-Generated: 2026-07-01 17:38:04
+Generated: 2026-07-02 18:15:10
 Files: 1
 
 ---
@@ -18,6 +18,6 @@ F: divide(n1,n2)
    ↳Called by: F001:calculator
    ↳Impact: 🟢LOW (1 dependents) | Breaks: [F001:calculator]
 F: calculator()
-   ↳Calls: F001:add,F001:divide,F001:subtract
+   ↳Calls: F001:subtract,F001:divide,F001:add
    S: Main calculator function that runs in a loop.
 ---

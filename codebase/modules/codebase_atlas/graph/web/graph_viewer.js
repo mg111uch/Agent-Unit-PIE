@@ -394,6 +394,27 @@ export class GraphViewer {
             return;
         }
 
+        const hasClusters =
+            (this.state.graph?.clusters?.length || 0) >
+            0;
+
+        const graphType =
+            this.graphData?.graph_type ??
+            "unknown";
+
+        if (graphType === "call" && hasClusters) {
+            this.layout.clusterGrid(
+                this.state.graph,
+                {
+                    microSpacing: 140,
+                    macroSpacing: 400,
+                    clusterMargin: 60,
+                }
+            );
+
+            return;
+        }
+
         if (
             nodes.length >= LARGE_GRAPH_THRESHOLD
         ) {

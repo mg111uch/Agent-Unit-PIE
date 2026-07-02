@@ -1,22 +1,25 @@
 {
-  "F001_divide": {
-    "x": 145,
-    "y": -137
-  },
-  "F001_calculator": {
-    "x": 0,
-    "y": 0
-  },
-  "F001_multiply": {
-    "x": 230,
-    "y": -32
-  },
-  "F001_add": {
-    "x": 220,
-    "y": 70
-  },
-  "F001_subtract": {
-    "x": -34,
-    "y": 161
+  "project_id": "/home/manigupt/Hello/python/Agentic_Unit_PIE/codebase/rag_pipeline/dummy",
+  "positions": {
+    "F001_subtract": {
+      "x": -167,
+      "y": -341
+    },
+    "F001_divide": {
+      "x": 117,
+      "y": -351
+    },
+    "F001_add": {
+      "x": 177,
+      "y": -150
+    },
+    "F001_calculator": {
+      "x": -49,
+      "y": -261
+    },
+    "F001_multiply": {
+      "x": -158,
+      "y": -152
+    }
   }
 }

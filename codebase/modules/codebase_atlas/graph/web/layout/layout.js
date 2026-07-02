@@ -158,6 +158,180 @@ export class GraphLayoutEngine {
         return graph;
     }
 
+    static clusterGrid(graph, options = {}) {
+
+        const microSpacing = options.microSpacing ?? 140;
+        const macroSpacing = options.macroSpacing ?? 400;
+        const clusterMargin = options.clusterMargin ?? 60;
+
+        const nodes = Array.isArray(graph.nodes)
+            ? graph.nodes
+            : Array.from(graph.nodes?.values?.() || []);
+
+        const edges = Array.isArray(graph.edges)
+            ? graph.edges
+            : Array.from(graph.edges?.values?.() || []);
+
+        const clusters = Array.isArray(graph.clusters)
+            ? graph.clusters
+            : [];
+
+        if (!nodes.length) {
+            return graph;
+        }
+
+        const nodeToCluster = new Map();
+        const clusterIds = new Set();
+
+        for (const node of nodes) {
+            const cid =
+                node.cluster_id && node.cluster_id.length
+                    ? node.cluster_id
+                    : "__UNCLUSTERED__";
+
+            nodeToCluster.set(node.id, cid);
+            clusterIds.add(cid);
+        }
+
+        const clusterEntries = Array.from(clusterIds).map(id => ({
+            id,
+            members: [],
+        }));
+
+        const clusterIndex = new Map(
+            clusterEntries.map((cluster, index) => [
+                cluster.id,
+                index,
+            ])
+        );
+
+        for (const node of nodes) {
+            const index =
+                clusterIndex.get(nodeToCluster.get(node.id));
+
+            if (index !== undefined) {
+                clusterEntries[index].members.push(node);
+            }
+        }
+
+        clusterEntries.forEach(entry => {
+            const count = entry.members.length;
+            entry.cols =
+                Math.max(1, Math.ceil(Math.sqrt(count)));
+            entry.rows =
+                Math.max(1, Math.ceil(count / entry.cols));
+        });
+
+        const macroNodes = clusterEntries.map((_, index) => ({
+            id: index,
+        }));
+
+        const macroAdj = new Map();
+        clusterEntries.forEach((_, index) =>
+            macroAdj.set(index, new Set())
+        );
+
+        for (const edge of edges) {
+            const sourceCluster =
+                nodeToCluster.get(edge.source);
+            const targetCluster =
+                nodeToCluster.get(edge.target);
+
+            if (
+                !sourceCluster ||
+                !targetCluster ||
+                sourceCluster === targetCluster
+            ) {
+                continue;
+            }
+
+            const sourceIndex =
+                clusterIndex.get(sourceCluster);
+            const targetIndex =
+                clusterIndex.get(targetCluster);
+
+            if (
+                sourceIndex == null ||
+                targetIndex == null
+            ) {
+                continue;
+            }
+
+            macroAdj.get(sourceIndex).add(
+                targetIndex
+            );
+            macroAdj.get(targetIndex).add(
+                sourceIndex
+            );
+        }
+
+        const macroEdges = [];
+        macroAdj.forEach((targets, source) => {
+            for (const target of targets) {
+                macroEdges.push({
+                    source,
+                    target,
+                });
+            }
+        });
+
+        const macroGraph = {
+            nodes: macroNodes,
+            edges: macroEdges,
+            nodeMap: new Map(
+                macroNodes.map(node => [
+                    node.id,
+                    node,
+                ])
+            ),
+        };
+
+        GraphLayoutEngine.hierarchical(
+            macroGraph,
+            {
+                levelSpacing: macroSpacing,
+                nodeSpacing: macroSpacing,
+            }
+        );
+
+        for (let i = 0; i < clusterEntries.length; i++) {
+            const entry = clusterEntries[i];
+            const center =
+                macroNodes[i].position || { x: 0, y: 0 };
+
+            const members = entry.members;
+            const cols = entry.cols;
+            const rows = entry.rows;
+
+            const totalWidth = (cols - 1) * microSpacing;
+            const totalHeight = (rows - 1) * microSpacing;
+
+            const startX =
+                center.x - totalWidth / 2;
+            const startY =
+                center.y - totalHeight / 2;
+
+            members.forEach((node, index) => {
+                const row =
+                    Math.floor(index / cols);
+                const col = index % cols;
+
+                node.position = {
+                    x: startX + col * microSpacing,
+                    y: startY + row * microSpacing,
+                };
+            });
+        }
+
+        GraphLayoutEngine._resolveClusterOverlaps(
+            graph,
+            clusterEntries,
+            clusterMargin
+        );
+
+        return graph;
+    }
+
     static forceDirected(graph, options = {}) {
 
         const MAX_FD_NODES = 200;
@@ -292,6 +466,111 @@ export class GraphLayoutEngine {
         }
 
         return graph;
+    }
+
+    static _resolveClusterOverlaps(_, clusterEntries, margin) {
+
+        if (!clusterEntries.length) {
+            return;
+        }
+
+        const boxes = clusterEntries.map(entry => {
+            if (!entry.members.length) {
+                return null;
+            }
+
+            const xs = entry.members.map(n => n.position.x);
+            const ys = entry.members.map(n => n.position.y);
+
+            const minX = Math.min(...xs);
+            const maxX = Math.max(...xs);
+            const minY = Math.min(...ys);
+            const maxY = Math.max(...ys);
+
+            return {
+                minX,
+                maxX,
+                minY,
+                maxY,
+                cx: (minX + maxX) / 2,
+                cy: (minY + maxY) / 2,
+            };
+        });
+
+        for (let i = 0; i < boxes.length; i++) {
+
+            if (!boxes[i]) {
+                continue;
+            }
+
+            for (let j = i + 1; j < boxes.length; j++) {
+
+                if (!boxes[j]) {
+                    continue;
+                }
+
+                const a = boxes[i];
+                const b = boxes[j];
+
+                const overlapX =
+                    Math.min(a.maxX, b.maxX) -
+                    Math.max(a.minX, b.minX);
+
+                const overlapY =
+                    Math.min(a.maxY, b.maxY) -
+                    Math.max(a.minY, b.minY);
+
+                if (overlapX > 0 && overlapY > 0) {
+
+                    let moveX = 0;
+                    let moveY = 0;
+
+                    if (overlapX < overlapY) {
+                        moveX =
+                            (overlapX + margin) / 2;
+                    } else {
+                        moveY =
+                            (overlapY + margin) / 2;
+                    }
+
+                    const signX = a.cx < b.cx ? -1 : 1;
+                    const signY = a.cy < b.cy ? -1 : 1;
+
+                    for (const node of clusterEntries[i].members) {
+                        node.position.x +=
+                            moveX * signX;
+                        node.position.y +=
+                            moveY * signY;
+                    }
+
+                    for (const node of clusterEntries[j].members) {
+                        node.position.x -=
+                            moveX * signX;
+                        node.position.y -=
+                            moveY * signY;
+                    }
+
+                    const refresh = (box, members) => {
+                        const xs =
+                            members.map(n => n.position.x);
+                        const ys =
+                            members.map(n => n.position.y);
+
+                        box.minX = Math.min(...xs);
+                        box.maxX = Math.max(...xs);
+                        box.minY = Math.min(...ys);
+                        box.maxY = Math.max(...ys);
+                        box.cx =
+                            (box.minX + box.maxX) / 2;
+                        box.cy =
+                            (box.minY + box.maxY) / 2;
+                    };
+
+                    refresh(a, clusterEntries[i].members);
+                    refresh(b, clusterEntries[j].members);
+                }
+            }
+        }
     }
 
     static fitToViewport(

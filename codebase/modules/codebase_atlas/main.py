@@ -9,6 +9,7 @@ Orchestrates the complete pipeline:
 """
 
 import sys
+import json
 import argparse
 from pathlib import Path
 from typing import Optional
@@ -149,12 +150,39 @@ def generate_atlas(
         print("📋 PHASE 4: Atlas Generation")
         print("-" * 60)
         
-        # Clean output directory for fresh start
-        clean_directory(output_dir)
+        # Clean output directory for fresh start,
+        # but preserve persisted node positions
+        clean_directory(
+            output_dir,
+            keep_files=[
+                "node_pos_dep.json",
+                "node_pos_call.json",
+            ],
+        )
         
         # Ensure output directory exists
         ensure_directory(output_dir)
-        
+
+        # Record project identity so persisted positions
+        # are not reused across different projects
+        project_id = str(
+            Path(project_dir).resolve()
+        )
+
+        try:
+            (
+                Path(output_dir) /
+                "atlas_meta.json"
+            ).write_text(
+                json.dumps(
+                    {"project_id": project_id},
+                    indent=2,
+                ),
+                encoding="utf-8",
+            )
+        except Exception:
+            pass
+
         # Generate base.md
         base_gen = BaseGenerator(config, atlas_data)
         base_path = base_gen.generate(output_dir)
@@ -292,14 +320,25 @@ Examples:
             print(f"Loaded from: {args.output_dir}")
             print()
 
+            meta_path = output_path / "atlas_meta.json"
+            project_id = None
+
+            if meta_path.exists():
+                try:
+                    project_id = json.loads(
+                        meta_path.read_text(encoding="utf-8")
+                    ).get("project_id")
+                except Exception:
+                    pass
+
             app = create_app(
                 dep_graph,
                 call_graph,
                 output_dir=output_path,
+                project_id=project_id,
             )
             print(f"  Graph explorer")
             print(f"    Interactive:  http://{args.host}:{args.port}/view/interactive")
-            print(f"    Mermaid:      http://{args.host}:{args.port}/view/mermaid")
             app.run(host=args.host, port=args.port, debug=False)
             return 0
         
@@ -314,15 +353,16 @@ Examples:
             output_dir=args.output_dir,
             config=config
         )
+
+        project_id = str(
+            Path(args.project_dir).resolve()
+        )
         
         # Start graph explorer if requested
         if args.serve:
             from .graph.backend.graph_builder import GraphBuilder
-            from .graph.backend.serve import create_app_from_dir
+            from .graph.backend.serve import create_app
             from .graph.backend.graph_serializer import GraphSerializer
-            from .graph.backend.renderers.interactive_renderer import InteractiveRenderer
-            from .graph.backend.renderers.mermaid_renderer import MermaidRenderer
-            import json
 
             builder = GraphBuilder(atlas_data)
             dep_graph = builder.build_dependency_graph()
@@ -340,38 +380,14 @@ Examples:
                 output_dir / "graphdata_call.json",
             )
 
-            # Save frontend-ready InteractiveRenderer JSON
-            interactive = InteractiveRenderer()
-            (output_dir / "interactive_dep.json").write_text(
-                json.dumps(
-                    interactive.render(dep_graph),
-                    indent=2,
-                ),
-                encoding="utf-8",
+            app = create_app(
+                dep_graph,
+                call_graph,
+                output_dir=output_dir,
+                project_id=project_id,
             )
-            (output_dir / "interactive_call.json").write_text(
-                json.dumps(
-                    interactive.render(call_graph),
-                    indent=2,
-                ),
-                encoding="utf-8",
-            )
-
-            # Save Mermaid text
-            mermaid = MermaidRenderer()
-            (output_dir / "mermaid_dep.txt").write_text(
-                mermaid.render(dep_graph),
-                encoding="utf-8",
-            )
-            (output_dir / "mermaid_call.txt").write_text(
-                mermaid.render(call_graph),
-                encoding="utf-8",
-            )
-
-            app = create_app_from_dir(output_dir)
             print(f"  Graph explorer")
             print(f"    Interactive:  http://{args.host}:{args.port}/view/interactive")
-            print(f"    Mermaid:      http://{args.host}:{args.port}/view/mermaid")
             app.run(host=args.host, port=args.port, debug=False)
         
         return 0

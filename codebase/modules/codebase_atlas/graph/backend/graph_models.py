@@ -3,15 +3,14 @@ graph_models.py
 
 Canonical graph model used by all graph renderers and algorithms.
 
-AtlasData
-    ↓
-GraphBuilder
-    ↓
-GraphData
-    ├── MermaidRenderer
-    ├── InteractiveRenderer
-    ├── GraphAlgorithms
-    └── Future AI tooling
+    AtlasData
+        ↓
+    GraphBuilder
+        ↓
+    GraphData
+        ├── InteractiveRenderer
+        ├── GraphAlgorithms
+        └── Future AI tooling
 """
 
 from __future__ import annotations

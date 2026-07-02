@@ -2,7 +2,7 @@
 
 ## TASK
 
-I asked a larger language model to solve the rendering bug given in `python/Agentic_Unit_PIE/AGENTS.md`. The fixes given by the model are given in `python/Agentic_Unit_PIE/Issues_n_ideas.md`. Review the fixes and report if they can be applied.
+Check `python/Agentic_Unit_PIE/codebase/modules/codebase_atlas/graph/web/core/storage.js` whether the custom node positions are stored in browser local storage. Node positions are also stored in json file using post method on `python/Agentic_Unit_PIE/codebase/modules/codebase_atlas/graph/backend/serve.py`. Why do we need duplicate storage of node positions.Could we removel browser local storage altogether so that node positions are only stored in json files.
 
 Start by knowing module details and current development status by reading `python/Agentic_Unit_PIE/system_devpt_reports/codebase_atlas/current_status.md`.
 
