@@ -51,6 +51,7 @@ class RiskLevel(str, Enum):
 class GraphType(str, Enum):
     DEPENDENCY = "dependency"
     CALL = "call"
+    UNIFIED = "unified"
 
 # ============================================================================
 # CORE GRAPH OBJECTS
@@ -80,6 +81,11 @@ class GraphNode:
     entry_point: bool = False
 
     cluster_id: Optional[str] = None
+
+    parent_id: Optional[str] = None
+    scope: str = "file"
+
+    children: List[GraphNode] = field(default_factory=list)
 
     metadata: Dict[str, Any] = field(default_factory=dict)
 

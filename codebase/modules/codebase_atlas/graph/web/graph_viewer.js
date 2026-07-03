@@ -92,6 +92,8 @@ export class GraphViewer {
                 this.graphData
             );
         
+        this.state._buildCallNodeParent();
+        
         this.layout =
             GraphLayoutEngine;
 
@@ -106,6 +108,10 @@ export class GraphViewer {
                 options.storageNamespace ??
                 `interactive-graph:${graphType}`
             );
+
+        this.childData =
+            options.childData ??
+            {};
 
         // -------------------------------------------------------------
         // Renderers
@@ -234,6 +240,8 @@ export class GraphViewer {
                 events: this.events,
 
                 drag: this.drag,
+
+                viewer: this,
             });
 
         this.events.initialize();
@@ -250,6 +258,8 @@ export class GraphViewer {
         this.restoreState();
 
         this.attachStorage();
+
+        this._loadChildPositions();
 
         this.renderer.initialize();
 
@@ -444,6 +454,12 @@ export class GraphViewer {
                 "nodes:moved",
                 () => this._savePositionsToServer()
             );
+
+        this._unsubscribeCollapseSave =
+            this.state.subscribe(
+                "nodeCollapsed",
+                () => this._savePositionsToServer()
+            );
     }
 
     _savePositionsToServer() {
@@ -477,6 +493,17 @@ export class GraphViewer {
             }
         }
 
+        const child_offsets = {};
+
+        for (const [
+            parentId,
+            offsets,
+        ] of this.state.childPositions) {
+
+            child_offsets[parentId] =
+                offsets;
+        }
+
         fetch("/api/save-positions", {
             method: "POST",
             headers: {
@@ -486,8 +513,41 @@ export class GraphViewer {
             body: JSON.stringify({
                 graph_type: graphType,
                 positions,
+                child_offsets,
             }),
         }).catch(() => {});
+    }
+
+    async _loadChildPositions() {
+
+        try {
+
+            const response =
+                await fetch(
+                    "/api/child-offsets"
+                );
+
+            if (!response.ok) {
+                return;
+            }
+
+            const data =
+                await response.json();
+
+            if (
+                data &&
+                typeof data === "object"
+            ) {
+
+                this.state.childPositions =
+                    new Map(
+                        Object.entries(data)
+                    );
+            }
+
+        } catch {
+            // silently ignore
+        }
     }
 
     save() {
@@ -516,6 +576,134 @@ export class GraphViewer {
     fitToView() {
 
         this.navigation.fitGraph();
+    }
+
+    // =====================================================================
+    // Expand / Collapse
+    // =====================================================================
+
+    async expandNode(nodeId) {
+
+        const node = this.state.getNode(nodeId);
+
+        if (!node || node.scope !== "file") {
+            return;
+        }
+
+        if (this.state.isExpanded(nodeId)) {
+            return;
+        }
+
+        let children =
+            this.state.getCachedChildren(nodeId);
+
+        if (!children) {
+
+            children =
+                await this._fetchChildren(nodeId);
+
+            if (
+                !children ||
+                !children.nodes.length
+            ) {
+                return;
+            }
+        }
+
+        this.state.addChildren(nodeId, children);
+
+        const savedPositions =
+            this.state.getChildPositions(
+                nodeId
+            );
+
+        if (savedPositions) {
+
+            for (const child of children.nodes) {
+
+                const offset =
+                    savedPositions[child.id];
+
+                if (offset) {
+                    child.position = {
+                        x: node.position.x +
+                            offset.dx,
+                        y: node.position.y +
+                            offset.dy,
+                    };
+                }
+            }
+
+        } else {
+
+            GraphLayoutEngine.layoutChildren(
+                node,
+                children.nodes
+            );
+        }
+
+        const childIds =
+            children.nodes.map(
+                n => n.id
+            );
+
+        this.state.trackExpandGroup(
+            nodeId,
+            childIds
+        );
+
+        this.state.expandNode(nodeId);
+    }
+
+    collapseNode(nodeId) {
+
+        const node = this.state.getNode(nodeId);
+
+        if (!node || node.scope !== "file") {
+            return;
+        }
+
+        if (!this.state.isExpanded(nodeId)) {
+            return;
+        }
+
+        this.state.collapseNode(nodeId);
+    }
+
+    async _fetchChildren(nodeId) {
+
+        if (this.childData[nodeId]) {
+            return this.childData[nodeId];
+        }
+
+        try {
+
+            const response =
+                await fetch(
+                    `/api/graph/children/${encodeURIComponent(nodeId)}`
+                );
+
+            if (!response.ok) {
+                return {
+                    nodes: [],
+                    edges: []
+                };
+            }
+
+            const data =
+                await response.json();
+
+            this.childData[nodeId] = data;
+
+            return data;
+
+        } catch {
+
+            return {
+                nodes: [],
+                edges: []
+            };
+        }
     }
 
     /**
@@ -572,6 +760,13 @@ export class GraphViewer {
         ) {
 
             this._unsubscribeServerSave();
+        }
+
+        if (
+            this._unsubscribeCollapseSave
+        ) {
+
+            this._unsubscribeCollapseSave();
         }
     }
 }

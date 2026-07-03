@@ -168,6 +168,22 @@ export class NodeRenderer {
 
                 group.appendChild(risk);
             }
+
+            if (
+                node.scope === "file" ||
+                node.type === "file"
+            ) {
+
+                const expandBtn =
+                    this.createExpandButton(
+                        node,
+                        width,
+                        height,
+                        state
+                    );
+
+                group.appendChild(expandBtn);
+            }
         }
 
         return group;
@@ -410,6 +426,128 @@ export class NodeRenderer {
         );
 
         return rect;
+    }
+
+    /**
+     * ------------------------------------------------------------------------
+     * Expand / Collapse Button
+     * ------------------------------------------------------------------------
+     */
+
+    createExpandButton(
+        node,
+        width,
+        height,
+        state
+    ) {
+
+        const btn =
+            document.createElementNS(
+                SVG_NS,
+                "g"
+            );
+
+        btn.classList.add(
+            "expand-btn"
+        );
+
+        btn.setAttribute(
+            "cursor",
+            "pointer"
+        );
+
+        const cx =
+            width - 28;
+
+        const cy =
+            height - 18;
+
+        const circle =
+            document.createElementNS(
+                SVG_NS,
+                "circle"
+            );
+
+        circle.setAttribute(
+            "cx",
+            cx
+        );
+
+        circle.setAttribute(
+            "cy",
+            cy
+        );
+
+        circle.setAttribute(
+            "r",
+            9
+        );
+
+        circle.setAttribute(
+            "fill",
+            "#202020"
+        );
+
+        circle.setAttribute(
+            "stroke",
+            "#4f8cff"
+        );
+
+        circle.setAttribute(
+            "stroke-width",
+            1.5
+        );
+
+        const text =
+            document.createElementNS(
+                SVG_NS,
+                "text"
+            );
+
+        text.setAttribute(
+            "x",
+            cx
+        );
+
+        text.setAttribute(
+            "y",
+            cy + 4
+        );
+
+        text.setAttribute(
+            "text-anchor",
+            "middle"
+        );
+
+        text.setAttribute(
+            "font-size",
+            "12"
+        );
+
+        text.setAttribute(
+            "font-weight",
+            "700"
+        );
+
+        text.setAttribute(
+            "fill",
+            "#4f8cff"
+        );
+
+        text.setAttribute(
+            "font-family",
+            "sans-serif"
+        );
+
+        text.textContent =
+            state.isExpanded(node.id)
+                ? "−"
+                : "+";
+
+        btn.appendChild(circle);
+        btn.appendChild(text);
+
+        return btn;
     }
 
     /**

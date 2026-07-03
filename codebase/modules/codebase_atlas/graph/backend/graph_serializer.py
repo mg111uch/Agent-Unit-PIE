@@ -69,6 +69,109 @@ class GraphSerializer:
         }
 
     @classmethod
+    def to_nested_dict(
+        cls,
+        graph: GraphData,
+    ) -> Dict[str, Any]:
+
+        file_nodes = []
+        children_by_parent = {}
+
+        for node in graph.nodes.values():
+
+            if node.scope == "file":
+
+                file_nodes.append(
+                    cls._node_to_dict(node)
+                )
+
+            elif node.parent_id:
+
+                parent_id = node.parent_id
+
+                if parent_id not in children_by_parent:
+                    children_by_parent[parent_id] = {
+                        "nodes": [],
+                        "edges": [],
+                    }
+
+                children_by_parent[parent_id]["nodes"].append(
+                    cls._node_to_dict(node)
+                )
+
+        top_level_edges = []
+
+        for edge in graph.edges.values():
+
+            source = graph.nodes.get(edge.source)
+            target = graph.nodes.get(edge.target)
+
+            source_is_call = (
+                source and
+                source.parent_id
+            )
+
+            target_is_call = (
+                target and
+                target.parent_id
+            )
+
+            if (
+                source_is_call and
+                target_is_call
+            ):
+
+                if (
+                    source.parent_id ==
+                    target.parent_id
+                ):
+
+                    children_by_parent[
+                        source.parent_id
+                    ]["edges"].append(
+                        cls._edge_to_dict(edge)
+                    )
+
+                else:
+
+                    top_level_edges.append(
+                        cls._edge_to_dict(edge)
+                    )
+
+            elif (
+                source_is_call and
+                not target_is_call
+            ) or (
+                not source_is_call and
+                target_is_call
+            ):
+
+                top_level_edges.append(
+                    cls._edge_to_dict(edge)
+                )
+
+            elif (
+                not source_is_call and
+                not target_is_call
+            ):
+
+                top_level_edges.append(
+                    cls._edge_to_dict(edge)
+                )
+
+        return {
+            "graph_type": graph.graph_type.value,
+            "metadata": graph.metadata,
+            "nodes": file_nodes,
+            "edges": top_level_edges,
+            "clusters": [
+                cls._cluster_to_dict(cluster)
+                for cluster in graph.clusters.values()
+            ],
+            "children_by_parent": children_by_parent,
+        }
+
+    @classmethod
     def to_json(
         cls,
         graph: GraphData,
@@ -206,15 +309,32 @@ class GraphSerializer:
         node: GraphNode,
     ) -> Dict[str, Any]:
 
-        data = asdict(node)
+        data = {
+            "id": node.id,
+            "label": node.label,
+            "type": node.node_type.value,
+            "risk_level": node.risk_level.value,
+            "entry_point": node.entry_point,
+            "cluster_id": node.cluster_id,
+            "parent_id": node.parent_id,
+            "scope": node.scope,
+            "metadata": node.metadata,
+        }
 
-        data["node_type"] = (
-            node.node_type.value
-        )
+        if node.x is not None and node.y is not None:
 
-        data["risk_level"] = (
-            node.risk_level.value
-        )
+            data["position"] = {
+                "x": node.x,
+                "y": node.y,
+            }
+
+        if node.pinned or node.hidden or node.color:
+
+            data["visual"] = {
+                "pinned": node.pinned,
+                "hidden": node.hidden,
+                "color": node.color,
+            }
 
         return data
 
@@ -227,7 +347,7 @@ class GraphSerializer:
             id=data["id"],
             label=data["label"],
             node_type=NodeType(
-                data["node_type"]
+                data["type"]
             ),
             risk_level=RiskLevel(
                 data["risk_level"]
@@ -238,6 +358,13 @@ class GraphSerializer:
             ),
             cluster_id=data.get(
                 "cluster_id"
+            ),
+            parent_id=data.get(
+                "parent_id"
+            ),
+            scope=data.get(
+                "scope",
+                "file"
             ),
             metadata=data.get(
                 "metadata",
@@ -269,7 +396,7 @@ class GraphSerializer:
 
         data = asdict(edge)
 
-        data["edge_type"] = (
+        data["type"] = (
             edge.edge_type.value
         )
 
@@ -285,7 +412,7 @@ class GraphSerializer:
             source=data["source"],
             target=data["target"],
             edge_type=EdgeType(
-                data["edge_type"]
+                data["type"]
             ),
             label=data.get(
                 "label"

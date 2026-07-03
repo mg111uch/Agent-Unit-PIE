@@ -218,53 +218,99 @@ export class DragController {
         deltaY
     ) {
 
+        const moved = new Set();
+
         for (
             const nodeId
             of this.draggedNodes
         ) {
 
-            const node =
-                this.state.getNode(
-                    nodeId
-                );
+            this._moveSingleNode(
+                nodeId,
+                deltaX,
+                deltaY
+            );
 
-            if (!node) {
+            moved.add(nodeId);
+
+            const group =
+                this.state
+                    .getExpandGroups()
+                    .get(nodeId);
+
+            if (!group) {
                 continue;
             }
 
-            if (
-                !node.position
+            for (
+                const childId
+                of group.childNodeIds
             ) {
 
-                node.position = {
-                    x: 0,
-                    y: 0,
-                };
-            }
+                if (
+                    moved.has(childId)
+                ) {
+                    continue;
+                }
 
-            node.position.x +=
-                deltaX;
+                this._moveSingleNode(
+                    childId,
+                    deltaX,
+                    deltaY
+                );
 
-            node.position.y +=
-                deltaY;
-
-            if (
-                DRAG.ENABLE_GRID_SNAP
-            ) {
-
-                node.position.x =
-                    this.snap(
-                        node.position.x
-                    );
-
-                node.position.y =
-                    this.snap(
-                        node.position.y
-                    );
+                moved.add(childId);
             }
         }
 
         this.requestRender();
+    }
+
+    _moveSingleNode(
+        nodeId,
+        deltaX,
+        deltaY
+    ) {
+
+        const node =
+            this.state.getNode(
+                nodeId
+            );
+
+        if (!node) {
+            return;
+        }
+
+        if (
+            !node.position
+        ) {
+
+            node.position = {
+                x: 0,
+                y: 0,
+            };
+        }
+
+        node.position.x +=
+            deltaX;
+
+        node.position.y +=
+            deltaY;
+
+        if (
+            DRAG.ENABLE_GRID_SNAP
+        ) {
+
+            node.position.x =
+                this.snap(
+                    node.position.x
+                );
+
+            node.position.y =
+                this.snap(
+                    node.position.y
+                );
+        }
     }
 
     snap(value) {

@@ -84,10 +84,14 @@ export class EdgeRenderer {
             const edge = group.representative;
 
             const source =
-                state.getNode(edge.source);
+                state.getNodeOrParent(
+                    edge.source
+                );
 
             const target =
-                state.getNode(edge.target);
+                state.getNodeOrParent(
+                    edge.target
+                );
 
             if (!source || !target) {
                 continue;
@@ -246,6 +250,18 @@ export class EdgeRenderer {
         state
     ) {
 
+        const resolvedSource =
+            this.resolveEdgeEndpoint(
+                source,
+                state
+            );
+
+        const resolvedTarget =
+            this.resolveEdgeEndpoint(
+                target,
+                state
+            );
+
         const line =
             document.createElementNS(
                 SVG_NS,
@@ -256,8 +272,8 @@ export class EdgeRenderer {
             source: sourcePos,
             target: targetPos
         } = nodeConnectionPoints(
-            source,
-            target
+            resolvedSource,
+            resolvedTarget
         );
 
         line.setAttribute(
@@ -310,6 +326,30 @@ export class EdgeRenderer {
         );
 
         return line;
+    }
+
+    resolveEdgeEndpoint(
+        node,
+        state
+    ) {
+
+        if (
+            node.scope !== "call" ||
+            !node.parent_id
+        ) {
+            return node;
+        }
+
+        if (
+            state.isExpanded(node.parent_id)
+        ) {
+            return node;
+        }
+
+        const parent =
+            state.getNode(node.parent_id);
+
+        return parent || node;
     }
 
     /**
@@ -519,14 +559,30 @@ export class EdgeRenderer {
         }
 
         const source =
-            state.getNode(edge.source);
+            state.getNodeOrParent(
+                edge.source
+            );
 
         const target =
-            state.getNode(edge.target);
+            state.getNodeOrParent(
+                edge.target
+            );
 
         if (!source || !target) {
             return;
         }
+
+        const resolvedSource =
+            this.resolveEdgeEndpoint(
+                source,
+                state
+            );
+
+        const resolvedTarget =
+            this.resolveEdgeEndpoint(
+                target,
+                state
+            );
 
         const line =
             group.querySelector("line");
@@ -536,10 +592,14 @@ export class EdgeRenderer {
         }
 
         const sourcePos =
-            this.getNodeCenter(source);
+            this.getNodeCenter(
+                resolvedSource
+            );
 
         const targetPos =
-            this.getNodeCenter(target);
+            this.getNodeCenter(
+                resolvedTarget
+            );
 
         line.setAttribute(
             "x1",
@@ -578,11 +638,6 @@ export class EdgeRenderer {
             badge.setAttribute("y", midY);
         }
 
-        // The label (if present) is a text node
-        // without the badge class.  querySelector
-        // returns the first match; the badge is
-        // first in DOM order, so look for any
-        // additional text element.
         const textNodes =
             group.querySelectorAll("text");
 

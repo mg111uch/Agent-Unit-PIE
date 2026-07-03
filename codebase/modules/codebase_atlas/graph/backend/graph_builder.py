@@ -76,6 +76,22 @@ class GraphBuilder:
 
         return graph
 
+    def build_unified_graph(self) -> GraphData:
+        """
+        Build a single unified graph with file-level dependency nodes
+        and function-level call nodes nested inside them.
+        """
+        graph = GraphData(graph_type=GraphType.UNIFIED)
+
+        self._add_file_nodes_unified(graph)
+        self._add_dependency_edges(graph)
+        self._add_function_nodes_unified(graph)
+        self._add_call_edges(graph)
+
+        graph.metadata["graph_type"] = "unified"
+
+        return graph
+
     # =========================================================================
     # Dependency Graph
     # =========================================================================
@@ -116,6 +132,67 @@ class GraphBuilder:
                     source=edge.source,
                     target=edge.target,
                     edge_type=EdgeType.DEPENDS_ON,
+                )
+            )
+
+    # =========================================================================
+    # Unified Graph
+    # =========================================================================
+
+    def _add_file_nodes_unified(self, graph: GraphData) -> None:
+
+        for file_info in self.atlas_data.files:
+
+            if self._is_init_py(file_info):
+                continue
+
+            graph.add_node(
+                GraphNode(
+                    id=file_info.ref_id,
+                    label=file_info.path.name,
+                    node_type=NodeType.FILE,
+                    scope="file",
+                    entry_point=file_info.entry_point,
+                    risk_level=self._file_risk_level(file_info),
+                    metadata={
+                        "path": str(file_info.path),
+                    },
+                )
+            )
+
+    def _add_function_nodes_unified(self, graph: GraphData) -> None:
+
+        funcs_in_edges = self._collect_call_graph_functions()
+
+        for file_ref, func_name in funcs_in_edges:
+
+            file_info = self.atlas_data.file_map.get(file_ref)
+
+            if not file_info:
+                continue
+
+            func = self._find_function(file_info, func_name)
+
+            node_id = self._function_node_id(
+                file_ref,
+                func_name,
+            )
+
+            graph.add_node(
+                GraphNode(
+                    id=node_id,
+                    label=f"{func_name}()",
+                    node_type=NodeType.FUNCTION,
+                    scope="call",
+                    parent_id=file_ref,
+                    risk_level=self._function_risk_level(func),
+                    entry_point=getattr(func, "is_entry", False)
+                    if func
+                    else False,
+                    metadata={
+                        "file_ref": file_ref,
+                        "function_name": func_name,
+                    },
                 )
             )
 

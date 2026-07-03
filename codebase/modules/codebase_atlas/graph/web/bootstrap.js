@@ -73,72 +73,7 @@ function updateSummary(graphData) {
         `${nodes} nodes \u00b7 ${edges} edges`;
 }
 
-function getGraphData(type) {
-
-    if (type === "call") {
-        return window.CALL_GRAPH_DATA;
-    }
-
-    return window.GRAPH_DATA;
-}
-
-function onGraphTypeChange(event) {
-
-    if (!viewer) {
-        return;
-    }
-
-    const type = event.target.value;
-    const graphData = getGraphData(type);
-
-    if (!graphData) {
-        showLoadError(
-            "Failed to load graph: no data for type " +
-                type
-        );
-        return;
-    }
-
-    showLoading("Switching graph\u2026");
-
-    requestAnimationFrame(() => {
-
-        try {
-
-            viewer.setGraphData(graphData);
-
-            updateSummary(graphData);
-
-            hideLoadingOverlay();
-
-        } catch (error) {
-
-            hideLoadingOverlay();
-
-            showLoadError(
-                "Failed to switch graph: " +
-                (error?.message ?? String(error))
-            );
-        }
-    });
-}
-
-function bindGraphTypeSelect() {
-
-    const select =
-        document.getElementById("graph-type");
-
-    if (!select) {
-        return;
-    }
-
-    select.addEventListener(
-        "change",
-        onGraphTypeChange
-    );
-}
-
-function bootstrap() {
+async function bootstrap() {
 
     const graphData = window.GRAPH_DATA;
 
@@ -152,13 +87,20 @@ function bootstrap() {
 
     try {
 
-        viewer = createGraphViewer(graphData);
+        const childData =
+            graphData.children_by_parent || {};
+
+        viewer = createGraphViewer(
+            graphData,
+            { childData }
+        );
 
         updateSummary(graphData);
         hideLoadingOverlay();
-        bindGraphTypeSelect();
 
     } catch (error) {
+
+        hideLoadingOverlay();
 
         showLoadError(
             "Failed to render graph: " +

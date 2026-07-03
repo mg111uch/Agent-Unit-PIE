@@ -26,7 +26,7 @@
  * ============================================================================
  */
 
-const STORAGE_VERSION = 2;
+const STORAGE_VERSION = 3;
 
 const DEFAULT_NAMESPACE = "interactive-graph";
 
@@ -71,6 +71,8 @@ export class GraphStorage {
             pinnedNodes: [...state.pinnedNodes],
 
             collapsedClusters: [...state.collapsedClusters],
+
+            expandedNodes: [...state.expandedNodes],
 
             selectedNodeId: state.selectedNodeId,
         };
@@ -194,6 +196,11 @@ export class GraphStorage {
                     snapshot.collapsedClusters || []
                 );
 
+            state.expandedNodes =
+                new Set(
+                    snapshot.expandedNodes || []
+                );
+
             // -------------------------------------------------------------
             // Selection
             // -------------------------------------------------------------
@@ -268,6 +275,16 @@ export class GraphStorage {
 
             state.subscribe(
                 "clusterChanged",
+                save
+            ),
+
+            state.subscribe(
+                "nodeExpanded",
+                save
+            ),
+
+            state.subscribe(
+                "nodeCollapsed",
                 save
             ),
 

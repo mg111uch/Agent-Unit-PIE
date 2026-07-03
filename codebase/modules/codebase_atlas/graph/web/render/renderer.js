@@ -6,6 +6,11 @@ import { EventEmitter, GRAPH_EVENTS }
 import { ViewportCuller }
     from "./viewport_culler.js";
 
+import {
+    computeNodeBounds,
+    expandBounds
+} from "../utils/geometry.js";
+
 function yieldToBrowser() {
 
     return new Promise(resolve => {
@@ -163,6 +168,16 @@ export class GraphRenderer extends EventEmitter {
         );
 
         this.state.on(
+            GRAPH_EVENTS.NODE_EXPANDED,
+            () => this.render()
+        );
+
+        this.state.on(
+            GRAPH_EVENTS.NODE_COLLAPSED,
+            () => this.render()
+        );
+
+        this.state.on(
             GRAPH_EVENTS.STATE_CHANGED,
             () => this.render()
         );
@@ -260,6 +275,8 @@ export class GraphRenderer extends EventEmitter {
         const culled = this._cullForRender();
 
         this.renderClusters(culled.clusters);
+
+        this.renderExpandGroups();
 
         this.renderEdges(culled.edges);
 
@@ -567,6 +584,110 @@ export class GraphRenderer extends EventEmitter {
                 this.overlayLayer.firstChild
             );
         }
+    }
+
+    renderExpandGroups() {
+
+        if (
+            !this.state?.getExpandGroups
+        ) {
+            return;
+        }
+
+        const groups =
+            this.state.getExpandGroups();
+
+        if (!groups.size) {
+            return;
+        }
+
+        const SVG_NS =
+            "http://www.w3.org/2000/svg";
+
+        const PADDING = 20;
+
+        const fragment =
+            document.createDocumentFragment();
+
+        for (const [
+            parentId,
+            group,
+        ] of groups) {
+
+            const parent =
+                this.state.getNode(
+                    parentId
+                );
+
+            if (!parent) {
+                continue;
+            }
+
+            const childNodes =
+                group.childNodeIds
+                    .map(
+                        id =>
+                            this.state
+                                .getNode(id)
+                    )
+                    .filter(Boolean);
+
+            const allNodes = [
+                parent,
+                ...childNodes,
+            ];
+
+            const bounds =
+                expandBounds(
+                    computeNodeBounds(
+                        allNodes
+                    ),
+                    PADDING
+                );
+
+            const rect =
+                document.createElementNS(
+                    SVG_NS,
+                    "rect"
+                );
+
+            rect.classList.add(
+                "expand-group-bg"
+            );
+
+            rect.setAttribute(
+                "x",
+                bounds.minX
+            );
+
+            rect.setAttribute(
+                "y",
+                bounds.minY
+            );
+
+            rect.setAttribute(
+                "width",
+                bounds.width
+            );
+
+            rect.setAttribute(
+                "height",
+                bounds.height
+            );
+
+            rect.setAttribute(
+                "rx",
+                10
+            );
+
+            fragment.appendChild(
+                rect
+            );
+        }
+
+        this.clusterLayer.appendChild(
+            fragment
+        );
     }
 
     // =====================================================================

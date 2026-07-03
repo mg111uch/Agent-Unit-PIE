@@ -60,6 +60,9 @@ export class GraphInteractionManager {
         this.drag =
             options.drag;
 
+        this.viewer =
+            options.viewer;
+
         this.initialize();
     }
 
@@ -126,6 +129,40 @@ export class GraphInteractionManager {
                         .selectNode(
                             nodeId
                         );
+                }
+
+                this.refresh();
+            }
+        );
+
+        this.events.on(
+            INTERACTION_EVENTS.NODE_EXPAND_CLICK,
+            event => {
+
+                const nodeId =
+                    event.target.id;
+
+                const node =
+                    this.state?.getNode?.(
+                        nodeId
+                    );
+
+                if (!node) {
+                    return;
+                }
+
+                if (node.scope !== "file") {
+                    return;
+                }
+
+                if (this.state.isExpanded(nodeId)) {
+
+                    this.state.collapseNode(nodeId);
+                    this.viewer?.collapseNode?.(nodeId);
+
+                } else {
+
+                    this.viewer?.expandNode?.(nodeId);
                 }
 
                 this.refresh();

@@ -62,6 +62,9 @@ export const INTERACTION_EVENTS = Object.freeze({
     NODE_CLICK:
         "node:click",
 
+    NODE_EXPAND_CLICK:
+        "node:expand-click",
+
     EDGE_CLICK:
         "edge:click",
 
@@ -401,6 +404,24 @@ export class GraphEventController extends EventEmitter {
             this.createGraphEvent(
                 event
             );
+
+        const expandTarget =
+            event.target.closest?.(
+                ".expand-btn"
+            );
+
+        if (
+            expandTarget &&
+            graphEvent.target.type === "node"
+        ) {
+
+            this.emit(
+                INTERACTION_EVENTS.NODE_EXPAND_CLICK,
+                graphEvent
+            );
+
+            return;
+        }
 
         this.emit(
             INTERACTION_EVENTS.CLICK,

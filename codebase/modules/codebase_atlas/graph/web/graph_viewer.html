@@ -334,6 +334,33 @@ select:hover {
 }
 
 /* =======================================================
+   Expand / Collapse Button
+======================================================= */
+
+.expand-btn {
+    cursor: pointer;
+}
+
+.expand-btn:hover circle {
+    fill: #2f374b;
+}
+
+.expand-btn:hover text {
+    fill: #ffffff;
+}
+
+/* =======================================================
+   Expand Group Background
+======================================================= */
+
+.expand-group-bg {
+    fill: rgba(79, 140, 255, 0.06);
+    stroke: rgba(79, 140, 255, 0.35);
+    stroke-width: 1.5;
+    pointer-events: none;
+}
+
+/* =======================================================
    Control Panel
 ======================================================= */
 
@@ -404,13 +431,6 @@ select:hover {
                 type="text"
                 placeholder="Search nodes..."
             >
-        </div>
-
-        <div class="toolbar-group">
-            <select id="graph-type">
-                <option value="dependency">Dependency</option>
-                <option value="call">Call</option>
-            </select>
         </div>
 
         <div class="toolbar-spacer"></div>
@@ -684,8 +704,11 @@ select:hover {
 ======================================================= -->
 
 <script>
-window.GRAPH_DATA = {{ dep_json | safe }};
-window.CALL_GRAPH_DATA = {{ call_json | safe }};
+{% if graph_json is defined and graph_json %}
+window.GRAPH_DATA = {{ graph_json | safe }};
+{% else %}
+window.GRAPH_DATA = null;
+{% endif %}
 window.GRAPH_CONFIG = {};
 
 (function() {

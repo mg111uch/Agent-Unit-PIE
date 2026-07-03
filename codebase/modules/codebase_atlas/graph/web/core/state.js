@@ -73,6 +73,13 @@ export class GraphState extends EventEmitter {
         this.hiddenEdges = new Set();
 
         this.collapsedClusters = new Set();
+        this.expandedNodes = new Set();
+
+        this.childCache = new Map();
+
+        this.expandGroups = new Map();
+
+        this.childPositions = new Map();
 
         this.pinnedNodes = new Set();
 
@@ -86,6 +93,10 @@ export class GraphState extends EventEmitter {
         this.clusterNodes = new Map();
 
         this._buildRelationships();
+
+        this.callNodeParent = new Map();
+
+        this._buildCallNodeParent();
 
         // ---------------------------------------------------------------------
         // Event Subscribers
@@ -132,23 +143,84 @@ export class GraphState extends EventEmitter {
             }
         }
 
-        for (const cluster of this.graph.clusters) {
-            this.clusterNodes.set(cluster.id, []);
-        }
+        this._buildClusterNodes();
+    }
 
-        for (const node of this.graph.nodes) {
+    _buildCallNodeParent() {
 
-            const clusterId = node.cluster_id;
+        this.callNodeParent.clear();
 
-            if (!clusterId) {
+        for (const edge of this.graph.edges) {
+
+            const source =
+                this.graph.nodes[edge.source];
+
+            const target =
+                this.graph.nodes[edge.target];
+
+            const sourceParent =
+                source?.parent_id;
+
+            const targetParent =
+                target?.parent_id;
+
+            if (sourceParent && targetParent) {
+
+                if (sourceParent !== targetParent) {
+
+                    if (
+                        !this.callNodeParent.has(
+                            source.id
+                        )
+                    ) {
+                        this.callNodeParent.set(
+                            source.id,
+                            sourceParent
+                        );
+                    }
+
+                    if (
+                        !this.callNodeParent.has(
+                            target.id
+                        )
+                    ) {
+                        this.callNodeParent.set(
+                            target.id,
+                            targetParent
+                        );
+                    }
+                }
+
                 continue;
             }
 
-            if (!this.clusterNodes.has(clusterId)) {
-                this.clusterNodes.set(clusterId, []);
+            if (sourceParent) {
+
+                if (
+                    !this.callNodeParent.has(
+                        source.id
+                    )
+                ) {
+                    this.callNodeParent.set(
+                        source.id,
+                        sourceParent
+                    );
+                }
             }
 
-            this.clusterNodes.get(clusterId).push(node);
+            if (targetParent) {
+
+                if (
+                    !this.callNodeParent.has(
+                        target.id
+                    )
+                ) {
+                    this.callNodeParent.set(
+                        target.id,
+                        targetParent
+                    );
+                }
+            }
         }
     }
 
@@ -288,6 +360,10 @@ export class GraphState extends EventEmitter {
         this.hiddenNodes = new Set();
         this.hiddenEdges = new Set();
         this.collapsedClusters = new Set();
+        this.expandedNodes = new Set();
+        this.childCache = new Map();
+        this.expandGroups = new Map();
+        this.childPositions = new Map();
         this.pinnedNodes = new Set();
 
         this.zoom = 1.0;
@@ -303,6 +379,9 @@ export class GraphState extends EventEmitter {
         this.outgoingEdges = new Map();
         this.clusterNodes = new Map();
         this._buildRelationships();
+
+        this.callNodeParent = new Map();
+        this._buildCallNodeParent();
 
         this.emit("graphChanged", {});
     }
@@ -418,6 +497,219 @@ export class GraphState extends EventEmitter {
     }
 
     // =========================================================================
+    // Node Expand / Collapse
+    // =========================================================================
+
+    expandNode(nodeId) {
+
+        if (!this.nodeMap.has(nodeId)) {
+            return;
+        }
+
+        this.expandedNodes.add(nodeId);
+
+        this.emit("nodeExpanded", {
+            nodeId,
+        });
+    }
+
+    collapseNode(nodeId) {
+
+        this.expandedNodes.delete(nodeId);
+
+        this.removeChildren(nodeId);
+
+        this.untrackExpandGroup(nodeId);
+
+        this.emit("nodeCollapsed", {
+            nodeId,
+        });
+    }
+
+    isExpanded(nodeId) {
+
+        return this.expandedNodes.has(nodeId);
+    }
+
+    cacheChildren(nodeId, children) {
+
+        this.childCache.set(
+            nodeId,
+            children
+        );
+    }
+
+    getCachedChildren(nodeId) {
+
+        return this.childCache.get(nodeId) || null;
+    }
+
+    addChildren(nodeId, children) {
+
+        this.cacheChildren(nodeId, children);
+
+        for (const node of children.nodes) {
+
+            this.graph.nodes.push(node);
+            this.nodeMap.set(node.id, node);
+
+            this.incomingEdges.set(node.id, []);
+            this.outgoingEdges.set(node.id, []);
+
+            if (node.parent_id) {
+                this.callNodeParent.set(
+                    node.id,
+                    node.parent_id
+                );
+            }
+        }
+
+        for (const edge of children.edges) {
+
+            this.graph.edges.push(edge);
+            this.edgeMap.set(edge.id, edge);
+
+            if (this.outgoingEdges.has(edge.source)) {
+                this.outgoingEdges.get(edge.source).push(edge);
+            }
+
+            if (this.incomingEdges.has(edge.target)) {
+                this.incomingEdges.get(edge.target).push(edge);
+            }
+        }
+
+        this._buildClusterNodes();
+    }
+
+    removeChildren(nodeId) {
+
+        const cached =
+            this.childCache.get(nodeId);
+
+        if (!cached) {
+            return;
+        }
+
+        const parent =
+            this.getNode(nodeId);
+
+        if (parent?.position) {
+
+            const offsets = {};
+
+            for (const child of cached.nodes) {
+
+                if (
+                    child.position?.x != null
+                ) {
+
+                    offsets[child.id] = {
+                        dx:
+                            child.position.x -
+                            parent.position.x,
+                        dy:
+                            child.position.y -
+                            parent.position.y,
+                    };
+                }
+            }
+
+            this.childPositions.set(
+                nodeId,
+                offsets
+            );
+        }
+
+        const nodeIds = new Set(
+            cached.nodes.map(n => n.id)
+        );
+
+        const edgeIds = new Set(
+            cached.edges.map(e => e.id)
+        );
+
+        this.graph.nodes =
+            this.graph.nodes.filter(
+                n => !nodeIds.has(n.id)
+            );
+
+        this.graph.edges =
+            this.graph.edges.filter(
+                e => !edgeIds.has(e.id)
+            );
+
+        for (const child of cached.nodes) {
+
+            this.nodeMap.delete(child.id);
+            this.incomingEdges.delete(child.id);
+            this.outgoingEdges.delete(child.id);
+            this.callNodeParent.delete(child.id);
+        }
+
+        for (const edge of cached.edges) {
+
+            this.edgeMap.delete(edge.id);
+        }
+
+        this.childCache.delete(nodeId);
+
+        this._buildClusterNodes();
+    }
+
+    _buildClusterNodes() {
+
+        this.clusterNodes.clear();
+
+        for (const cluster of this.graph.clusters) {
+            this.clusterNodes.set(cluster.id, []);
+        }
+
+        for (const node of this.graph.nodes) {
+
+            const clusterId = node.cluster_id;
+
+            if (!clusterId) {
+                continue;
+            }
+
+            if (!this.clusterNodes.has(clusterId)) {
+                this.clusterNodes.set(clusterId, []);
+            }
+
+            this.clusterNodes.get(clusterId).push(node);
+        }
+    }
+
+    // =========================================================================
+    // Expand Groups
+    // =========================================================================
+
+    trackExpandGroup(parentNodeId, childNodeIds) {
+
+        this.expandGroups.set(
+            parentNodeId,
+            { childNodeIds }
+        );
+    }
+
+    untrackExpandGroup(parentNodeId) {
+
+        this.expandGroups.delete(parentNodeId);
+    }
+
+    getExpandGroups() {
+
+        return this.expandGroups;
+    }
+
+    getChildPositions(nodeId) {
+
+        return this.childPositions.get(
+            nodeId
+        ) || null;
+    }
+
+    // =========================================================================
     // Pinning
     // =========================================================================
 
@@ -472,6 +764,24 @@ export class GraphState extends EventEmitter {
 
     getClusterNodes(clusterId) {
         return this.clusterNodes.get(clusterId) || [];
+    }
+
+    getNodeOrParent(nodeId) {
+
+        const node = this.nodeMap.get(nodeId);
+
+        if (node) {
+            return node;
+        }
+
+        const parentId =
+            this.callNodeParent.get(nodeId);
+
+        if (parentId) {
+            return this.nodeMap.get(parentId);
+        }
+
+        return null;
     }
 
     // =========================================================================

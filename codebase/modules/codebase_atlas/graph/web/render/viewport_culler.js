@@ -117,16 +117,37 @@ export class ViewportCuller {
             node.position?.y ??
             node.y ?? 0;
 
-        // AABB intersection: NOT
-        // (node is fully to the left, right,
-        //  above, or below the bounds).
         return !(
-
             x + w < bounds.minX ||
             x > bounds.maxX ||
             y + h < bounds.minY ||
             y > bounds.maxY
         );
+    }
+
+    resolveEdgeEndpoint(node) {
+
+        if (
+            node.scope !== "call" ||
+            !node.parent_id
+        ) {
+            return node;
+        }
+
+        if (
+            this.state?.isExpanded?.(
+                node.parent_id
+            )
+        ) {
+            return node;
+        }
+
+        const parent =
+            this.state?.getNode?.(
+                node.parent_id
+            );
+
+        return parent || node;
     }
 
     computeLod(node, zoom) {
@@ -211,10 +232,37 @@ export class ViewportCuller {
 
         for (const edge of graph.edges) {
 
-            if (
+            const source =
+                this.state?.getNode?.(
+                    edge.source
+                );
 
-                visibleNodeIds.has(edge.source) &&
-                visibleNodeIds.has(edge.target)
+            const target =
+                this.state?.getNode?.(
+                    edge.target
+                );
+
+            if (!source || !target) {
+                continue;
+            }
+
+            const resolvedSource =
+                this.resolveEdgeEndpoint(
+                    source
+                );
+
+            const resolvedTarget =
+                this.resolveEdgeEndpoint(
+                    target
+                );
+
+            if (
+                visibleNodeIds.has(
+                    resolvedSource.id
+                ) &&
+                visibleNodeIds.has(
+                    resolvedTarget.id
+                )
             ) {
 
                 visibleEdges.push(edge);

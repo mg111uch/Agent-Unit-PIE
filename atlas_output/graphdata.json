@@ -1,0 +1,155 @@
+{
+  "graph_type": "unified",
+  "metadata": {
+    "graph_type": "unified"
+  },
+  "nodes": [
+    {
+      "id": "F001",
+      "label": "calculator.py",
+      "type": "file",
+      "risk_level": "none",
+      "entry_point": true,
+      "cluster_id": null,
+      "parent_id": null,
+      "scope": "file",
+      "metadata": {
+        "path": "/home/manigupt/Hello/python/Agentic_Unit_PIE/codebase/rag_pipeline/dummy/calculator.py"
+      }
+    },
+    {
+      "id": "F002",
+      "label": "fabonacci.py",
+      "type": "file",
+      "risk_level": "none",
+      "entry_point": false,
+      "cluster_id": null,
+      "parent_id": null,
+      "scope": "file",
+      "metadata": {
+        "path": "/home/manigupt/Hello/python/Agentic_Unit_PIE/codebase/rag_pipeline/dummy/fabo/fabonacci.py"
+      }
+    },
+    {
+      "id": "F001_divide",
+      "label": "divide()",
+      "type": "function",
+      "risk_level": "low",
+      "entry_point": false,
+      "cluster_id": null,
+      "parent_id": "F001",
+      "scope": "call",
+      "metadata": {
+        "file_ref": "F001",
+        "function_name": "divide"
+      }
+    },
+    {
+      "id": "F001_add",
+      "label": "add()",
+      "type": "function",
+      "risk_level": "low",
+      "entry_point": false,
+      "cluster_id": null,
+      "parent_id": "F001",
+      "scope": "call",
+      "metadata": {
+        "file_ref": "F001",
+        "function_name": "add"
+      }
+    },
+    {
+      "id": "F001_multiply",
+      "label": "multiply()",
+      "type": "function",
+      "risk_level": "low",
+      "entry_point": false,
+      "cluster_id": null,
+      "parent_id": "F001",
+      "scope": "call",
+      "metadata": {
+        "file_ref": "F001",
+        "function_name": "multiply"
+      }
+    },
+    {
+      "id": "F001_calculator",
+      "label": "calculator()",
+      "type": "function",
+      "risk_level": "none",
+      "entry_point": false,
+      "cluster_id": null,
+      "parent_id": "F001",
+      "scope": "call",
+      "metadata": {
+        "file_ref": "F001",
+        "function_name": "calculator"
+      }
+    },
+    {
+      "id": "F001_subtract",
+      "label": "subtract()",
+      "type": "function",
+      "risk_level": "low",
+      "entry_point": false,
+      "cluster_id": null,
+      "parent_id": "F001",
+      "scope": "call",
+      "metadata": {
+        "file_ref": "F001",
+        "function_name": "subtract"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "call:F001_calculator->F001_divide",
+      "source": "F001_calculator",
+      "target": "F001_divide",
+      "edge_type": "calls",
+      "label": null,
+      "weight": 1.0,
+      "strength": 1.0,
+      "metadata": {},
+      "hidden": false,
+      "type": "calls"
+    },
+    {
+      "id": "call:F001_calculator->F001_multiply",
+      "source": "F001_calculator",
+      "target": "F001_multiply",
+      "edge_type": "calls",
+      "label": null,
+      "weight": 1.0,
+      "strength": 1.0,
+      "metadata": {},
+      "hidden": false,
+      "type": "calls"
+    },
+    {
+      "id": "call:F001_calculator->F001_subtract",
+      "source": "F001_calculator",
+      "target": "F001_subtract",
+      "edge_type": "calls",
+      "label": null,
+      "weight": 1.0,
+      "strength": 1.0,
+      "metadata": {},
+      "hidden": false,
+      "type": "calls"
+    },
+    {
+      "id": "call:F001_calculator->F001_add",
+      "source": "F001_calculator",
+      "target": "F001_add",
+      "edge_type": "calls",
+      "label": null,
+      "weight": 1.0,
+      "strength": 1.0,
+      "metadata": {},
+      "hidden": false,
+      "type": "calls"
+    }
+  ],
+  "clusters": []
+}

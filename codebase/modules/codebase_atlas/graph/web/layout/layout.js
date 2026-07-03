@@ -630,4 +630,81 @@ export class GraphLayoutEngine {
 
         return graph;
     }
+
+    static layoutChildren(
+        parentNode,
+        children,
+        options = {}
+    ) {
+
+        if (!children || !children.length) {
+            return [];
+        }
+
+        const microSpacing =
+            options.microSpacing ?? 140;
+
+        const nodeWidth =
+            parentNode.width ??
+            options.nodeWidth ??
+            180;
+
+        const nodeHeight =
+            parentNode.height ??
+            options.nodeHeight ??
+            48;
+
+        const gap =
+            options.gap ?? 24;
+
+        const originX =
+            parentNode.position?.x ?? 0;
+
+        const originY =
+            (parentNode.position?.y ?? 0) +
+            nodeHeight +
+            gap;
+
+        const layout =
+            options.layout ?? "grid";
+
+        const cols =
+            options.columns ??
+            Math.max(
+                1,
+                Math.ceil(
+                    Math.sqrt(
+                        children.length
+                    )
+                )
+            );
+
+        children.forEach(
+            (child, index) => {
+
+                const row =
+                    Math.floor(
+                        index / cols
+                    );
+
+                const col =
+                    index % cols;
+
+                child.position = {
+                    x: originX +
+                        col * microSpacing,
+                    y: originY +
+                        row * microSpacing,
+                };
+            }
+        );
+
+        return children.map(
+            child => ({
+                id: child.id,
+                x: child.position.x,
+                y: child.position.y,
+            })
+        );
+    }
 }

@@ -328,3 +328,6 @@ Beyond the build plan, these are the directions in which the project can grow, o
 **Direction 6 — Multi-Agent Coordination.** When the specialized agents from Phase 5 are working, allow them to communicate. The observer agent can trigger the pattern agent, which can trigger the debate agent to challenge a belief that contradicts a new pattern. This is an emergent intelligence loop — the system updates its own worldview in response to new observations.
 
 **Direction 7 — Population Simulation as Civilization Engine.** Following the `DevptPhases.md` plan already in `popula_dyn`, extend the simulation toward Phase 5 (social structures) and Phase 6 (conflict and civilization). When this is integrated with the unit intelligence layer, the system can detect emergent phenomena (city formation, resource collapse, inequality cycles) and store them as cross-unit patterns. The simulation becomes a synthetic experience generator for the intelligence engine.
+
+---
+

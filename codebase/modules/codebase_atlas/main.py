@@ -297,22 +297,20 @@ Examples:
             from .graph.backend.serve import create_app
 
             output_path = Path(args.output_dir)
-            dep_json_path = output_path / "graphdata_dep.json"
-            call_json_path = output_path / "graphdata_call.json"
+            unified_json_path = output_path / "graphdata.json"
 
-            if not dep_json_path.exists() or not call_json_path.exists():
+            if not unified_json_path.exists():
                 print("=" * 60)
                 print("❌ GRAPHDATA JSON NOT FOUND")
                 print("=" * 60)
-                print(f"Expected graphdata JSON files in: {args.output_dir}")
+                print(f"Expected unified graph data in: {unified_json_path}")
                 print()
                 print("Run with --serve first to generate graph data:")
                 print(f"  python -m codebase_atlas.main --serve --project-dir <path>")
                 print()
                 return 1
 
-            dep_graph = GraphSerializer.load_json(dep_json_path)
-            call_graph = GraphSerializer.load_json(call_json_path)
+            unified_graph = GraphSerializer.load_json(unified_json_path)
 
             print("=" * 60)
             print("🗺️  LOADED GRAPHDATA JSON")
@@ -332,8 +330,7 @@ Examples:
                     pass
 
             app = create_app(
-                dep_graph,
-                call_graph,
+                unified_graph=unified_graph,
                 output_dir=output_path,
                 project_id=project_id,
             )
@@ -365,24 +362,17 @@ Examples:
             from .graph.backend.graph_serializer import GraphSerializer
 
             builder = GraphBuilder(atlas_data)
-            dep_graph = builder.build_dependency_graph()
-            call_graph = builder.build_call_graph()
+            unified_graph = builder.build_unified_graph()
 
             output_dir = Path(args.output_dir)
 
-            # Save canonical GraphData JSON (both renderers can consume)
             GraphSerializer.save_json(
-                dep_graph,
-                output_dir / "graphdata_dep.json",
-            )
-            GraphSerializer.save_json(
-                call_graph,
-                output_dir / "graphdata_call.json",
+                unified_graph,
+                output_dir / "graphdata.json",
             )
 
             app = create_app(
-                dep_graph,
-                call_graph,
+                unified_graph=unified_graph,
                 output_dir=output_dir,
                 project_id=project_id,
             )
