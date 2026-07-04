@@ -90,7 +90,7 @@ async function bootstrap() {
         const childData =
             graphData.children_by_parent || {};
 
-        viewer = createGraphViewer(
+        viewer = await createGraphViewer(
             graphData,
             { childData }
         );

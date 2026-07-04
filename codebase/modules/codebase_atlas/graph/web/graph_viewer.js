@@ -76,6 +76,8 @@ export class GraphViewer {
         this.graphData =
             options.graphData;
 
+        this._hadViewportSnapshot = false;
+
         if (!this.graphData) {
 
             throw new Error(
@@ -253,13 +255,31 @@ export class GraphViewer {
      * ========================================================================
      */
 
-    initialize() {
+    async initialize() {
 
-        this.restoreState();
+        this._hadViewportSnapshot =
+            this.restoreState();
+
+        if (
+            this._hadViewportSnapshot &&
+            this.viewport
+        ) {
+
+            this.viewport.zoom =
+                this.state.zoom;
+
+            this.viewport.panX =
+                this.state.panX;
+
+            this.viewport.panY =
+                this.state.panY;
+
+            this.viewport.updateTransform();
+        }
+
+        await this._loadChildPositions();
 
         this.attachStorage();
-
-        this._loadChildPositions();
 
         this.renderer.initialize();
 
@@ -281,16 +301,72 @@ export class GraphViewer {
                 .renderChunked()
                 .then(() => {
 
-                    this.navigation.fitGraph();
+                    if (this._hadViewportSnapshot) {
+
+                        this.viewport.zoom =
+                            this.state.zoom;
+
+                        this.viewport.panX =
+                            this.state.panX;
+
+                        this.viewport.panY =
+                            this.state.panY;
+
+                        this.viewport.updateTransform();
+
+                    } else {
+
+                        this.navigation.fitGraph();
+                    }
+
+                    this._replayExpandedNodes();
+
                     return this;
                 });
+        }
+
+        if (this._hadViewportSnapshot) {
+
+            this.viewport.zoom =
+                this.state.zoom;
+
+            this.viewport.panX =
+                this.state.panX;
+
+            this.viewport.panY =
+                this.state.panY;
+
+            this.viewport.updateTransform();
+
+            this.renderer.render();
+
+            this._replayExpandedNodes();
+
+            return this;
         }
 
         this.renderer.render();
 
         this.navigation.fitGraph();
 
+        this._replayExpandedNodes();
+
         return this;
+    }
+
+    _replayExpandedNodes() {
+
+        const ids =
+            Array.from(
+                this.state.expandedNodes
+            );
+
+        this.state.expandedNodes.clear();
+
+        for (const nodeId of ids) {
+
+            this.expandNode(nodeId);
+        }
     }
 
     /**
@@ -454,12 +530,6 @@ export class GraphViewer {
                 "nodes:moved",
                 () => this._savePositionsToServer()
             );
-
-        this._unsubscribeCollapseSave =
-            this.state.subscribe(
-                "nodeCollapsed",
-                () => this._savePositionsToServer()
-            );
     }
 
     _savePositionsToServer() {
@@ -472,6 +542,15 @@ export class GraphViewer {
             this.graphData?.graph_type ??
             "unknown";
 
+        const expandedChildIds = new Set();
+
+        for (const group
+             of this.state.getExpandGroups().values()) {
+            for (const childId of group.childNodeIds) {
+                expandedChildIds.add(childId);
+            }
+        }
+
         const positions = {};
 
         for (const node of this.state.graph.nodes) {
@@ -483,12 +562,13 @@ export class GraphViewer {
                 ) &&
                 Number.isFinite(
                     node.position.y
-                )
+                ) &&
+                !expandedChildIds.has(node.id)
             ) {
 
                 positions[node.id] = {
-                    x: node.position.x,
-                    y: node.position.y,
+                    x: Math.round(node.position.x),
+                    y: Math.round(node.position.y),
                 };
             }
         }
@@ -497,11 +577,62 @@ export class GraphViewer {
 
         for (const [
             parentId,
-            offsets,
+            offsets
         ] of this.state.childPositions) {
+            child_offsets[parentId] = { ...offsets };
+        }
 
-            child_offsets[parentId] =
-                offsets;
+        for (const [
+            parentId,
+            group
+        ] of this.state.getExpandGroups()) {
+
+            const parent =
+                this.state.getNode(parentId);
+
+            if (!parent || !parent.position) {
+                continue;
+            }
+
+            const offsets = {};
+
+            for (const childId
+                 of group.childNodeIds) {
+
+                const child =
+                    this.state.getNode(childId);
+
+                if (!child || !child.position) {
+                    continue;
+                }
+
+                const dx =
+                    child.position.x -
+                    parent.position.x;
+
+                const dy =
+                    child.position.y -
+                    parent.position.y;
+
+                if (
+                    Number.isFinite(dx) &&
+                    Number.isFinite(dy)
+                ) {
+
+                    offsets[childId] = {
+                        dx: Math.round(dx),
+                        dy: Math.round(dy),
+                    };
+                }
+            }
+
+            if (Object.keys(offsets).length > 0) {
+                child_offsets[parentId] = offsets;
+                this.state.childPositions.set(
+                    parentId,
+                    offsets
+                );
+            }
         }
 
         fetch("/api/save-positions", {
@@ -760,13 +891,6 @@ export class GraphViewer {
         ) {
 
             this._unsubscribeServerSave();
-        }
-
-        if (
-            this._unsubscribeCollapseSave
-        ) {
-
-            this._unsubscribeCollapseSave();
         }
     }
 }

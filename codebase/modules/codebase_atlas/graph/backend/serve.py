@@ -270,12 +270,28 @@ def _build_app(
                "x" in pos and "y" in pos
         }
 
+        rounded_child_offsets = None
+        if isinstance(child_offsets, dict):
+            rounded_child_offsets = {
+                parent_id: {
+                    node_id: {
+                        "dx": round(offset["dx"]),
+                        "dy": round(offset["dy"]),
+                    }
+                    for node_id, offset in offsets.items()
+                    if isinstance(offset, dict) and
+                       "dx" in offset and "dy" in offset
+                }
+                for parent_id, offsets in child_offsets.items()
+                if isinstance(offsets, dict)
+            }
+
         _write_positions(
             output_dir,
             graph_type,
             rounded,
             project_id,
-            child_offsets,
+            rounded_child_offsets,
         )
 
         return jsonify({"saved": True})
