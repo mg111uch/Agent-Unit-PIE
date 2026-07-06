@@ -58,6 +58,7 @@ class FunctionInfo:
     external_calls: Set[str] = field(default_factory=set)  # External lib calls
     
     risk_level: RiskLevel = RiskLevel.SAFE
+    produces_json: List[str] = field(default_factory=list)
     
     def get_signature(self, compact: bool = False) -> str:
         """Get function signature string."""

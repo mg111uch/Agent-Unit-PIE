@@ -9,8 +9,31 @@ Single reference for project usage.
 ### Run Agent
 ```bash
 cd codebase
-conda run -n myenv python agent.py
+conda run -n myenv python agent.py --provider gemini --model gemini-3.1-flash-lite
+conda run -n myenv python agent.py --provider openrouter --model openai/gpt-oss-20b:free
 ```
+
+#### OpenRouter provider Models
+- google/gemma-4-26b-a4b-it:free
+- google/gemma-4-31b-it:free
+- openai/gpt-oss-120b:free
+- openai/gpt-oss-20b:free
+- nvidia/nemotron-3-ultra-550b-a55b:free
+- nvidia/nemotron-3-super-120b-a12b:free
+- nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free
+- nvidia/nemotron-3-nano-30b-a3b:free
+
+#### Google provider Models
+- gemini-3.5-flash
+- gemini-3.1-pro-preview
+- gemini-3.1-flash-lite
+- gemini-3.1-flash-lite-image
+- gemma-4-31b-it
+- gemma-4-26b-a4b-it
+
+#### Environment Variables
+- `GEMINI_API_KEY` — required for `--provider gemini`
+- `OPENROUTER_API_KEY` — required for `--provider openrouter`
 
 ### Exit
 ```bash
@@ -146,6 +169,29 @@ print(conn.compare_runs(['run_001', 'run_002']))
 | `initial_pop` | 50 |
 | `initial_healers` | 1 |
 | `grid_width` | 10 |
+
+---
+
+## LLM Orchestration
+
+### Architecture
+
+```
+agent.py
+  │
+  ├── orchestrator.generate(provider, model, conversation_id, ...)
+  │     │
+  │     ├── gemini_provider.generate()
+  │     │     └── genai.Client.interactions.create(previous_interaction_id=conversation_id)
+  │     │         ↳ stateful — conversation_id carries turn history server-side
+  │     │
+  │     └── openrouter_provider.generate()
+  │           └── openai.OpenAI(base_url="https://openrouter.ai/api/v1")
+  │               .chat.completions.create(messages=[...])
+  │               ↳ stateless — conversation_id ignored
+  │
+  └── result["response"] ──► agent loop
+```
 
 ---
 

@@ -6,8 +6,8 @@
       "y": -1120
     },
     "F002": {
-      "x": 308,
-      "y": -1126
+      "x": 315,
+      "y": -1123
     },
     "F003": {
       "x": 0,
@@ -82,21 +82,21 @@
       }
     },
     "F002": {
-      "F002_run_gemini_agent": {
-        "dx": 219,
-        "dy": 11
-      },
-      "F002_write_question_to_file": {
-        "dx": 231,
-        "dy": 91
-      },
-      "F002_read_answer_from_file": {
-        "dx": 224,
-        "dy": 165
-      },
       "F002_compile_topic_llm": {
         "dx": 0,
-        "dy": 85
+        "dy": 72
+      },
+      "F002_read_answer_from_file": {
+        "dx": 140,
+        "dy": 72
+      },
+      "F002_run_gemini_agent": {
+        "dx": 0,
+        "dy": 212
+      },
+      "F002_write_question_to_file": {
+        "dx": 140,
+        "dy": 212
       }
     }
   }

@@ -1,13 +1,13 @@
 ## Codebase size
-Total files processed: 219
-Total lines of code: 42535
-Total tokens: 266749
+Total files processed: 217
+Total lines of code: 42692
+Total tokens: 267109
 ## End Codebase size
 
 ## Directory Structure 
 - **Project path:** `/home/manigupt/Hello/python/Agentic_Unit_PIE`
 ### FILE_MAP Tree
-├── codebase/ [50878 LOC, 307879 tokens]
+├── codebase/ [50800 LOC, 308343 tokens]
 │   ├── storage/ [1071 LOC, 4056 tokens]
 │   │   ├── raw_observation_storage.py
 │   │   ├── [] unit_storage.py [553 LOC, 2124 tokens]
@@ -119,32 +119,39 @@ Total tokens: 266749
 │   │   │   ├── hypotheses/
 │   │   │   └── patterns/
 │   │   └── kb/
-│   ├── modules/ [28613 LOC, 217091 tokens]
-│   │   ├── codebase_atlas/ [16324 LOC, 73262 tokens]
-│   │   │   ├── generators/ [311 LOC, 2105 tokens]
-│   │   │   │   ├── [] detail_generator.py [114 LOC, 705 tokens]
-│   │   │   │   ├── [] base_generator.py [182 LOC, 1318 tokens]
+│   │       ├── countries/
+│   │       ├── companies/
+│   │       ├── global/
+│   │       ├── markets/
+│   │       ├── humans/
+│   │       ├── cities/
+│   │       └── patterns/
+│   ├── modules/ [28893 LOC, 218820 tokens]
+│   │   ├── codebase_atlas/ [16604 LOC, 74991 tokens]
+│   │   │   ├── generators/ [367 LOC, 2519 tokens]
+│   │   │   │   ├── [] detail_generator.py [139 LOC, 880 tokens]
+│   │   │   │   ├── [] base_generator.py [213 LOC, 1557 tokens]
 │   │   │   │   └── [] __init__.py [15 LOC, 82 tokens]
-│   │   │   ├── utils/ [407 LOC, 2620 tokens]
+│   │   │   ├── utils/ [441 LOC, 2941 tokens]
 │   │   │   │   ├── [] __init__.py [34 LOC, 123 tokens]
-│   │   │   │   ├── [] formatting.py [187 LOC, 1510 tokens]
+│   │   │   │   ├── [] formatting.py [221 LOC, 1831 tokens]
 │   │   │   │   └── [] io_helpers.py [186 LOC, 987 tokens]
 │   │   │   ├── analyzers/ [816 LOC, 5475 tokens]
 │   │   │   │   ├── [] entry_point_detector.py [210 LOC, 1381 tokens]
 │   │   │   │   ├── [] __init__.py [18 LOC, 90 tokens]
 │   │   │   │   ├── [] dependency_analyzer.py [269 LOC, 1795 tokens]
 │   │   │   │   └── [] impact_analyzer.py [319 LOC, 2209 tokens]
-│   │   │   ├── graph/ [12338 LOC, 47147 tokens]
-│   │   │   │   ├── backend/ [1599 LOC, 7281 tokens]
+│   │   │   ├── graph/ [12478 LOC, 47749 tokens]
+│   │   │   │   ├── backend/ [1615 LOC, 7386 tokens]
 │   │   │   │   │   ├── renderers/ [150 LOC, 624 tokens]
 │   │   │   │   │   │   ├── [] interactive_renderer.py [150 LOC, 624 tokens]
 │   │   │   │   │   │   └── __init__.py
 │   │   │   │   │   ├── [] graph_models.py [242 LOC, 1170 tokens]
 │   │   │   │   │   ├── [] graph_builder.py [413 LOC, 2025 tokens]
 │   │   │   │   │   ├── __init__.py
-│   │   │   │   │   ├── [] serve.py [313 LOC, 1501 tokens]
+│   │   │   │   │   ├── [] serve.py [329 LOC, 1606 tokens]
 │   │   │   │   │   └── [] graph_serializer.py [481 LOC, 1961 tokens]
-│   │   │   │   ├── web/ [10739 LOC, 39866 tokens]
+│   │   │   │   ├── web/ [10863 LOC, 40363 tokens]
 │   │   │   │   │   ├── utils/ [355 LOC, 1277 tokens]
 │   │   │   │   │   │   └── [] geometry.js [355 LOC, 1277 tokens]
 │   │   │   │   │   ├── viewport/ [658 LOC, 2213 tokens]
@@ -170,21 +177,21 @@ Total tokens: 266749
 │   │   │   │   │   │   ├── [] interaction.js [891 LOC, 3106 tokens]
 │   │   │   │   │   │   ├── [] drag.js [392 LOC, 1255 tokens]
 │   │   │   │   │   │   └── [] selection.js [432 LOC, 1331 tokens]
-│   │   │   │   │   ├── [] graph_viewer.js [791 LOC, 2712 tokens]
+│   │   │   │   │   ├── [] graph_viewer.js [915 LOC, 3208 tokens]
 │   │   │   │   │   ├── [] graph_viewer.html [767 LOC, 3424 tokens]
-│   │   │   │   │   └── [] bootstrap.js [124 LOC, 423 tokens]
+│   │   │   │   │   └── [] bootstrap.js [124 LOC, 424 tokens]
 │   │   │   │   └── __init__.py
-│   │   │   ├── parsers/ [1155 LOC, 7343 tokens]
+│   │   │   ├── parsers/ [1204 LOC, 7725 tokens]
 │   │   │   │   ├── [] html_parser.py [110 LOC, 728 tokens]
 │   │   │   │   ├── [] config_parser.py [125 LOC, 770 tokens]
 │   │   │   │   ├── [] __init__.py [23 LOC, 124 tokens]
 │   │   │   │   ├── [] javascript_parser.py [435 LOC, 2932 tokens]
 │   │   │   │   ├── [] base_parser.py [94 LOC, 479 tokens]
-│   │   │   │   └── [] python_parser.py [368 LOC, 2310 tokens]
-│   │   │   ├── [] models.py [331 LOC, 2656 tokens]
+│   │   │   │   └── [] python_parser.py [417 LOC, 2692 tokens]
+│   │   │   ├── [] models.py [332 LOC, 2670 tokens]
 │   │   │   ├── [] scanner.py [217 LOC, 1295 tokens]
 │   │   │   ├── [] config.py [293 LOC, 1853 tokens]
-│   │   │   ├── [] main.py [395 LOC, 2469 tokens]
+│   │   │   ├── [] main.py [395 LOC, 2465 tokens]
 │   │   │   └── [] __init__.py [61 LOC, 299 tokens]
 │   │   ├── simulators/ [6877 LOC, 116735 tokens]
 │   │   │   ├── popula_dyn/ [6514 LOC, 114356 tokens]
@@ -267,42 +274,47 @@ Total tokens: 266749
 │   ├── tests/ [179 LOC, 1156 tokens]
 │   │   ├── [] __init__.py [1 LOC, 9 tokens]
 │   │   └── [] agent_test.py [178 LOC, 1147 tokens]
-│   ├── llm/ [1076 LOC, 4000 tokens]
+│   ├── llm/ [774 LOC, 3475 tokens]
+│   │   ├── providers/ [113 LOC, 736 tokens]
+│   │   │   ├── [] openrouter_provider.py [57 LOC, 376 tokens]
+│   │   │   ├── __init__.py
+│   │   │   └── [] gemini_provider.py [56 LOC, 360 tokens]
 │   │   ├── extractors/
 │   │   │   ├── signal_extractor.py
 │   │   │   ├── pattern_extractor.py
 │   │   │   └── hypothesis_extractor.py
 │   │   ├── [] context_builder.py [548 LOC, 1977 tokens]
-│   │   └── [] llm_orchestrator.py [528 LOC, 2023 tokens]
+│   │   └── [] llm_orchestrator.py [113 LOC, 762 tokens]
 │   ├── [] system_instruction.md [99 LOC, 758 tokens]
-│   ├── [] agent_tools.py [601 LOC, 4109 tokens]
-│   ├── [] agent.py [297 LOC, 2124 tokens]
-│   ├── [] Launcher.md [38 LOC, 529 tokens]
+│   ├── [] agent_tools.py [602 LOC, 4086 tokens]
+│   ├── [] agent.py [300 LOC, 2228 tokens]
 │   ├── [] __init__.py [1 LOC, 5 tokens]
-│   └── [] tui_output.txt [22 LOC, 292 tokens]
-├── system_devpt_reports/ [1472 LOC, 10625 tokens]
-│   ├── codebase_atlas/ [598 LOC, 5580 tokens]
-│   │   ├── [] current_status.md [177 LOC, 937 tokens]
-│   │   ├── [] devpt_roadmap.md [137 LOC, 2220 tokens]
-│   │   └── [] README.md [284 LOC, 2423 tokens]
+│   └── tui_output.txt
+├── system_devpt_reports/ [1583 LOC, 12924 tokens]
+│   ├── codebase_atlas/ [663 LOC, 7421 tokens]
+│   │   ├── [] current_status.md [211 LOC, 1311 tokens]
+│   │   ├── [] devpt_roadmap.md [202 LOC, 4004 tokens]
+│   │   └── [] README.md [250 LOC, 2106 tokens]
 │   ├── [] kernel.md [162 LOC, 1110 tokens]
 │   ├── [] debate_engine.md [323 LOC, 1739 tokens]
 │   ├── [] simulation_engine.md [217 LOC, 1380 tokens]
-│   └── [] orchestrator.md [172 LOC, 816 tokens]
-├── atlas_output/ [238 LOC, 1694 tokens]
-│   ├── children/ [33 LOC, 302 tokens]
-│   │   ├── [] fabo.md [10 LOC, 56 tokens]
-│   │   └── [] dummy.md [23 LOC, 246 tokens]
-│   ├── [] atlas_meta.json [3 LOC, 29 tokens]
-│   ├── [] code_atlas.md [10 LOC, 56 tokens]
-│   ├── [] node_positions.json [37 LOC, 250 tokens]
-│   └── [] graphdata.json [155 LOC, 1057 tokens]
+│   └── [] orchestrator.md [218 LOC, 1274 tokens]
+├── atlas_output/ [2207 LOC, 18377 tokens]
+│   ├── children/ [274 LOC, 4007 tokens]
+│   │   ├── [] json_files.md [28 LOC, 279 tokens]
+│   │   ├── [] engine.md [164 LOC, 2515 tokens]
+│   │   ├── [] argu_god.md [32 LOC, 342 tokens]
+│   │   └── [] static.md [50 LOC, 871 tokens]
+│   ├── [] graphdata.json [1815 LOC, 13618 tokens]
+│   ├── [] atlas_meta.json [3 LOC, 30 tokens]
+│   ├── [] code_atlas.md [12 LOC, 134 tokens]
+│   └── [] node_positions.json [103 LOC, 588 tokens]
 ├── [] GPT_5-5_Chat.md [4962 LOC, 18724 tokens]
-├── [] Issues_n_ideas.md [4 LOC, 9 tokens]
-├── [] agent_harness.md [34 LOC, 342 tokens]
-├── [] code_atlas.md [309 LOC, 5545 tokens]
+├── [] Issues_n_ideas.md [11 LOC, 1 tokens]
+├── [] agent_harness.md [34 LOC, 395 tokens]
+├── [] code_atlas.md [313 LOC, 5593 tokens]
 ├── [] Devpt_phases.md [333 LOC, 2918 tokens]
-├── [] code_dump.txt [4553 LOC, 18081 tokens]
+├── code_dump.txt
 ├── [] .gitignore [7 LOC, 23 tokens]
 ├── [] README.md [953 LOC, 4763 tokens]
 └── [] project_tools.md [24 LOC, 904 tokens]

@@ -6,11 +6,11 @@ Compact format (<100 LOC, <1000 tokens) with links to detailed children files.
 """
 
 from pathlib import Path
-from typing import List, Dict
+from typing import List, Dict, Set
 from collections import defaultdict
 
 from ..models import AtlasData, FileInfo
-from ..config import AtlasConfig, estimate_tokens
+from ..config import AtlasConfig, CONFIG_EXTENSIONS, estimate_tokens
 from ..utils import write_file, get_timestamp
 
 
@@ -153,18 +153,49 @@ class BaseGenerator:
             dir_name = dir_path.name if dir_path.name else 'root'
             by_directory[dir_name].append(file_info)
 
+        produced_json_paths = self._get_produced_json_paths()
+
         final_groups = {}
 
         for dir_name, files in by_directory.items():
-            if len(files) <= self.config.max_files_per_child:
-                final_groups[dir_name] = files
+            filtered = [f for f in files if f.ext not in CONFIG_EXTENSIONS]
+            if not filtered:
+                continue
+            if len(filtered) <= self.config.max_files_per_child:
+                final_groups[dir_name] = filtered
             else:
-                for i in range(0, len(files), self.config.max_files_per_child):
-                    chunk = files[i:i + self.config.max_files_per_child]
+                for i in range(0, len(filtered), self.config.max_files_per_child):
+                    chunk = filtered[i:i + self.config.max_files_per_child]
                     group_name = f"{dir_name}_{i // self.config.max_files_per_child + 1}"
                     final_groups[group_name] = chunk
 
+        if self._get_orphan_config_files(produced_json_paths):
+            final_groups['json_files'] = self._get_orphan_config_files(produced_json_paths)
+
         return final_groups
+
+    def _get_produced_json_paths(self) -> Set[str]:
+        produced: Set[str] = set()
+
+        for file_info in self.atlas_data.files:
+            for func in file_info.functions:
+                produced.update(func.produces_json)
+            for cls in file_info.classes:
+                for method in cls.methods:
+                    produced.update(method.produces_json)
+
+        return produced
+
+    def _get_orphan_config_files(self, produced_json_paths: Set[str]) -> List[FileInfo]:
+        orphans: List[FileInfo] = []
+
+        for file_info in self.atlas_data.files:
+            if file_info.ext not in CONFIG_EXTENSIONS:
+                continue
+            if str(file_info.path) not in produced_json_paths:
+                orphans.append(file_info)
+
+        return orphans
 
     def _apply_budget_limits(self):
         current_loc = len(self.lines)

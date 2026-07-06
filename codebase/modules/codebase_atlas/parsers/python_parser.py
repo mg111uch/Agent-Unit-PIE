@@ -179,6 +179,7 @@ class PythonParser(BaseParser):
         
         # Extract function calls and variable usage
         self._extract_calls_and_vars(node, func_info)
+        func_info.produces_json = self._detect_json_outputs(node)
         
         return func_info
     
@@ -354,6 +355,54 @@ class PythonParser(BaseParser):
         
         return False
     
+    def _detect_json_outputs(self, node: ast.FunctionDef) -> List[str]:
+        json_paths: List[str] = []
+        json_opens: List[str] = []
+
+        for child in ast.walk(node):
+            if isinstance(child, ast.Call):
+                func_full_name = self._get_name(child.func)
+                if func_full_name == 'open' and child.args:
+                    first = child.args[0]
+                    if (
+                        isinstance(first, ast.Constant)
+                        and isinstance(first.value, str)
+                        and first.value.endswith('.json')
+                    ):
+                        json_opens.append(first.value)
+                    elif isinstance(first, ast.BinOp) and isinstance(first.op, ast.Add):
+                        if (
+                            isinstance(first.left, ast.Constant)
+                            and isinstance(first.left.value, str)
+                            and first.left.value.endswith('.json')
+                        ):
+                            json_paths.append(first.left.value)
+
+                if func_full_name in ('json.dump', 'json.dumps') and child.args:
+                    second = child.args[1] if len(child.args) >= 2 else None
+                    if isinstance(second, ast.Call):
+                        open_path = self._get_open_path_from_call(second)
+                        if open_path:
+                            json_paths.append(open_path)
+
+        if json_opens:
+            json_paths.extend(json_opens)
+
+        return sorted(set(json_paths))
+
+    def _get_open_path_from_call(self, node: ast.Call) -> Optional[str]:
+        func_name = self._get_name(node.func)
+        if func_name != 'open' or not node.args:
+            return None
+        path_arg = node.args[0]
+        if (
+            isinstance(path_arg, ast.Constant)
+            and isinstance(path_arg.value, str)
+            and path_arg.value.endswith('.json')
+        ):
+            return path_arg.value
+        return None
+
     def _has_entry_point_pattern(self, content: str) -> bool:
         """
         Check if content has entry point patterns.

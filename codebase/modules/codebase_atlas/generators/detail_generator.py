@@ -6,11 +6,11 @@ Includes inline impact matrices and docstrings for every function.
 """
 
 from pathlib import Path
-from typing import List, Dict
+from typing import List, Dict, Set
 from collections import defaultdict
 
 from ..models import AtlasData, FileInfo
-from ..config import AtlasConfig
+from ..config import AtlasConfig, CONFIG_EXTENSIONS
 from ..utils import (
     write_file, get_timestamp, ensure_directory,
     format_file,
@@ -55,19 +55,44 @@ class DetailGenerator:
             dir_name = dir_path.name if dir_path.name else 'root'
             by_directory[dir_name].append(file_info)
 
+        produced_json_paths = self._get_produced_json_paths()
+
         final_groups = {}
+        orphan_config_files: List[FileInfo] = []
 
         for dir_name, files in by_directory.items():
-            if len(files) <= self.config.max_files_per_child:
-                final_groups[dir_name] = files
+            filtered = [f for f in files if f.ext not in CONFIG_EXTENSIONS]
+
+            if filtered:
+                if len(filtered) <= self.config.max_files_per_child:
+                    final_groups[dir_name] = filtered
+                else:
+                    for i in range(0, len(filtered), self.config.max_files_per_child):
+                        chunk = filtered[i:i + self.config.max_files_per_child]
+                        chunk_num = i // self.config.max_files_per_child + 1
+                        group_name = f"{dir_name}_{chunk_num}"
+                        final_groups[group_name] = chunk
             else:
-                for i in range(0, len(files), self.config.max_files_per_child):
-                    chunk = files[i:i + self.config.max_files_per_child]
-                    chunk_num = i // self.config.max_files_per_child + 1
-                    group_name = f"{dir_name}_{chunk_num}"
-                    final_groups[group_name] = chunk
+                for cf in files:
+                    if str(cf.path) not in produced_json_paths:
+                        orphan_config_files.append(cf)
+
+        if orphan_config_files:
+            final_groups['json_files'] = orphan_config_files
 
         return final_groups
+
+    def _get_produced_json_paths(self) -> Set[str]:
+        produced: Set[str] = set()
+
+        for file_info in self.atlas_data.files:
+            for func in file_info.functions:
+                produced.update(func.produces_json)
+            for cls in file_info.classes:
+                for method in cls.methods:
+                    produced.update(method.produces_json)
+
+        return produced
 
     def _generate_child_file(
         self,

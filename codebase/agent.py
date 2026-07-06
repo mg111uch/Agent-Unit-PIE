@@ -4,9 +4,8 @@ agent.py - Main agent entry point.
 Minimal file that delegates to agent_tools.py for all tool definitions.
 """
 
-import os, sys, time, json, re, traceback
+import os, sys, time, json, re, traceback, argparse
 
-from google import genai
 from dotenv import load_dotenv
 load_dotenv()
 
@@ -26,33 +25,34 @@ if KERNEL_AVAILABLE:
     except ImportError:
         working_memory = None
 
-my_api_key = os.getenv("GEMINI_API_KEY")
-client = genai.Client(api_key=my_api_key)
-MODEL = "gemini-2.5-flash-lite"
+from llm.llm_orchestrator import LLMOrchestrator
 
-interaction_id = None
+# --- CLI ---
+parser = argparse.ArgumentParser(description="Agentic Unit PIE Agent")
+parser.add_argument("--provider", default="gemini", choices=["gemini", "openrouter"])
+parser.add_argument("--model", default=None)
+args = parser.parse_args()
 
-from agent_tools import LOG_FILE
+# --- Orchestrator ---
+orchestrator = LLMOrchestrator(default_provider=args.provider, default_model=args.model)
 
+gemini_key = os.getenv("GEMINI_API_KEY")
+if gemini_key:
+    from llm.providers.gemini_provider import GeminiProvider
+    orchestrator.register_provider("gemini", GeminiProvider(
+        api_key=gemini_key,
+        model=args.model or "gemini-3.1-flash-lite",
+    ))
 
-class TeeStderr:
-    def __init__(self, original_stderr, log_file):
-        self.original_stderr = original_stderr
-        self.log_file = log_file
+openrouter_key = os.getenv("OPENROUTER_API_KEY")
+if openrouter_key:
+    from llm.providers.openrouter_provider import OpenRouterProvider
+    orchestrator.register_provider("openrouter", OpenRouterProvider(
+        api_key=openrouter_key,
+        model=args.model or "openai/gpt-oss-20b:free",
+    ))
 
-    def write(self, message):
-        self.original_stderr.write(message)
-        try:
-            with open(self.log_file, "a") as f:
-                f.write(message)
-        except Exception:
-            pass
-
-    def flush(self):
-        self.original_stderr.flush()
-
-
-sys.stderr = TeeStderr(sys.stderr, LOG_FILE)
+conversation_id = None
 
 try:
     with open("system_instruction.md", "r") as f:
@@ -86,7 +86,7 @@ def parse_command(user_input: str):
 
 
 def run_agent(user_input: str) -> str:
-    global interaction_id
+    global conversation_id
 
     context_info = ""
     if AUTO_RETRIEVE_CONTEXT and KERNEL_AVAILABLE and retrieval_engine:
@@ -104,19 +104,25 @@ def run_agent(user_input: str) -> str:
         except Exception as e:
             log_output(f"[Kernel] Context retrieval warning: {e}")
 
-    first_input = SYSTEM_PROMPT + "\n\nUser: " + user_input + context_info if interaction_id is None else user_input + context_info
-    current_input = first_input
+    current_input = user_input + context_info
 
     for step in range(10):
         try:
-            res = client.interactions.create(
-                model=MODEL,
-                input=current_input,
-                previous_interaction_id=interaction_id
+            result = orchestrator.generate(
+                prompt=current_input,
+                system_prompt=SYSTEM_PROMPT if conversation_id is None else None,
+                conversation_id=conversation_id,
+                provider=args.provider,
+                model=args.model,
             )
 
-            interaction_id = res.id
-            reply = res.outputs[-1].text
+            if result["status"] == "error":
+                error_msg = f"LLM call failed: {result.get('error')}"
+                log_output(f"[ERROR] {error_msg}")
+                return error_msg
+
+            conversation_id = result.get("conversation_id")
+            reply = result["response"]
             log_output(f"\n[Agent Step {step}]: {reply}")
 
             clean_reply = reply.strip()
@@ -192,15 +198,18 @@ When goal is achieved, respond with: {"final": "summary of findings"}"""
         except:
             pass
 
-        first_input = system_prompt + f"\n\nGoal: {goal}\nPrevious findings: {all_findings}\n{context_info}\nWhat subtask next?"
+        first_input = f"Goal: {goal}\nPrevious findings: {all_findings}\n{context_info}\nWhat subtask next?"
 
         try:
-            res = client.interactions.create(
-                model=MODEL,
-                input=first_input,
-                previous_interaction_id=None
+            result = orchestrator.generate(
+                prompt=first_input,
+                system_prompt=system_prompt,
+                provider=args.provider,
+                model=args.model,
             )
-            reply = res.outputs[-1].text
+            if result["status"] == "error":
+                return f"Error in LLM call: {result.get('error')}"
+            reply = result["response"]
             clean_reply = reply.strip()
         except Exception as e:
             return f"Error in LLM call: {e}"
@@ -263,12 +272,6 @@ When goal is achieved, respond with: {"final": "summary of findings"}"""
 
 
 if __name__ == "__main__":
-    try:
-        with open(LOG_FILE, "w") as f:
-            f.write("")
-    except Exception as e:
-        print(f"Warning: Could not clear log file: {e}")
-
     log_output("--- Starting Agent ---", flush=True)
 
     if KERNEL_AVAILABLE:

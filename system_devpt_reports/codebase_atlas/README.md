@@ -47,7 +47,7 @@ python -m codebase_atlas.main \
 
 ```
 
-## 🎛️ Configuration
+## 🛠️ Configuration
 
 Edit `codebase_atlas/config.py` to customize:
 
@@ -59,21 +59,45 @@ IMPACT_DEPTH = 3                # Track call chains 3 levels deep
 RISK_THRESHOLD_HIGH = 3         # 3+ dependents = HIGH risk
 ```
 
+### Ignore Directories
+
+Additional directories can be ignored via CLI or config:
+
+```bash
+# CLI: pass directory names (space-separated)
+python -m codebase_atlas.main --ignore-dirs docs examples deprecated
+```
+
+```python
+# codebase_atlas/config.py
+
+# Ignore additional directories
+IGNORE_DIRS.update({'docs', 'examples', 'deprecated'})
+```
+
+### Add custom entry point patterns
+ENTRY_POINT_PATTERNS['python'].append('app.run')
+
+### Adjust impact depth (default: 3)
+IMPACT_DEPTH = 5  # Track deeper call chains (slower)
+
+### Change risk thresholds
+RISK_THRESHOLD_HIGH = 5    # More lenient
+RISK_THRESHOLD_MEDIUM = 3
+```
+
+### Group Files by Functionality
+
+```python
+# Override default directory-based grouping
+CUSTOM_GROUPING = {
+    'core': ['entities.py', 'components.py', 'systems.py'],
+    'api': ['routes.py', 'handlers.py', 'middleware.py'],
+    'data': ['models.py', 'database.py', 'migrations/']
+}
+```
+
 ---
-
-## 🕸️ Graph Explorer
-
-**Interactive browser-based visualization of dependency and call graphs.**
-
-After generating the atlas, use `--serve` to start a local web server 
-
-### Features
-
-- **Dependency Graph** — File-level import/require relationships with color-coded risk
-- **Call Graph** — Function-level call relationships grouped by file
-- **Risk Color Coding** — Entry points (green), High risk (red), Medium (orange), Low (yellow), Circular deps (purple)
-- **Interactive** — Pan, zoom, and toggle between graph views in your browser
-
 
 ### Language Support
 - ✅ Python (AST-based parsing)
@@ -95,15 +119,10 @@ project_dir/
 │   │   ├── api.md              # Layer 2: API module details
 │   │   ├── utils.md            # Layer 2: Utils module details
 │   │   └── tests.md            # Layer 2: Tests module details
-│   └── graph.json          
+│   ├── atlas_meta.json    
+│   ├── graphdata.json 
+│   └── node_positions.json       
 └── codebase/                      # Layer 3: Agent reads only when implementing
-```
-
-### Navigation Flow
-```
-1. Agent reads code_atlas.md → Gets overview, entry points, critical deps
-2. Agent identifies relevant module → Reads specific children/X.md
-3. Agent reads actual source file only when line-level implementation is needed
 ```
 
 ## 📖 Output Format
@@ -140,25 +159,12 @@ S:  = Summary / docstring
 ⚪ = SAFE (0 dependents)
 ```
 
----
-
-## 🔍 Impact Analysis
-
-Every function includes inline impact data showing who calls it, what it calls, and what breaks if changed:
-
-```markdown
-F: process_payment(user_id, amount)→bool
-   ↳Called by: F023,F045,F067 | Calls: F089,F090
-   ↳Impact: 🔴HIGH (3 dependents) | Breaks: [F023,F045,F067]
-   S: Validates payment method, processes transaction, and
-   S: updates user balance and transaction log.
+### Navigation Flow
 ```
-
-**Risk Scoring:**
-- 🔴 **HIGH** (3+ dependents): Critical function, extensive testing needed
-- 🟡 **MEDIUM** (2 dependents): Important function, verify callers
-- 🟢 **LOW** (1 dependent): Limited impact, safer to modify
-- ⚪ **SAFE** (0 dependents): Unused or leaf function
+1. Agent reads code_atlas.md → Gets overview, entry points, critical deps
+2. Agent identifies relevant module → Reads specific children/X.md
+3. Agent reads actual source file only when line-level implementation is needed
+```
 
 ---
 
@@ -169,48 +175,6 @@ F: process_payment(user_id, amount)→bool
 | 5K LOC | ~2 sec | 70% | 3x faster |
 | 10K LOC | ~5 sec | 65% | 3x faster |
 | 50K LOC | ~20 sec | 75% | 4x faster |
-
----
-
-## 🛠️ Advanced Configuration
-
-### Ignore Directories
-
-Additional directories can be ignored via CLI or config:
-
-```bash
-# CLI: pass directory names (space-separated)
-python -m codebase_atlas.main --ignore-dirs docs examples deprecated
-```
-
-```python
-# codebase_atlas/config.py
-
-# Ignore additional directories
-IGNORE_DIRS.update({'docs', 'examples', 'deprecated'})
-```
-
-# Add custom entry point patterns
-ENTRY_POINT_PATTERNS['python'].append('app.run')
-
-# Adjust impact depth (default: 3)
-IMPACT_DEPTH = 5  # Track deeper call chains (slower)
-
-# Change risk thresholds
-RISK_THRESHOLD_HIGH = 5    # More lenient
-RISK_THRESHOLD_MEDIUM = 3
-```
-
-### Group Files by Functionality
-
-```python
-# Override default directory-based grouping
-CUSTOM_GROUPING = {
-    'core': ['entities.py', 'components.py', 'systems.py'],
-    'api': ['routes.py', 'handlers.py', 'middleware.py'],
-    'data': ['models.py', 'database.py', 'migrations/']
-}
-```
 
 ---
 
@@ -240,7 +204,6 @@ codebase_atlas/
 ├── graph/
 │   ├── backend/
 │   │   ├── renderers/
-│   │   │   ├── mermaid_renderer.py
 │   │   │   └── interactive_renderer.py
 │   │   ├── graph_models.py
 │   │   ├── graph_builder.py
@@ -277,8 +240,11 @@ codebase_atlas/
 │       ├── utils/
 │       │   └── geometry.js
 │       │
-│       ├── mermaid_view.html
+│       ├── bootstrap.js
 │       ├── graph_viewer.html
 │       └── graph_viewer.js
 └── main.py                      # CLI entry point
 ```
+
+---
+

@@ -2,26 +2,9 @@
 
 ## TASK
 
-Suppose I have this project codebase structure:
+Currently agent only use gemini api for llm, i also want to integrate openrouter api so that user can select when to use use which provider. Also how `python/Agentic_Unit_PIE/codebase/llm/llm_orchestrator.py` can be ontegrated to main agent loop. Also current agent writes every terminal output to tui_output.txt file, instead i want it to write last terminal output with error only when user enters a command in agent ternimal. How can this be achieved.
 
-```
-project_dir/
-├── subdir1/                         
-│   ├── subsubdir1/
-│   │   ├── file2.py         
-│   │   └── file3.py          
-│   └── file4.py  
-├── subdir2/                         
-│   ├── subsubdir2/
-│   │   ├── file5.py         
-│   │   └── file6.py          
-│   └── file7.py
-└── file1.py  
-```
-
-I want to render node graph of this project, but as there are so many files in node, rendering whole graph simultaneously and relocating nodes is not possible. What else i could do is render graph of subdirectories one by one, rearrange node as i want and save it. Finally rendering whole codebase becomes easy as it just load saved state of already arranged subdirectories nodes. How could this be achieved with respect to current graph served using `python/Agentic_Unit_PIE/codebase/modules/codebase_atlas/graph/backend/serve.py`. Also can we group files nodes in boxes as per the subdirectories are organised in the codebase.
-
-Start by knowing module details and current development status by reading `python/Agentic_Unit_PIE/system_devpt_reports/codebase_atlas/current_status.md`.
+Start by knowing module details by reading `python/Agentic_Unit_PIE/system_devpt_reports/orchestrator.md`.
 
 Do not give code or make any changes, just a concise plan or answer.
 

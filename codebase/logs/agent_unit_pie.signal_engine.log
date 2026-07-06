@@ -108,3 +108,21 @@
 [2026-05-26 17:02:52] [INFO] [agent_unit_pie.signal_engine] Signal emitted: trade_gap_1475be8966f7
 [2026-05-26 17:02:52] [WARNING] [agent_unit_pie.signal_engine] Unknown signal type: population_trend_declining
 [2026-05-26 17:02:52] [INFO] [agent_unit_pie.signal_engine] Signal emitted: population_trend_declining_7cfe9d164f42
+[2026-07-06 15:30:53] [INFO] [agent_unit_pie.signal_engine] Registered signal handler: belief_shift
+[2026-07-06 15:30:53] [INFO] [agent_unit_pie.signal_engine] Registered signal handler: contradiction_detected
+[2026-07-06 15:30:53] [INFO] [agent_unit_pie.signal_engine] Registered signal handler: confidence_change
+[2026-07-06 15:33:36] [INFO] [agent_unit_pie.signal_engine] Registered signal handler: belief_shift
+[2026-07-06 15:33:36] [INFO] [agent_unit_pie.signal_engine] Registered signal handler: contradiction_detected
+[2026-07-06 15:33:36] [INFO] [agent_unit_pie.signal_engine] Registered signal handler: confidence_change
+[2026-07-06 15:39:28] [INFO] [agent_unit_pie.signal_engine] Registered signal handler: belief_shift
+[2026-07-06 15:39:28] [INFO] [agent_unit_pie.signal_engine] Registered signal handler: contradiction_detected
+[2026-07-06 15:39:28] [INFO] [agent_unit_pie.signal_engine] Registered signal handler: confidence_change
+[2026-07-06 15:43:05] [INFO] [agent_unit_pie.signal_engine] Registered signal handler: belief_shift
+[2026-07-06 15:43:05] [INFO] [agent_unit_pie.signal_engine] Registered signal handler: contradiction_detected
+[2026-07-06 15:43:05] [INFO] [agent_unit_pie.signal_engine] Registered signal handler: confidence_change
+[2026-07-06 15:46:06] [INFO] [agent_unit_pie.signal_engine] Registered signal handler: belief_shift
+[2026-07-06 15:46:06] [INFO] [agent_unit_pie.signal_engine] Registered signal handler: contradiction_detected
+[2026-07-06 15:46:06] [INFO] [agent_unit_pie.signal_engine] Registered signal handler: confidence_change
+[2026-07-06 16:03:30] [INFO] [agent_unit_pie.signal_engine] Registered signal handler: belief_shift
+[2026-07-06 16:03:30] [INFO] [agent_unit_pie.signal_engine] Registered signal handler: contradiction_detected
+[2026-07-06 16:03:30] [INFO] [agent_unit_pie.signal_engine] Registered signal handler: confidence_change

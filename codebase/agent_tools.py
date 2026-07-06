@@ -55,18 +55,11 @@ RETRIEVE_LIMIT = 5
 
 # ----- HELPERS -----
 def log_output(message: str, end: str = "\n", flush: bool = False):
-    """Write message to both terminal and log file with timestamp"""
+    """Write message to terminal with timestamp"""
     from datetime import datetime
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     log_line = f"[{timestamp}] {message}"
     print(log_line, end=end, flush=flush)
-    try:
-        with open(LOG_FILE, "a") as f:
-            f.write(log_line + (end if end else ""))
-            if flush:
-                f.flush()
-    except Exception as e:
-        print(f"Warning: Could not write to log file: {e}")
 
 
 def extract_json(text: str):
@@ -213,6 +206,14 @@ def execute_command(cmd: str) -> str:
             output += f"\n[STDERR]: {result.stderr}"
         if result.returncode != 0:
             output += f"\n[Exit code: {result.returncode}]"
+
+        if result.returncode != 0 or result.stderr:
+            try:
+                with open(LOG_FILE, "w") as f:
+                    f.write(output)
+            except Exception:
+                pass
+
         return output if output else "(No output)"
     except subprocess.TimeoutExpired:
         error_msg = f"Command timed out after 30 seconds: {cmd}"

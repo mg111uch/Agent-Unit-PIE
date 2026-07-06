@@ -1,5 +1,5 @@
 # 📂 engine
-Generated: 2026-07-04 15:14:21
+Generated: 2026-07-05 14:01:18
 Files: 8
 
 ---
@@ -17,7 +17,7 @@ F: argu_cli(mode,topic)
 ---
 
 F009│kernel_bridge.py│418
-D: ●datetime,json,os,sys,uuid,+1
+D: ●json,kernel,os,sys,uuid,+1
 F: _get_session_path(session_id)
    ↳Called by: F009:save_debate_session,F009:load_debate_session
    ↳Impact: 🟡MEDIUM (2 dependents) | Breaks: [F009:save_debate_session],[F009:load_debate_session]
@@ -68,8 +68,8 @@ F: get_hypothesis_for_argument(argument_name,topic)→str
 F: get_belief_summary(topic)→list
    S: Get summary of all belief hypotheses for topic.
 F: emit_debate_event(event_type,topic,description,metadata)→None
-   ↳Called by: F009:emit_argument_viewed_event,F009:emit_session_end_event,F009:emit_belief_changed_event
-   ↳Impact: 🔴HIGH (6 dependents) | Breaks: [F009:emit_argument_viewed_event],[F009:emit_session_end_event],[F009:emit_belief_changed_event]
+   ↳Called by: F009:emit_argument_viewed_event,F009:emit_user_response_event,F009:emit_session_end_event
+   ↳Impact: 🔴HIGH (6 dependents) | Breaks: [F009:emit_argument_viewed_event],[F009:emit_user_response_event],[F009:emit_session_end_event]
    S: Emit debate event for timeline tracking.
 F: emit_session_start_event(topic,is_resume)→None
    ↳Called by: F003:run_explore_loop | Calls: F009:emit_debate_event
@@ -108,7 +108,7 @@ F: map_choice_to_stance(choice)
    ↳Called by: F003:run_explore_loop
    ↳Impact: 🟢LOW (1 dependents) | Breaks: [F003:run_explore_loop]
 F: run_explore_loop(topic)
-   ↳Called by: F008:argu_cli | Calls: F007:save_beliefs,F003:map_choice_to_stance,F006:build_question
+   ↳Called by: F008:argu_cli | Calls: F009:emit_contradiction_signal,F006:build_question,F007:save_state
    ↳Impact: 🟢LOW (1 dependents) | Breaks: [F008:argu_cli]
 ---
 
@@ -153,8 +153,8 @@ F: add_response(state,argument_name,choice,custom_text)
 F010│vector_store.py│32
 D: ●chromadb,sentence_transformers
 F: embed(text)
-   ↳Called by: F010:index_graph,F010:search_similar
-   ↳Impact: 🟡MEDIUM (2 dependents) | Breaks: [F010:index_graph],[F010:search_similar]
+   ↳Called by: F010:search_similar,F010:index_graph
+   ↳Impact: 🟡MEDIUM (2 dependents) | Breaks: [F010:search_similar],[F010:index_graph]
 F: index_graph(graph)
    ↳Called by: F003:run_explore_loop | Calls: F010:embed
    ↳Impact: 🟢LOW (1 dependents) | Breaks: [F003:run_explore_loop]

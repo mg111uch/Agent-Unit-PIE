@@ -25,5 +25,5 @@ inherited and which must be re-specified, see
         input="What is my name?",
         previous_interaction_id=interaction1.id
     )
-    print(f"Model: {interaction2.outputs[-1].text}")
+    print(f"Model: {interaction2.output_text}")
 

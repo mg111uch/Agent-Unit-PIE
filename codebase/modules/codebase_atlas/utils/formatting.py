@@ -98,6 +98,40 @@ def format_file(
             for dl in doc_lines[:5]:
                 lines.append(f"   S: {dl}")
 
+        if func.produces_json:
+            for json_path in func.produces_json[:3]:
+                lines.append(f"   O: {json_path}")
+
+    for cls in file_info.classes:
+        methods_str = ','.join([m.name for m in cls.methods[:10]])
+        if len(cls.methods) > 10:
+            methods_str += f",+{len(cls.methods)-10}"
+        base_str = f"←{','.join(cls.bases)}" if cls.bases else ""
+        lines.append(f"C: {cls.name}{base_str}{sep}[{methods_str}]")
+        if cls.docstring:
+            first_line = cls.docstring.split('\n')[0].strip()
+            if first_line:
+                lines.append(f"   S: {first_line}")
+
+        for m in cls.methods[:20]:
+            lines.append(f"   F: {m.get_signature(compact=True)}")
+
+            if impact_nodes:
+                node_key = f"{file_info.ref_id}:{m.name}"
+                impact = impact_nodes.get(node_key)
+                if impact:
+                    impact_lines = _format_impact_lines(m, impact, config)
+                    lines.extend(impact_lines)
+
+            if m.docstring:
+                doc_lines = [l.strip() for l in m.docstring.split('\n') if l.strip()]
+                for dl in doc_lines[:5]:
+                    lines.append(f"      S: {dl}")
+
+            if m.produces_json:
+                for json_path in m.produces_json[:3]:
+                    lines.append(f"      O: {json_path}")
+
     if file_info.config_keys:
         keys_str = ', '.join(file_info.config_keys[:10])
         if len(file_info.config_keys) > 10:

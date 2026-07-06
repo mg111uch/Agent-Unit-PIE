@@ -1,5 +1,5 @@
 # 🗺️ CODEBASE ATLAS
-Generated: 2026-07-04 15:14:21
+Generated: 2026-07-05 14:01:18
 
 ---
 
@@ -9,4 +9,4 @@ Entries: F001
 
 HighRisk: F009:emit_debate_event🔴,F011:if🔴,F011:if🔴,F011:if🔴,F011:createGraph🔴,F011:if🔴
 
-Children: argu_god.md,engine.md,static.md,theism_atheism.md,local_user.md,sessions.md
+Children: argu_god.md,engine.md,static.md,json_files.md
