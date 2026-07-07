@@ -34,9 +34,7 @@ import logging
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
-
 logger = logging.getLogger(__name__)
-
 
 class ObservationPipeline:
     """
@@ -50,7 +48,6 @@ class ObservationPipeline:
     - update memory
     - dispatch cognition hooks
     """
-
     def __init__(
         self,
         event_engine=None,
@@ -59,17 +56,12 @@ class ObservationPipeline:
         memory_router=None,
         compression_engine=None,
     ):
-
         self.event_engine = event_engine
         self.signal_engine = signal_engine
         self.pattern_engine = pattern_engine
         self.memory_router = memory_router
         self.compression_engine = compression_engine
-
-    # ============================================================
     # MAIN ENTRY
-    # ============================================================
-
     def process(
         self,
         observation: Dict[str, Any],
@@ -87,65 +79,36 @@ class ObservationPipeline:
         dict
             Full cognition processing result.
         """
-
         try:
-
-            # ----------------------------------------------------
             # STEP 1 — NORMALIZE
-            # ----------------------------------------------------
-
             normalized_observation = self.normalize_observation(
                 observation
             )
-
-            # ----------------------------------------------------
             # STEP 2 — EVENT GENERATION
-            # ----------------------------------------------------
-
             events = self.generate_events(
                 normalized_observation
             )
-
-            # ----------------------------------------------------
             # STEP 3 — SIGNAL GENERATION
-            # ----------------------------------------------------
-
             signals = self.generate_signals(
                 normalized_observation,
                 events,
             )
-
-            # ----------------------------------------------------
             # STEP 4 — PATTERN DETECTION
-            # ----------------------------------------------------
-
             patterns = self.detect_patterns(
                 normalized_observation,
                 events,
                 signals,
             )
-
-            # ----------------------------------------------------
             # STEP 5 — MEMORY UPDATE
-            # ----------------------------------------------------
-
             self.update_memory(
                 observation=normalized_observation,
                 events=events,
                 signals=signals,
                 patterns=patterns,
             )
-
-            # ----------------------------------------------------
             # STEP 6 — OPTIONAL COMPRESSION
-            # ----------------------------------------------------
-
             self.run_compression_if_needed()
-
-            # ----------------------------------------------------
             # FINAL RESULT
-            # ----------------------------------------------------
-
             result = {
                 "status": "success",
                 "observation": normalized_observation,
@@ -154,25 +117,17 @@ class ObservationPipeline:
                 "patterns": patterns,
                 "processed_at": self.utc_now(),
             }
-
             return result
-
         except Exception as e:
-
             logger.exception(
                 "Observation pipeline failed."
             )
-
             return {
                 "status": "error",
                 "error": str(e),
                 "processed_at": self.utc_now(),
             }
-
-    # ============================================================
     # NORMALIZATION
-    # ============================================================
-
     def normalize_observation(
         self,
         observation: Dict[str, Any],
@@ -180,7 +135,6 @@ class ObservationPipeline:
         """
         Normalize observation into canonical schema.
         """
-
         normalized = {
             "observation_id": observation.get(
                 "observation_id",
@@ -218,13 +172,8 @@ class ObservationPipeline:
                 observation.get("confidence", 0.5)
             ),
         }
-
         return normalized
-
-    # ============================================================
     # EVENT GENERATION
-    # ============================================================
-
     def generate_events(
         self,
         observation: Dict[str, Any],
@@ -232,18 +181,12 @@ class ObservationPipeline:
         """
         Convert observation into events.
         """
-
         if self.event_engine is None:
             return []
-
         return self.event_engine.process_observation(
             observation
         )
-
-    # ============================================================
     # SIGNAL GENERATION
-    # ============================================================
-
     def generate_signals(
         self,
         observation: Dict[str, Any],
@@ -252,19 +195,13 @@ class ObservationPipeline:
         """
         Generate signals from events + observations.
         """
-
         if self.signal_engine is None:
             return []
-
         return self.signal_engine.generate_signals(
             observation=observation,
             events=events,
         )
-
-    # ============================================================
     # PATTERN DETECTION
-    # ============================================================
-
     def detect_patterns(
         self,
         observation: Dict[str, Any],
@@ -274,20 +211,14 @@ class ObservationPipeline:
         """
         Detect higher-order patterns.
         """
-
         if self.pattern_engine is None:
             return []
-
         return self.pattern_engine.detect_patterns(
             observation=observation,
             events=events,
             signals=signals,
         )
-
-    # ============================================================
     # MEMORY UPDATE
-    # ============================================================
-
     def update_memory(
         self,
         observation: Dict[str, Any],
@@ -298,80 +229,57 @@ class ObservationPipeline:
         """
         Route cognition artifacts into memory systems.
         """
-
         if self.memory_router is None:
             return
-
         try:
-
             self.memory_router.store_observation(
                 observation
             )
-
             for event in events:
                 self.memory_router.store_event(
                     event
                 )
-
             for signal in signals:
                 self.memory_router.store_signal(
                     signal
                 )
-
             for pattern in patterns:
                 self.memory_router.store_pattern(
                     pattern
                 )
-
         except Exception:
             logger.exception(
                 "Memory update failed."
             )
-
-    # ============================================================
     # COMPRESSION
-    # ============================================================
-
     def run_compression_if_needed(self) -> None:
         """
         Optional memory compression step.
         """
-
         if self.compression_engine is None:
             return
-
         try:
-
             self.compression_engine.run_cycle()
-
         except Exception:
             logger.exception(
                 "Compression cycle failed."
             )
 
-    # ============================================================
     # HELPERS
-    # ============================================================
-
     @staticmethod
     def utc_now() -> str:
         """
         UTC ISO timestamp.
         """
-
         return datetime.now(
             timezone.utc
         ).isoformat()
 
-    # ============================================================
     # HEALTH CHECK
-    # ============================================================
-
     def health_check(self) -> Dict[str, Any]:
         """
         Pipeline component status.
         """
-
         return {
             "event_engine": self.event_engine is not None,
             "signal_engine": self.signal_engine is not None,

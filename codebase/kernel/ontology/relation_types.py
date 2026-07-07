@@ -1,41 +1,25 @@
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional
 
-
-# =========================================================
 # RELATION TYPE DEFINITION
-# =========================================================
 
 @dataclass
 class RelationTypeDefinition:
     relation_type: str
-
     category: str
-
     description: str = ""
-
     directed: bool = False
-
     symmetric: bool = False
-
     source_unit_types: List[str] = field(default_factory=list)
-
     target_unit_types: List[str] = field(default_factory=list)
-
     inverse_relation: Optional[str] = None
-
     tags: List[str] = field(default_factory=list)
 
-
-# =========================================================
 # RELATION TYPES
-# =========================================================
 
 RELATION_TYPES: Dict[str, RelationTypeDefinition] = {
 
-    # -----------------------------------------------------
     # HUMAN RELATIONS
-    # -----------------------------------------------------
 
     "friend": RelationTypeDefinition(
         relation_type="friend",
@@ -148,9 +132,7 @@ RELATION_TYPES: Dict[str, RelationTypeDefinition] = {
         ]
     ),
 
-    # -----------------------------------------------------
     # ECONOMIC RELATIONS
-    # -----------------------------------------------------
 
     "supplier_of": RelationTypeDefinition(
         relation_type="supplier_of",
@@ -272,9 +254,7 @@ RELATION_TYPES: Dict[str, RelationTypeDefinition] = {
         inverse_relation="investor_in"
     ),
 
-    # -----------------------------------------------------
     # GEOGRAPHIC RELATIONS
-    # -----------------------------------------------------
 
     "located_in": RelationTypeDefinition(
         relation_type="located_in",
@@ -358,9 +338,7 @@ RELATION_TYPES: Dict[str, RelationTypeDefinition] = {
         ]
     ),
 
-    # -----------------------------------------------------
     # GOVERNANCE RELATIONS
-    # -----------------------------------------------------
 
     "governed_by": RelationTypeDefinition(
         relation_type="governed_by",
@@ -410,9 +388,7 @@ RELATION_TYPES: Dict[str, RelationTypeDefinition] = {
         inverse_relation="governed_by"
     ),
 
-    # -----------------------------------------------------
     # MARKET RELATIONS
-    # -----------------------------------------------------
 
     "belongs_to_sector": RelationTypeDefinition(
         relation_type="belongs_to_sector",
@@ -451,9 +427,7 @@ RELATION_TYPES: Dict[str, RelationTypeDefinition] = {
         ]
     ),
 
-    # -----------------------------------------------------
     # KNOWLEDGE RELATIONS
-    # -----------------------------------------------------
 
     "supports": RelationTypeDefinition(
         relation_type="supports",
@@ -496,9 +470,7 @@ RELATION_TYPES: Dict[str, RelationTypeDefinition] = {
         symmetric=True
     ),
 
-    # -----------------------------------------------------
     # AI SYSTEM RELATIONS
-    # -----------------------------------------------------
 
     "collaborates_with": RelationTypeDefinition(
         relation_type="collaborates_with",
@@ -531,10 +503,7 @@ RELATION_TYPES: Dict[str, RelationTypeDefinition] = {
     )
 }
 
-
-# =========================================================
 # HELPER FUNCTIONS
-# =========================================================
 
 def get_relation_type(
     relation_type: str
@@ -542,18 +511,14 @@ def get_relation_type(
 
     return RELATION_TYPES.get(relation_type)
 
-
 def relation_type_exists(
     relation_type: str
 ) -> bool:
 
     return relation_type in RELATION_TYPES
 
-
 def list_relation_types() -> List[str]:
-
     return list(RELATION_TYPES.keys())
-
 
 def get_relation_types_by_category(
     category: str
@@ -564,7 +529,6 @@ def get_relation_types_by_category(
         for name, definition in RELATION_TYPES.items()
         if definition.category == category
     ]
-
 
 def get_inverse_relation(
     relation_type: str

@@ -7,17 +7,11 @@ from typing import Optional
 
 from kernel.utils.paths import LOGS_DIR
 
-
-# =========================================================
 # LOGGER CACHE
-# =========================================================
 
 _LOGGER_CACHE = {}
 
-
-# =========================================================
 # LOG FORMAT
-# =========================================================
 
 LOG_FORMAT = (
     "[%(asctime)s] "
@@ -28,10 +22,7 @@ LOG_FORMAT = (
 
 DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
 
-
-# =========================================================
 # LOG LEVELS
-# =========================================================
 
 VALID_LOG_LEVELS = {
     "debug": logging.DEBUG,
@@ -41,10 +32,7 @@ VALID_LOG_LEVELS = {
     "critical": logging.CRITICAL,
 }
 
-
-# =========================================================
 # CREATE LOGGER
-# =========================================================
 
 def get_logger(
     name: str = "agent_unit_pie",
@@ -83,9 +71,7 @@ def get_logger(
         datefmt=DATE_FORMAT
     )
 
-    # -----------------------------------------------------
     # CONSOLE HANDLER
-    # -----------------------------------------------------
 
     if log_to_console:
 
@@ -95,9 +81,7 @@ def get_logger(
 
         logger.addHandler(console_handler)
 
-    # -----------------------------------------------------
     # FILE HANDLER
-    # -----------------------------------------------------
 
     if log_to_file:
 
@@ -118,46 +102,28 @@ def get_logger(
 
     return logger
 
-
-# =========================================================
 # ROOT LOGGER
-# =========================================================
 
 root_logger = get_logger()
 
-
-# =========================================================
 # SHORTCUT FUNCTIONS
-# =========================================================
 
 def debug(message: str):
-
     root_logger.debug(message)
 
-
 def info(message: str):
-
     root_logger.info(message)
 
-
 def warning(message: str):
-
     root_logger.warning(message)
 
-
 def error(message: str):
-
     root_logger.error(message)
 
-
 def critical(message: str):
-
     root_logger.critical(message)
 
-
-# =========================================================
 # EXCEPTION LOGGER
-# =========================================================
 
 def log_exception(
     exception: Exception,
@@ -176,10 +142,7 @@ def log_exception(
             str(exception)
         )
 
-
-# =========================================================
 # STRUCTURED LOGGING
-# =========================================================
 
 def structured_log(
     level: str,
@@ -203,10 +166,7 @@ def structured_log(
 
     logger_method(message)
 
-
-# =========================================================
 # CHILD LOGGER
-# =========================================================
 
 def get_child_logger(
     child_name: str

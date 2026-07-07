@@ -69,19 +69,13 @@ import logging
 from datetime import datetime, timezone
 from typing import Dict, Any, Optional, List
 
-
 logger = logging.getLogger(__name__)
-
 
 class CityTwin:
     """
     Unified city digital twin.
     """
-
-    # ============================================================
     # INIT
-    # ============================================================
-
     def __init__(
         self,
         city_id: str,
@@ -95,39 +89,27 @@ class CityTwin:
             Dict[str, Any]
         ] = None,
     ):
-
         self.city_id = city_id
-
         self.memory_engine = (
             memory_engine
         )
-
         self.pattern_engine = (
             pattern_engine
         )
-
         self.simulation_engine = (
             simulation_engine
         )
-
         self.resource_engine = (
             resource_engine
         )
-
         self.timeline_engine = (
             timeline_engine
         )
-
         self.knowledge_engine = (
             knowledge_engine
         )
-
         self.config = config or {}
-
-        # --------------------------------------------------------
         # CORE CITY PROFILE
-        # --------------------------------------------------------
-
         self.profile = {
             "city_id": city_id,
             "created_at": (
@@ -143,11 +125,7 @@ class CityTwin:
             "gdp": 0.0,
             "area_km2": 0.0,
         }
-
-        # --------------------------------------------------------
         # SPATIAL MODEL
-        # --------------------------------------------------------
-
         self.spatial_model = {
             "zones": [],
             "districts": [],
@@ -156,11 +134,7 @@ class CityTwin:
             "coordinates": {},
             "gis_layers": [],
         }
-
-        # --------------------------------------------------------
         # POPULATION MODEL
-        # --------------------------------------------------------
-
         self.population_model = {
             "population": 0,
             "growth_rate": 0.0,
@@ -169,11 +143,7 @@ class CityTwin:
             "education_distribution": {},
             "income_distribution": {},
         }
-
-        # --------------------------------------------------------
         # ECONOMIC MODEL
-        # --------------------------------------------------------
-
         self.economic_model = {
             "gdp": 0.0,
             "gdp_growth_rate": 0.0,
@@ -183,11 +153,7 @@ class CityTwin:
             "financial_flows": [],
             "stock_market_correlations": [],
         }
-
-        # --------------------------------------------------------
         # INFRASTRUCTURE MODEL
-        # --------------------------------------------------------
-
         self.infrastructure_model = {
             "roads": [],
             "railways": [],
@@ -196,11 +162,7 @@ class CityTwin:
             "internet_network": {},
             "public_services": {},
         }
-
-        # --------------------------------------------------------
         # GOVERNANCE MODEL
-        # --------------------------------------------------------
-
         self.governance_model = {
             "departments": [],
             "public_budget": {},
@@ -208,11 +170,7 @@ class CityTwin:
             "governance_efficiency": 0.5,
             "corruption_risk": 0.0,
         }
-
-        # --------------------------------------------------------
         # RESOURCE MODEL
-        # --------------------------------------------------------
-
         self.resource_model = {
             "water": {},
             "energy": {},
@@ -221,11 +179,7 @@ class CityTwin:
             "waste": {},
             "resource_pressure": 0.0,
         }
-
-        # --------------------------------------------------------
         # KNOWLEDGE MODEL
-        # --------------------------------------------------------
-
         self.knowledge_model = {
             "historical_events": [],
             "newspaper_patterns": [],
@@ -233,28 +187,16 @@ class CityTwin:
             "economic_patterns": [],
             "behavior_patterns": [],
         }
-
-        # --------------------------------------------------------
         # SIMULATION MODEL
-        # --------------------------------------------------------
-
         self.simulation_model = {
             "future_projections": [],
             "risk_models": [],
             "growth_models": [],
             "collapse_models": [],
         }
-
-        # --------------------------------------------------------
         # TIMELINE
-        # --------------------------------------------------------
-
         self.timeline = []
-
-    # ============================================================
     # UPDATE PROFILE
-    # ============================================================
-
     def update_profile(
         self,
         updates: Dict[str, Any],
@@ -262,19 +204,13 @@ class CityTwin:
         """
         Update city metadata.
         """
-
         self.profile.update(
             updates
         )
-
         self.profile[
             "updated_at"
         ] = self.utc_now()
-
-    # ============================================================
     # ADD GIS LAYER
-    # ============================================================
-
     def add_gis_layer(
         self,
         layer: Dict[str, Any],
@@ -282,15 +218,10 @@ class CityTwin:
         """
         Add GIS/spatial layer.
         """
-
         self.spatial_model[
             "gis_layers"
         ].append(layer)
-
-    # ============================================================
     # INGEST NEWSPAPER KNOWLEDGE
-    # ============================================================
-
     def ingest_newspaper_patterns(
         self,
         patterns: List[
@@ -300,15 +231,10 @@ class CityTwin:
         """
         Store historical newspaper insights.
         """
-
         self.knowledge_model[
             "newspaper_patterns"
         ].extend(patterns)
-
-    # ============================================================
     # UPDATE ECONOMIC MODEL
-    # ============================================================
-
     def update_economy(
         self,
         economic_data: Dict[str, Any],
@@ -316,15 +242,10 @@ class CityTwin:
         """
         Update economic metrics.
         """
-
         self.economic_model.update(
             economic_data
         )
-
-    # ============================================================
     # UPDATE GOVERNANCE MODEL
-    # ============================================================
-
     def update_governance(
         self,
         governance_data: Dict[str, Any],
@@ -332,15 +253,10 @@ class CityTwin:
         """
         Update governance system.
         """
-
         self.governance_model.update(
             governance_data
         )
-
-    # ============================================================
     # TRACK FINANCIAL FLOW
-    # ============================================================
-
     def add_financial_flow(
         self,
         flow: Dict[str, Any],
@@ -348,55 +264,38 @@ class CityTwin:
         """
         Track financial movement.
         """
-
         flow = copy.deepcopy(flow)
-
         flow.setdefault(
             "timestamp",
             self.utc_now(),
         )
-
         self.economic_model[
             "financial_flows"
         ].append(flow)
-
-    # ============================================================
     # DETECT CORRUPTION PATTERNS
-    # ============================================================
-
     def detect_corruption_patterns(
         self,
     ) -> List[Dict[str, Any]]:
         """
         Detect suspicious public fund flows.
         """
-
         suspicious = []
-
         flows = self.economic_model[
             "financial_flows"
         ]
-
         for flow in flows:
-
             amount = float(
                 flow.get(
                     "amount",
                     0.0,
                 )
             )
-
             destination = flow.get(
                 "destination",
                 "",
             )
-
-            # ----------------------------------------------------
             # SIMPLE HEURISTIC
-            # ----------------------------------------------------
-
             if amount > 100000000:
-
                 suspicious.append(
                     {
                         "type": (
@@ -409,41 +308,28 @@ class CityTwin:
                         "amount": amount,
                     }
                 )
-
         corruption_score = min(
             1.0,
             len(suspicious) / 20.0,
         )
-
         self.governance_model[
             "corruption_risk"
         ] = corruption_score
-
         return suspicious
-
-    # ============================================================
     # ANALYZE GDP GROWTH
-    # ============================================================
-
     def analyze_growth_opportunities(
         self,
     ) -> List[Dict[str, Any]]:
         """
         Analyze GDP growth opportunities.
         """
-
         opportunities = []
-
         industries = (
             self.economic_model[
                 "industries"
             ]
         )
-
-        # --------------------------------------------------------
         # TECHNOLOGY
-        # --------------------------------------------------------
-
         if (
             industries.get(
                 "technology",
@@ -451,7 +337,6 @@ class CityTwin:
             )
             < 0.2
         ):
-
             opportunities.append(
                 {
                     "sector": (
@@ -464,11 +349,7 @@ class CityTwin:
                     ),
                 }
             )
-
-        # --------------------------------------------------------
         # MANUFACTURING
-        # --------------------------------------------------------
-
         if (
             industries.get(
                 "manufacturing",
@@ -476,7 +357,6 @@ class CityTwin:
             )
             < 0.3
         ):
-
             opportunities.append(
                 {
                     "sector": (
@@ -485,11 +365,7 @@ class CityTwin:
                     "potential": "medium",
                 }
             )
-
-        # --------------------------------------------------------
         # AI / DATA ECONOMY
-        # --------------------------------------------------------
-
         opportunities.append(
             {
                 "sector": (
@@ -498,27 +374,20 @@ class CityTwin:
                 "potential": "very_high",
             }
         )
-
         return opportunities
-
-    # ============================================================
     # RESOURCE PRESSURE
-    # ============================================================
-
     def compute_resource_pressure(
         self,
     ) -> float:
         """
         Estimate city resource stress.
         """
-
         population = float(
             self.population_model.get(
                 "population",
                 1,
             )
         )
-
         energy = float(
             self.resource_model[
                 "energy"
@@ -527,7 +396,6 @@ class CityTwin:
                 1,
             )
         )
-
         water = float(
             self.resource_model[
                 "water"
@@ -536,46 +404,35 @@ class CityTwin:
                 1,
             )
         )
-
         pressure = (
             population / max(
                 1.0,
                 energy + water,
             )
         )
-
         normalized = min(
             1.0,
             pressure / 1000000,
         )
-
         self.resource_model[
             "resource_pressure"
         ] = normalized
-
         return normalized
-
-    # ============================================================
     # BUILD HISTORICAL MODEL
-    # ============================================================
-
     def build_historical_model(
         self,
     ) -> Dict[str, Any]:
         """
         Build historical evolution model.
         """
-
         timeline_size = len(
             self.timeline
         )
-
         newspaper_patterns = len(
             self.knowledge_model[
                 "newspaper_patterns"
             ]
         )
-
         return {
             "timeline_events": (
                 timeline_size
@@ -584,11 +441,7 @@ class CityTwin:
                 newspaper_patterns
             ),
         }
-
-    # ============================================================
     # SIMULATE FUTURE
-    # ============================================================
-
     def simulate_future(
         self,
         future_ticks: int = 50,
@@ -596,42 +449,34 @@ class CityTwin:
         """
         Generate city future projections.
         """
-
         projections = []
-
         current_gdp = float(
             self.economic_model.get(
                 "gdp",
                 0.0,
             )
         )
-
         growth_rate = float(
             self.economic_model.get(
                 "gdp_growth_rate",
                 0.02,
             )
         )
-
         current_population = float(
             self.population_model.get(
                 "population",
                 0,
             )
         )
-
         for tick in range(
             future_ticks
         ):
-
             current_gdp *= (
                 1.0 + growth_rate
             )
-
             current_population *= (
                 1.0 + 0.01
             )
-
             projections.append(
                 {
                     "tick": tick,
@@ -643,55 +488,40 @@ class CityTwin:
                     ),
                 }
             )
-
         self.simulation_model[
             "future_projections"
         ] = projections
-
         return {
             "future_projections": (
                 projections
             )
         }
-
-    # ============================================================
     # DETECT CITY RISKS
-    # ============================================================
-
     def detect_city_risks(
         self,
     ) -> List[Dict[str, Any]]:
         """
         Detect structural city risks.
         """
-
         risks = []
-
         corruption = (
             self.governance_model[
                 "corruption_risk"
             ]
         )
-
         pressure = (
             self.resource_model[
                 "resource_pressure"
             ]
         )
-
         unemployment = float(
             self.economic_model.get(
                 "employment_rate",
                 1.0,
             )
         )
-
-        # --------------------------------------------------------
         # CORRUPTION
-        # --------------------------------------------------------
-
         if corruption > 0.7:
-
             risks.append(
                 {
                     "type": (
@@ -700,13 +530,8 @@ class CityTwin:
                     "severity": "high",
                 }
             )
-
-        # --------------------------------------------------------
         # RESOURCE PRESSURE
-        # --------------------------------------------------------
-
         if pressure > 0.7:
-
             risks.append(
                 {
                     "type": (
@@ -715,13 +540,8 @@ class CityTwin:
                     "severity": "high",
                 }
             )
-
-        # --------------------------------------------------------
         # UNEMPLOYMENT
-        # --------------------------------------------------------
-
         if unemployment < 0.6:
-
             risks.append(
                 {
                     "type": (
@@ -730,32 +550,23 @@ class CityTwin:
                     "severity": "medium",
                 }
             )
-
         return risks
-
-    # ============================================================
     # GENERATE CITY INSIGHTS
-    # ============================================================
-
     def generate_city_insights(
         self,
     ) -> Dict[str, Any]:
         """
         Generate strategic city insights.
         """
-
         opportunities = (
             self.analyze_growth_opportunities()
         )
-
         corruption = (
             self.detect_corruption_patterns()
         )
-
         risks = (
             self.detect_city_risks()
         )
-
         return {
             "growth_opportunities": (
                 opportunities
@@ -765,11 +576,7 @@ class CityTwin:
             ),
             "risks": risks,
         }
-
-    # ============================================================
     # RECORD TIMELINE EVENT
-    # ============================================================
-
     def add_timeline_event(
         self,
         event: Dict[str, Any],
@@ -777,31 +584,23 @@ class CityTwin:
         """
         Add city historical event.
         """
-
         event = copy.deepcopy(
             event
         )
-
         event.setdefault(
             "timestamp",
             self.utc_now(),
         )
-
         self.timeline.append(
             event
         )
-
-    # ============================================================
     # EXPORT CITY TWIN
-    # ============================================================
-
     def export(
         self,
     ) -> Dict[str, Any]:
         """
         Export full city twin.
         """
-
         return {
             "profile": copy.deepcopy(
                 self.profile
@@ -850,15 +649,10 @@ class CityTwin:
                 self.timeline
             ),
         }
-
-    # ============================================================
     # SUMMARY
-    # ============================================================
-
     def summary(
         self,
     ) -> Dict[str, Any]:
-
         return {
             "city_id": self.city_id,
             "population": (
@@ -890,14 +684,9 @@ class CityTwin:
                 ]
             ),
         }
-
-    # ============================================================
     # HELPERS
-    # ============================================================
-
     @staticmethod
     def utc_now() -> str:
-
         return datetime.now(
             timezone.utc
         ).isoformat()

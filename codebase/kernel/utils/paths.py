@@ -4,10 +4,7 @@ from pathlib import Path
 from typing import Optional
 import os
 
-
-# =========================================================
 # ROOT PATHS
-# =========================================================
 
 CURRENT_FILE = Path(__file__).resolve()
 
@@ -17,10 +14,7 @@ KERNEL_DIR = UTILS_DIR.parent
 
 PROJECT_ROOT = KERNEL_DIR.parent
 
-
-# =========================================================
 # CORE DIRECTORIES
-# =========================================================
 
 DATA_DIR = PROJECT_ROOT / "data"
 
@@ -38,10 +32,7 @@ TEMP_DIR = PROJECT_ROOT / "temp"
 
 CONFIG_DIR = PROJECT_ROOT / "config"
 
-
-# =========================================================
 # KNOWLEDGE BASE DIRECTORIES
-# =========================================================
 
 CITY_KB_DIR = KB_DIR / "cities"
 
@@ -57,10 +48,7 @@ PATTERN_KB_DIR = KB_DIR / "patterns"
 
 GLOBAL_KB_DIR = KB_DIR / "global"
 
-
-# =========================================================
 # MEMORY DIRECTORIES
-# =========================================================
 
 WORKING_MEMORY_DIR = MEMORY_DIR / "working"
 
@@ -72,10 +60,7 @@ PATTERN_MEMORY_DIR = MEMORY_DIR / "patterns"
 
 HYPOTHESIS_MEMORY_DIR = MEMORY_DIR / "hypotheses"
 
-
-# =========================================================
 # SIMULATION DIRECTORIES
-# =========================================================
 
 CITY_SIM_DIR = SIMULATION_DIR / "cities"
 
@@ -85,10 +70,7 @@ MARKET_SIM_DIR = SIMULATION_DIR / "markets"
 
 HUMAN_SIM_DIR = SIMULATION_DIR / "humans"
 
-
-# =========================================================
 # CREATE DIRECTORIES
-# =========================================================
 
 DEFAULT_DIRS = [
 
@@ -122,19 +104,14 @@ DEFAULT_DIRS = [
     HUMAN_SIM_DIR,
 ]
 
-
 def ensure_directories_exist():
-
     for directory in DEFAULT_DIRS:
         directory.mkdir(
             parents=True,
             exist_ok=True
         )
 
-
-# =========================================================
 # PATH HELPERS
-# =========================================================
 
 def get_kb_path(
     domain: str,
@@ -147,7 +124,6 @@ def get_kb_path(
 
     return KB_DIR / domain / entity_name.lower()
 
-
 def get_memory_path(
     memory_type: str,
     entity_id: str
@@ -158,7 +134,6 @@ def get_memory_path(
     """
 
     return MEMORY_DIR / memory_type / entity_id
-
 
 def get_simulation_path(
     simulation_type: str,
@@ -175,13 +150,11 @@ def get_simulation_path(
         / simulation_name
     )
 
-
 def get_log_file_path(
     log_name: str = "system.log"
 ) -> Path:
 
     return LOGS_DIR / log_name
-
 
 def get_temp_file_path(
     filename: str
@@ -189,17 +162,13 @@ def get_temp_file_path(
 
     return TEMP_DIR / filename
 
-
 def get_cache_file_path(
     filename: str
 ) -> Path:
 
     return CACHE_DIR / filename
 
-
-# =========================================================
 # FILE HELPERS
-# =========================================================
 
 def ensure_parent_dir(
     file_path: Path
@@ -210,13 +179,11 @@ def ensure_parent_dir(
         exist_ok=True
     )
 
-
 def path_exists(
     path: Path
 ) -> bool:
 
     return path.exists()
-
 
 def create_dir(
     path: Path
@@ -227,10 +194,7 @@ def create_dir(
         exist_ok=True
     )
 
-
-# =========================================================
 # ENVIRONMENT HELPERS
-# =========================================================
 
 def get_env(
     key: str,
@@ -239,9 +203,6 @@ def get_env(
 
     return os.getenv(key, default)
 
-
-# =========================================================
 # INITIALIZATION
-# =========================================================
 
 ensure_directories_exist()

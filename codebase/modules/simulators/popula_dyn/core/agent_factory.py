@@ -19,7 +19,6 @@ Usage
 import uuid
 from typing import Dict, Any, Optional
 
-
 AGENT_CONFIGS = {
     "farmer": {
         "unit_type": "human",
@@ -107,7 +106,6 @@ AGENT_CONFIGS = {
     },
 }
 
-
 def create_unit_config(
     agent_type: str,
     model: Any = None,
@@ -175,35 +173,25 @@ def create_unit_config(
 
     return unit_config
 
-
 def get_agent_behaviors(agent_type: str) -> list:
     """Get behavior list for agent type."""
-
     if agent_type not in AGENT_CONFIGS:
         return []
-
     return AGENT_CONFIGS[agent_type]["behaviors"].copy()
-
 
 def get_agent_type_from_behavior(behavior_name: str) -> Optional[str]:
     """Find agent type that uses a given behavior."""
-
     for agent_type, config in AGENT_CONFIGS.items():
         if behavior_name in config["behaviors"]:
             return agent_type
-
     return None
-
 
 def list_agent_types() -> list:
     """List all available agent types."""
-
     return list(AGENT_CONFIGS.keys())
-
 
 def summary() -> Dict[str, Any]:
     """Get factory summary."""
-
     return {
         "agent_types": list_agent_types(),
         "configs": {

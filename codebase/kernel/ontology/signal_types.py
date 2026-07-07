@@ -1,39 +1,24 @@
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional
 
-
-# =========================================================
 # SIGNAL TYPE DEFINITION
-# =========================================================
 
 @dataclass
 class SignalTypeDefinition:
     signal_type: str
-
     category: str
-
     description: str = ""
-
     data_type: str = "float"
-
     default_unit: Optional[str] = None
-
     valid_range: Optional[tuple] = None
-
     related_patterns: List[str] = field(default_factory=list)
-
     tags: List[str] = field(default_factory=list)
 
-
-# =========================================================
 # SIGNAL TYPES
-# =========================================================
 
 SIGNAL_TYPES: Dict[str, SignalTypeDefinition] = {
 
-    # -----------------------------------------------------
     # HUMAN SIGNALS
-    # -----------------------------------------------------
 
     "stress": SignalTypeDefinition(
         signal_type="stress",
@@ -89,9 +74,7 @@ SIGNAL_TYPES: Dict[str, SignalTypeDefinition] = {
         ]
     ),
 
-    # -----------------------------------------------------
     # ECONOMIC SIGNALS
-    # -----------------------------------------------------
 
     "revenue_growth": SignalTypeDefinition(
         signal_type="revenue_growth",
@@ -148,9 +131,7 @@ SIGNAL_TYPES: Dict[str, SignalTypeDefinition] = {
         ]
     ),
 
-    # -----------------------------------------------------
     # CITY / COUNTRY SIGNALS
-    # -----------------------------------------------------
 
     "population_growth": SignalTypeDefinition(
         signal_type="population_growth",
@@ -216,9 +197,7 @@ SIGNAL_TYPES: Dict[str, SignalTypeDefinition] = {
         ]
     ),
 
-    # -----------------------------------------------------
     # MARKET SIGNALS
-    # -----------------------------------------------------
 
     "bullish": SignalTypeDefinition(
         signal_type="bullish",
@@ -268,9 +247,7 @@ SIGNAL_TYPES: Dict[str, SignalTypeDefinition] = {
         ]
     ),
 
-    # -----------------------------------------------------
     # AI / KNOWLEDGE SIGNALS
-    # -----------------------------------------------------
 
     "pattern_detected": SignalTypeDefinition(
         signal_type="pattern_detected",
@@ -317,10 +294,7 @@ SIGNAL_TYPES: Dict[str, SignalTypeDefinition] = {
     )
 }
 
-
-# =========================================================
 # HELPER FUNCTIONS
-# =========================================================
 
 def get_signal_type(
     signal_type: str
@@ -328,16 +302,11 @@ def get_signal_type(
 
     return SIGNAL_TYPES.get(signal_type)
 
-
 def signal_type_exists(signal_type: str) -> bool:
-
     return signal_type in SIGNAL_TYPES
 
-
 def list_signal_types() -> List[str]:
-
     return list(SIGNAL_TYPES.keys())
-
 
 def get_signal_types_by_category(
     category: str

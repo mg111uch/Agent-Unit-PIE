@@ -60,19 +60,13 @@ from __future__ import annotations
 import logging
 from typing import Dict, Any, List, Optional
 
-
 logger = logging.getLogger(__name__)
-
 
 class PatternRetriever:
     """
     Unified pattern retrieval engine.
     """
-
-    # ============================================================
     # INIT
-    # ============================================================
-
     def __init__(
         self,
         pattern_storage=None,
@@ -84,33 +78,23 @@ class PatternRetriever:
             Dict[str, Any]
         ] = None,
     ):
-
         self.pattern_storage = (
             pattern_storage
         )
-
         self.pattern_engine = (
             pattern_engine
         )
-
         self.timeline_retriever = (
             timeline_retriever
         )
-
         self.relation_engine = (
             relation_engine
         )
-
         self.embedding_engine = (
             embedding_engine
         )
-
         self.config = config or {}
-
-    # ============================================================
     # GET PATTERN
-    # ============================================================
-
     def get_pattern(
         self,
         pattern_id: str,
@@ -118,32 +102,21 @@ class PatternRetriever:
         """
         Retrieve single pattern.
         """
-
         if self.pattern_storage is None:
-
             return None
-
         try:
-
             return (
                 self.pattern_storage
                 .get_pattern(
                     pattern_id
                 )
             )
-
         except Exception:
-
             logger.exception(
                 "Failed retrieving pattern."
             )
-
             return None
-
-    # ============================================================
     # GET BY TYPE
-    # ============================================================
-
     def get_patterns_by_type(
         self,
         pattern_type: str,
@@ -152,34 +125,22 @@ class PatternRetriever:
         """
         Retrieve patterns by type.
         """
-
         if self.pattern_storage is None:
-
             return []
-
         try:
-
             patterns = (
                 self.pattern_storage
                 .get_patterns_by_type(
                     pattern_type
                 )
             )
-
             return patterns[:limit]
-
         except Exception:
-
             logger.exception(
                 "Pattern type retrieval failed."
             )
-
             return []
-
-    # ============================================================
     # GET BY CATEGORY
-    # ============================================================
-
     def get_patterns_by_category(
         self,
         category: str,
@@ -188,35 +149,23 @@ class PatternRetriever:
         """
         Retrieve patterns by ontology category.
         """
-
         if self.pattern_storage is None:
-
             return []
-
         try:
-
             patterns = (
                 self.pattern_storage
                 .get_patterns_by_category(
                     category
                 )
             )
-
             return patterns[:limit]
-
         except Exception:
-
             logger.exception(
                 "Pattern category retrieval "
                 "failed."
             )
-
             return []
-
-    # ============================================================
     # GET UNIT PATTERNS
-    # ============================================================
-
     def get_unit_patterns(
         self,
         unit_id: str,
@@ -225,34 +174,22 @@ class PatternRetriever:
         """
         Retrieve patterns linked to unit.
         """
-
         if self.pattern_storage is None:
-
             return []
-
         try:
-
             patterns = (
                 self.pattern_storage
                 .get_patterns_by_unit(
                     unit_id
                 )
             )
-
             return patterns[:limit]
-
         except Exception:
-
             logger.exception(
                 "Unit pattern retrieval failed."
             )
-
             return []
-
-    # ============================================================
     # CONFIDENCE FILTER
-    # ============================================================
-
     def get_high_confidence_patterns(
         self,
         threshold: float = 0.8,
@@ -261,24 +198,17 @@ class PatternRetriever:
         """
         Retrieve high-confidence patterns.
         """
-
         patterns = self.get_all_patterns()
-
         results = []
-
         for pattern in patterns:
-
             confidence = float(
                 pattern.get(
                     "confidence",
                     0.0,
                 )
             )
-
             if confidence >= threshold:
-
                 results.append(pattern)
-
         results = sorted(
             results,
             key=lambda x: x.get(
@@ -287,13 +217,8 @@ class PatternRetriever:
             ),
             reverse=True,
         )
-
         return results[:limit]
-
-    # ============================================================
     # ANOMALIES
-    # ============================================================
-
     def get_anomaly_patterns(
         self,
         limit: int = 100,
@@ -301,7 +226,6 @@ class PatternRetriever:
         """
         Retrieve anomaly patterns.
         """
-
         anomaly_keywords = {
             "anomaly",
             "outlier",
@@ -310,33 +234,22 @@ class PatternRetriever:
             "unexpected",
             "rare",
         }
-
         patterns = self.get_all_patterns()
-
         results = []
-
         for pattern in patterns:
-
             pattern_type = str(
                 pattern.get(
                     "pattern_type",
                     ""
                 )
             ).lower()
-
             if any(
                 keyword in pattern_type
                 for keyword in anomaly_keywords
             ):
-
                 results.append(pattern)
-
         return results[:limit]
-
-    # ============================================================
     # OPPORTUNITIES
-    # ============================================================
-
     def get_opportunity_patterns(
         self,
         limit: int = 100,
@@ -344,7 +257,6 @@ class PatternRetriever:
         """
         Retrieve opportunity patterns.
         """
-
         keywords = {
             "opportunity",
             "growth",
@@ -353,33 +265,22 @@ class PatternRetriever:
             "optimization",
             "emerging",
         }
-
         patterns = self.get_all_patterns()
-
         results = []
-
         for pattern in patterns:
-
             pattern_type = str(
                 pattern.get(
                     "pattern_type",
                     ""
                 )
             ).lower()
-
             if any(
                 keyword in pattern_type
                 for keyword in keywords
             ):
-
                 results.append(pattern)
-
         return results[:limit]
-
-    # ============================================================
     # RISKS
-    # ============================================================
-
     def get_risk_patterns(
         self,
         limit: int = 100,
@@ -387,7 +288,6 @@ class PatternRetriever:
         """
         Retrieve risk patterns.
         """
-
         keywords = {
             "risk",
             "collapse",
@@ -396,33 +296,22 @@ class PatternRetriever:
             "conflict",
             "crash",
         }
-
         patterns = self.get_all_patterns()
-
         results = []
-
         for pattern in patterns:
-
             pattern_type = str(
                 pattern.get(
                     "pattern_type",
                     ""
                 )
             ).lower()
-
             if any(
                 keyword in pattern_type
                 for keyword in keywords
             ):
-
                 results.append(pattern)
-
         return results[:limit]
-
-    # ============================================================
     # TEMPORAL PATTERNS
-    # ============================================================
-
     def get_temporal_patterns(
         self,
         start_time: Optional[
@@ -436,11 +325,8 @@ class PatternRetriever:
         """
         Retrieve timeline-bound patterns.
         """
-
         if self.timeline_retriever is None:
-
             return []
-
         return (
             self.timeline_retriever
             .retrieve_patterns(
@@ -449,11 +335,7 @@ class PatternRetriever:
                 limit=limit,
             )
         )
-
-    # ============================================================
     # RECURRING PATTERNS
-    # ============================================================
-
     def get_recurring_patterns(
         self,
         limit: int = 100,
@@ -461,9 +343,7 @@ class PatternRetriever:
         """
         Retrieve recurring patterns.
         """
-
         patterns = self.get_all_patterns()
-
         recurring_keywords = {
             "recurring",
             "cycle",
@@ -471,31 +351,21 @@ class PatternRetriever:
             "habit",
             "loop",
         }
-
         results = []
-
         for pattern in patterns:
-
             pattern_type = str(
                 pattern.get(
                     "pattern_type",
                     ""
                 )
             ).lower()
-
             if any(
                 keyword in pattern_type
                 for keyword in recurring_keywords
             ):
-
                 results.append(pattern)
-
         return results[:limit]
-
-    # ============================================================
     # CROSS UNIT
-    # ============================================================
-
     def get_cross_unit_patterns(
         self,
         min_units: int = 2,
@@ -504,31 +374,20 @@ class PatternRetriever:
         """
         Retrieve patterns spanning multiple units.
         """
-
         patterns = self.get_all_patterns()
-
         results = []
-
         for pattern in patterns:
-
             linked_units = pattern.get(
                 "linked_units",
                 [],
             )
-
             if (
                 len(linked_units)
                 >= min_units
             ):
-
                 results.append(pattern)
-
         return results[:limit]
-
-    # ============================================================
     # CAUSAL PATTERNS
-    # ============================================================
-
     def get_causal_patterns(
         self,
         limit: int = 100,
@@ -536,7 +395,6 @@ class PatternRetriever:
         """
         Retrieve causal relation patterns.
         """
-
         keywords = {
             "causal",
             "dependency",
@@ -544,33 +402,22 @@ class PatternRetriever:
             "correlation",
             "reinforcement",
         }
-
         patterns = self.get_all_patterns()
-
         results = []
-
         for pattern in patterns:
-
             pattern_type = str(
                 pattern.get(
                     "pattern_type",
                     ""
                 )
             ).lower()
-
             if any(
                 keyword in pattern_type
                 for keyword in keywords
             ):
-
                 results.append(pattern)
-
         return results[:limit]
-
-    # ============================================================
     # SEMANTIC SEARCH
-    # ============================================================
-
     def semantic_search(
         self,
         query: str,
@@ -579,93 +426,61 @@ class PatternRetriever:
         """
         Semantic pattern retrieval.
         """
-
         if self.embedding_engine is None:
-
             return []
-
-        # --------------------------------------------------------
         # PLACEHOLDER
-        # --------------------------------------------------------
         # Future:
         # vector search
         # graph retrieval
         # hybrid retrieval
         # --------------------------------------------------------
-
         return []
-
-    # ============================================================
     # GET ALL
-    # ============================================================
-
     def get_all_patterns(
         self,
     ) -> List[Dict[str, Any]]:
         """
         Retrieve all patterns.
         """
-
         if self.pattern_storage is None:
-
             return []
-
         try:
-
             return (
                 self.pattern_storage
                 .get_all_patterns()
             )
-
         except Exception:
-
             logger.exception(
                 "Failed retrieving all "
                 "patterns."
             )
-
             return []
-
-    # ============================================================
     # PATTERN SUMMARY
-    # ============================================================
-
     def summarize_patterns(
         self,
     ) -> Dict[str, Any]:
         """
         Generate pattern statistics.
         """
-
         patterns = self.get_all_patterns()
-
         categories = {}
-
         for pattern in patterns:
-
             category = pattern.get(
                 "pattern_category",
                 "unknown",
             )
-
             categories.setdefault(
                 category,
                 0,
             )
-
             categories[category] += 1
-
         return {
             "total_patterns": len(
                 patterns
             ),
             "categories": categories,
         }
-
-    # ============================================================
     # RETRIEVE FOR CONTEXT
-    # ============================================================
-
     def retrieve_for_context(
         self,
         query: str,
@@ -677,59 +492,41 @@ class PatternRetriever:
         """
         Retrieve optimized cognition packet.
         """
-
         results = {
             "patterns": [],
             "opportunities": [],
             "risks": [],
             "anomalies": [],
         }
-
-        # --------------------------------------------------------
         # UNIT PATTERNS
-        # --------------------------------------------------------
-
         if unit_id:
-
             results[
                 "patterns"
             ] = self.get_unit_patterns(
                 unit_id=unit_id,
                 limit=limit,
             )
-
-        # --------------------------------------------------------
         # SPECIALIZED
-        # --------------------------------------------------------
-
         results[
             "opportunities"
         ] = self.get_opportunity_patterns(
             limit=10
         )
-
         results[
             "risks"
         ] = self.get_risk_patterns(
             limit=10
         )
-
         results[
             "anomalies"
         ] = self.get_anomaly_patterns(
             limit=10
         )
-
         return results
-
-    # ============================================================
     # HEALTH CHECK
-    # ============================================================
-
     def health_check(
         self,
     ) -> Dict[str, Any]:
-
         return {
             "pattern_storage": (
                 self.pattern_storage

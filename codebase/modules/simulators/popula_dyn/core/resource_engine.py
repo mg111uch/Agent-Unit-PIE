@@ -67,19 +67,13 @@ import logging
 from datetime import datetime, timezone
 from typing import Dict, Any, Optional, List
 
-
 logger = logging.getLogger(__name__)
-
 
 class ResourceEngine:
     """
     Unified resource simulation engine.
     """
-
-    # ============================================================
     # INIT
-    # ============================================================
-
     def __init__(
         self,
         ontology_registry=None,
@@ -90,47 +84,26 @@ class ResourceEngine:
             Dict[str, Any]
         ] = None,
     ):
-
         self.ontology_registry = (
             ontology_registry
         )
-
         self.unit_registry = (
             unit_registry
         )
-
         self.event_engine = (
             event_engine
         )
-
         self.pattern_engine = (
             pattern_engine
         )
-
         self.config = config or {}
-
-        # --------------------------------------------------------
         # GLOBAL RESOURCE STATE
-        # --------------------------------------------------------
-
         self.resource_pools = {}
-
-        # --------------------------------------------------------
         # RESOURCE TRANSFERS
-        # --------------------------------------------------------
-
         self.transfer_history = []
-
-        # --------------------------------------------------------
         # RESOURCE ALERTS
-        # --------------------------------------------------------
-
         self.resource_alerts = []
-
-    # ============================================================
     # CREATE RESOURCE POOL
-    # ============================================================
-
     def create_resource_pool(
         self,
         resource_type: str,
@@ -142,7 +115,6 @@ class ResourceEngine:
         """
         Create global resource pool.
         """
-
         pool = {
             "resource_type": (
                 resource_type
@@ -160,35 +132,23 @@ class ResourceEngine:
                 metadata or {}
             ),
         }
-
         self.resource_pools[
             resource_type
         ] = pool
-
         logger.info(
             f"Created resource pool: "
             f"{resource_type}"
         )
-
         return pool
-
-    # ============================================================
     # GET RESOURCE POOL
-    # ============================================================
-
     def get_resource_pool(
         self,
         resource_type: str,
     ) -> Optional[Dict[str, Any]]:
-
         return self.resource_pools.get(
             resource_type
         )
-
-    # ============================================================
     # ADD RESOURCE
-    # ============================================================
-
     def add_resource(
         self,
         resource_type: str,
@@ -197,33 +157,23 @@ class ResourceEngine:
         """
         Add resources into pool.
         """
-
         pool = self.get_resource_pool(
             resource_type
         )
-
         if pool is None:
-
             pool = (
                 self.create_resource_pool(
                     resource_type
                 )
             )
-
         pool["total_amount"] += float(
             amount
         )
-
         pool["updated_at"] = (
             self.utc_now()
         )
-
         return True
-
-    # ============================================================
     # REMOVE RESOURCE
-    # ============================================================
-
     def remove_resource(
         self,
         resource_type: str,
@@ -232,34 +182,24 @@ class ResourceEngine:
         """
         Remove resources from pool.
         """
-
         pool = self.get_resource_pool(
             resource_type
         )
-
         if pool is None:
             return False
-
         if (
             pool["total_amount"]
             < amount
         ):
             return False
-
         pool["total_amount"] -= float(
             amount
         )
-
         pool["updated_at"] = (
             self.utc_now()
         )
-
         return True
-
-    # ============================================================
     # ALLOCATE RESOURCE
-    # ============================================================
-
     def allocate_resource(
         self,
         unit_id: str,
@@ -269,36 +209,28 @@ class ResourceEngine:
         """
         Allocate resource to unit.
         """
-
         unit = self.resolve_unit(
             unit_id
         )
-
         if unit is None:
             return False
-
         success = self.remove_resource(
             resource_type,
             amount,
         )
-
         if not success:
             return False
-
         resources = unit.setdefault(
             "resources",
             {}
         )
-
         resources.setdefault(
             resource_type,
             0.0,
         )
-
         resources[
             resource_type
         ] += float(amount)
-
         self.emit_resource_event(
             event_type=(
                 "resource_allocated"
@@ -307,13 +239,8 @@ class ResourceEngine:
             resource_type=resource_type,
             amount=amount,
         )
-
         return True
-
-    # ============================================================
     # TRANSFER RESOURCE
-    # ============================================================
-
     def transfer_resource(
         self,
         source_unit_id: str,
@@ -327,68 +254,48 @@ class ResourceEngine:
         """
         Transfer resources between units.
         """
-
         source = self.resolve_unit(
             source_unit_id
         )
-
         target = self.resolve_unit(
             target_unit_id
         )
-
         if (
             source is None
             or target is None
         ):
             return False
-
         source_resources = (
             source.setdefault(
                 "resources",
                 {}
             )
         )
-
         current = source_resources.get(
             resource_type,
             0.0,
         )
-
         if current < amount:
             return False
-
-        # --------------------------------------------------------
         # REMOVE FROM SOURCE
-        # --------------------------------------------------------
-
         source_resources[
             resource_type
         ] -= float(amount)
-
-        # --------------------------------------------------------
         # ADD TO TARGET
-        # --------------------------------------------------------
-
         target_resources = (
             target.setdefault(
                 "resources",
                 {}
             )
         )
-
         target_resources.setdefault(
             resource_type,
             0.0,
         )
-
         target_resources[
             resource_type
         ] += float(amount)
-
-        # --------------------------------------------------------
         # LOG TRANSFER
-        # --------------------------------------------------------
-
         transfer = {
             "source_unit_id": (
                 source_unit_id
@@ -407,15 +314,10 @@ class ResourceEngine:
                 metadata or {}
             ),
         }
-
         self.transfer_history.append(
             transfer
         )
-
-        # --------------------------------------------------------
         # EVENT
-        # --------------------------------------------------------
-
         self.emit_resource_event(
             event_type=(
                 "resource_transferred"
@@ -424,13 +326,8 @@ class ResourceEngine:
             resource_type=resource_type,
             amount=amount,
         )
-
         return True
-
-    # ============================================================
     # CONSUME RESOURCE
-    # ============================================================
-
     def consume_resource(
         self,
         unit_id: str,
@@ -440,31 +337,24 @@ class ResourceEngine:
         """
         Consume resources from unit.
         """
-
         unit = self.resolve_unit(
             unit_id
         )
-
         if unit is None:
             return False
-
         resources = unit.setdefault(
             "resources",
             {}
         )
-
         current = resources.get(
             resource_type,
             0.0,
         )
-
         if current < amount:
             return False
-
         resources[
             resource_type
         ] -= float(amount)
-
         self.emit_resource_event(
             event_type=(
                 "resource_consumed"
@@ -473,13 +363,8 @@ class ResourceEngine:
             resource_type=resource_type,
             amount=amount,
         )
-
         return True
-
-    # ============================================================
     # SCARCITY DETECTION
-    # ============================================================
-
     def detect_scarcity(
         self,
         threshold: float = 10.0,
@@ -487,20 +372,15 @@ class ResourceEngine:
         """
         Detect scarce resources.
         """
-
         scarce = []
-
         for resource_type, pool in (
             self.resource_pools.items()
         ):
-
             amount = pool.get(
                 "total_amount",
                 0.0,
             )
-
             if amount <= threshold:
-
                 scarce.append(
                     {
                         "resource_type": (
@@ -512,13 +392,8 @@ class ResourceEngine:
                         ),
                     }
                 )
-
         return scarce
-
-    # ============================================================
     # ABUNDANCE DETECTION
-    # ============================================================
-
     def detect_abundance(
         self,
         threshold: float = 1000000.0,
@@ -526,20 +401,15 @@ class ResourceEngine:
         """
         Detect highly abundant resources.
         """
-
         abundant = []
-
         for resource_type, pool in (
             self.resource_pools.items()
         ):
-
             amount = pool.get(
                 "total_amount",
                 0.0,
             )
-
             if amount >= threshold:
-
                 abundant.append(
                     {
                         "resource_type": (
@@ -551,26 +421,17 @@ class ResourceEngine:
                         ),
                     }
                 )
-
         return abundant
-
-    # ============================================================
     # BOTTLENECK DETECTION
-    # ============================================================
-
     def detect_bottlenecks(
         self,
     ) -> List[Dict[str, Any]]:
         """
         Detect resource bottlenecks.
         """
-
         bottlenecks = []
-
         scarce = self.detect_scarcity()
-
         for item in scarce:
-
             bottlenecks.append(
                 {
                     "resource_type": (
@@ -584,37 +445,24 @@ class ResourceEngine:
                     ),
                 }
             )
-
         return bottlenecks
-
-    # ============================================================
     # CORRUPTION DETECTION
-    # ============================================================
-
     def detect_corruption_patterns(
         self,
     ) -> List[Dict[str, Any]]:
         """
         Detect suspicious resource flows.
         """
-
         suspicious = []
-
         for transfer in (
             self.transfer_history
         ):
-
             amount = transfer.get(
                 "amount",
                 0.0,
             )
-
-            # ----------------------------------------------------
             # SIMPLE HEURISTIC
-            # ----------------------------------------------------
-
             if amount > 10000000:
-
                 suspicious.append(
                     {
                         "type": (
@@ -623,20 +471,14 @@ class ResourceEngine:
                         "transfer": transfer,
                     }
                 )
-
         return suspicious
-
-    # ============================================================
     # ECONOMIC FLOW SIMULATION
-    # ============================================================
-
     def simulate_economic_cycle(
         self,
     ) -> Dict[str, Any]:
         """
         Simulate economic movement.
         """
-
         total_resources = sum(
             pool.get(
                 "total_amount",
@@ -646,7 +488,6 @@ class ResourceEngine:
                 self.resource_pools.values()
             )
         )
-
         return {
             "timestamp": (
                 self.utc_now()
@@ -661,26 +502,18 @@ class ResourceEngine:
                 self.transfer_history
             ),
         }
-
-    # ============================================================
     # FORECAST COLLAPSE
-    # ============================================================
-
     def forecast_resource_collapse(
         self,
     ) -> Dict[str, Any]:
         """
         Forecast collapse risks.
         """
-
         bottlenecks = (
             self.detect_bottlenecks()
         )
-
         risks = []
-
         for bottleneck in bottlenecks:
-
             risks.append(
                 {
                     "resource_type": (
@@ -695,25 +528,19 @@ class ResourceEngine:
                     ),
                 }
             )
-
         return {
             "risks": risks,
             "risk_count": len(
                 risks
             ),
         }
-
-    # ============================================================
     # RESOURCE SUMMARY
-    # ============================================================
-
     def summarize_resources(
         self,
     ) -> Dict[str, Any]:
         """
         Generate resource statistics.
         """
-
         total = sum(
             pool.get(
                 "total_amount",
@@ -723,7 +550,6 @@ class ResourceEngine:
                 self.resource_pools.values()
             )
         )
-
         return {
             "resource_types": len(
                 self.resource_pools
@@ -736,11 +562,7 @@ class ResourceEngine:
                 self.resource_alerts
             ),
         }
-
-    # ============================================================
     # EVENT EMISSION
-    # ============================================================
-
     def emit_resource_event(
         self,
         event_type: str,
@@ -751,12 +573,9 @@ class ResourceEngine:
         """
         Emit simulation resource event.
         """
-
         if self.event_engine is None:
             return
-
         try:
-
             self.event_engine.create_event(
                 event_type=event_type,
                 unit_id=unit_id,
@@ -767,18 +586,12 @@ class ResourceEngine:
                     "amount": amount,
                 },
             )
-
         except Exception:
-
             logger.exception(
                 "Failed emitting "
                 "resource event."
             )
-
-    # ============================================================
     # UNIT RESOLUTION
-    # ============================================================
-
     def resolve_unit(
         self,
         unit_id: str,
@@ -786,23 +599,15 @@ class ResourceEngine:
         """
         Resolve unit from registry.
         """
-
         if self.unit_registry is None:
-
             return None
-
         return self.unit_registry.get_unit(
             unit_id
         )
-
-    # ============================================================
     # HEALTH CHECK
-    # ============================================================
-
     def health_check(
         self,
     ) -> Dict[str, Any]:
-
         return {
             "resource_pools": len(
                 self.resource_pools
@@ -827,14 +632,9 @@ class ResourceEngine:
                 is not None
             ),
         }
-
-    # ============================================================
     # HELPERS
-    # ============================================================
-
     @staticmethod
     def utc_now() -> str:
-
         return datetime.now(
             timezone.utc
         ).isoformat()

@@ -1,41 +1,25 @@
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional
 
-
-# =========================================================
 # UNIT TYPE DEFINITION
-# =========================================================
 
 @dataclass
 class UnitTypeDefinition:
     unit_type: str
-
     category: str
-
     description: str = ""
-
     parent_type: Optional[str] = None
-
     allowed_behaviors: List[str] = field(default_factory=list)
-
     allowed_resources: List[str] = field(default_factory=list)
-
     allowed_signals: List[str] = field(default_factory=list)
-
     allowed_relations: List[str] = field(default_factory=list)
-
     tags: List[str] = field(default_factory=list)
 
-
-# =========================================================
 # CORE UNIT TYPES
-# =========================================================
 
 UNIT_TYPES: Dict[str, UnitTypeDefinition] = {
 
-    # -----------------------------------------------------
     # HUMAN SYSTEMS
-    # -----------------------------------------------------
 
     "human": UnitTypeDefinition(
         unit_type="human",
@@ -87,9 +71,7 @@ UNIT_TYPES: Dict[str, UnitTypeDefinition] = {
         ]
     ),
 
-    # -----------------------------------------------------
     # ORGANIZATIONS
-    # -----------------------------------------------------
 
     "company": UnitTypeDefinition(
         unit_type="company",
@@ -136,9 +118,7 @@ UNIT_TYPES: Dict[str, UnitTypeDefinition] = {
         ]
     ),
 
-    # -----------------------------------------------------
     # GEOGRAPHIC SYSTEMS
-    # -----------------------------------------------------
 
     "city": UnitTypeDefinition(
         unit_type="city",
@@ -259,9 +239,7 @@ UNIT_TYPES: Dict[str, UnitTypeDefinition] = {
         ]
     ),
 
-    # -----------------------------------------------------
     # FINANCIAL SYSTEMS
-    # -----------------------------------------------------
 
     "stock": UnitTypeDefinition(
         unit_type="stock",
@@ -300,9 +278,7 @@ UNIT_TYPES: Dict[str, UnitTypeDefinition] = {
         ]
     ),
 
-    # -----------------------------------------------------
     # KNOWLEDGE SYSTEMS
-    # -----------------------------------------------------
 
     "knowledge_domain": UnitTypeDefinition(
         unit_type="knowledge_domain",
@@ -335,9 +311,7 @@ UNIT_TYPES: Dict[str, UnitTypeDefinition] = {
         ]
     ),
 
-    # -----------------------------------------------------
     # AI SYSTEMS
-    # -----------------------------------------------------
 
     "ai_agent": UnitTypeDefinition(
         unit_type="ai_agent",
@@ -377,25 +351,18 @@ UNIT_TYPES: Dict[str, UnitTypeDefinition] = {
     )
 }
 
-
-# =========================================================
 # HELPER FUNCTIONS
-# =========================================================
 
 def get_unit_type(unit_type: str) -> Optional[UnitTypeDefinition]:
     return UNIT_TYPES.get(unit_type)
 
-
 def unit_type_exists(unit_type: str) -> bool:
     return unit_type in UNIT_TYPES
-
 
 def list_unit_types() -> List[str]:
     return list(UNIT_TYPES.keys())
 
-
 def get_unit_types_by_category(category: str) -> List[str]:
-
     return [
         name
         for name, definition in UNIT_TYPES.items()

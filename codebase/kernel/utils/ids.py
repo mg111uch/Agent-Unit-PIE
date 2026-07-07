@@ -4,10 +4,7 @@ import uuid
 import hashlib
 from typing import Optional
 
-
-# =========================================================
 # GENERIC RANDOM ID
-# =========================================================
 
 def generate_id(
     prefix: str = "id",
@@ -24,10 +21,7 @@ def generate_id(
 
     return f"{prefix}_{uid}"
 
-
-# =========================================================
 # DETERMINISTIC HASH ID
-# =========================================================
 
 def generate_hash_id(
     content: str,
@@ -46,10 +40,7 @@ def generate_hash_id(
 
     return f"{prefix}_{digest[:length]}"
 
-
-# =========================================================
 # TIMESTAMPED ID
-# =========================================================
 
 def generate_time_id(
     timestamp: str,
@@ -66,10 +57,7 @@ def generate_time_id(
 
     return f"{prefix}_{digest[:length]}"
 
-
-# =========================================================
 # ENTITY IDS
-# =========================================================
 
 def generate_unit_id(
     unit_type: str,
@@ -81,7 +69,6 @@ def generate_unit_id(
         length=length
     )
 
-
 def generate_signal_id(
     signal_type: str,
     length: int = 12
@@ -91,7 +78,6 @@ def generate_signal_id(
         prefix=signal_type,
         length=length
     )
-
 
 def generate_event_id(
     event_type: str,
@@ -103,7 +89,6 @@ def generate_event_id(
         length=length
     )
 
-
 def generate_pattern_id(
     pattern_type: str,
     length: int = 12
@@ -113,7 +98,6 @@ def generate_pattern_id(
         prefix=pattern_type,
         length=length
     )
-
 
 def generate_relation_id(
     relation_type: str,
@@ -125,7 +109,6 @@ def generate_relation_id(
         length=length
     )
 
-
 def generate_hypothesis_id(
     hypothesis_type: str = "hypothesis",
     length: int = 12
@@ -136,10 +119,7 @@ def generate_hypothesis_id(
         length=length
     )
 
-
-# =========================================================
 # SESSION IDS
-# =========================================================
 
 def generate_session_id(
     agent_name: Optional[str] = None
@@ -152,45 +132,29 @@ def generate_session_id(
 
     return generate_id(prefix=prefix)
 
-
-# =========================================================
 # VALIDATION
-# =========================================================
 
 def is_valid_id(value: str) -> bool:
     """
     Minimal validation check.
     """
-
     if not isinstance(value, str):
         return False
-
     if "_" not in value:
         return False
-
     prefix, suffix = value.split("_", 1)
-
     if not prefix or not suffix:
         return False
-
     return True
 
-
-# =========================================================
 # PARSING
-# =========================================================
 
 def extract_prefix(entity_id: str) -> Optional[str]:
-
     if not is_valid_id(entity_id):
         return None
-
     return entity_id.split("_", 1)[0]
 
-
 def extract_suffix(entity_id: str) -> Optional[str]:
-
     if not is_valid_id(entity_id):
         return None
-
     return entity_id.split("_", 1)[1]

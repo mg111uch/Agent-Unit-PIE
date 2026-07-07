@@ -36,16 +36,11 @@ across the entire agent_unit_pie architecture.
 
 from __future__ import annotations
 
-
-# ============================================================
 # ROOT EVENT TYPES
-# ============================================================
 
 EVENT_TYPES = {
 
-    # --------------------------------------------------------
     # SYSTEM
-    # --------------------------------------------------------
 
     "system": {
         "system_started",
@@ -60,9 +55,7 @@ EVENT_TYPES = {
         "storage_sync",
     },
 
-    # --------------------------------------------------------
     # OBSERVATION
-    # --------------------------------------------------------
 
     "observation": {
         "observation_created",
@@ -77,9 +70,7 @@ EVENT_TYPES = {
         "knowledge_extracted",
     },
 
-    # --------------------------------------------------------
     # MEMORY
-    # --------------------------------------------------------
 
     "memory": {
         "memory_created",
@@ -94,9 +85,7 @@ EVENT_TYPES = {
         "memory_conflict_detected",
     },
 
-    # --------------------------------------------------------
     # SIGNAL
-    # --------------------------------------------------------
 
     "signal": {
         "signal_created",
@@ -110,9 +99,7 @@ EVENT_TYPES = {
         "weak_signal_detected",
     },
 
-    # --------------------------------------------------------
     # PATTERN
-    # --------------------------------------------------------
 
     "pattern": {
         "pattern_detected",
@@ -127,9 +114,7 @@ EVENT_TYPES = {
         "trend_detected",
     },
 
-    # --------------------------------------------------------
     # RELATION
-    # --------------------------------------------------------
 
     "relation": {
         "relation_created",
@@ -143,9 +128,7 @@ EVENT_TYPES = {
         "entity_unlinked",
     },
 
-    # --------------------------------------------------------
     # HUMAN BEHAVIOR
-    # --------------------------------------------------------
 
     "human_behavior": {
         "emotion_shift",
@@ -162,9 +145,7 @@ EVENT_TYPES = {
         "social_interaction",
     },
 
-    # --------------------------------------------------------
     # ASTROLOGY / SOFT SCIENCE
-    # --------------------------------------------------------
 
     "soft_science": {
         "horoscope_generated",
@@ -179,9 +160,7 @@ EVENT_TYPES = {
         "archetype_detected",
     },
 
-    # --------------------------------------------------------
     # ECONOMIC
-    # --------------------------------------------------------
 
     "economic": {
         "trade_completed",
@@ -198,9 +177,7 @@ EVENT_TYPES = {
         "economic_opportunity_detected",
     },
 
-    # --------------------------------------------------------
     # FINANCIAL
-    # --------------------------------------------------------
 
     "financial": {
         "stock_price_spike",
@@ -217,9 +194,7 @@ EVENT_TYPES = {
         "financial_risk_detected",
     },
 
-    # --------------------------------------------------------
     # ORGANIZATION
-    # --------------------------------------------------------
 
     "organization": {
         "employee_joined",
@@ -235,9 +210,7 @@ EVENT_TYPES = {
         "organizational_restructure",
     },
 
-    # --------------------------------------------------------
     # CITY
-    # --------------------------------------------------------
 
     "city": {
         "traffic_congestion",
@@ -254,9 +227,7 @@ EVENT_TYPES = {
         "district_instability",
     },
 
-    # --------------------------------------------------------
     # GOVERNANCE
-    # --------------------------------------------------------
 
     "governance": {
         "policy_announced",
@@ -271,9 +242,7 @@ EVENT_TYPES = {
         "administrative_reform",
     },
 
-    # --------------------------------------------------------
     # GEOPOLITICAL
-    # --------------------------------------------------------
 
     "geopolitical": {
         "border_tension",
@@ -287,9 +256,7 @@ EVENT_TYPES = {
         "geopolitical_risk_detected",
     },
 
-    # --------------------------------------------------------
     # ENVIRONMENT
-    # --------------------------------------------------------
 
     "environment": {
         "temperature_anomaly",
@@ -303,9 +270,7 @@ EVENT_TYPES = {
         "environmental_risk_detected",
     },
 
-    # --------------------------------------------------------
     # SIMULATION
-    # --------------------------------------------------------
 
     "simulation": {
         "simulation_started",
@@ -322,9 +287,7 @@ EVENT_TYPES = {
         "simulation_instability",
     },
 
-    # --------------------------------------------------------
     # DIGITAL TWIN
-    # --------------------------------------------------------
 
     "digital_twin": {
         "digital_twin_created",
@@ -337,9 +300,7 @@ EVENT_TYPES = {
         "digital_twin_divergence_detected",
     },
 
-    # --------------------------------------------------------
     # KNOWLEDGE
-    # --------------------------------------------------------
 
     "knowledge": {
         "entity_extracted",
@@ -354,9 +315,7 @@ EVENT_TYPES = {
         "ontology_extended",
     },
 
-    # --------------------------------------------------------
     # RISK
-    # --------------------------------------------------------
 
     "risk": {
         "risk_detected",
@@ -370,9 +329,7 @@ EVENT_TYPES = {
         "critical_threshold_crossed",
     },
 
-    # --------------------------------------------------------
     # OPPORTUNITY
-    # --------------------------------------------------------
 
     "opportunity": {
         "market_gap_detected",
@@ -386,10 +343,7 @@ EVENT_TYPES = {
     },
 }
 
-
-# ============================================================
 # FLAT LOOKUP
-# ============================================================
 
 ALL_EVENT_TYPES = sorted({
     item
@@ -397,10 +351,7 @@ ALL_EVENT_TYPES = sorted({
     for item in category
 })
 
-
-# ============================================================
 # CATEGORY LOOKUP
-# ============================================================
 
 EVENT_CATEGORY_LOOKUP = {}
 
@@ -410,10 +361,7 @@ for category, values in EVENT_TYPES.items():
 
         EVENT_CATEGORY_LOOKUP[value] = category
 
-
-# ============================================================
 # HELPERS
-# ============================================================
 
 def is_valid_event_type(
     event_type: str,
@@ -423,7 +371,6 @@ def is_valid_event_type(
         event_type
         in ALL_EVENT_TYPES
     )
-
 
 def get_event_category(
     event_type: str,
@@ -436,7 +383,6 @@ def get_event_category(
         )
     )
 
-
 def get_events_by_category(
     category: str,
 ):
@@ -446,14 +392,10 @@ def get_events_by_category(
         set(),
     )
 
-
 def list_event_categories():
-
     return sorted(
         EVENT_TYPES.keys()
     )
 
-
 def list_all_event_types():
-
     return ALL_EVENT_TYPES

@@ -46,13 +46,9 @@ from __future__ import annotations
 import logging
 from typing import Dict, Any, List, Optional
 
-
 logger = logging.getLogger(__name__)
 
-
-# ============================================================
 # IMPORT ONTOLOGIES
-# ============================================================
 
 try:
 
@@ -82,9 +78,7 @@ except Exception:
     ALL_PATTERN_TYPES = []
     PATTERN_CATEGORY_LOOKUP = {}
 
-# ------------------------------------------------------------
 # OPTIONAL FUTURE ONTOLOGIES
-# ------------------------------------------------------------
 
 try:
 
@@ -156,24 +150,15 @@ except Exception:
     ALL_RESOURCE_TYPES = []
     RESOURCE_CATEGORY_LOOKUP = {}
 
-
-# ============================================================
 # ONTOLOGY REGISTRY
-# ============================================================
 
 class OntologyRegistry:
     """
     Unified ontology access layer.
     """
-
-    # ========================================================
     # INIT
-    # ========================================================
-
     def __init__(self):
-
         self.ontologies = {
-
             "event": {
                 "types": EVENT_TYPES,
                 "flat": set(
@@ -183,7 +168,6 @@ class OntologyRegistry:
                     EVENT_CATEGORY_LOOKUP
                 ),
             },
-
             "pattern": {
                 "types": PATTERN_TYPES,
                 "flat": set(
@@ -193,7 +177,6 @@ class OntologyRegistry:
                     PATTERN_CATEGORY_LOOKUP
                 ),
             },
-
             "signal": {
                 "types": SIGNAL_TYPES,
                 "flat": set(
@@ -203,7 +186,6 @@ class OntologyRegistry:
                     SIGNAL_CATEGORY_LOOKUP
                 ),
             },
-
             "relation": {
                 "types": RELATION_TYPES,
                 "flat": set(
@@ -213,7 +195,6 @@ class OntologyRegistry:
                     RELATION_CATEGORY_LOOKUP
                 ),
             },
-
             "entity": {
                 "types": ENTITY_TYPES,
                 "flat": set(
@@ -223,7 +204,6 @@ class OntologyRegistry:
                     ENTITY_CATEGORY_LOOKUP
                 ),
             },
-
             "unit": {
                 "types": UNIT_TYPES,
                 "flat": set(
@@ -233,7 +213,6 @@ class OntologyRegistry:
                     UNIT_CATEGORY_LOOKUP
                 ),
             },
-
             "resource": {
                 "types": RESOURCE_TYPES,
                 "flat": set(
@@ -245,10 +224,7 @@ class OntologyRegistry:
             },
         }
 
-    # ========================================================
     # VALIDATION
-    # ========================================================
-
     def is_valid(
         self,
         ontology_name: str,
@@ -257,23 +233,16 @@ class OntologyRegistry:
         """
         Validate ontology value.
         """
-
         ontology = self.ontologies.get(
             ontology_name
         )
-
         if ontology is None:
             return False
-
         return (
             value
             in ontology["flat"]
         )
-
-    # ========================================================
     # CATEGORY LOOKUP
-    # ========================================================
-
     def get_category(
         self,
         ontology_name: str,
@@ -282,25 +251,18 @@ class OntologyRegistry:
         """
         Get category of ontology value.
         """
-
         ontology = self.ontologies.get(
             ontology_name
         )
-
         if ontology is None:
             return "unknown"
-
         return ontology[
             "lookup"
         ].get(
             value,
             "unknown",
         )
-
-    # ========================================================
     # GET TYPES BY CATEGORY
-    # ========================================================
-
     def get_types_by_category(
         self,
         ontology_name: str,
@@ -309,25 +271,18 @@ class OntologyRegistry:
         """
         Get all types under category.
         """
-
         ontology = self.ontologies.get(
             ontology_name
         )
-
         if ontology is None:
             return set()
-
         return ontology[
             "types"
         ].get(
             category,
             set(),
         )
-
-    # ========================================================
     # LIST ALL TYPES
-    # ========================================================
-
     def list_types(
         self,
         ontology_name: str,
@@ -335,22 +290,15 @@ class OntologyRegistry:
         """
         List all ontology types.
         """
-
         ontology = self.ontologies.get(
             ontology_name
         )
-
         if ontology is None:
             return []
-
         return sorted(
             ontology["flat"]
         )
-
-    # ========================================================
     # LIST CATEGORIES
-    # ========================================================
-
     def list_categories(
         self,
         ontology_name: str,
@@ -358,24 +306,17 @@ class OntologyRegistry:
         """
         List ontology categories.
         """
-
         ontology = self.ontologies.get(
             ontology_name
         )
-
         if ontology is None:
             return []
-
         return sorted(
             ontology[
                 "types"
             ].keys()
         )
-
-    # ========================================================
     # REGISTER NEW ONTOLOGY
-    # ========================================================
-
     def register_ontology(
         self,
         ontology_name: str,
@@ -387,21 +328,14 @@ class OntologyRegistry:
         """
         Dynamically register ontology.
         """
-
         flat = set()
-
         lookup = {}
-
         for category, values in (
             ontology_types.items()
         ):
-
             for value in values:
-
                 flat.add(value)
-
                 lookup[value] = category
-
         self.ontologies[
             ontology_name
         ] = {
@@ -409,16 +343,11 @@ class OntologyRegistry:
             "flat": flat,
             "lookup": lookup,
         }
-
         logger.info(
             f"Registered ontology: "
             f"{ontology_name}"
         )
-
-    # ========================================================
     # REMOVE ONTOLOGY
-    # ========================================================
-
     def remove_ontology(
         self,
         ontology_name: str,
@@ -426,28 +355,20 @@ class OntologyRegistry:
         """
         Remove ontology.
         """
-
         if (
             ontology_name
             not in self.ontologies
         ):
             return False
-
         del self.ontologies[
             ontology_name
         ]
-
         logger.info(
             f"Removed ontology: "
             f"{ontology_name}"
         )
-
         return True
-
-    # ========================================================
     # GLOBAL SEARCH
-    # ========================================================
-
     def search(
         self,
         value: str,
@@ -455,15 +376,11 @@ class OntologyRegistry:
         """
         Search value across all ontologies.
         """
-
         matches = []
-
         for ontology_name, ontology in (
             self.ontologies.items()
         ):
-
             if value in ontology["flat"]:
-
                 matches.append(
                     {
                         "ontology": (
@@ -475,29 +392,21 @@ class OntologyRegistry:
                         "value": value,
                     }
                 )
-
         return {
             "query": value,
             "matches": matches,
         }
-
-    # ========================================================
     # EXPORT
-    # ========================================================
-
     def export_registry(
         self,
     ) -> Dict[str, Any]:
         """
         Export ontology metadata.
         """
-
         exported = {}
-
         for name, ontology in (
             self.ontologies.items()
         ):
-
             exported[name] = {
                 "categories": sorted(
                     ontology[
@@ -508,17 +417,11 @@ class OntologyRegistry:
                     ontology["flat"]
                 ),
             }
-
         return exported
-
-    # ========================================================
     # SUMMARY
-    # ========================================================
-
     def summary(
         self,
     ) -> Dict[str, Any]:
-
         return {
             "ontology_count": len(
                 self.ontologies

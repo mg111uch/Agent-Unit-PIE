@@ -1,39 +1,24 @@
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional
 
-
-# =========================================================
 # BEHAVIOR TYPE DEFINITION
-# =========================================================
 
 @dataclass
 class BehaviorTypeDefinition:
     behavior_type: str
-
     category: str
-
     description: str = ""
-
     required_resources: List[str] = field(default_factory=list)
-
     generated_signals: List[str] = field(default_factory=list)
-
     generated_events: List[str] = field(default_factory=list)
-
     compatible_unit_types: List[str] = field(default_factory=list)
-
     tags: List[str] = field(default_factory=list)
 
-
-# =========================================================
 # BEHAVIOR TYPES
-# =========================================================
 
 BEHAVIOR_TYPES: Dict[str, BehaviorTypeDefinition] = {
 
-    # -----------------------------------------------------
     # HUMAN BEHAVIORS
-    # -----------------------------------------------------
 
     "move": BehaviorTypeDefinition(
         behavior_type="move",
@@ -214,9 +199,7 @@ BEHAVIOR_TYPES: Dict[str, BehaviorTypeDefinition] = {
         ]
     ),
 
-    # -----------------------------------------------------
     # ORGANIZATION BEHAVIORS
-    # -----------------------------------------------------
 
     "hire": BehaviorTypeDefinition(
         behavior_type="hire",
@@ -301,9 +284,7 @@ BEHAVIOR_TYPES: Dict[str, BehaviorTypeDefinition] = {
         ]
     ),
 
-    # -----------------------------------------------------
     # GOVERNANCE BEHAVIORS
-    # -----------------------------------------------------
 
     "govern": BehaviorTypeDefinition(
         behavior_type="govern",
@@ -391,9 +372,7 @@ BEHAVIOR_TYPES: Dict[str, BehaviorTypeDefinition] = {
         ]
     ),
 
-    # -----------------------------------------------------
     # CITY / COUNTRY BEHAVIORS
-    # -----------------------------------------------------
 
     "expand": BehaviorTypeDefinition(
         behavior_type="expand",
@@ -453,9 +432,7 @@ BEHAVIOR_TYPES: Dict[str, BehaviorTypeDefinition] = {
         ]
     ),
 
-    # -----------------------------------------------------
     # AI / KNOWLEDGE BEHAVIORS
-    # -----------------------------------------------------
 
     "observe": BehaviorTypeDefinition(
         behavior_type="observe",
@@ -597,10 +574,7 @@ BEHAVIOR_TYPES: Dict[str, BehaviorTypeDefinition] = {
     )
 }
 
-
-# =========================================================
 # HELPER FUNCTIONS
-# =========================================================
 
 def get_behavior_type(
     behavior_type: str
@@ -608,18 +582,14 @@ def get_behavior_type(
 
     return BEHAVIOR_TYPES.get(behavior_type)
 
-
 def behavior_type_exists(
     behavior_type: str
 ) -> bool:
 
     return behavior_type in BEHAVIOR_TYPES
 
-
 def list_behavior_types() -> List[str]:
-
     return list(BEHAVIOR_TYPES.keys())
-
 
 def get_behaviors_by_category(
     category: str
@@ -630,7 +600,6 @@ def get_behaviors_by_category(
         for name, definition in BEHAVIOR_TYPES.items()
         if definition.category == category
     ]
-
 
 def get_behaviors_for_unit_type(
     unit_type: str

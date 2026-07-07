@@ -31,32 +31,21 @@ import logging
 from datetime import datetime, timezone
 from typing import Dict, Any, List, Optional
 
-
 logger = logging.getLogger(__name__)
-
 
 class EventBridge:
     """
     Simulation cognition bridge.
     """
-
-    # ============================================================
     # INIT
-    # ============================================================
-
     def __init__(
         self,
         observation_pipeline=None,
     ):
-
         self.observation_pipeline = (
             observation_pipeline
         )
-
-    # ============================================================
     # MAIN ENTRY
-    # ============================================================
-
     def process_simulation_step(
         self,
         simulation_id: str,
@@ -68,18 +57,13 @@ class EventBridge:
         """
         Process all events from one simulation step.
         """
-
         results = []
-
         logger.debug(
             f"Processing simulation step "
             f"for {simulation_id}"
         )
-
         for event in events:
-
             try:
-
                 observation = (
                     self.convert_event_to_observation(
                         simulation_id=simulation_id,
@@ -87,27 +71,18 @@ class EventBridge:
                         metadata=metadata,
                     )
                 )
-
                 result = (
                     self.process_observation(
                         observation
                     )
                 )
-
                 results.append(result)
-
             except Exception:
-
                 logger.exception(
                     "Failed processing simulation event."
                 )
-
         return results
-
-    # ============================================================
     # SINGLE EVENT
-    # ============================================================
-
     def process_simulation_event(
         self,
         simulation_id: str,
@@ -119,7 +94,6 @@ class EventBridge:
         """
         Process single simulation event.
         """
-
         observation = (
             self.convert_event_to_observation(
                 simulation_id=simulation_id,
@@ -127,15 +101,10 @@ class EventBridge:
                 metadata=metadata,
             )
         )
-
         return self.process_observation(
             observation
         )
-
-    # ============================================================
     # EVENT → OBSERVATION
-    # ============================================================
-
     def convert_event_to_observation(
         self,
         simulation_id: str,
@@ -147,7 +116,6 @@ class EventBridge:
         """
         Convert simulation event into universal observation.
         """
-
         observation = {
             "timestamp": self.utc_now(),
             "source": "simulation_engine",
@@ -167,13 +135,8 @@ class EventBridge:
             "metadata": metadata or {},
             "confidence": 1.0,
         }
-
         return observation
-
-    # ============================================================
     # OBSERVATION PIPELINE
-    # ============================================================
-
     def process_observation(
         self,
         observation: Dict[str, Any],
@@ -181,13 +144,10 @@ class EventBridge:
         """
         Send observation into cognition pipeline.
         """
-
         if self.observation_pipeline is None:
-
             logger.warning(
                 "Observation pipeline missing."
             )
-
             return {
                 "status": "skipped",
                 "reason": (
@@ -195,17 +155,12 @@ class EventBridge:
                 ),
                 "observation": observation,
             }
-
         return (
             self.observation_pipeline.process(
                 observation
             )
         )
-
-    # ============================================================
     # BULK PROCESSING
-    # ============================================================
-
     def process_multiple_simulations(
         self,
         simulation_batches: List[
@@ -215,26 +170,20 @@ class EventBridge:
         """
         Process multiple simulation batches.
         """
-
         all_results = []
-
         for batch in simulation_batches:
-
             simulation_id = batch.get(
                 "simulation_id",
                 "unknown_simulation",
             )
-
             events = batch.get(
                 "events",
                 [],
             )
-
             metadata = batch.get(
                 "metadata",
                 {},
             )
-
             result = (
                 self.process_simulation_step(
                     simulation_id=simulation_id,
@@ -242,15 +191,9 @@ class EventBridge:
                     metadata=metadata,
                 )
             )
-
             all_results.extend(result)
-
         return all_results
-
-    # ============================================================
     # SIMULATION SNAPSHOT
-    # ============================================================
-
     def process_simulation_snapshot(
         self,
         simulation_id: str,
@@ -259,7 +202,6 @@ class EventBridge:
         """
         Convert world snapshot into observation.
         """
-
         observation = {
             "timestamp": self.utc_now(),
             "source": "simulation_snapshot",
@@ -273,33 +215,22 @@ class EventBridge:
             "metadata": {},
             "confidence": 1.0,
         }
-
         return self.process_observation(
             observation
         )
-
-    # ============================================================
     # HEALTH CHECK
-    # ============================================================
-
     def health_check(
         self,
     ) -> Dict[str, Any]:
-
         return {
             "observation_pipeline": (
                 self.observation_pipeline
                 is not None
             )
         }
-
-    # ============================================================
     # HELPERS
-    # ============================================================
-
     @staticmethod
     def utc_now() -> str:
-
         return datetime.now(
             timezone.utc
         ).isoformat()

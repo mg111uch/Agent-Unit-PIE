@@ -34,16 +34,11 @@ all cognition layers interoperable.
 
 from __future__ import annotations
 
-
-# ============================================================
 # ROOT PATTERN TYPES
-# ============================================================
 
 PATTERN_TYPES = {
 
-    # --------------------------------------------------------
     # TEMPORAL
-    # --------------------------------------------------------
 
     "temporal": {
         "recurring",
@@ -59,9 +54,7 @@ PATTERN_TYPES = {
         "timeline_shift",
     },
 
-    # --------------------------------------------------------
     # BEHAVIORAL
-    # --------------------------------------------------------
 
     "behavioral": {
         "habit",
@@ -78,9 +71,7 @@ PATTERN_TYPES = {
         "attention_drift",
     },
 
-    # --------------------------------------------------------
     # ECONOMIC
-    # --------------------------------------------------------
 
     "economic": {
         "wealth_accumulation",
@@ -97,9 +88,7 @@ PATTERN_TYPES = {
         "supply_chain_disruption",
     },
 
-    # --------------------------------------------------------
     # FINANCIAL
-    # --------------------------------------------------------
 
     "financial": {
         "bullish_trend",
@@ -116,9 +105,7 @@ PATTERN_TYPES = {
         "high_volatility_cluster",
     },
 
-    # --------------------------------------------------------
     # SOCIAL
-    # --------------------------------------------------------
 
     "social": {
         "community_growth",
@@ -135,9 +122,7 @@ PATTERN_TYPES = {
         "information_propagation",
     },
 
-    # --------------------------------------------------------
     # GOVERNANCE
-    # --------------------------------------------------------
 
     "governance": {
         "bureaucratic_expansion",
@@ -154,9 +139,7 @@ PATTERN_TYPES = {
         "civil_unrest",
     },
 
-    # --------------------------------------------------------
     # ORGANIZATIONAL
-    # --------------------------------------------------------
 
     "organizational": {
         "productivity_decline",
@@ -173,9 +156,7 @@ PATTERN_TYPES = {
         "scaling_failure",
     },
 
-    # --------------------------------------------------------
     # INFRASTRUCTURE
-    # --------------------------------------------------------
 
     "infrastructure": {
         "traffic_congestion",
@@ -190,9 +171,7 @@ PATTERN_TYPES = {
         "critical_dependency",
     },
 
-    # --------------------------------------------------------
     # ENVIRONMENTAL
-    # --------------------------------------------------------
 
     "environmental": {
         "climate_shift",
@@ -206,9 +185,7 @@ PATTERN_TYPES = {
         "environmental_collapse",
     },
 
-    # --------------------------------------------------------
     # HEALTH
-    # --------------------------------------------------------
 
     "health": {
         "fatigue_cycle",
@@ -222,9 +199,7 @@ PATTERN_TYPES = {
         "behavior_health_correlation",
     },
 
-    # --------------------------------------------------------
     # KNOWLEDGE
-    # --------------------------------------------------------
 
     "knowledge": {
         "knowledge_growth",
@@ -238,9 +213,7 @@ PATTERN_TYPES = {
         "memory_decay",
     },
 
-    # --------------------------------------------------------
     # SIMULATION
-    # --------------------------------------------------------
 
     "simulation": {
         "population_growth",
@@ -257,9 +230,7 @@ PATTERN_TYPES = {
         "system_instability",
     },
 
-    # --------------------------------------------------------
     # RELATIONAL
-    # --------------------------------------------------------
 
     "relational": {
         "strong_correlation",
@@ -274,9 +245,7 @@ PATTERN_TYPES = {
         "relation_instability",
     },
 
-    # --------------------------------------------------------
     # ANOMALY
-    # --------------------------------------------------------
 
     "anomaly": {
         "outlier_event",
@@ -290,9 +259,7 @@ PATTERN_TYPES = {
         "unknown_pattern",
     },
 
-    # --------------------------------------------------------
     # OPPORTUNITY
-    # --------------------------------------------------------
 
     "opportunity": {
         "investment_opportunity",
@@ -306,9 +273,7 @@ PATTERN_TYPES = {
         "optimization_potential",
     },
 
-    # --------------------------------------------------------
     # RISK
-    # --------------------------------------------------------
 
     "risk": {
         "collapse_risk",
@@ -323,10 +288,7 @@ PATTERN_TYPES = {
     },
 }
 
-
-# ============================================================
 # FLAT LOOKUP
-# ============================================================
 
 ALL_PATTERN_TYPES = sorted({
     item
@@ -334,10 +296,7 @@ ALL_PATTERN_TYPES = sorted({
     for item in category
 })
 
-
-# ============================================================
 # CATEGORY LOOKUP
-# ============================================================
 
 PATTERN_CATEGORY_LOOKUP = {}
 
@@ -347,10 +306,7 @@ for category, values in PATTERN_TYPES.items():
 
         PATTERN_CATEGORY_LOOKUP[value] = category
 
-
-# ============================================================
 # HELPERS
-# ============================================================
 
 def is_valid_pattern_type(
     pattern_type: str,
@@ -360,7 +316,6 @@ def is_valid_pattern_type(
         pattern_type
         in ALL_PATTERN_TYPES
     )
-
 
 def get_pattern_category(
     pattern_type: str,
@@ -373,7 +328,6 @@ def get_pattern_category(
         )
     )
 
-
 def get_patterns_by_category(
     category: str,
 ):
@@ -383,14 +337,10 @@ def get_patterns_by_category(
         set(),
     )
 
-
 def list_pattern_categories():
-
     return sorted(
         PATTERN_TYPES.keys()
     )
 
-
 def list_all_pattern_types():
-
     return ALL_PATTERN_TYPES

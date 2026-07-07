@@ -1,41 +1,25 @@
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional
 
-
-# =========================================================
 # RESOURCE TYPE DEFINITION
-# =========================================================
 
 @dataclass
 class ResourceTypeDefinition:
     resource_type: str
-
     category: str
-
     description: str = ""
-
     unit: Optional[str] = None
-
     renewable: bool = False
-
     transferable: bool = True
-
     measurable: bool = True
-
     related_signals: List[str] = field(default_factory=list)
-
     tags: List[str] = field(default_factory=list)
 
-
-# =========================================================
 # RESOURCE TYPES
-# =========================================================
 
 RESOURCE_TYPES: Dict[str, ResourceTypeDefinition] = {
 
-    # -----------------------------------------------------
     # FINANCIAL RESOURCES
-    # -----------------------------------------------------
 
     "money": ResourceTypeDefinition(
         resource_type="money",
@@ -98,9 +82,7 @@ RESOURCE_TYPES: Dict[str, ResourceTypeDefinition] = {
         ]
     ),
 
-    # -----------------------------------------------------
     # HUMAN RESOURCES
-    # -----------------------------------------------------
 
     "time": ResourceTypeDefinition(
         resource_type="time",
@@ -180,9 +162,7 @@ RESOURCE_TYPES: Dict[str, ResourceTypeDefinition] = {
         ]
     ),
 
-    # -----------------------------------------------------
     # ORGANIZATIONAL RESOURCES
-    # -----------------------------------------------------
 
     "employees": ResourceTypeDefinition(
         resource_type="employees",
@@ -301,9 +281,7 @@ RESOURCE_TYPES: Dict[str, ResourceTypeDefinition] = {
         ]
     ),
 
-    # -----------------------------------------------------
     # GEOGRAPHIC / NATURAL RESOURCES
-    # -----------------------------------------------------
 
     "land": ResourceTypeDefinition(
         resource_type="land",
@@ -379,9 +357,7 @@ RESOURCE_TYPES: Dict[str, ResourceTypeDefinition] = {
         ]
     ),
 
-    # -----------------------------------------------------
     # NATIONAL / MACRO RESOURCES
-    # -----------------------------------------------------
 
     "gdp": ResourceTypeDefinition(
         resource_type="gdp",
@@ -449,10 +425,7 @@ RESOURCE_TYPES: Dict[str, ResourceTypeDefinition] = {
     )
 }
 
-
-# =========================================================
 # HELPER FUNCTIONS
-# =========================================================
 
 def get_resource_type(
     resource_type: str
@@ -460,18 +433,14 @@ def get_resource_type(
 
     return RESOURCE_TYPES.get(resource_type)
 
-
 def resource_type_exists(
     resource_type: str
 ) -> bool:
 
     return resource_type in RESOURCE_TYPES
 
-
 def list_resource_types() -> List[str]:
-
     return list(RESOURCE_TYPES.keys())
-
 
 def get_resources_by_category(
     category: str
@@ -482,7 +451,6 @@ def get_resources_by_category(
         for name, definition in RESOURCE_TYPES.items()
         if definition.category == category
     ]
-
 
 def get_related_signals(
     resource_type: str
