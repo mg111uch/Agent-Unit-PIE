@@ -41,7 +41,7 @@ if gemini_key:
     from llm.providers.gemini_provider import GeminiProvider
     orchestrator.register_provider("gemini", GeminiProvider(
         api_key=gemini_key,
-        model=args.model or "gemini-3.1-flash-lite",
+        model=args.model,
     ))
 
 openrouter_key = os.getenv("OPENROUTER_API_KEY")
@@ -49,7 +49,7 @@ if openrouter_key:
     from llm.providers.openrouter_provider import OpenRouterProvider
     orchestrator.register_provider("openrouter", OpenRouterProvider(
         api_key=openrouter_key,
-        model=args.model or "openai/gpt-oss-20b:free",
+        model=args.model,
     ))
 
 conversation_id = None

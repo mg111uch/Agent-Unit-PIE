@@ -29,6 +29,7 @@ Generate compact, hierarchical documentation that helps LLM agents understand yo
 
 ```bash
 # Generate atlas
+cd Agentic_Unit_PIE/codebase/modules
 python -m codebase_atlas.main \
     --project-dir /path/to/your/project \
     --output-dir ./atlas_output \

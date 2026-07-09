@@ -38,19 +38,13 @@ from .graph_models import (
     RiskLevel,
 )
 
-
 class GraphSerializer:
-
-    # =====================================================================
     # Public Serialization API
-    # =====================================================================
-
     @classmethod
     def to_dict(
         cls,
         graph: GraphData,
     ) -> Dict[str, Any]:
-
         return {
             "graph_type": graph.graph_type.value,
             "metadata": graph.metadata,
@@ -67,77 +61,57 @@ class GraphSerializer:
                 for cluster in graph.clusters.values()
             ],
         }
-
     @classmethod
     def to_nested_dict(
         cls,
         graph: GraphData,
     ) -> Dict[str, Any]:
-
         file_nodes = []
         children_by_parent = {}
-
         for node in graph.nodes.values():
-
             if node.scope == "file":
-
                 file_nodes.append(
                     cls._node_to_dict(node)
                 )
-
             elif node.parent_id:
-
                 parent_id = node.parent_id
-
                 if parent_id not in children_by_parent:
                     children_by_parent[parent_id] = {
                         "nodes": [],
                         "edges": [],
                     }
-
                 children_by_parent[parent_id]["nodes"].append(
                     cls._node_to_dict(node)
                 )
-
         top_level_edges = []
-
         for edge in graph.edges.values():
-
             source = graph.nodes.get(edge.source)
             target = graph.nodes.get(edge.target)
-
             source_is_call = (
                 source and
                 source.parent_id
             )
-
             target_is_call = (
                 target and
                 target.parent_id
             )
-
             if (
                 source_is_call and
                 target_is_call
             ):
-
                 if (
                     source.parent_id ==
                     target.parent_id
                 ):
-
                     children_by_parent[
                         source.parent_id
                     ]["edges"].append(
                         cls._edge_to_dict(edge)
                     )
-
                 else:
-
                     top_level_edges.append(
                         cls._edge_to_dict(edge)
                     )
-
             elif (
                 source_is_call and
                 not target_is_call
@@ -145,20 +119,16 @@ class GraphSerializer:
                 not source_is_call and
                 target_is_call
             ):
-
                 top_level_edges.append(
                     cls._edge_to_dict(edge)
                 )
-
             elif (
                 not source_is_call and
                 not target_is_call
             ):
-
                 top_level_edges.append(
                     cls._edge_to_dict(edge)
                 )
-
         return {
             "graph_type": graph.graph_type.value,
             "metadata": graph.metadata,
@@ -170,7 +140,6 @@ class GraphSerializer:
             ],
             "children_by_parent": children_by_parent,
         }
-
     @classmethod
     def to_json(
         cls,
@@ -178,13 +147,11 @@ class GraphSerializer:
         *,
         indent: int = 2,
     ) -> str:
-
         return json.dumps(
             cls.to_dict(graph),
             indent=indent,
             sort_keys=False,
         )
-
     @classmethod
     def save_json(
         cls,
@@ -193,14 +160,11 @@ class GraphSerializer:
         *,
         indent: int = 2,
     ) -> None:
-
         output_path = Path(output_path)
-
         output_path.parent.mkdir(
             parents=True,
             exist_ok=True,
         )
-
         output_path.write_text(
             cls.to_json(
                 graph,
@@ -208,17 +172,12 @@ class GraphSerializer:
             ),
             encoding="utf-8",
         )
-
-    # =====================================================================
     # Public Deserialization API
-    # =====================================================================
-
     @classmethod
     def from_dict(
         cls,
         data: Dict[str, Any],
     ) -> GraphData:
-
         graph = GraphData(
             graph_type=GraphType(
                 data["graph_type"]
@@ -228,87 +187,64 @@ class GraphSerializer:
                 {},
             ),
         )
-
         #
         # Clusters first
         #
-
         for cluster_data in data.get(
             "clusters",
             [],
         ):
-
             cluster = cls._cluster_from_dict(
                 cluster_data
             )
-
             graph.add_cluster(cluster)
-
         #
         # Nodes
         #
-
         for node_data in data.get(
             "nodes",
             [],
         ):
-
             node = cls._node_from_dict(
                 node_data
             )
-
             graph.add_node(node)
-
         #
         # Edges
         #
-
         for edge_data in data.get(
             "edges",
             [],
         ):
-
             edge = cls._edge_from_dict(
                 edge_data
             )
-
             graph.add_edge(edge)
-
         return graph
-
     @classmethod
     def from_json(
         cls,
         json_text: str,
     ) -> GraphData:
-
         return cls.from_dict(
             json.loads(json_text)
         )
-
     @classmethod
     def load_json(
         cls,
         input_path: str | Path,
     ) -> GraphData:
-
         input_path = Path(input_path)
-
         return cls.from_json(
             input_path.read_text(
                 encoding="utf-8"
             )
         )
-
-    # =====================================================================
     # Node Serialization
-    # =====================================================================
-
     @staticmethod
     def _node_to_dict(
         node: GraphNode,
     ) -> Dict[str, Any]:
-
         data = {
             "id": node.id,
             "label": node.label,
@@ -320,29 +256,22 @@ class GraphSerializer:
             "scope": node.scope,
             "metadata": node.metadata,
         }
-
         if node.x is not None and node.y is not None:
-
             data["position"] = {
                 "x": node.x,
                 "y": node.y,
             }
-
         if node.pinned or node.hidden or node.color:
-
             data["visual"] = {
                 "pinned": node.pinned,
                 "hidden": node.hidden,
                 "color": node.color,
             }
-
         return data
-
     @staticmethod
     def _node_from_dict(
         data: Dict[str, Any],
     ) -> GraphNode:
-
         return GraphNode(
             id=data["id"],
             label=data["label"],
@@ -384,29 +313,20 @@ class GraphSerializer:
                 "color"
             ),
         )
-
-    # =====================================================================
     # Edge Serialization
-    # =====================================================================
-
     @staticmethod
     def _edge_to_dict(
         edge: GraphEdge,
     ) -> Dict[str, Any]:
-
         data = asdict(edge)
-
         data["type"] = (
             edge.edge_type.value
         )
-
         return data
-
     @staticmethod
     def _edge_from_dict(
         data: Dict[str, Any],
     ) -> GraphEdge:
-
         return GraphEdge(
             id=data["id"],
             source=data["source"],
@@ -430,16 +350,11 @@ class GraphSerializer:
                 False,
             ),
         )
-
-    # =====================================================================
     # Cluster Serialization
-    # =====================================================================
-
     @staticmethod
     def _cluster_to_dict(
         cluster: GraphCluster,
     ) -> Dict[str, Any]:
-
         return {
             "id": cluster.id,
             "label": cluster.label,
@@ -452,12 +367,10 @@ class GraphSerializer:
             "metadata": cluster.metadata,
             "collapsed": cluster.collapsed,
         }
-
     @staticmethod
     def _cluster_from_dict(
         data: Dict[str, Any],
     ) -> GraphCluster:
-
         return GraphCluster(
             id=data["id"],
             label=data["label"],

@@ -13,7 +13,6 @@ from flask import (
 from .graph_models import GraphData
 from .graph_serializer import GraphSerializer
 
-
 ROOT_DIR = Path(__file__).parent.parent
 
 WEB_DIR = ROOT_DIR / "web"
@@ -22,21 +21,16 @@ _POS_FILE = {
     "unified": "node_positions.json",
 }
 
-
 def _read_project_id(output_dir: Path) -> str | None:
-
     meta_file = output_dir / "atlas_meta.json"
-
     if not meta_file.exists():
         return None
-
     try:
         return json.loads(
             meta_file.read_text(encoding="utf-8")
         ).get("project_id")
     except Exception:
         return None
-
 
 def _load_positions_with_meta(
     output_dir: Path,
@@ -66,7 +60,6 @@ def _load_positions_with_meta(
         )
 
     return "legacy", data, None
-
 
 def _merge_positions(
     graph: GraphData,
@@ -102,7 +95,6 @@ def _merge_positions(
 
         node.x = pos.get("x", node.x)
         node.y = pos.get("y", node.y)
-
 
 def _write_positions(
     output_dir: Path,
@@ -141,7 +133,6 @@ def _write_positions(
         encoding="utf-8",
     )
 
-
 def create_app(
     unified_graph: GraphData | None = None,
     output_dir: str | Path | None = None,
@@ -166,7 +157,6 @@ def create_app(
         project_id=project_id,
     )
 
-
 def _build_app(
     graph_json: str | None = None,
     output_dir: str | Path | None = None,
@@ -181,7 +171,6 @@ def _build_app(
 
     @app.route("/view/interactive")
     def index():
-
         return render_template(
             "graph_viewer.html",
             graph_json=graph_json,
@@ -189,7 +178,6 @@ def _build_app(
 
     @app.route("/web/<path:path>")
     def web_assets(path: str):
-
         return send_from_directory(
             WEB_DIR,
             path,
@@ -197,69 +185,54 @@ def _build_app(
 
     @app.route("/api/graph")
     def api_graph():
-
         if graph_json is None:
             return jsonify(
                 {"error": "unified graph not configured"}
             ), 400
-
         return jsonify(
             json.loads(graph_json)
         )
 
     @app.route("/api/graph/children/<node_id>")
     def api_graph_children(node_id):
-
         if graph_json is None:
             return jsonify(
                 {"error": "unified graph not configured"}
             ), 400
-
         try:
-
             data = json.loads(graph_json)
-
         except Exception:
             return jsonify(
                 {"error": "invalid graph data"}
             ), 500
-
         children = data.get("children_by_parent", {}).get(
             node_id,
             {"nodes": [], "edges": []}
         )
-
         return jsonify(children)
 
     @app.route("/api/save-positions", methods=["POST"])
     def save_positions():
-
         if output_dir is None:
             return jsonify(
                 {"error": "output_dir not configured"}
             ), 400
-
         if project_id is None:
             return jsonify(
                 {"error": "project_id not configured"}
             ), 400
-
         data = request.get_json(silent=True)
-
         if not data:
             return jsonify(
                 {"error": "invalid JSON"}
             ), 400
-
         graph_type = data.get("graph_type", "unified")
         positions = data.get("positions")
         child_offsets = data.get("child_offsets")
-
         if not isinstance(positions, dict):
             return jsonify(
                 {"error": "positions must be an object"}
             ), 400
-
         rounded = {
             node_id: {
                 "x": round(pos["x"]),
@@ -269,7 +242,6 @@ def _build_app(
             if isinstance(pos, dict) and
                "x" in pos and "y" in pos
         }
-
         rounded_child_offsets = None
         if isinstance(child_offsets, dict):
             rounded_child_offsets = {
@@ -285,7 +257,6 @@ def _build_app(
                 for parent_id, offsets in child_offsets.items()
                 if isinstance(offsets, dict)
             }
-
         _write_positions(
             output_dir,
             graph_type,
@@ -293,26 +264,21 @@ def _build_app(
             project_id,
             rounded_child_offsets,
         )
-
         return jsonify({"saved": True})
 
     @app.route("/api/child-offsets")
     def api_child_offsets():
-
         if output_dir is None:
             return jsonify({}), 200
-
         _, _, child_offsets = _load_positions_with_meta(
             output_dir,
             "unified",
         )
-
         return jsonify(
             child_offsets or {}
         )
 
     return app
-
 
 if __name__ == "__main__":
 

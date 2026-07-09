@@ -2,12 +2,13 @@
 """
 Whitespace Cleaner — removes excess blank lines from function/class bodies
 while keeping standard one-line spacing between definitions.
+Supports .py, .js, .jsx, .ts, .tsx files.
 
 Usage:
     # Single file (Output: Removed 104 blank lines)
     python whitespace_clean.py path/to/file.py
 
-    # Recursive directory (all .py files)
+    # Recursive directory (all .py, .js, .ts, .tsx files)
     python whitespace_clean.py --dir path/to/dir
 
     # Dry-run (show what would change without modifying)
@@ -51,23 +52,67 @@ def simplify_headers(content: str) -> str:
       # ================     # ===== NAME =====
       # NAME
       # ================
+    
+    Also supports // and /* */ styles:
+      // ================     // ===== NAME =====
+      // NAME
+      // ================
+      
+      /* ================    /* ===== NAME =====
+       * NAME
+       * ================     */
+       
+      /* ================    /* ===== NAME =====
+      /* NAME        */
+      /* ================     */
     """
-    def _replacer(m):
+    def _replacer_single(m):
+        indent = m.group(1)
+        comment = m.group(2)
+        name = m.group(4).strip()
+        return f"{indent}{comment} {name}"
+
+    content = re.sub(
+        r'^([ \t]*)(#|//)[ \t]*([=\-]{3,})\s*'
+        r'\n\1\2[ \t]*(.+?)\s*'
+        r'\n\1\2[ \t]*\3',
+        _replacer_single,
+        content,
+        flags=re.MULTILINE,
+    )
+    
+    def _replacer_block(m):
         indent = m.group(1)
         name = m.group(3).strip()
-        return f"{indent}# {name}"
+        return f"{indent}/* {name} */"
 
-    return re.sub(
-        r'^([ \t]*)#[ \t]*([=\-]{3,})\s*'
-        r'\n\1#[ \t]*(.+?)\s*'
-        r'\n\1#[ \t]*\2',
-        _replacer,
+    content = re.sub(
+        r'^([ \t]*)/\*[ \t]*([=\-]{3,})\s*'
+        r'\n\1[ \t]*\*[ \t]*(.+?)\s*'
+        r'\n\1[ \t]*\*[ \t]*([=\-]{3,})\s*\*/',
+        _replacer_block,
         content,
         flags=re.MULTILINE,
     )
 
+    def _replacer_block_inline(m):
+        indent = m.group(1)
+        name = m.group(3).strip()
+        return f"{indent}/* {name} */"
 
-def clean_file_content(content: str) -> str:
+    content = re.sub(
+        r'^([ \t]*)/\*[ \t]*([=\-]{3,})\s*\*/'
+        r'\n\1/\*[ \t]*(.+?)\s*\*/'
+        r'\n\1/\*[ \t]*([=\-]{3,})\s*\*/',
+        _replacer_block_inline,
+        content,
+        flags=re.MULTILINE,
+    )
+    
+    return content
+
+
+def clean_file_content_py(content: str) -> str:
     """Remove excess blank lines inside function/class bodies.
 
     Uses a look-ahead strategy: when a blank line is encountered, it peeks at
@@ -164,6 +209,64 @@ def clean_file_content(content: str) -> str:
     return "\n".join(output)
 
 
+_JS_TOP_LEVEL_PREFIXES = (
+    "function ", "async function ", "class ", "export ",
+    "const ", "let ", "var ", "interface ", "type ", "enum ", "import ",
+)
+
+
+def clean_file_content_js_ts(content: str) -> str:
+    """Collapse excess blank lines in JS/TS files.
+
+    Uses brace-depth tracking to distinguish top-level declarations from
+    in-body blocks:
+      - Inside braces (depth > 0): all blank lines removed.
+      - At brace depth 0: consecutive blanks collapsed to at most one,
+        and exactly one blank kept before recognized top-level declarations.
+    """
+    lines = content.split("\n")
+    if not lines:
+        return content
+
+    output = []
+    depth = 0
+    blank_pending = False
+
+    for raw in lines:
+        stripped = raw.strip()
+
+        if not stripped:
+            blank_pending = True
+            continue
+
+        for ch in raw:
+            if ch == "{":
+                depth += 1
+            elif ch == "}":
+                depth -= 1
+
+        if blank_pending:
+            if depth > 0:
+                pass
+            else:
+                if not output or output[-1].strip() != "":
+                    output.append("")
+            blank_pending = False
+
+        output.append(raw)
+
+    while output and not output[-1].strip():
+        output.pop()
+
+    result = []
+    for line in output:
+        if not line.strip() and result and not result[-1].strip():
+            continue
+        result.append(line)
+
+    return "\n".join(result)
+
+
 def process_file(
     filepath: str,
     dry_run: bool = False,
@@ -171,14 +274,18 @@ def process_file(
     check: bool = False,
     simplify_headers_flag: bool = False,
 ) -> dict:
-    """Clean a single .py file.
+    ext = os.path.splitext(filepath)[1].lower()
+    if ext == ".py":
+        cleaner = clean_file_content_py
+    elif ext in (".js", ".jsx", ".ts", ".tsx"):
+        cleaner = clean_file_content_js_ts
+    else:
+        return {"changed": False, "lines_removed": 0, "headers_done": 0}
 
-    Returns dict: {"changed": bool, "lines_removed": int, "headers_done": int}
-    """
     with open(filepath, "r", encoding="utf-8") as f:
         original = f.read()
 
-    cleaned = clean_file_content(original)
+    cleaned = cleaner(original)
 
     if simplify_headers_flag:
         cleaned = simplify_headers(cleaned)
@@ -187,18 +294,19 @@ def process_file(
 
     headers_done = 0
     if simplify_headers_flag:
-        orig_headers = len(re.findall(
-            r'^[ \t]*#[ \t]*[=\-]{3,}\s*'
-            r'\n[ \t]*#[ \t]*.+?\s*'
-            r'\n[ \t]*#[ \t]*[=\-]{3,}',
-            original, re.MULTILINE
-        ))
-        clean_headers = len(re.findall(
-            r'^[ \t]*#[ \t]*[=\-]{3,}\s*'
-            r'\n[ \t]*#[ \t]*.+?\s*'
-            r'\n[ \t]*#[ \t]*[=\-]{3,}',
-            cleaned, re.MULTILINE
-        ))
+        header_pattern = (
+            r"(?:^[ \t]*(?:#|//)[ \t]*[=\-]{3,}\s*"
+            r"\n[ \t]*(?:#|//)[ \t]*.+?\s*"
+            r"\n[ \t]*(?:#|//)[ \t]*[=\-]{3,})"
+            r"|(?:^[ \t]*/\*[ \t]*[=\-]{3,}\s*"
+            r"\n[ \t]*\*[ \t]*.+?\s*"
+            r"\n[ \t]*\*[ \t]*[=\-]{3,}\s*\*/)"
+            r"|(?:^[ \t]*/\*[ \t]*[=\-]{3,}\s*\*/"
+            r"\n[ \t]*/\*[ \t]*.+?\s*\*/"
+            r"\n[ \t]*/\*[ \t]*[=\-]{3,}\s*\*/)"
+        )
+        orig_headers = len(re.findall(header_pattern, original, re.MULTILINE))
+        clean_headers = len(re.findall(header_pattern, cleaned, re.MULTILINE))
         headers_done = orig_headers - clean_headers
 
     changed = blank_diff != 0 or headers_done != 0
@@ -239,18 +347,19 @@ def process_dir(
     check: bool = False,
     simplify_headers_flag: bool = False,
 ) -> int:
-    """Recursively clean all .py files under dirpath.  Returns error count."""
+    """Recursively clean .py, .js, .jsx, .ts, .tsx files under dirpath. Returns error count."""
     errors = 0
     total_lines = 0
     total_headers = 0
     modified_count = 0
     ignore_set = set(ignore_dirs or [])
+    valid_exts = (".py", ".js", ".jsx", ".ts", ".tsx")
 
     for root, dirs, files in os.walk(dirpath):
         dirs[:] = [d for d in dirs if d not in ignore_set]
 
         for fname in files:
-            if not fname.endswith(".py"):
+            if not fname.lower().endswith(valid_exts):
                 continue
             fpath = os.path.join(root, fname)
             try:
@@ -290,7 +399,7 @@ def main():
     )
     parser.add_argument(
         "--dir", action="store_true",
-        help="Recursively process all .py files under the given path",
+        help="Recursively process .py, .js, .jsx, .ts, .tsx files under the given path",
     )
     parser.add_argument(
         "--dry-run", action="store_true",
@@ -337,8 +446,8 @@ def main():
         if not os.path.isfile(args.path):
             print(f"Error: '{args.path}' is not a file", file=sys.stderr)
             sys.exit(1)
-        if not args.path.endswith(".py"):
-            print("Error: only .py files are supported", file=sys.stderr)
+        if not args.path.lower().endswith((".py", ".js", ".jsx", ".ts", ".tsx")):
+            print("Error: only .py, .js, .jsx, .ts, .tsx files are supported", file=sys.stderr)
             sys.exit(1)
         result = process_file(
             args.path,

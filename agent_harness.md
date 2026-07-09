@@ -2,7 +2,7 @@
 
 ## TASK
 
-Currently agent only use gemini api for llm, i also want to integrate openrouter api so that user can select when to use use which provider. Also how `python/Agentic_Unit_PIE/codebase/llm/llm_orchestrator.py` can be ontegrated to main agent loop. Also current agent writes every terminal output to tui_output.txt file, instead i want it to write last terminal output with error only when user enters a command in agent ternimal. How can this be achieved.
+I have build a agent `/home/manigupt/Hello/Agentic_Unit_PIE/codebase/agent.py`. I want to improve its coding finctionalities by making it a proper agent like claudecode codex or opencode. I dont want to build a terminal based ui, nor a desktop app nor a vscode extension. I am planning to make it browser based. Can it work. What issues i would face. Should i use plain html js or use a framework with ts. Can all finctionalities of a standard coding agent be covered on a browser. 
 
 Start by knowing module details by reading `python/Agentic_Unit_PIE/system_devpt_reports/orchestrator.md`.
 
@@ -10,12 +10,12 @@ Do not give code or make any changes, just a concise plan or answer.
 
 ## Project Paths
 
-- **Project_root:**  `/home/manigupt/Hello/python/Agentic_Unit_PIE`
-- **Source_code:** (Working directory) `/home/manigupt/Hello/python/Agentic_Unit_PIE/codebase`
+- **Project_root:**  `/home/manigupt/Hello/Agentic_Unit_PIE`
+- **Source_code:** (Working directory) `/home/manigupt/Hello/Agentic_Unit_PIE/codebase`
 
 ## Code Execution & Validation Environment
 
-- **Command to run project:** `cd /home/manigupt/Hello/python/Agentic_Unit_PIE/codebase && conda run -n myenv python agent.py`
+- **Command to run project:** `cd /home/manigupt/Hello/Agentic_Unit_PIE/codebase && conda run -n myenv python agent.py`
 
 ## Core principles
 

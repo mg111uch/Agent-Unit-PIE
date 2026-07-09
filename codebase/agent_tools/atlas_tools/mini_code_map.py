@@ -5,8 +5,8 @@ import yaml
 from pathlib import Path
 
 # --- CONFIGURATION ---
-LEGACY_DIR = "/home/manigupt/Hello/python/control/dota2/grok4/dota2_gym"  # Point this to your legacy folder
-OUTPUT_FILE = "/home/manigupt/Hello/python/control/dota2/grok4/legacy_atlas.md"
+LEGACY_DIR = "/home/manigupt/Hello/python/Agentic_Unit_PIE/codebase/kernel"  # Point this to your legacy folder
+OUTPUT_FILE = "/home/manigupt/Hello/python/Agentic_Unit_PIE/atlas_output/legacy_atlas.md"
 IGNORE_DIRS = {'.git', '__pycache__', 'venv', '.ipynb_checkpoints'}
 # ---------------------
 
@@ -60,13 +60,13 @@ class AtlasGenerator:
             if rel_path == ".":
                 rel_path = "Root"
             
-            markdown.append(f"## 📂 Directory: {rel_path}")
+            markdown.append(f"## {rel_path}")
             
             for file in sorted(files):
                 file_path = Path(root) / file
                 ext = file_path.suffix.lower()
                 
-                markdown.append(f"### 📄 `{file}`")
+                markdown.append(f"### `{file}`")
                 
                 if ext == '.py':
                     data = self.parse_python_file(file_path)
@@ -75,10 +75,10 @@ class AtlasGenerator:
                             for cls in data["classes"]:
                                 markdown.append(f"- **Class:** `{cls['name']}`")
                                 for m in cls['methods']:
-                                    markdown.append(f"  - Method: `{m}()`")
+                                    markdown.append(f"  - {m}()")
                         if data["functions"]:
                             for func in data["functions"]:
-                                markdown.append(f"- **Function:** `{func}()`")
+                                markdown.append(f"- {func}()")
                     else:
                         markdown.append(f"- ⚠️ {data}")
                 

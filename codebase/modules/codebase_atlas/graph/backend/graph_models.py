@@ -19,11 +19,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Dict, List, Optional, Set
 
-
-# ============================================================================
 # ENUMS
-# ============================================================================
-
 
 class NodeType(str, Enum):
     FILE = "file"
@@ -33,14 +29,12 @@ class NodeType(str, Enum):
     PACKAGE = "package"
     EXTERNAL = "external"
 
-
 class EdgeType(str, Enum):
     DEPENDS_ON = "depends_on"
     IMPORTS = "imports"
     CALLS = "calls"
     INHERITS = "inherits"
     REFERENCES = "references"
-
 
 class RiskLevel(str, Enum):
     NONE = "none"
@@ -53,10 +47,7 @@ class GraphType(str, Enum):
     CALL = "call"
     UNIFIED = "unified"
 
-# ============================================================================
 # CORE GRAPH OBJECTS
-# ============================================================================
-
 
 @dataclass(slots=True)
 class GraphNode:
@@ -69,55 +60,37 @@ class GraphNode:
         class node
         external dependency node
     """
-
     id: str
     label: str
     node_type: NodeType
-
     color: str | None = None
     size: float | None = None
-
     risk_level: RiskLevel = RiskLevel.NONE
     entry_point: bool = False
-
     cluster_id: Optional[str] = None
-
     parent_id: Optional[str] = None
     scope: str = "file"
-
     children: List[GraphNode] = field(default_factory=list)
-
     metadata: Dict[str, Any] = field(default_factory=dict)
-
     x: Optional[float] = None
     y: Optional[float] = None
-
     pinned: bool = False
     hidden: bool = False
-
 
 @dataclass(slots=True)
 class GraphEdge:
     """
     Canonical graph edge.
     """
-
     id: str
-
     source: str
     target: str
-
     edge_type: EdgeType
-
     label: str | None = None
-
     weight: float = 1.0
     strength: float = 1.0
-
     metadata: Dict[str, Any] = field(default_factory=dict)
-
     hidden: bool = False
-
 
 @dataclass(slots=True)
 class GraphCluster:
@@ -129,23 +102,14 @@ class GraphCluster:
         package containing modules
         directory grouping files
     """
-
     id: str
     label: str
-
     node_ids: Set[str] = field(default_factory=set)
-
     parent_cluster_id: Optional[str] = None
-
     metadata: Dict[str, Any] = field(default_factory=dict)
-
     collapsed: bool = False
 
-
-# ============================================================================
 # GRAPH ROOT OBJECT
-# ============================================================================
-
 
 @dataclass(slots=True)
 class GraphData:
@@ -154,19 +118,12 @@ class GraphData:
 
     All renderers and algorithms consume this object.
     """
-
     graph_type: GraphType = GraphType.DEPENDENCY
-
     nodes: Dict[str, GraphNode] = field(default_factory=dict)
     edges: Dict[str, GraphEdge] = field(default_factory=dict)
     clusters: Dict[str, GraphCluster] = field(default_factory=dict)
-
     metadata: Dict[str, Any] = field(default_factory=dict)
-
-    # ---------------------------------------------------------------------
     # Node operations
-    # ---------------------------------------------------------------------
-
     def add_node(self, node: GraphNode) -> None:
         self.nodes[node.id] = node
 
@@ -176,30 +133,21 @@ class GraphData:
     def has_node(self, node_id: str) -> bool:
         return node_id in self.nodes
 
-    # ---------------------------------------------------------------------
     # Edge operations
-    # ---------------------------------------------------------------------
-
     def add_edge(self, edge: GraphEdge) -> None:
         self.edges[edge.id] = edge
 
     def get_edge(self, edge_id: str) -> Optional[GraphEdge]:
         return self.edges.get(edge_id)
 
-    # ---------------------------------------------------------------------
     # Cluster operations
-    # ---------------------------------------------------------------------
-
     def add_cluster(self, cluster: GraphCluster) -> None:
         self.clusters[cluster.id] = cluster
 
     def get_cluster(self, cluster_id: str) -> Optional[GraphCluster]:
         return self.clusters.get(cluster_id)
 
-    # ---------------------------------------------------------------------
     # Query helpers
-    # ---------------------------------------------------------------------
-
     def outgoing_edges(self, node_id: str) -> List[GraphEdge]:
         return [
             edge
@@ -216,19 +164,14 @@ class GraphData:
 
     def neighbors(self, node_id: str) -> Set[str]:
         result = set()
-
         for edge in self.edges.values():
             if edge.source == node_id:
                 result.add(edge.target)
             elif edge.target == node_id:
                 result.add(edge.source)
-
         return result
 
-    # ---------------------------------------------------------------------
     # Statistics
-    # ---------------------------------------------------------------------
-
     @property
     def node_count(self) -> int:
         return len(self.nodes)
