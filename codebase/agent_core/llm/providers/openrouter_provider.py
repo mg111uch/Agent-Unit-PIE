@@ -43,12 +43,20 @@ class OpenRouterProvider:
         )
 
         choice = res.choices[0] if res.choices else None
-        response_text = choice.message.content if choice else ""
+        # content can be None (refusal, tool-only, or some free models)
+        response_text = ""
+        if choice and choice.message:
+            response_text = choice.message.content or ""
+            # Some models put text in reasoning / refusal fields only
+            if not response_text:
+                refusal = getattr(choice.message, "refusal", None)
+                if refusal:
+                    response_text = str(refusal)
         token_count = res.usage.total_tokens if res.usage else 0
 
         return {
             "status": "success",
-            "response": response_text,
+            "response": response_text if response_text is not None else "",
             "conversation_id": None,
             "usage": {
                 "total_tokens": token_count,

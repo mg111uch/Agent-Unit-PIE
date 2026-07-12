@@ -14,5 +14,5 @@ def fibonacci_iterative(n):
 
 # Example usage:
 n_terms = 10
-print(f"Fibonacci sequence for the first {n_terms} terms: {fibonacci_iterative(n_terms)}") 
+print(f"Fibonacci sequence for the first {n_terms} terms: {fib(n_terms)}") 
 # Output: Fibonacci sequence for the first 10 terms: [0, 1, 1, 2, 3, 5, 8, 13, 21, 34]

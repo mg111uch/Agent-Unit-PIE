@@ -2,7 +2,7 @@
 
 ## TASK
 
-I have build a agent `/home/manigupt/Hello/Agentic_Unit_PIE/codebase/agent.py`. I want to improve its coding finctionalities by making it a proper agent like claudecode codex or opencode. I dont want to build a terminal based ui, nor a desktop app nor a vscode extension. I am planning to make it browser based. Can it work. What issues i would face. Should i use plain html js or use a framework with ts. Can all finctionalities of a standard coding agent be covered on a browser. 
+Implement the fixes given in `Agentic_Unit_PIE/agent_fix_and_upgrade_plan.md`.
 
 Start by knowing module details by reading `python/Agentic_Unit_PIE/system_devpt_reports/orchestrator.md`.
 
@@ -15,7 +15,7 @@ Do not give code or make any changes, just a concise plan or answer.
 
 ## Code Execution & Validation Environment
 
-- **Command to run project:** `cd /home/manigupt/Hello/Agentic_Unit_PIE/codebase && conda run -n myenv python agent.py`
+- **Command to run project:** `cd /home/manigupt/Hello/Agentic_Unit_PIE/codebase && conda run -n myenv python server.py`
 
 ## Core principles
 

@@ -1,13 +1,13 @@
 ## Codebase size
-Total files processed: 219
-Total lines of code: 40812
-Total tokens: 259549
+Total files processed: 232
+Total lines of code: 41347
+Total tokens: 263810
 ## End Codebase size
 
 ## Directory Structure 
 - **Project path:** `/home/manigupt/Hello/Agentic_Unit_PIE`
 ### FILE_MAP Tree
-├── codebase/ [40409 LOC, 218250 tokens]
+├── codebase/ [41047 LOC, 223316 tokens]
 │   ├── storage/ [792 LOC, 3754 tokens]
 │   │   ├── raw_observation_storage.py
 │   │   ├── [] unit_storage.py [416 LOC, 1964 tokens]
@@ -71,6 +71,10 @@ Total tokens: 259549
 │   │   │   ├── [] retrieval_engine.py [401 LOC, 1916 tokens]
 │   │   │   ├── [] hierarchy_retriever.py [408 LOC, 1995 tokens]
 │   │   │   └── [] relation_retriever.py [9 LOC, 109 tokens]
+│   │   ├── extractors/
+│   │   │   ├── signal_extractor.py
+│   │   │   ├── pattern_extractor.py
+│   │   │   └── hypothesis_extractor.py
 │   │   ├── signals/ [738 LOC, 4038 tokens]
 │   │   │   ├── signal_extractor.py
 │   │   │   ├── [] signal_engine.py [322 LOC, 1710 tokens]
@@ -270,28 +274,40 @@ Total tokens: 259549
 │   │       ├── [] digital_twin_manager.py [635 LOC, 2797 tokens]
 │   │       ├── [] human_twin.py [624 LOC, 2827 tokens]
 │   │       └── [] company_twin.py [767 LOC, 3599 tokens]
-│   ├── tests/ [179 LOC, 1156 tokens]
+│   ├── tests/ [179 LOC, 1177 tokens]
 │   │   ├── [] __init__.py [1 LOC, 9 tokens]
-│   │   └── [] agent_test.py [178 LOC, 1147 tokens]
-│   ├── llm/ [662 LOC, 3567 tokens]
-│   │   ├── providers/ [149 LOC, 1014 tokens]
-│   │   │   ├── [] openrouter_provider.py [57 LOC, 376 tokens]
-│   │   │   ├── [] mock_provider.py [36 LOC, 278 tokens]
-│   │   │   ├── __init__.py
-│   │   │   └── [] gemini_provider.py [56 LOC, 360 tokens]
-│   │   ├── extractors/
-│   │   │   ├── signal_extractor.py
-│   │   │   ├── pattern_extractor.py
-│   │   │   └── hypothesis_extractor.py
-│   │   ├── [] context_builder.py [400 LOC, 1791 tokens]
-│   │   └── [] llm_orchestrator.py [113 LOC, 762 tokens]
-│   ├── [] server.py [336 LOC, 2514 tokens]
-│   ├── [] system_instruction.md [99 LOC, 758 tokens]
-│   ├── [] agent_tools.py [602 LOC, 4086 tokens]
-│   ├── [] agent.py [300 LOC, 2205 tokens]
+│   │   └── [] agent_test.py [178 LOC, 1168 tokens]
+│   ├── agent_core/ [2046 LOC, 13560 tokens]
+│   │   ├── tools/ [570 LOC, 4034 tokens]
+│   │   │   ├── [X] kernel_ops.py [220 LOC, 1454 tokens]
+│   │   │   ├── [X] sim_ops.py [92 LOC, 531 tokens]
+│   │   │   ├── [] __init__.py [96 LOC, 644 tokens]
+│   │   │   └── [X] file_ops.py [162 LOC, 1405 tokens]
+│   │   ├── llm/ [679 LOC, 3722 tokens]
+│   │   │   ├── providers/ [166 LOC, 1166 tokens]
+│   │   │   │   ├── [X] openrouter_provider.py [65 LOC, 455 tokens]
+│   │   │   │   ├── [X] mock_provider.py [38 LOC, 287 tokens]
+│   │   │   │   ├── __init__.py
+│   │   │   │   └── [X] gemini_provider.py [63 LOC, 424 tokens]
+│   │   │   ├── [] context_builder.py [400 LOC, 1791 tokens]
+│   │   │   ├── [X] llm_orchestrator.py [113 LOC, 765 tokens]
+│   │   │   └── __init__.py
+│   │   ├── [X] workspace.py [35 LOC, 214 tokens]
+│   │   ├── [X] context.py [45 LOC, 311 tokens]
+│   │   ├── [X] response_parse.py [100 LOC, 795 tokens]
+│   │   ├── [X] providers_setup.py [89 LOC, 692 tokens]
+│   │   ├── [X] auto_research.py [138 LOC, 938 tokens]
+│   │   ├── [X] prompts.py [23 LOC, 155 tokens]
+│   │   ├── [X] config.py [48 LOC, 362 tokens]
+│   │   ├── [X] agent_loop.py [272 LOC, 1978 tokens]
+│   │   ├── [X] __init__.py [22 LOC, 160 tokens]
+│   │   └── [X] commands.py [25 LOC, 199 tokens]
+│   ├── [X] server.py [454 LOC, 3055 tokens]
+│   ├── [X] system_instruction.md [97 LOC, 1200 tokens]
 │   ├── [] __init__.py [1 LOC, 5 tokens]
-│   └── tui_output.txt
-├── system_devpt_reports/ [1584 LOC, 12934 tokens]
+│   ├── [] tui_output.txt [4 LOC, 24 tokens]
+│   └── [] config.json [36 LOC, 336 tokens]
+├── system_devpt_reports/ [1574 LOC, 12842 tokens]
 │   ├── codebase_atlas/ [664 LOC, 7431 tokens]
 │   │   ├── [] current_status.md [211 LOC, 1311 tokens]
 │   │   ├── [] devpt_roadmap.md [202 LOC, 4004 tokens]
@@ -299,13 +315,15 @@ Total tokens: 259549
 │   ├── [] kernel.md [162 LOC, 1110 tokens]
 │   ├── [] debate_engine.md [323 LOC, 1739 tokens]
 │   ├── [] simulation_engine.md [217 LOC, 1380 tokens]
-│   └── [] orchestrator.md [218 LOC, 1274 tokens]
+│   └── [X] orchestrator.md [208 LOC, 1182 tokens]
 ├── [] GPT_5-5_Chat.md [4962 LOC, 18724 tokens]
-├── [] Issues_n_ideas.md [11 LOC, 1 tokens]
-├── [] agent_harness.md [34 LOC, 403 tokens]
-├── [] code_atlas.md [310 LOC, 5461 tokens]
+├── Issues_n_ideas.md
+├── [X] agent_fix_and_upgrade_plan.md [192 LOC, 2868 tokens]
+├── [] agent_harness.md [34 LOC, 303 tokens]
+├── [] code_atlas.md [323 LOC, 5729 tokens]
 ├── [] Devpt_phases.md [333 LOC, 2918 tokens]
-├── code_dump.txt
+├── [] code_dump.txt [2714 LOC, 19909 tokens]
+├── [] agent_test_prompts.md [78 LOC, 739 tokens]
 ├── [] .gitignore [7 LOC, 23 tokens]
 ├── [] README.md [953 LOC, 4763 tokens]
 └── [] project_tools.md [24 LOC, 884 tokens]

@@ -45,10 +45,17 @@ class GeminiProvider:
                 + getattr(usage, "candidates_token_count", 0)
             )
 
+        output = getattr(res, "output_text", None)
+        if output is None:
+            # Fallback for SDK shape differences
+            output = getattr(res, "text", None) or ""
+        if not isinstance(output, str):
+            output = str(output) if output is not None else ""
+
         return {
             "status": "success",
-            "response": res.output_text,
-            "conversation_id": res.id,
+            "response": output,
+            "conversation_id": getattr(res, "id", None),
             "usage": {
                 "total_tokens": token_count,
                 "estimated_cost": 0.0,

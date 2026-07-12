@@ -1,0 +1,36 @@
+{
+  "default_provider": "gemini",
+  "default_model": "gemini-3.1-flash-lite",
+  "providers": {
+    "gemini": {
+      "default_model": "gemini-3.1-flash-lite",
+      "models": [
+        "gemini-3.5-flash",
+        "gemini-3.1-pro-preview",
+        "gemini-3.1-flash-lite",
+        "gemini-3.1-flash-lite-image",
+        "gemma-4-31b-it",
+        "gemma-4-26b-a4b-it"
+      ]
+    },
+    "openrouter": {
+      "default_model": "openai/gpt-oss-20b:free",
+      "models": [
+        "google/gemma-4-26b-a4b-it:free",
+        "google/gemma-4-31b-it:free",
+        "openai/gpt-oss-120b:free",
+        "openai/gpt-oss-20b:free",
+        "nvidia/nemotron-3-ultra-550b-a55b:free",
+        "nvidia/nemotron-3-super-120b-a12b:free",
+        "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
+        "nvidia/nemotron-3-nano-30b-a3b:free"
+      ]
+    },
+    "mock": {
+      "default_model": "mock",
+      "models": [
+        "mock"
+      ]
+    }
+  }
+}

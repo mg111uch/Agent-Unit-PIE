@@ -8,32 +8,14 @@ Single reference for project usage.
 
 ### Run Agent
 ```bash
-cd codebase
-conda run -n myenv python agent.py --provider gemini --model gemini-3.1-flash-lite
-conda run -n myenv python agent.py --provider openrouter --model openai/gpt-oss-20b:free
+cd Agentic_Unit_PIE/codebase
+conda run -n myenv python server.py
 ```
 
-#### OpenRouter provider Models
-- google/gemma-4-26b-a4b-it:free
-- google/gemma-4-31b-it:free
-- openai/gpt-oss-120b:free
-- openai/gpt-oss-20b:free
-- nvidia/nemotron-3-ultra-550b-a55b:free
-- nvidia/nemotron-3-super-120b-a12b:free
-- nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free
-- nvidia/nemotron-3-nano-30b-a3b:free
-
-#### Google provider Models
-- gemini-3.5-flash
-- gemini-3.1-pro-preview
-- gemini-3.1-flash-lite
-- gemini-3.1-flash-lite-image
-- gemma-4-31b-it
-- gemma-4-26b-a4b-it
-
 #### Environment Variables
-- `GEMINI_API_KEY` — required for `--provider gemini`
-- `OPENROUTER_API_KEY` — required for `--provider openrouter`
+- `GEMINI_API_KEY`
+- `OPENROUTER_API_KEY`
+- `AGENT_WORKSPACE_ROOT` — override workspace root (default: process CWD)
 
 ### Exit
 ```bash
@@ -123,9 +105,11 @@ Goal-autonomous research without manual iteration.
 ### File Operations
 | Tool | Purpose |
 |------|---------|
-| `read_file` | Read file |
-| `list_files` | List directory |
-| `write_to_file` | Write file |
+| `read_file` | Read file (returns line-numbered output; lists nearby files on error) |
+| `list_files` | List directory (recursive, depth-capped, skips noise dirs) |
+| `write_to_file` | Write file (create/overwrite/append/patch modes) |
+| `edit_file` | Targeted replacement (unique old_string → new_string; rejects 0/>1 matches) |
+| `get_workspace_info` | Ground-truth: root path + top-level entries |
 | `execute_command` | Run shell |
 
 ### Kernel Tools
@@ -177,21 +161,27 @@ print(conn.compare_runs(['run_001', 'run_002']))
 ### Architecture
 
 ```
-agent.py
-  │
-  ├── orchestrator.generate(provider, model, conversation_id, ...)
-  │     │
-  │     ├── gemini_provider.generate()
-  │     │     └── genai.Client.interactions.create(previous_interaction_id=conversation_id)
-  │     │         ↳ stateful — conversation_id carries turn history server-side
-  │     │
-  │     └── openrouter_provider.generate()
-  │           └── openai.OpenAI(base_url="https://openrouter.ai/api/v1")
-  │               .chat.completions.create(messages=[...])
-  │               ↳ stateless — conversation_id ignored
-  │
-  └── result["response"] ──► agent loop
+agent.py / server.py
+        │
+        ▼
+   agent_core/
+     ├── agent_loop     ──► tools + parse + steps + failure breaker
+     ├── workspace      ──► single path resolver (used by all file tools + server APIs)
+     ├── providers_setup ──► agent_core.llm.*
+     ├── context, prompts, commands, auto_research
+     └── llm/ (orchestrator + providers)
 ```
+
+### Path Resolution (workspace.py)
+
+All file tools (`read_file`, `list_files`, `write_to_file`, `edit_file`) and the server's
+`/api/files/*` endpoints resolve paths through `agent_core.workspace.resolve()`. This ensures
+the agent and frontend always agree on the root. The root defaults to process CWD and is
+overridable via the `AGENT_WORKSPACE_ROOT` environment variable.
+
+Leading slashes in model-supplied paths are treated as workspace-relative (not OS-root), matching
+the convention most coding agents expect. A `PathEscapeError` is raised if `..` traversal or
+symlinks attempt to escape the workspace.
 
 ---
 

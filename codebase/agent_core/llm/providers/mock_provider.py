@@ -5,6 +5,7 @@ Mock provider for frontend development.
 Returns a pre-saved answer without calling any LLM.
 """
 
+import time
 from typing import Dict, Any, Optional
 
 
@@ -25,6 +26,7 @@ class MockProvider:
         max_tokens: int = 2048,
         **kwargs,
     ) -> Dict[str, Any]:
+        time.sleep(3)
         return {
             "status": "success",
             "response": MOCK_RESPONSE,

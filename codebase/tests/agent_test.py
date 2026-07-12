@@ -33,7 +33,7 @@ class TestToolRegistry:
 
     def test_all_tools_registered(self):
         """Verify all required tools are registered"""
-        from agent_tools import TOOLS
+        from agent_core.tools import TOOLS
         required = [
             "read_file", "list_files", "write_to_file", "execute_command",
             "kernel_retrieve", "kernel_emit_signal",
@@ -48,7 +48,7 @@ class TestKernelConfig:
 
     def test_kernel_config(self):
         """Verify kernel config flags"""
-        from agent_tools import KERNEL_AVAILABLE, AUTO_RETRIEVE_CONTEXT, RETRIEVE_LIMIT
+        from agent_core.tools.kernel_ops import KERNEL_AVAILABLE, AUTO_RETRIEVE_CONTEXT, RETRIEVE_LIMIT
         assert KERNEL_AVAILABLE is True
         assert AUTO_RETRIEVE_CONTEXT is True
         assert RETRIEVE_LIMIT > 0
@@ -82,7 +82,7 @@ class TestKernelRetrieval:
         assert isinstance(summary, dict)
 
     def test_kernel_retrieve_tool(self):
-        from agent_tools import TOOLS, KERNEL_AVAILABLE
+        from agent_core.tools import TOOLS, KERNEL_AVAILABLE
         if not KERNEL_AVAILABLE:
             pytest.skip("Kernel not available")
         result = TOOLS["kernel_retrieve"](json.dumps({"query": "test", "limit": 5}))
@@ -102,7 +102,7 @@ class TestSignalEngine:
 
     @pytest.fixture
     def kernel_avail(self):
-        from agent_tools import KERNEL_AVAILABLE
+        from agent_core.tools.kernel_ops import KERNEL_AVAILABLE
         return KERNEL_AVAILABLE
 
     def test_create_signal(self, signal_eng):
@@ -114,7 +114,7 @@ class TestSignalEngine:
     def test_emit_signal_tool(self, kernel_avail):
         if not kernel_avail:
             pytest.skip("Kernel not available")
-        from agent_tools import TOOLS
+        from agent_core.tools import TOOLS
         result = TOOLS["kernel_emit_signal"](json.dumps({
             "signal_type": "observation", "source_unit_id": "agent",
             "value": "test", "title": "Test"
@@ -127,13 +127,13 @@ class TestWorkingMemory:
 
     @pytest.fixture
     def kernel_avail(self):
-        from agent_tools import KERNEL_AVAILABLE
+        from agent_core.tools.kernel_ops import KERNEL_AVAILABLE
         return KERNEL_AVAILABLE
 
     def test_store_context(self, kernel_avail):
         if not kernel_avail:
             pytest.skip("Kernel not available")
-        from agent_tools import TOOLS
+        from agent_core.tools import TOOLS
         result = TOOLS["kernel_store_context"](json.dumps({
             "memory_type": "context", "content": "test", "importance": 0.7
         }))
@@ -145,13 +145,13 @@ class TestEventEngine:
 
     @pytest.fixture
     def kernel_avail(self):
-        from agent_tools import KERNEL_AVAILABLE
+        from agent_core.tools.kernel_ops import KERNEL_AVAILABLE
         return KERNEL_AVAILABLE
 
     def test_create_event(self, kernel_avail):
         if not kernel_avail:
             pytest.skip("Kernel not available")
-        from agent_tools import TOOLS
+        from agent_core.tools import TOOLS
         result = TOOLS["kernel_create_event"](json.dumps({
             "event_type": "action", "title": "test", "description": "desc"
         }))
@@ -163,13 +163,13 @@ class TestPhase3Tools:
 
     @pytest.fixture
     def kernel_avail(self):
-        from agent_tools import KERNEL_AVAILABLE
+        from agent_core.tools.kernel_ops import KERNEL_AVAILABLE
         return KERNEL_AVAILABLE
 
     def test_all_tools_callable(self, kernel_avail):
         if not kernel_avail:
             pytest.skip("Kernel not available")
-        from agent_tools import TOOLS
+        from agent_core.tools import TOOLS
         for tool in ["kernel_store_context", "kernel_get_memory", "kernel_create_event"]:
             assert callable(TOOLS.get(tool))
 
