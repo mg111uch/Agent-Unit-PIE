@@ -1,32 +1,37 @@
-"""Autonomous research mode: Goal -> Plan -> Execute -> Learn -> Repeat."""
+"""Autonomous research mode using the shared agent loop.
+
+Delegates to iter_agent_events for consistent parsing, failure recovery,
+and streaming. No longer reimplements the tool-calling mini-loop.
+"""
 
 from __future__ import annotations
 
 from typing import Any, Optional
 
-from agent_core.tools import (
-    TOOLS,
-    extract_json,
-    log_output,
-)
-from agent_core.tools.kernel_ops import (
-    KERNEL_AVAILABLE,
-    retrieval_engine,
-)
-from agent_core.response_parse import strip_code_fences
+from agent_core.agent_loop import run_agent_turn
+from agent_core.tools import log_output
+from agent_core.tools.kernel_ops import KERNEL_AVAILABLE
 
 try:
     from kernel.memory.working_memory import working_memory
 except ImportError:
     working_memory = None
 
-import json
+AUTO_RESEARCH_SYSTEM_PROMPT = """You are an autonomous research agent operating on a real project workspace.
+Your goal is to research a question thoroughly using available tools.
 
-AUTO_RESEARCH_SYSTEM_PROMPT = """You are an autonomous research agent.
-Given a research goal, break it into executable subtasks.
-For each subtask, respond with JSON: {"action": "tool_name", "input": {...}}
-After getting results, decide next subtask or finish.
-When goal is achieved, respond with: {"final": "summary of findings"}"""
+## WORKFLOW
+1. First, use `kernel_retrieve` to find existing context on the topic.
+2. Use `read_file` / `list_files` / `execute_command` to gather information.
+3. Use `kernel_store_context` to store important findings.
+4. When the goal is fully researched, respond with: {"final": "summary of findings"}
+
+## RULES
+- Respond with valid JSON only: {"action": "tool_name", "input": ...} or {"final": "..."}
+- Prefer native tool usage. Call tools to gather data.
+- Keep findings concise and structured.
+- When finished, provide a complete summary of all findings.
+- If kernel is unavailable, proceed with file/shell tools only — do not error out."""  # noqa: E501
 
 
 def run_auto_research(
@@ -39,87 +44,38 @@ def run_auto_research(
 ) -> str:
     log_output(f"[Auto-Research] Goal: {goal}")
 
-    if not KERNEL_AVAILABLE or not retrieval_engine:
-        return "Error: Kernel not available. Enable kernel for auto-research."
-
     all_findings: list[str] = []
-    current_goal = goal
+    remaining_steps = max_iterations
+    conv_id: Optional[str] = None
 
     for iteration in range(max_iterations):
         log_output(f"[Auto-Research] Iteration {iteration + 1}/{max_iterations}")
 
-        context_info = ""
-        try:
-            results = retrieval_engine.search(query=current_goal, limit=3)
-            if results:
-                context_parts = ["## Relevant Context"]
-                for r in results[:3]:
-                    context_parts.append(f"- {r.content.get('content', str(r))}")
-                context_info = "\n" + "\n".join(context_parts)
-        except Exception:
-            pass
-
-        first_input = (
-            f"Goal: {current_goal}\n"
-            f"Previous findings: {all_findings}\n"
-            f"{context_info}\n"
+        research_prompt = (
+            f"Research goal: {goal}\n"
+            f"Findings so far: {all_findings if all_findings else '(none yet)'}\n"
+            f"Remaining steps: {remaining_steps}\n"
             f"What subtask next?"
         )
 
-        try:
-            result = orchestrator.generate(
-                prompt=first_input,
-                system_prompt=AUTO_RESEARCH_SYSTEM_PROMPT,
-                provider=provider,
-                model=model,
-            )
-            if result["status"] == "error":
-                return f"Error in LLM call: {result.get('error')}"
-            clean_reply = strip_code_fences(result["response"])
-        except Exception as e:
-            return f"Error in LLM call: {e}"
+        final_text, conv_id = run_agent_turn(
+            research_prompt,
+            orchestrator,
+            conversation_id=conv_id,
+            provider=provider,
+            model=model,
+            system_prompt=AUTO_RESEARCH_SYSTEM_PROMPT,
+            max_steps=remaining_steps,
+        )
 
-        if '"final"' in clean_reply.lower() or "final" in clean_reply.lower():
-            try:
-                json_str = extract_json(clean_reply)
-                data = json.loads(json_str) if json_str else {}
-                if "final" in data:
-                    all_findings.append(data["final"])
-                    break
-            except Exception:
-                pass
-            all_findings.append(clean_reply)
+        if final_text and final_text != "Max iterations reached":
+            all_findings.append(final_text)
             break
 
-        try:
-            json_str = extract_json(clean_reply)
-            if not json_str:
-                all_findings.append(clean_reply)
-                continue
-            data = json.loads(json_str)
-        except Exception:
-            all_findings.append(clean_reply)
-            continue
+        if conv_id:
+            remaining_steps -= 1
 
-        tool = data.get("action")
-        tool_input = data.get("input", "")
-
-        if not tool or tool not in TOOLS:
-            all_findings.append(f"Unknown tool: {tool}")
-            continue
-
-        try:
-            tool_result = TOOLS[tool](tool_input)
-            result_str = str(tool_result)[:500]
-            all_findings.append(f"[{tool}] {result_str}")
-            log_output(f"[Auto] Tool {tool} result: {result_str[:100]}...")
-            current_goal = (
-                f"Continue research. Last result: {result_str[:200]}. What next?"
-            )
-        except Exception as e:
-            all_findings.append(f"Tool error: {e}")
-
-    findings_summary = "\n\n".join(all_findings)
+    findings_summary = "\n\n".join(all_findings) if all_findings else "No findings produced"
 
     if KERNEL_AVAILABLE and working_memory and all_findings:
         try:
@@ -135,4 +91,4 @@ def run_auto_research(
         except Exception as e:
             log_output(f"[Kernel] Storage warning: {e}")
 
-    return findings_summary or "No findings produced"
+    return findings_summary

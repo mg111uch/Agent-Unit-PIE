@@ -32,5 +32,27 @@
         "mock"
       ]
     }
+  },
+  "allowed_commands": [
+    "ls", "cat", "pwd", "echo", "python", "python3",
+    "pytest", "pip", "pip3", "node", "npm", "npx",
+    "git"
+  ],
+  "git_tools_enabled": true,
+  "enable_checkpoints": true,
+  "max_checkpoints": 50,
+  "agents_md_enabled": true,
+  "sandbox_enabled": false,
+  "secrets_patterns": [
+    "sk-[A-Za-z0-9]{15,}",
+    "gh[pousrx]_[A-Za-z0-9]{15,}",
+    "xox[bpsa]-[A-Za-z0-9]{10,}",
+    "AKIA[0-9A-Z]{16}",
+    "-----BEGIN (RSA |EC |OPENSSH )PRIVATE KEY-----"
+  ],
+  "tool_packs": ["file", "kernel", "sim", "meta", "git"],
+  "rate_limits": {
+    "llm_calls_per_minute": 10,
+    "tool_writes_per_minute": 30
   }
 }
