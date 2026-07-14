@@ -36,7 +36,12 @@ TOOL_SCHEMAS: List[Dict[str, Any]] = [
     {
         "name": "read_file",
         "description": "Read a file from the workspace (returns line-numbered output; lists nearby files on error)",
-        "parameters": _str_schema("Path to the file, relative to the workspace root"),
+        "parameters": _obj_schema(
+            properties={
+                "path": _str_schema("Path to the file, relative to the workspace root"),
+            },
+            required=["path"],
+        ),
     },
     {
         "name": "read_file_range",
@@ -53,7 +58,11 @@ TOOL_SCHEMAS: List[Dict[str, Any]] = [
     {
         "name": "list_files",
         "description": "List directory contents (recursive, depth-capped, skips .git/node_modules/__pycache__)",
-        "parameters": _str_schema("Directory path relative to workspace root; use '.' for root"),
+        "parameters": _obj_schema(
+            properties={
+                "path": _str_schema("Directory path relative to workspace root; use '.' for root"),
+            },
+        ),
     },
     {
         "name": "write_to_file",
@@ -90,12 +99,22 @@ TOOL_SCHEMAS: List[Dict[str, Any]] = [
     {
         "name": "execute_command",
         "description": "Run a shell command. Allowed: ls, cat, pwd, echo, python.",
-        "parameters": _str_schema("Shell command string to execute"),
+        "parameters": _obj_schema(
+            properties={
+                "command": _str_schema("Shell command string to execute"),
+            },
+            required=["command"],
+        ),
     },
     {
         "name": "glob_search",
         "description": "Find files matching a glob pattern (e.g. '**/*.py', 'src/**/*.ts')",
-        "parameters": _str_schema("Glob pattern to match files against, relative to workspace root"),
+        "parameters": _obj_schema(
+            properties={
+                "pattern": _str_schema("Glob pattern to match files against, relative to workspace root"),
+            },
+            required=["pattern"],
+        ),
     },
     {
         "name": "grep_search",

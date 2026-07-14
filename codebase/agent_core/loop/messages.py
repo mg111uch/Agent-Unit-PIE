@@ -31,7 +31,12 @@ def build_tool_calls_msg(tool_calls: List[ParsedToolCall]) -> dict:
         "role": "assistant",
         "content": None,
         "tool_calls": [
-            {"name": tc.name, "arguments": tc.arguments}
+            {
+                "name": tc.name,
+                "arguments": tc.arguments,
+                "id": tc.call_id or "",
+                "_call_id": tc.call_id or "",
+            }
             for tc in tool_calls
         ],
     }
@@ -42,17 +47,33 @@ def build_tool_results_msg(results: List[dict]) -> dict:
         "role": "tool",
         "content": None,
         "tool_results": [
-            {"tool": r["tool"], "result": r["result"]}
+            {
+                "tool": r["tool"],
+                "result": r["result"],
+                "id": r.get("call_id", "") or r.get("id", ""),
+                "_call_id": r.get("call_id", "") or r.get("id", ""),
+                "tool_call_id": r.get("call_id", "") or r.get("id", "") or r["tool"],
+            }
             for r in results
         ],
     }
 
 
-def build_single_tool_result_msg(tool: str, result_str: str) -> dict:
+def build_single_tool_result_msg(
+    tool: str, result_str: str, call_id: str = ""
+) -> dict:
     return {
         "role": "tool",
         "content": None,
-        "tool_results": [{"tool": tool, "result": result_str}],
+        "tool_results": [
+            {
+                "tool": tool,
+                "result": result_str,
+                "id": call_id,
+                "_call_id": call_id,
+                "tool_call_id": call_id or tool,
+            }
+        ],
     }
 
 

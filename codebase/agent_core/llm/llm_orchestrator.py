@@ -103,6 +103,7 @@ class LLMOrchestrator:
                     "model": model_name,
                     "response": result.get("response", ""),
                     "conversation_id": result.get("conversation_id"),
+                    "tool_calls": result.get("tool_calls"),
                     "raw_response": result,
                     "usage": usage,
                     "latency_seconds": round(time.time() - started_at, 3),

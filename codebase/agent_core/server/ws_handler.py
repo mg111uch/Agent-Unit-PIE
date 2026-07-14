@@ -259,7 +259,7 @@ async def handle_chat(
         elif etype == "final":
             await websocket.send_json({
                 "type": "final",
-                "content": event.get("content") or "",
+                "content": event.get("full_content") or event.get("content") or "",
                 "step": event["step"],
             })
             conv_id = event.get("conversation_id", conv_id)

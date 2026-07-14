@@ -28,6 +28,7 @@ class ParsedToolCall:
     name: str
     arguments: dict
     raw: str = ""
+    call_id: str = ""
 
 
 def parse_provider_response(
@@ -49,15 +50,27 @@ def parse_provider_response(
         for tc in tool_calls_raw:
             name = tc.get("name", "") or tc.get("function", {}).get("name", "")
             raw_args = tc.get("arguments", {}) or tc.get("function", {}).get("arguments", "{}")
+            call_id = (
+                tc.get("id", "")
+                or tc.get("call_id", "")
+                or tc.get("_call_id", "")
+                or ""
+            )
             if isinstance(raw_args, str):
                 try:
                     args = json.loads(raw_args)
                 except json.JSONDecodeError:
                     args = {"input": raw_args}
             else:
-                args = raw_args
+                args = raw_args if isinstance(raw_args, dict) else {"input": raw_args}
             if name in known_tools:
-                valid_calls.append(ParsedToolCall(name=name, arguments=args))
+                valid_calls.append(
+                    ParsedToolCall(
+                        name=name,
+                        arguments=args or {},
+                        call_id=str(call_id) if call_id else "",
+                    )
+                )
             else:
                 return ParsedReply(
                     kind="invalid_tool",

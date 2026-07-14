@@ -2,7 +2,7 @@
 
 ## TASK
 
-I am in process of refactoring my coding agent codebase. The implementation plan with changes necessary along with phases and resume notes are given in `Agentic_Unit_PIE/Issues_n_ideas.md`. 
+I am getting output given in `Agentic_Unit_PIE/Issues_n_ideas.md` while making a llm call to gemini_provider. There are no final answer as output in the frontend. Also tool names are not displayed properly, every tool name is shown `multi`. There are no errors shown in backend terminal while making tool calls to gemini api. I think there is issue in response parsing only.
 
 Start by knowing module details by reading `Agentic_Unit_PIE/system_devpt_reports/orchestrator/README.md`.
 

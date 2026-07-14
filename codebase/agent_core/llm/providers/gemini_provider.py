@@ -1,90 +1,184 @@
 """
 llm/providers/gemini_provider.py
 
-Gemini provider adapter for LLMOrchestrator.
-Supports two modes:
-  1. Stateful via conversation_id -> previous_interaction_id (legacy)
-  2. Stateless via explicit messages array -> generate_content
+Gemini provider using the Interactions API (google-genai >= 2.3.0).
 """
 
 from __future__ import annotations
 
 import json
-from typing import Dict, Any, Optional, List, Generator
+from typing import Any, Dict, Generator, List, Optional
+
+
+def _get(obj: Any, attr: str, default: Any = None) -> Any:
+    if hasattr(obj, attr):
+        return getattr(obj, attr)
+    if isinstance(obj, dict):
+        return obj.get(attr, default)
+    return default
 
 
 def _format_tool_for_gemini(tools: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    """Convert OpenAI-style tool schemas to Gemini function_declarations format."""
-    gemini_tools = []
+    """Normalize OpenAI-style, legacy gemini function_declarations, or flat tools."""
+    result: List[Dict[str, Any]] = []
     for t in tools:
-        fd = {
-            "name": t["function"]["name"],
-            "description": t["function"].get("description", ""),
-        }
-        params = t["function"].get("parameters", {})
-        if params:
-            fd["parameters"] = params
-        gemini_tools.append(fd)
-    return gemini_tools
+        if not isinstance(t, dict):
+            continue
+        # Legacy generateContent wrapper: {"function_declarations": [...]}
+        if "function_declarations" in t:
+            for decl in t.get("function_declarations") or []:
+                if not isinstance(decl, dict):
+                    continue
+                fd: dict[str, Any] = {
+                    "type": "function",
+                    "name": decl.get("name", ""),
+                    "description": decl.get("description", ""),
+                }
+                params = decl.get("parameters") or decl.get("parameters_json_schema") or {}
+                if params:
+                    fd["parameters"] = params
+                result.append(fd)
+            continue
+
+        # OpenAI / registry default: {"type": "function", "function": {...}}
+        if "function" in t and isinstance(t["function"], dict):
+            fn = t["function"]
+            fd = {
+                "type": "function",
+                "name": fn.get("name", ""),
+                "description": fn.get("description", ""),
+            }
+            params = fn.get("parameters") or {}
+            if params:
+                fd["parameters"] = params
+            result.append(fd)
+            continue
+
+        # Already Interactions-style flat tool
+        if t.get("type") == "function" or "name" in t:
+            fd = {
+                "type": "function",
+                "name": t.get("name", ""),
+                "description": t.get("description", ""),
+            }
+            params = t.get("parameters") or {}
+            if params:
+                fd["parameters"] = params
+            result.append(fd)
+    return result
 
 
-def _convert_messages_to_contents(
+def _parse_interaction(res: Any) -> dict[str, Any]:
+    output = _get(res, "output_text", None) or ""
+
+    tool_calls: list[dict[str, Any]] = []
+    steps = _get(res, "steps", None) or []
+    for step in steps:
+        step_type = _get(step, "type")
+        if step_type == "function_call":
+            name = _get(step, "name", "")
+            args = _get(step, "arguments", {})
+            if isinstance(args, str):
+                try:
+                    args = json.loads(args)
+                except json.JSONDecodeError:
+                    args = {"input": args}
+            call_id = _get(step, "id", "") or ""
+            tool_calls.append({
+                "id": call_id,
+                "call_id": call_id,
+                "name": name,
+                "arguments": args if isinstance(args, dict) else {"input": args},
+            })
+
+    usage = _get(res, "usage", None)
+    token_count = 0
+    if usage:
+        token_count = _get(usage, "total_tokens", 0) or _get(usage, "total_token_count", 0) or 0
+
+    if not tool_calls and output:
+        try:
+            parsed = json.loads(output)
+            if "final" not in parsed and "action" not in parsed:
+                output = json.dumps({"final": output})
+        except json.JSONDecodeError:
+            output = json.dumps({"final": output})
+
+    return {
+        "status": "success",
+        "response": output,
+        "tool_calls": tool_calls or None,
+        "conversation_id": _get(res, "id", None),
+        "usage": {
+            "total_tokens": token_count,
+            "estimated_cost": 0.0,
+        },
+    }
+
+
+def _messages_to_steps(
     messages: List[Dict[str, Any]],
-) -> tuple[List[Dict[str, Any]], Optional[str]]:
-    """Convert internal message array to Gemini contents list + system_instruction.
-
-    Internal message format:
-      {"role": "user"|"assistant"|"tool", "content": str|None,
-       "tool_calls": [{"name":..., "arguments":...}]|None,
-       "tool_results": [{"tool":..., "result":...}]|None}
-    """
-    contents = []
-    system_instruction = None
+) -> tuple[list[dict[str, Any]], Optional[str]]:
+    """Convert internal chat messages to Interactions API steps."""
+    sys_inst = None
+    steps: list[dict[str, Any]] = []
 
     for msg in messages:
         role = msg.get("role", "user")
-
         if role == "system":
-            system_instruction = msg.get("content", "")
+            sys_inst = msg.get("content", "")
             continue
-
-        parts = []
-
         content = msg.get("content")
-        if content:
-            parts.append({"text": str(content)})
-
         tool_calls = msg.get("tool_calls")
-        if tool_calls:
-            for tc in tool_calls:
-                parts.append({
-                    "function_call": {
-                        "name": tc.get("name", ""),
-                        "args": tc.get("arguments", {}),
-                    }
-                })
-
         tool_results = msg.get("tool_results")
-        if tool_results:
-            for tr in tool_results:
-                parts.append({
-                    "function_response": {
-                        "name": tr.get("tool", tr.get("name", "")),
-                        "response": {"result": tr.get("result", "")},
-                    }
+
+        if role == "user":
+            steps.append({
+                "type": "user_input",
+                "content": [{"type": "text", "text": content or ""}],
+            })
+        elif role == "assistant":
+            if content:
+                steps.append({
+                    "type": "model_output",
+                    "content": [{"type": "text", "text": content}],
                 })
+            if tool_calls:
+                for tc in tool_calls:
+                    call_id = (
+                        tc.get("id")
+                        or tc.get("_call_id")
+                        or tc.get("call_id")
+                        or ""
+                    )
+                    steps.append({
+                        "type": "function_call",
+                        "id": call_id,
+                        "name": tc.get("name", ""),
+                        "arguments": tc.get("arguments", {}),
+                    })
+        elif role == "tool":
+            if tool_results:
+                for tr in tool_results:
+                    call_id = (
+                        tr.get("_call_id")
+                        or tr.get("call_id")
+                        or tr.get("id")
+                        or tr.get("tool_call_id")
+                        or ""
+                    )
+                    steps.append({
+                        "type": "function_result",
+                        "name": tr.get("tool", tr.get("name", "")),
+                        "call_id": call_id,
+                        "result": [{"type": "text", "text": tr.get("result", "")}],
+                    })
 
-        if not parts:
-            parts.append({"text": ""})
-
-        gemini_role = "model" if role == "assistant" else "user"
-        contents.append({"role": gemini_role, "parts": parts})
-
-    return contents, system_instruction
+    return steps, sys_inst
 
 
 class GeminiProvider:
-    def __init__(self, api_key: str, model: str = "gemini-3.1-flash-lite"):
+    def __init__(self, api_key: str, model: str = "gemini-3.5-flash"):
         from google import genai
         self.client = genai.Client(api_key=api_key)
         self.default_model = model
@@ -102,59 +196,44 @@ class GeminiProvider:
         **kwargs,
     ) -> Dict[str, Any]:
         if messages:
-            return self._generate_with_messages(
-                messages, model, system_prompt, temperature, max_tokens, tools
+            if conversation_id:
+                return self._generate_stateful(
+                    messages,
+                    model or self.default_model,
+                    system_prompt,
+                    tools,
+                    conversation_id,
+                    temperature=temperature,
+                    max_tokens=max_tokens,
+                )
+            # First turn: store server-side so previous_interaction_id chaining works.
+            # Do not use store=False here — that breaks tool follow-ups with 400.
+            return self._generate_initial_from_messages(
+                messages,
+                model or self.default_model,
+                system_prompt,
+                tools,
             )
 
-        full_input = prompt
-        if system_prompt and not conversation_id:
-            full_input = f"{system_prompt}\n\n{prompt}"
+        model_name = model or self.default_model
+        call_kwargs: dict[str, Any] = {"model": model_name}
 
-        kwargs = {"model": model or self.default_model, "input": full_input}
         if conversation_id:
-            kwargs["previous_interaction_id"] = conversation_id
+            call_kwargs["previous_interaction_id"] = conversation_id
+            call_kwargs["input"] = prompt
+            if system_prompt:
+                call_kwargs["system_instruction"] = system_prompt
+        else:
+            full = prompt
+            if system_prompt:
+                full = f"{system_prompt}\n\n{prompt}"
+            call_kwargs["input"] = full
+
         if tools:
-            kwargs["tools"] = _format_tool_for_gemini(tools)
+            call_kwargs["tools"] = _format_tool_for_gemini(tools)
 
-        res = self.client.interactions.create(**kwargs)
-
-        usage = getattr(res, "usage_metadata", None)
-        token_count = 0
-        if usage:
-            token_count = (
-                getattr(usage, "prompt_token_count", 0)
-                + getattr(usage, "candidates_token_count", 0)
-            )
-
-        tool_calls = getattr(res, "tool_calls", None) or []
-        output = getattr(res, "output_text", None)
-        if output is None:
-            output = getattr(res, "text", None) or ""
-        if not isinstance(output, str):
-            output = str(output) if output is not None else ""
-
-        structured_calls = []
-        for tc in tool_calls:
-            fc = getattr(tc, "function_call", None) or tc
-            name = getattr(fc, "name", "") or fc.get("name", "")
-            args = getattr(fc, "args", {}) or fc.get("args", {})
-            if isinstance(args, str):
-                try:
-                    args = json.loads(args)
-                except json.JSONDecodeError:
-                    args = {"input": args}
-            structured_calls.append({"name": name, "arguments": args})
-
-        return {
-            "status": "success",
-            "response": output,
-            "tool_calls": structured_calls or None,
-            "conversation_id": getattr(res, "id", None),
-            "usage": {
-                "total_tokens": token_count,
-                "estimated_cost": 0.0,
-            },
-        }
+        res = self.client.interactions.create(**call_kwargs)
+        return _parse_interaction(res)
 
     def _generate_with_messages(
         self,
@@ -165,106 +244,165 @@ class GeminiProvider:
         max_tokens: int = 2048,
         tools: Optional[List[Dict[str, Any]]] = None,
     ) -> Dict[str, Any]:
-        """Generate using explicit message array with generate_content API."""
-        from google.genai import types
-
-        contents, extracted_system = _convert_messages_to_contents(messages)
-        sys_inst = system_prompt or extracted_system
-
-        config_kwargs = dict(
-            temperature=temperature,
-            max_output_tokens=max_tokens,
-        )
-        if sys_inst:
-            config_kwargs["system_instruction"] = sys_inst
-        if tools:
-            config_kwargs["tools"] = _format_tool_for_gemini(tools)
-
-        config = types.GenerateContentConfig(**config_kwargs)
-
-        res = self.client.models.generate_content(
-            model=model or self.default_model,
-            contents=contents,
-            config=config,
+        return self._generate_initial_from_messages(
+            messages, model or self.default_model, system_prompt, tools,
         )
 
-        token_count = 0
-        usage = getattr(res, "usage_metadata", None)
-        if usage:
-            token_count = (
-                getattr(usage, "prompt_token_count", 0)
-                + getattr(usage, "candidates_token_count", 0)
-            )
+    def _generate_initial_from_messages(
+        self,
+        messages: List[Dict[str, Any]],
+        model: str,
+        system_prompt: Optional[str],
+        tools: Optional[List[Dict[str, Any]]],
+    ) -> Dict[str, Any]:
+        """First Interactions turn: store history server-side for later chaining."""
+        sys_inst = None
+        last_user = ""
+        for msg in messages:
+            role = msg.get("role", "user")
+            if role == "system" and msg.get("content"):
+                sys_inst = msg["content"]
+            elif role == "user" and msg.get("content"):
+                last_user = msg["content"]
 
-        tool_calls = getattr(res, "function_calls", None) or []
-        output = getattr(res, "text", None) or ""
-        if not isinstance(output, str):
-            output = str(output) if output is not None else ""
-
-        structured_calls = []
-        if tool_calls:
-            for tc in tool_calls:
-                name = getattr(tc, "name", "") or tc.get("name", "")
-                args = getattr(tc, "args", {}) or tc.get("args", {})
-                if isinstance(args, str):
-                    try:
-                        args = json.loads(args)
-                    except json.JSONDecodeError:
-                        args = {"input": args}
-                structured_calls.append({"name": name, "arguments": args})
-
-        return {
-            "status": "success",
-            "response": output,
-            "tool_calls": structured_calls or None,
-            "conversation_id": None,
-            "usage": {
-                "total_tokens": token_count,
-                "estimated_cost": 0.0,
-            },
+        call_kwargs: dict[str, Any] = {
+            "model": model,
+            "input": last_user or "",
         }
+        if system_prompt or sys_inst:
+            call_kwargs["system_instruction"] = system_prompt or sys_inst
+        if tools:
+            call_kwargs["tools"] = _format_tool_for_gemini(tools)
+
+        res = self.client.interactions.create(**call_kwargs)
+        return _parse_interaction(res)
+
+    def _generate_stateful(
+        self,
+        messages: List[Dict[str, Any]],
+        model: str,
+        system_prompt: Optional[str],
+        tools: Optional[List[Dict[str, Any]]],
+        conversation_id: str,
+        temperature: float = 0.7,
+        max_tokens: int = 2048,
+    ) -> Dict[str, Any]:
+        """Continue a server-side conversation; send only the latest turn + tool results."""
+        pending_results: list[dict[str, Any]] = []
+        last_user = None
+
+        for msg in messages:
+            role = msg.get("role", "user")
+            if role == "user" and msg.get("content"):
+                last_user = msg["content"]
+                pending_results = []
+            elif role == "tool":
+                for tr in msg.get("tool_results") or []:
+                    call_id = (
+                        tr.get("_call_id")
+                        or tr.get("call_id")
+                        or tr.get("id")
+                        or tr.get("tool_call_id")
+                        or ""
+                    )
+                    name = tr.get("tool", tr.get("name", ""))
+                    # Skip parse/corrective pseudo-tools that were never model function_calls
+                    if name == "parse" or not call_id:
+                        continue
+                    text = tr.get("result", "")
+                    if not isinstance(text, str):
+                        text = json.dumps(text, ensure_ascii=False)
+                    step: dict[str, Any] = {
+                        "type": "function_result",
+                        "name": name,
+                        "call_id": call_id,
+                        "result": [{"type": "text", "text": text}],
+                    }
+                    if isinstance(text, str) and text.startswith("Error"):
+                        step["is_error"] = True
+                    pending_results.append(step)
+
+        if pending_results:
+            input_data: Any = pending_results
+        else:
+            # Fall back to last user text (e.g. corrective follow-ups without call_id)
+            input_data = last_user or ""
+
+        call_kwargs: dict[str, Any] = {
+            "model": model,
+            "previous_interaction_id": conversation_id,
+            "input": input_data,
+        }
+        # Do not resend system_instruction on chained turns (can cause invalid_request).
+        if tools:
+            call_kwargs["tools"] = _format_tool_for_gemini(tools)
+
+        res = self.client.interactions.create(**call_kwargs)
+        return _parse_interaction(res)
+
+    def _generate_stateless(
+        self,
+        messages: List[Dict[str, Any]],
+        model: str,
+        system_prompt: Optional[str],
+        tools: Optional[List[Dict[str, Any]]],
+        temperature: float = 0.7,
+        max_tokens: int = 2048,
+    ) -> Dict[str, Any]:
+        """Client-managed history. Prefer _generate_initial_from_messages + stateful chaining."""
+        steps, sys_inst = _messages_to_steps(messages)
+
+        call_kwargs: dict[str, Any] = {
+            "model": model,
+            "input": steps,
+            "store": False,
+        }
+        if sys_inst or system_prompt:
+            call_kwargs["system_instruction"] = system_prompt or sys_inst
+        if tools:
+            call_kwargs["tools"] = _format_tool_for_gemini(tools)
+
+        res = self.client.interactions.create(**call_kwargs)
+        return _parse_interaction(res)
 
     def generate_stream(
         self,
         prompt: str = "",
         model: Optional[str] = None,
         system_prompt: Optional[str] = None,
+        conversation_id: Optional[str] = None,
         temperature: float = 0.7,
         max_tokens: int = 2048,
         tools: Optional[List[Dict[str, Any]]] = None,
         messages: Optional[List[Dict[str, Any]]] = None,
         **kwargs,
     ) -> Generator[str, None, None]:
-        """Stream tokens from Gemini using generate_content_stream."""
-        from google.genai import types
-
         if messages:
-            contents, extracted_system = _convert_messages_to_contents(messages)
+            input_data, extracted_system = _messages_to_steps(messages)
             sys_inst = system_prompt or extracted_system
         else:
-            full_input = prompt
+            full = prompt
             if system_prompt:
-                full_input = f"{system_prompt}\n\n{prompt}"
-            contents = full_input
+                full = f"{system_prompt}\n\n{prompt}"
             sys_inst = None
+            input_data = full
 
-        config_kwargs = dict(
-            temperature=temperature,
-            max_output_tokens=max_tokens,
-        )
+        call_kwargs: dict[str, Any] = {
+            "model": model or self.default_model,
+            "input": input_data,
+            "stream": True,
+        }
+        if conversation_id:
+            call_kwargs["previous_interaction_id"] = conversation_id
         if sys_inst:
-            config_kwargs["system_instruction"] = sys_inst
+            call_kwargs["system_instruction"] = sys_inst
         if tools:
-            config_kwargs["tools"] = _format_tool_for_gemini(tools)
+            call_kwargs["tools"] = _format_tool_for_gemini(tools)
 
-        config = types.GenerateContentConfig(**config_kwargs)
-
-        stream = self.client.models.generate_content_stream(
-            model=model or self.default_model,
-            contents=contents,
-            config=config,
-        )
-
-        for chunk in stream:
-            if chunk.text:
-                yield chunk.text
+        for event in self.client.interactions.create(**call_kwargs):
+            if _get(event, "event_type") == "step.delta":
+                delta = _get(event, "delta")
+                if delta and _get(delta, "type") == "text":
+                    text = _get(delta, "text")
+                    if text:
+                        yield text

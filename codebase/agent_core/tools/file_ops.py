@@ -58,7 +58,26 @@ def _count_lines(path: str) -> int:
         return 0
 
 
-def read_file(path: str) -> str:
+def _coerce_str_arg(value, *keys: str, default: str = "") -> str:
+    """Accept a plain string or a dict of tool args (native function calling)."""
+    if value is None:
+        return default
+    if isinstance(value, str):
+        return value
+    if isinstance(value, dict):
+        for k in keys:
+            if value.get(k) is not None and value.get(k) != "":
+                return str(value[k])
+        if len(value) == 1:
+            only = next(iter(value.values()))
+            if only is not None:
+                return str(only)
+        return default
+    return str(value)
+
+
+def read_file(path: str = "") -> str:
+    path = _coerce_str_arg(path, "path", "input", "file", default="")
     try:
         full = resolve(path)
         if not os.path.exists(full):
@@ -101,6 +120,9 @@ def read_file_range(input_data) -> str:
 
 
 def list_files(path: str = ".") -> str:
+    path = _coerce_str_arg(path, "path", "input", "directory", "dir", default=".")
+    if not path:
+        path = "."
     try:
         full = resolve(path)
         if not os.path.isdir(full):
@@ -245,8 +267,9 @@ def get_workspace_info(_input=None) -> str:
     )
 
 
-def glob_search(pattern: str) -> str:
+def glob_search(pattern: str = "") -> str:
     """Find files matching a glob pattern (e.g. '**/*.py', 'src/**/*.ts')."""
+    pattern = _coerce_str_arg(pattern, "pattern", "glob", "input", default="")
     try:
         matches = sorted(Path(WORKSPACE_ROOT).rglob(pattern))
         relative = [str(Path(p).relative_to(WORKSPACE_ROOT)) for p in matches if p.is_file()]

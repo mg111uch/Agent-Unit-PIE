@@ -9,6 +9,7 @@ Target file: `codebase/rag_pipeline/dummy/fabo/fibonacci.py`
 
 ```
 Start by figuring out where you are. What files exist under rag_pipeline/dummy? Read fibonacci.py and tell me what it does.
+Read fibonacci.py under rag_pipeline/dummy and tell me what it does.
 ```
 
 **Tests:** `get_workspace_info` → `list_files("rag_pipeline/dummy")` → `read_file("rag_pipeline/dummy/fabo/fibonacci.py")`
@@ -48,7 +49,7 @@ Create a new file rag_pipeline/dummy/fabo/test_fibonacci.py with a simple pytest
 ## 5. write_to_file overwrite mode (full rewrite)
 
 ```
-I have changed file name fibonacci.py to fabonacci.py. Now the fibonacci.py file has a typo in its directory name (fabo should be fibo) and the function name doesn't match the filename. Rewrite the entire file to fix both: rename the file's content to use proper naming. Make the fibonacci function work for the edge case n=0 correctly (currently it does, but add a clarifying comment). Overwrite the file with the improved version.
+I have changed file name fibonacci.py to fabonacci.py. Now the fabonacci.py file has a typo in its directory name (fabo should be fibo) and the function name doesn't match the filename. Rewrite the entire file to fix both: rename the file's content to use proper naming. Make the fibonacci function work for the edge case n=0 correctly (currently it does, but add a clarifying comment). Overwrite the file with the improved version.
 ```
 
 **Tests:** `read_file` → `write_to_file` (mode=overwrite) → optionally `read_file` to verify. Tests full-file replacement.

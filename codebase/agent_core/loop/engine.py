@@ -88,6 +88,7 @@ def iter_agent_events(
                     system_prompt=system_prompt,
                     provider=provider,
                     model=model,
+                    conversation_id=conv_id,
                     tools=registry.get_schemas(),
                     messages=current_messages,
                 )
@@ -112,6 +113,10 @@ def iter_agent_events(
             conv_id = result.get("conversation_id")
             reply = result.get("response") or ""
             tool_calls_raw = result.get("tool_calls")
+            if tool_calls_raw is None:
+                raw = result.get("raw_response") or {}
+                if isinstance(raw, dict):
+                    tool_calls_raw = raw.get("tool_calls")
 
             parsed = parse_provider_response(reply, tool_calls_raw, _tools)
 
@@ -208,20 +213,37 @@ def iter_agent_events(
                         session_id=session_id, role="assistant",
                         content=None,
                         tool_calls=[
-                            {"name": tc.name, "arguments": tc.arguments}
+                            {
+                                "name": tc.name,
+                                "arguments": tc.arguments,
+                                "id": tc.call_id or "",
+                                "_call_id": tc.call_id or "",
+                            }
                             for tc in parsed.tool_calls
                         ],
                     )
 
+                for tc in parsed.tool_calls:
+                    input_str = serialize_tool_input(tc.arguments)
+                    yield {
+                        "type": "tool_call",
+                        "tool": tc.name,
+                        "input": input_str,
+                        "step": step,
+                    }
+
                 results = execute_tool_calls(parsed.tool_calls, step, tools=_tools)
                 all_ok = all(r.get("ok", True) for r in results)
-                yield {
-                    "type": "tool_result",
-                    "tool": "multi",
-                    "input": json.dumps([{"name": tc.name, "arguments": tc.arguments} for tc in parsed.tool_calls]),
-                    "result": json.dumps(results, indent=2)[:2000],
-                    "step": step,
-                }
+
+                for tc, result in zip(parsed.tool_calls, results):
+                    input_str = serialize_tool_input(tc.arguments)
+                    yield {
+                        "type": "tool_result",
+                        "tool": result["tool"],
+                        "input": input_str,
+                        "result": result.get("result", "")[:2000],
+                        "step": step,
+                    }
 
                 if use_messages:
                     current_messages.append(build_tool_results_msg(results))
@@ -229,7 +251,13 @@ def iter_agent_events(
                         session_id=session_id, role="tool",
                         content=None,
                         tool_results=[
-                            {"tool": r["tool"], "result": r["result"]}
+                            {
+                                "tool": r["tool"],
+                                "result": r["result"],
+                                "id": r.get("call_id", ""),
+                                "_call_id": r.get("call_id", ""),
+                                "tool_call_id": r.get("call_id", "") or r["tool"],
+                            }
                             for r in results
                         ],
                     )

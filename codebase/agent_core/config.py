@@ -4,14 +4,13 @@ from __future__ import annotations
 
 import json
 import os
-import secrets
 
 # codebase/ (parent of agent_core/)
 CODEBASE_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 
 CONFIG_PATH = os.path.join(CODEBASE_ROOT, "config.json")
 
-JWT_SECRET = os.getenv("JWT_SECRET", secrets.token_hex(32))
+JWT_SECRET = os.getenv("JWT_SECRET", "your_jwt_secret")
 AGENT_PORT = int(os.getenv("AGENT_PORT", "8001"))
 CORS_ORIGINS = os.getenv("CORS_ORIGINS", "http://localhost:3000,http://localhost:8001").split(",")
 WORKSPACE_BASE = os.getenv("AGENT_WORKSPACE_BASE",

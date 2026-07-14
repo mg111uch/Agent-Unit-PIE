@@ -1,5 +1,5 @@
 def fibonacci_iterative(n):
-    """Returns the first n Fibonacci numbers."""
+    """Generates the first n Fibonacci numbers."""
     if n <= 0:
         return []
     if n == 1:

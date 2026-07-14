@@ -87,7 +87,11 @@ def tool_call(fn: Callable) -> Callable:
             result = fn(*args, **kwargs)
             if isinstance(result, ToolResult):
                 return result
-            return ToolResult(ok=True, data=str(result))
+            text = str(result)
+            # Many tools return "Error: ..." strings instead of raising
+            if text.startswith("Error"):
+                return ToolResult(ok=False, error_type="tool", message=text, data=text)
+            return ToolResult(ok=True, data=text)
         except ToolError as e:
             return ToolResult(ok=False, error_type=e.error_type, message=e.message, suggestion=e.suggestion)
         except Exception as e:
@@ -141,6 +145,16 @@ def _run_sandboxed(cmd: str, timeout: int = 60) -> str:
 
 @tool_call
 def execute_command_raw(cmd: str) -> str:
+    # Native function calling often passes {"command": "..."}; text path may pass a plain string.
+    if isinstance(cmd, dict):
+        cmd = (
+            cmd.get("command")
+            or cmd.get("cmd")
+            or cmd.get("input")
+            or next(iter(cmd.values()), "")
+        )
+    cmd = "" if cmd is None else str(cmd)
+
     if not _is_command_allowed(cmd):
         allowed = ", ".join(sorted(ALLOWED_COMMANDS))
         return f"Command not allowed. Allowed commands: {allowed}"
