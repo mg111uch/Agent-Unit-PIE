@@ -24,6 +24,8 @@ from .analyzers import (
     DependencyAnalyzer, ImpactAnalyzer, EntryPointDetector
 )
 from .generators import BaseGenerator, DetailGenerator
+from .graph.backend.graph_builder import GraphBuilder
+from .graph.backend.graph_serializer import GraphSerializer
 from .utils import clean_directory, ensure_directory
 
 
@@ -157,6 +159,7 @@ def generate_atlas(
             keep_files=[
                 "node_pos_dep.json",
                 "node_pos_call.json",
+                "graphdata.json",
             ],
         )
         
@@ -190,7 +193,19 @@ def generate_atlas(
         # Generate children/*.md files
         detail_gen = DetailGenerator(config, atlas_data)
         child_paths = detail_gen.generate(output_dir)
-        
+
+        # Always generate graphdata.json (for code_rag tools)
+        try:
+            output_path = Path(output_dir)
+            builder = GraphBuilder(atlas_data)
+            unified_graph = builder.build_unified_graph()
+            GraphSerializer.save_json(
+                unified_graph,
+                output_path / "graphdata.json",
+            )
+        except Exception as e:
+            print(f"  ⚠️  Graph generation skipped: {e}")
+
         print()
         print("=" * 60)
         print("✅ ATLAS GENERATION COMPLETE")

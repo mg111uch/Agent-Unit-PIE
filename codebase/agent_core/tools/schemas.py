@@ -308,6 +308,54 @@ TOOL_SCHEMAS: List[Dict[str, Any]] = [
         "description": "List available checkpoints for undo operations",
         "parameters": _obj_schema(properties={}),
     },
+    # Code RAG tools
+    {
+        "name": "get_symbol",
+        "description": "Look up a function or class by name with its source code, signature, docstring, and metadata. Optionally scope by file_path or parent_name to disambiguate.",
+        "parameters": _obj_schema(
+            properties={
+                "name": _str_schema("Function or class name to look up"),
+                "file_path": _str_schema("Optional file path to narrow search (when multiple files have the same symbol)"),
+                "parent_name": _str_schema("Optional parent class name (to disambiguate methods with the same name)"),
+            },
+            required=["name"],
+        ),
+    },
+    {
+        "name": "search_symbols",
+        "description": "Full-text search across all function/class names, docstrings, and source code. Returns matching symbols ranked by relevance.",
+        "parameters": _obj_schema(
+            properties={
+                "query": _str_schema("Search query (supports FTS5 syntax, e.g. 'auth AND login', 'process_order')"),
+                "type_filter": _str_schema("Optional filter: 'function', 'class', 'method', or 'file'"),
+                "top_k": {"type": "integer", "description": "Number of results to return (default 10)"},
+            },
+            required=["query"],
+        ),
+    },
+    {
+        "name": "get_callers_callees",
+        "description": "Show which functions call a given symbol (callers) and which functions it calls (callees). Uses recursive graph traversal up to the specified depth.",
+        "parameters": _obj_schema(
+            properties={
+                "name": _str_schema("Function or class name to analyze"),
+                "file_path": _str_schema("Optional file path to disambiguate"),
+                "direction": _str_schema("Direction: 'callers', 'callees', or 'both' (default: 'both')"),
+            },
+            required=["name"],
+        ),
+    },
+    {
+        "name": "find_impact",
+        "description": "Find all functions that would be affected by changing the given symbol. Lists everything that directly or transitively depends on it.",
+        "parameters": _obj_schema(
+            properties={
+                "name": _str_schema("Function or class name to check impact for"),
+                "file_path": _str_schema("Optional file path to disambiguate"),
+            },
+            required=["name"],
+        ),
+    },
 ]
 
 TOOL_NAME_MAP: Dict[str, dict] = {s["name"]: s for s in TOOL_SCHEMAS}

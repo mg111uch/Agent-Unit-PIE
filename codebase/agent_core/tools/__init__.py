@@ -46,6 +46,12 @@ from agent_core.tools.sim_ops import (
     simulation_list,
     simulation_get_signals,
 )
+from agent_core.tools.code_rag import (
+    get_symbol_tool,
+    search_symbols_tool,
+    get_callers_callees_tool,
+    find_impact_tool,
+)
 from agent_core.tools.registry import ToolRegistry, CAT_FILE, CAT_KERNEL, CAT_SIM, CAT_META, CAT_GIT
 from agent_core.tools.schemas import TOOL_NAME_MAP
 
@@ -319,6 +325,24 @@ def _register_all():
         meta={"description": "Get signals emitted during a simulation run",
               "input_format": "`{\"run_id\": \"...\"}`"},
         category=CAT_SIM)
+
+    # Code RAG tools (codebase atlas intelligence)
+    _reg.register("get_symbol", _tc(get_symbol_tool), schema=_s["get_symbol"],
+        meta={"description": "Look up a function/class by name with source code, signature, and docstring",
+              "input_format": "`{\"name\": \"process_order\", \"file_path\": \"optional\"}`"},
+        category=CAT_META)
+    _reg.register("search_symbols", _tc(search_symbols_tool), schema=_s["search_symbols"],
+        meta={"description": "Full-text search across all symbol names, docstrings, and source code",
+              "input_format": "`{\"query\": \"auth AND login\", \"type_filter\": \"function\", \"top_k\": 10}`"},
+        category=CAT_META)
+    _reg.register("get_callers_callees", _tc(get_callers_callees_tool), schema=_s["get_callers_callees"],
+        meta={"description": "Show callers and callees of a function via recursive graph traversal",
+              "input_format": "`{\"name\": \"validate_user\", \"direction\": \"both\"}`"},
+        category=CAT_META)
+    _reg.register("find_impact", _tc(find_impact_tool), schema=_s["find_impact"],
+        meta={"description": "Find all functions affected by changing the given symbol",
+              "input_format": "`{\"name\": \"validate_user\"}`"},
+        category=CAT_META)
 
 
 _register_all()

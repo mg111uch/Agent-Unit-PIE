@@ -28,21 +28,21 @@ Generate compact, hierarchical documentation that helps LLM agents understand yo
 ### CLI Usage
 
 ```bash
-# Generate atlas
-cd Agentic_Unit_PIE/codebase/modules
-python -m codebase_atlas.main \
+# Generate atlas (markdown + graphdata.json for code_rag tools)
+cd Agentic_Unit_PIE/codebase
+python -m modules.codebase_atlas.main \
     --project-dir /path/to/your/project \
     --output-dir ./atlas_output \
     --ignore-dirs agent_tools cache data
 
 # Generate atlas and launch interactive graph explorer - Default port 8080
-python -m codebase_atlas.main \
+python -m modules.codebase_atlas.main \
     --project-dir /path/to/your/project \
     --serve \
     --port 9090 --host 0.0.0.0 
 
 # Serve a previously generated atlas (skips regeneration)
-python -m codebase_atlas.main \
+python -m modules.codebase_atlas.main \
     --output-dir ./atlas_output \
     --load
 
@@ -121,8 +121,9 @@ project_dir/
 │   │   ├── utils.md            # Layer 2: Utils module details
 │   │   └── tests.md            # Layer 2: Tests module details
 │   ├── atlas_meta.json    
-│   ├── graphdata.json 
-│   └── node_positions.json       
+│   ├── graphdata.json          # Always generated (not just --serve). Consumed by code_rag agent tools.
+│   ├── code_rag.db             # Auto-generated SQLite DB with FTS5 from graphdata.json + source code
+│   └── node_positions.json     # Only persisted during --serve interactive sessions
 └── codebase/                      # Layer 3: Agent reads only when implementing
 ```
 

@@ -1,5 +1,5 @@
 # 📂 argu_god
-Generated: 2026-07-05 14:01:18
+Generated: 2026-07-15 15:25:49
 Files: 2
 
 ---
@@ -16,7 +16,7 @@ F: read_answer_from_file()
    ↳Called by: F002:compile_topic_llm
    ↳Impact: 🟢LOW (1 dependents) | Breaks: [F002:compile_topic_llm]
 F: compile_topic_llm(topic)
-   ↳Called by: F001:compile_topic | Calls: F002:write_question_to_file,F002:run_gemini_agent,F002:read_answer_from_file
+   ↳Called by: F001:compile_topic | Calls: F002:write_question_to_file,F002:read_answer_from_file,F002:run_gemini_agent
    ↳Impact: 🟢LOW (1 dependents) | Breaks: [F001:compile_topic]
 ---
 

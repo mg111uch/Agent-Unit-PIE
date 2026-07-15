@@ -2,9 +2,9 @@
 
 ## TASK
 
-I am getting output given in `Agentic_Unit_PIE/Issues_n_ideas.md` while making a llm call to gemini_provider. There are no final answer as output in the frontend. Also tool names are not displayed properly, every tool name is shown `multi`. There are no errors shown in backend terminal while making tool calls to gemini api. I think there is issue in response parsing only.
+There is much detail given in `Agentic_Unit_PIE/system_devpt_reports/orchestrator/README.md` which the end user dont need to know about. This doc is for humans to get usage details and overview of how project work. But many features documented gives unnecessary details which humans dont need to concern with  and agents can easily get it by reading code files directly. Should we keep details as it is or should we clean up a bit.   
 
-Start by knowing module details by reading `Agentic_Unit_PIE/system_devpt_reports/orchestrator/README.md`.
+Start by knowing module details by reading `Agentic_Unit_PIE/system_devpt_reports/orchestrator/README.md`. Keep updating it.
 
 Do not give code or make any changes, just a concise plan or answer.
 
@@ -41,3 +41,8 @@ Add useful project-specific findings here for later sessions. Be precise — one
 ### 2026-07-13 — Phase 4: server.py / agent_loop.py split into packages
 - `codebase/__init__.py` causes circular import on `pytest` — workaround: `mv __init__.py __init__.py.bak` before running tests, restore after
 - Splitting a module with mutable globals into a package: import via `import pkg as _srv` and reference `_srv.global_name` for reads/writes; `from pkg import name` creates local bindings that won't see mutations by other submodules
+
+### 2026-07-15 — Code RAG: SQLite-based symbol search from atlas output
+- `agent_core/tools/code_rag.py` — `CodeRAG` class ingests atlas `graphdata.json` + `ast`-parsed function/class code into SQLite with FTS5. Zero external deps (stdlib only).
+- 4 agent tools registered under `CAT_META`: `get_symbol`, `search_symbols`, `get_callers_callees`, `find_impact`
+- Tool functions must be plain (no `@tool_call`) in ops module to avoid circular import; decorator applied in `__init__.py` registration.

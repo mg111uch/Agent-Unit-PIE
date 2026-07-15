@@ -138,26 +138,9 @@ GEMINI_API_KEY=your_api_key_here
 ## ▶️ Run the Agent
 
 ```bash
-python agent.py
+cd Agentic_Unit_PIE/codebase
+python server.py
 ```
-
-## 🛠️ Available Tools
-
-### File Operations
-| Tool | Purpose |
-|------|---------|
-| `read_file` | Read file |
-| `list_files` | List directory |
-| `write_to_file` | Write file |
-| `execute_command` | Run shell |
-
-### `write_to_file` with modes
-  * `create` – new file
-  * `overwrite` – replace file
-  * `append` – add content
-  * `patch` – find & replace text
-
----
 
 # 🌍 Core Concept: Universal Units
 
@@ -261,15 +244,6 @@ Responsibilities:
 The kernel owns cognition.
 
 All other systems become modules around the kernel.
-
-### Kernel Tools
-| Tool | Purpose |
-|------|---------|
-| `kernel_retrieve` | Query memory |
-| `kernel_emit_signal` | Emit observation |
-| `kernel_store_context` | Store in memory |
-| `kernel_get_memory` | Retrieve memory |
-| `kernel_create_event` | Create event |
 
 ## Ontology Engine
 
@@ -736,14 +710,6 @@ coordinate
 ```
 
 Units dynamically attach behaviors.This enables universal simulation.
-
-### Simulation Tools
-| Tool | Purpose |
-|------|---------|
-| `simulation_run` | Run simulation |
-| `simulation_compare` | Compare runs |
-| `simulation_list` | List runs |
-| `simulation_get_signals` | Get signals |
 
 # 📈 Economic Intelligence Engine
 

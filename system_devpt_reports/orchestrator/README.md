@@ -19,6 +19,7 @@ conda run -n myenv python server.py
 - `JWT_SECRET` — JWT signing secret (default: auto-generated random hex)
 - `CORS_ORIGINS` — comma-separated allowed origins (default: `http://localhost:3000,http://localhost:8001`)
 - `AGENT_PORT` — server port (default: 8001)
+- `CODEBASE_ATLAS_DIR` — path to atlas output dir with `graphdata.json` (default: `<workspace>/atlas_output/`)
 
 #### Config File (`config.json`)
 - `allowed_commands` — list of allowed shell commands for `execute_command`
@@ -31,6 +32,24 @@ conda run -n myenv python server.py
 ```bash
 exit
 ```
+
+---
+
+## Features Overview
+
+| Capability | Description |
+|------------|-------------|
+| Auto-Research | Goal-autonomous research using shared agent loop (`/auto`) |
+| Debate Mode | Structured topic exploration with belief tracking (`/argu`) |
+| Kernel Memory | Persistent memory — retrieve, store, emit signals, create events |
+| Simulation | Run, compare, and analyze agent-based simulations |
+| File Operations | Read, write, edit, search, glob, execute commands, run tests |
+| Git Tools | Status, diff, commit, log |
+| Planning | Task todo lists, checkpoints, undo |
+| Provider Switching | Swap LLM provider/model at runtime via API |
+| Tool Pack Filtering | Enable/disable tool categories via env or config.json |
+| MCP Integration | Expose kernel + simulation tools to any MCP host (Claude Code, Cursor) |
+| Code RAG | SQLite-based symbol search + call graph from codebase atlas output — `get_symbol`, `search_symbols`, `get_callers_callees`, `find_impact` |
 
 ---
 
@@ -148,6 +167,14 @@ All tools support **native function calling** (JSON Schema via `tools/schemas.py
 | `undo_last_edit` | Restore the most recent checkpoint for a file |
 | `checkpoint_info` | List available checkpoints |
 
+### Code RAG Tools (from codebase atlas)
+| Tool | Purpose |
+|------|---------|
+| `get_symbol` | Look up a function/class by name with full source code, signature, and docstring |
+| `search_symbols` | FTS5 full-text search across symbol names, docstrings, and code |
+| `get_callers_callees` | Recursive graph traversal — who calls this symbol and what it calls |
+| `find_impact` | List everything that depends on a symbol (all transitive callers) |
+
 ### Kernel Tools
 | Tool | Purpose |
 |------|---------|
@@ -221,31 +248,15 @@ registry.add_middleware(lambda name, fn: audit_wrap(name, fn, ...))
 | `file` | read_file, list_files, write_to_file, edit_file, execute_command, glob_search, grep_search, get_workspace_info | `file` |
 | `kernel` | kernel_retrieve, kernel_emit_signal, kernel_store_context, kernel_get_memory, kernel_create_event | `kernel` |
 | `sim` | simulation_run, simulation_compare, simulation_list, simulation_get_signals | `sim` |
-| `meta` | todo_write, todo_read, run_tests, undo_last_edit, checkpoint_info | `meta` |
+| `meta` | todo_write, todo_read, run_tests, undo_last_edit, checkpoint_info, get_symbol, search_symbols, get_callers_callees, find_impact | `meta` |
 | `git` | git_status, git_diff, git_commit, git_log | `git` |
 
 ### Config-Based Tool Pack Filtering
 Set `AGENT_TOOL_PACKS=file,kernel,sim` env var or `"tool_packs": ["kernel","sim"]` in `config.json` to control which tools are active. Default: all five packs.
 
-### MCP Server (agent_core/mcp_server.py)
-Exposes kernel+sim tools via stdio MCP transport, usable by any MCP host (Claude Code, Cursor, etc.):
+For MCP integration (expose kernel+sim to Claude Code, Cursor, etc.), see `ADAPTERS.md`.
 
-```bash
-python -m agent_core.mcp_server
-```
-
-Claude Code integration:
-```json
-{
-  "pie-kernel-sim": {
-    "command": "python",
-    "args": ["-m", "agent_core.mcp_server"]
-  }
-}
-```
-
-### Backward Compatibility
-`TOOLS` and `TOOL_META` globals preserved in `agent_core.tools` for existing import sites. They are snapshots of the registry at import time. For dynamic filtering, use `registry.get_tools(categories=[...])`.
+---
 
 ## LLM Orchestration
 
@@ -272,7 +283,7 @@ agent_core/
   ├── workspace        ──► single path resolver (used by all file tools + server APIs)
   ├── providers_setup  ──► agent_core.llm.*
   ├── context, prompts, commands, auto_research
-  ├── tools/           ──► registry.py + file_ops, kernel_ops, sim_ops, schemas, plan_ops, ...
+  ├── tools/           ──► registry.py + file_ops, kernel_ops, sim_ops, schemas, plan_ops, code_rag, ...
   └── llm/             ──► orchestrator (timeouts/retries) + providers
        ├── gemini_provider.py
        ├── openrouter_provider.py
@@ -280,94 +291,22 @@ agent_core/
 ```
 
 ### System Prompt
-The system prompt (`system_instruction.md`) is loaded dynamically at server startup:
-- `{TOOL_LIST}` — replaced with a markdown table of all registered tools + descriptions
-- `{TOOL_INPUT_FORMATS}` — replaced with a markdown table of tool input formats
-- `{AGENTS_MD}` — replaced with AGENTS.md content from workspace root (if `agents_md_enabled: true`)
-- Kernel and simulation tools are automatically included in the tables
-- Prompt contract enforces JSON-only responses (action+input or final, mutually exclusive)
+The system prompt (`system_instruction.md`) is loaded dynamically at server startup, replacing `{TOOL_LIST}`, `{TOOL_INPUT_FORMATS}`, and `{AGENTS_MD}` placeholders. Kernel and simulation tools are automatically included. The prompt contract enforces JSON-only responses (action+input or final, mutually exclusive).
 
 ### Native Function Calling
-All providers support optional `tools=[]` parameter with JSON Schema definitions:
-- Tool schemas defined once in `agent_core/tools/schemas.py`
-- Gemini uses `function_declarations` format
-- OpenRouter/OpenAI uses `type: "function"` format
-- Responses with `tool_calls` are parsed by `response_parse.parse_provider_response()`
-- Text-JSON and XML tool call formats serve as fallback
+All providers support optional `tools=[]` parameter with JSON Schema definitions. Gemini uses `function_declarations` format, OpenRouter/OpenAI uses `type: "function"` format. Text-JSON and XML tool call formats serve as fallback.
 
-### Structured Tool Results
-Tools now return structured `ToolResult` objects:
-```python
-@dataclass
-class ToolResult:
-    ok: bool
-    data: str = ""
-    error_type: str = ""
-    message: str = ""
-    suggestion: str = ""
-```
-Errors are typed: `not_found`, `not_unique`, `permission`, `path_escape`, `too_large`, `timeout`, `internal`.
+### Streaming
+All providers support `generate_stream()` for real-time token streaming. The agent loop uses streaming for the final answer path, falling back to fake chunking. Stop/cancel is supported via `threading.Event` checked between agent loop steps.
 
-### Real Token Streaming
-All providers support `generate_stream()` for real-time token streaming:
-- **Gemini:** uses `generate_content_stream()` yielding text chunks as they arrive
-- **OpenRouter:** uses `stream=True` on the OpenAI-compatible API
-- **Mock:** simulates streaming for development
-- The agent loop uses streaming for the final answer path, falling back to fake chunking
-- Orchestrator wrapper `generate_stream()` provides unified streaming with non-streaming fallback
-
-### Stop/Cancel Generation
-- Client sends `{"type": "cancel"}` via WebSocket to stop the current generation
-- Server sets a `threading.Event` checked between agent loop steps
-- Frontend shows a "Stop generation" button when `isBusy`
-
-### LLM Timeouts & Retries
-- `LLMOrchestrator.generate()` retries up to 3 times with exponential backoff (2^attempt seconds)
-- Timeout per provider call is 60s
-- Retry count exposed in `/api/status` and response metadata
-
-### Server Status API
-`GET /api/status` (no auth) returns:
-```json
-{
-  "status": "ok",
-  "provider": "openrouter",
-  "model": "anthropic/claude-sonnet-20241022",
-  "kernel": true,
-  "tools": ["read_file", "edit_file", ...],
-  "tool_packs": ["file", "kernel", "sim", "meta", "git"],
-  "workspace": "/path/to/workspace",
-  "total_requests": 42,
-  "total_failures": 1,
-  "total_tokens": 15000,
-  "total_cost": 0.15,
-  "total_retries": 2,
-  "sessions": 3
-}
-```
+### Timeouts & Retries
+`LLMOrchestrator.generate()` retries up to 3 times with exponential backoff (2^attempt seconds). Timeout per provider call is 60s. Retry count exposed in `/api/status` and response metadata.
 
 ### Multi-Tool Parallel Turns
-When a provider returns multiple `tool_calls` in one response, the agent loop executes all of them (serialized) and feeds results back in a single follow-up. This reduces round trips for multi-file operations.
+When a provider returns multiple `tool_calls` in one response, the agent loop executes all of them (serialized) and feeds results back in a single follow-up, reducing round trips.
 
 ### Message Store & Context Compaction
-Sessions and messages persist to SQLite (`agent_sessions.db`, WAL mode, thread-safe):
-- Every user message and tool result is stored per session
-- When a session exceeds 100 messages, older messages are trimmed (keeps last 50)
-- Sessions survive server restarts
-- API: `MessageStore` in `agent_core/message_store.py`
-
-### Explicit Message Arrays (Phase 1 gap closed)
-The agent loop (`iter_agent_events`) now accepts optional `msg_store` and `session_id`.
-When provided, it builds explicit message arrays from the store + in-memory tool results,
-and passes them to all providers via a new `messages` parameter, **replacing** the old
-growing-string `current_input` + provider-side `conversation_id` approach for that path.
-
-**Per-provider handling of `messages`:**
-| Provider | Mechanism |
-|----------|-----------|
-| Gemini | `models.generate_content()` with `contents` + `system_instruction` in config |
-| OpenRouter | `_convert_messages_to_openai()` → OpenAI chat completions `messages` |
-| Mock | Accepted but ignored (backward compat) |
+Sessions and messages persist to SQLite (`agent_sessions.db`, WAL mode, thread-safe). When a session exceeds 100 messages, older messages are trimmed (keeps last 50). Sessions survive server restarts.
 
 ---
 
@@ -380,14 +319,7 @@ growing-string `current_input` + provider-side `conversation_id` approach for th
 
 ## Path Resolution (workspace.py)
 
-All file tools (`read_file`, `list_files`, `write_to_file`, `edit_file`) and the server's
-`/api/files/*` endpoints resolve paths through `agent_core.workspace.resolve()`. This ensures
-the agent and frontend always agree on the root. The root defaults to process CWD and is
-overridable via the `AGENT_WORKSPACE_ROOT` environment variable.
-
-Leading slashes in model-supplied paths are treated as workspace-relative (not OS-root), matching
-the convention most coding agents expect. A `PathEscapeError` is raised if `..` traversal or
-symlinks attempt to escape the workspace.
+All file tools resolve paths through `agent_core.workspace.resolve()`. The root defaults to process CWD, overridable via `AGENT_WORKSPACE_ROOT`. Leading slashes in model-supplied paths are treated as workspace-relative. A `PathEscapeError` is raised if `..` traversal or symlinks attempt to escape the workspace.
 
 ---
 
@@ -396,66 +328,23 @@ symlinks attempt to escape the workspace.
 - JWT-based auth on WebSocket (`/ws/agent?token=...`) and all REST endpoints except `/api/status`
 - `JWT_SECRET` env var (auto-generated random hex if not set)
 - CORS restricted to `CORS_ORIGINS` env var (default: `http://localhost:3000,http://localhost:8001`)
-- `allow_credentials=False` (auth via token query param, not cookies)
 
 ## Per-User Workspace
 
-Each authenticated user gets an isolated workspace rooted at `{WORKSPACE_BASE}/{user_id}/`.
-- `WORKSPACE_BASE` defaults to `{project_root}/workspaces/`, overridable via `AGENT_WORKSPACE_BASE` env var
-- `workspace.set_user_workspace(user_id)` creates the directory and sets a thread-local root
-- `resolve()` and `to_relative()` use the thread-local root when set, falling back to global `WORKSPACE_ROOT`
-- REST endpoints (`/api/files/*`) set user workspace from JWT `id` claim
-- WebSocket handler sets user workspace on connect, clears on disconnect
+Each authenticated user gets an isolated workspace rooted at `{WORKSPACE_BASE}/{user_id}/`. `WORKSPACE_BASE` defaults to `{project_root}/workspaces/`, overridable via `AGENT_WORKSPACE_BASE` env var.
 
 ## Sandbox Shell
 
-- Config flag `sandbox_enabled` in `config.json` (default: `false`)
-- When enabled, `execute_command` wraps commands via Docker: `docker run --rm --network none -v {workspace}:/workspace:ro python:3.11-slim sh -c "{cmd}"`
-- Falls back with a clear error message if Docker is unavailable
-- Preserves existing subprocess path when disabled
+Optional Docker sandboxing for `execute_command`: when `sandbox_enabled: true`, commands run in a read-only Docker container with no network access. Falls back with a clear error if Docker is unavailable.
 
 ## Secrets Redaction
 
-- Regex patterns in `config.json` `secrets_patterns` (OpenAI keys, GitHub tokens, Slack tokens, AWS keys, private keys)
-- `secrets_redactor.redact(text)` applies all patterns, replacing matches with `[REDACTED]`
-- Applied on `message_store.get_messages()` read path (tool results and model outputs redacted before feeding back to LLM)
-- Applied on every tool result via the audit wrapper in `handle_chat`
+Regex patterns in `config.json` `secrets_patterns` redact API keys and tokens from tool results and stored messages to prevent credential leakage.
 
 ## Rate Limiting
 
-- Token-bucket per user, two categories: `llm_calls_per_minute` (default: 10) and `tool_writes_per_minute` (default: 30)
-- Configurable via `config.json` `rate_limits` block
-- LLM rate checked before processing `chat` and `slash` WS messages
-- Write rate (write_to_file, edit_file, execute_command, etc.) checked inside the tool wrapper
-- Returns `{"type": "error", "message": "Rate limited: ..."}` on denial
+Token-bucket per user: `llm_calls_per_minute` (default: 10) and `tool_writes_per_minute` (default: 30), configurable via `config.json` `rate_limits`.
 
 ## Audit Log
 
-- SQLite (`agent_audit.db`, WAL mode) with table: `user_id, tool, input_hash, status, created_at`
-- Every tool invocation logged via wrapped TOOLS dict in `handle_chat`
-- `/api/audit?limit=100&offset=0` endpoint (auth-protected) returns paginated entries
-- Inputs are hashed (SHA-256, 16-char prefix) rather than stored raw
-
----
-
-## Integrations
-
-| Component | Status | Docs |
-|-----------|--------|------|
-| Kernel | ✅ | `kernel.md` |
-| Simulation | ✅ | `simulation_engine.md` |
-| ArguGod | ✅ | `debate_engine.md` |
-| Digital Twins | Planned | - |
-
----
-
-## Self-Evolution
-
-Full concept in README.md.
-
-Current: User-reactive → Target: Goal-autonomous
-1. Research Loop ✓ implemented (shared agent loop)
-2. Hypothesis Generator
-3. Validator
-4. Compressor
-5. Self-Evolve Loop
+Every tool invocation is logged to SQLite (`agent_audit.db`) with user_id, tool name, input hash, and timestamp. Queryable via `/api/audit` endpoint.

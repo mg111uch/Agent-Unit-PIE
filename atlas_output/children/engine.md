@@ -1,5 +1,5 @@
 # 📂 engine
-Generated: 2026-07-05 14:01:18
+Generated: 2026-07-15 15:25:49
 Files: 8
 
 ---
@@ -17,7 +17,7 @@ F: argu_cli(mode,topic)
 ---
 
 F009│kernel_bridge.py│418
-D: ●json,kernel,os,sys,uuid,+1
+D: ●datetime,json,os,sys,uuid,+1
 F: _get_session_path(session_id)
    ↳Called by: F009:save_debate_session,F009:load_debate_session
    ↳Impact: 🟡MEDIUM (2 dependents) | Breaks: [F009:save_debate_session],[F009:load_debate_session]
@@ -26,12 +26,12 @@ F: save_debate_session(topic,state,beliefs,session_id)→str
    ↳Impact: 🟢LOW (1 dependents) | Breaks: [F003:run_explore_loop]
    S: Save debate session state.
 F: load_debate_session(session_id)→dict
-   ↳Called by: F003:run_explore_loop | Calls: F009:list_debate_sessions,F009:_get_session_path
+   ↳Called by: F003:run_explore_loop | Calls: F009:_get_session_path,F009:list_debate_sessions
    ↳Impact: 🟢LOW (1 dependents) | Breaks: [F003:run_explore_loop]
    S: Load debate session state. If session_id is None, loads most recent.
 F: list_debate_sessions()→list
-   ↳Called by: F009:load_debate_session,F009:get_current_session_info
-   ↳Impact: 🟡MEDIUM (2 dependents) | Breaks: [F009:load_debate_session],[F009:get_current_session_info]
+   ↳Called by: F009:get_current_session_info,F009:load_debate_session
+   ↳Impact: 🟡MEDIUM (2 dependents) | Breaks: [F009:get_current_session_info],[F009:load_debate_session]
    S: List all saved debate sessions.
 F: get_current_session_info()→dict
    ↳Called by: F003:run_explore_loop | Calls: F009:list_debate_sessions
@@ -68,8 +68,8 @@ F: get_hypothesis_for_argument(argument_name,topic)→str
 F: get_belief_summary(topic)→list
    S: Get summary of all belief hypotheses for topic.
 F: emit_debate_event(event_type,topic,description,metadata)→None
-   ↳Called by: F009:emit_argument_viewed_event,F009:emit_user_response_event,F009:emit_session_end_event
-   ↳Impact: 🔴HIGH (6 dependents) | Breaks: [F009:emit_argument_viewed_event],[F009:emit_user_response_event],[F009:emit_session_end_event]
+   ↳Called by: F009:emit_belief_changed_event,F009:emit_contradiction_event,F009:emit_user_response_event
+   ↳Impact: 🔴HIGH (6 dependents) | Breaks: [F009:emit_belief_changed_event],[F009:emit_contradiction_event],[F009:emit_user_response_event]
    S: Emit debate event for timeline tracking.
 F: emit_session_start_event(topic,is_resume)→None
    ↳Called by: F003:run_explore_loop | Calls: F009:emit_debate_event
@@ -108,7 +108,7 @@ F: map_choice_to_stance(choice)
    ↳Called by: F003:run_explore_loop
    ↳Impact: 🟢LOW (1 dependents) | Breaks: [F003:run_explore_loop]
 F: run_explore_loop(topic)
-   ↳Called by: F008:argu_cli | Calls: F009:emit_contradiction_signal,F006:build_question,F007:save_state
+   ↳Called by: F008:argu_cli | Calls: F009:emit_contradiction_signal,F009:get_hypothesis_for_argument,F009:emit_belief_changed_event
    ↳Impact: 🟢LOW (1 dependents) | Breaks: [F008:argu_cli]
 ---
 
@@ -153,8 +153,8 @@ F: add_response(state,argument_name,choice,custom_text)
 F010│vector_store.py│32
 D: ●chromadb,sentence_transformers
 F: embed(text)
-   ↳Called by: F010:search_similar,F010:index_graph
-   ↳Impact: 🟡MEDIUM (2 dependents) | Breaks: [F010:search_similar],[F010:index_graph]
+   ↳Called by: F010:index_graph,F010:search_similar
+   ↳Impact: 🟡MEDIUM (2 dependents) | Breaks: [F010:index_graph],[F010:search_similar]
 F: index_graph(graph)
    ↳Called by: F003:run_explore_loop | Calls: F010:embed
    ↳Impact: 🟢LOW (1 dependents) | Breaks: [F003:run_explore_loop]
