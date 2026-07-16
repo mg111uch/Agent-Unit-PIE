@@ -166,6 +166,7 @@ All tools support **native function calling** (JSON Schema via `tools/schemas.py
 | `todo_read` | Read the current task plan |
 | `undo_last_edit` | Restore the most recent checkpoint for a file |
 | `checkpoint_info` | List available checkpoints |
+| `ask_user_question` | Ask the user for input/clarification with up to 3 options per question (a custom text option is always added). Multiple questions can be asked at once — the user sees them one by one with a progress bar. Tool blocks until all answers are submitted. |
 
 ### Code RAG Tools (from codebase atlas)
 | Tool | Purpose |
@@ -248,7 +249,7 @@ registry.add_middleware(lambda name, fn: audit_wrap(name, fn, ...))
 | `file` | read_file, list_files, write_to_file, edit_file, execute_command, glob_search, grep_search, get_workspace_info | `file` |
 | `kernel` | kernel_retrieve, kernel_emit_signal, kernel_store_context, kernel_get_memory, kernel_create_event | `kernel` |
 | `sim` | simulation_run, simulation_compare, simulation_list, simulation_get_signals | `sim` |
-| `meta` | todo_write, todo_read, run_tests, undo_last_edit, checkpoint_info, get_symbol, search_symbols, get_callers_callees, find_impact | `meta` |
+| `meta` | todo_write, todo_read, run_tests, undo_last_edit, checkpoint_info, get_symbol, search_symbols, get_callers_callees, find_impact, ask_user_question | `meta` |
 | `git` | git_status, git_diff, git_commit, git_log | `git` |
 
 ### Config-Based Tool Pack Filtering

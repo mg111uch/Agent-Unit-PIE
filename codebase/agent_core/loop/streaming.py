@@ -22,39 +22,6 @@ def stream_final(
 ) -> Generator[dict[str, Any], None, None]:
     text = content or ""
 
-    if _STREAMING_ENABLED and orchestrator and content:
-        provider_client = (
-            orchestrator.providers.get(provider or orchestrator.default_provider)
-            if hasattr(orchestrator, 'providers') else None
-        )
-        if provider_client and hasattr(provider_client, "generate_stream"):
-            try:
-                streamed_full = []
-                for chunk in orchestrator.generate_stream(
-                    prompt="",
-                    system_prompt=system_prompt,
-                    provider=provider,
-                    model=model,
-                    messages=messages,
-                ):
-                    if chunk:
-                        streamed_full.append(chunk)
-                        yield {
-                            "type": "stream_chunk",
-                            "content": chunk,
-                            "step": step,
-                        }
-                yield {
-                    "type": "final",
-                    "content": "",
-                    "step": step,
-                    "conversation_id": conversation_id,
-                    "full_content": "".join(streamed_full) or text,
-                }
-                return
-            except Exception:
-                pass
-
     if text:
         for i in range(0, len(text), _STREAM_CHUNK_CHARS):
             yield {

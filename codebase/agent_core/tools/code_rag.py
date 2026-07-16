@@ -5,6 +5,8 @@ import ast
 from pathlib import Path
 from typing import Optional, List, Dict, Any
 
+from agent_core.config import CODEBASE_ATLAS_DIR as _CONFIG_ATLAS_DIR, CODEBASE_ROOT as _CODEBASE_ROOT
+
 DB_FILENAME = "code_rag.db"
 
 
@@ -283,6 +285,21 @@ class CodeRAG:
             "matches": result,
         }
 
+    def get_symbols(self, names: List[str], file_path: Optional[str] = None) -> List[Dict[str, Any]]:
+        conn = self._get_conn()
+        placeholders = ",".join("?" * len(names))
+        if file_path:
+            cur = conn.execute(
+                f"SELECT * FROM symbols WHERE symbol_name IN ({placeholders}) AND file_path = ?",
+                (*names, file_path)
+            )
+        else:
+            cur = conn.execute(
+                f"SELECT * FROM symbols WHERE symbol_name IN ({placeholders})",
+                names
+            )
+        return [dict(r) for r in cur.fetchall()]
+
     def search_symbols(self, query: str, type_filter: Optional[str] = None,
                        top_k: int = 10) -> List[Dict[str, Any]]:
         conn = self._get_conn()
@@ -375,10 +392,14 @@ def _get_rag() -> Optional[CodeRAG]:
     global _rag_instance
     if _rag_instance is not None:
         return _rag_instance
-    atlas_dir = os.environ.get("CODEBASE_ATLAS_DIR", "")
+    atlas_dir = ""
+    if _CONFIG_ATLAS_DIR and os.path.isdir(_CONFIG_ATLAS_DIR):
+        atlas_dir = _CONFIG_ATLAS_DIR
     if not atlas_dir:
-        ws = os.environ.get("AGENT_WORKSPACE_ROOT", os.getcwd())
-        candidate = os.path.join(ws, "atlas_output")
+        atlas_dir = os.environ.get("CODEBASE_ATLAS_DIR", "")
+    if not atlas_dir:
+        project_root = os.path.dirname(_CODEBASE_ROOT)
+        candidate = os.path.join(project_root, "atlas_output")
         if os.path.isdir(candidate):
             atlas_dir = candidate
     if not atlas_dir or not os.path.isdir(atlas_dir):
@@ -389,23 +410,59 @@ def _get_rag() -> Optional[CodeRAG]:
 
 # Agent tool functions (plain functions — @tool_call decorator applied in __init__.py)
 
+BUDGET_CHARS = 10000
+
+
 def get_symbol_tool(params: dict) -> str:
     rag = _get_rag()
     if rag is None:
         return "Codebase atlas not found. Run `python -m codebase_atlas.main --project-dir <path> --output-dir ./atlas_output --serve` to generate it."
     rag.ensure_indexed()
-    name = params.get("name", "")
-    if not name:
-        return "Error: 'name' parameter is required."
-    file_path = params.get("file_path")
-    parent_name = params.get("parent_name")
-    result = rag.get_symbol(name, file_path, parent_name)
-    if result is None:
-        return f"Symbol '{name}' not found in indexed codebase."
-    return json.dumps(result, indent=2)
+
+    names = params.get("names")
+    if not names:
+        single = params.get("name", "")
+        if single:
+            names = [single]
+    if names:
+        if isinstance(names, str):
+            names = [names]
+        file_path = params.get("file_path")
+        symbols = rag.get_symbols(names, file_path)
+        found_names = {s["symbol_name"] for s in symbols}
+        missing_names = [n for n in names if n not in found_names]
+        if not symbols:
+            return json.dumps({
+                "error": f"No symbols found for: {names}",
+                "missing_names": list(names),
+                "hint": "Use search_symbols with a fuzzy query for possible misspellings, then get_symbol only for the exact names you need.",
+            }, indent=2)
+        results = []
+        total_chars = 0
+        truncated_names = []
+        for sym in symbols:
+            serialized = json.dumps(sym, indent=2)
+            total_chars += len(serialized)
+            if total_chars > BUDGET_CHARS and results:
+                truncated_names.append(sym["symbol_name"])
+            else:
+                results.append(sym)
+        output: dict = {"symbols": results}
+        if missing_names:
+            output["missing_names"] = missing_names
+            output["hint"] = (
+                "Some names were not found (check spelling). "
+                "Call search_symbols only for missing names, then get_symbol with corrected exact names."
+            )
+        if truncated_names:
+            output["truncated_names"] = truncated_names
+        return json.dumps(output, indent=2)
+
+    return "Error: 'names' (list) or 'name' (string) parameter is required."
 
 
 def search_symbols_tool(params: dict) -> str:
+    """Metadata-only search. Does not prefetch definitions (avoids bloating with unrelated hits)."""
     rag = _get_rag()
     if rag is None:
         return "Codebase atlas not found. Run `python -m codebase_atlas.main --project-dir <path> --output-dir ./atlas_output --serve` to generate it."
@@ -429,7 +486,7 @@ def search_symbols_tool(params: dict) -> str:
             "end_line": r["end_line"],
             "risk_level": r["risk_level"],
         })
-    return json.dumps(summary, indent=2)
+    return json.dumps({"results": summary}, indent=2)
 
 
 def get_callers_callees_tool(params: dict) -> str:

@@ -229,6 +229,35 @@ async def handle_chat(
         if etype == "step_reply":
             continue
 
+        if etype == "llm_call":
+            await websocket.send_json({
+                "type": "llm_call",
+                "status": event.get("status", ""),
+                "step": event.get("step", 0),
+            })
+            continue
+
+        if etype == "question":
+            await websocket.send_json({
+                "type": "question",
+                "questions": event.get("questions", []),
+                "session_id": event.get("session_id", ""),
+                "step": event.get("step", 0),
+            })
+            from agent_core.tools.question_ops import resolve_all_questions, cancel_questions
+            while True:
+                data = await websocket.receive_json()
+                if data.get("type") == "question_answer":
+                    resolve_all_questions(
+                        event.get("session_id", ""),
+                        data.get("answers", []),
+                    )
+                    break
+                elif data.get("type") == "cancel":
+                    cancel_questions(event.get("session_id", ""))
+                    break
+            continue
+
         if etype == "status":
             await websocket.send_json({
                 "type": "status",
@@ -257,9 +286,11 @@ async def handle_chat(
                 "step": event["step"],
             })
         elif etype == "final":
+            full = event.get("full_content") or event.get("content") or ""
             await websocket.send_json({
                 "type": "final",
-                "content": event.get("full_content") or event.get("content") or "",
+                "content": "",
+                "full_content": full,
                 "step": event["step"],
             })
             conv_id = event.get("conversation_id", conv_id)

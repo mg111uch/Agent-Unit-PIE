@@ -43,6 +43,7 @@
   "max_checkpoints": 50,
   "agents_md_enabled": true,
   "sandbox_enabled": false,
+  "codebase_atlas_dir": "../atlas_output",
   "secrets_patterns": [
     "sk-[A-Za-z0-9]{15,}",
     "gh[pousrx]_[A-Za-z0-9]{15,}",

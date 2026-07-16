@@ -6,6 +6,7 @@ import json
 import threading
 import time
 import traceback
+from concurrent.futures import ThreadPoolExecutor, TimeoutError
 from typing import Any, Generator, List, Optional
 
 from agent_core.config import MAX_AGENT_STEPS
@@ -22,6 +23,26 @@ from agent_core.loop.messages import (
 )
 from agent_core.loop.streaming import stream_final
 from agent_core.loop.executor import execute_tool_calls
+
+
+def _generate_with_cancel(
+    orchestrator: Any,
+    cancel_event: Optional[threading.Event],
+    **kwargs: Any,
+) -> Optional[dict]:
+    """Run orchestrator.generate() in a thread, polling cancel_event every 500ms."""
+    pool = ThreadPoolExecutor(max_workers=1)
+    future = pool.submit(orchestrator.generate, **kwargs)
+    try:
+        while True:
+            if cancel_event and cancel_event.is_set():
+                return None
+            try:
+                return future.result(timeout=0.5)
+            except TimeoutError:
+                continue
+    finally:
+        pool.shutdown(wait=False)
 
 
 def iter_agent_events(
@@ -82,8 +103,11 @@ def iter_agent_events(
                 "conversation_id": conv_id,
             }
 
+            yield {"type": "llm_call", "status": "start", "step": step}
             if use_messages:
-                result = orchestrator.generate(
+                result = _generate_with_cancel(
+                    orchestrator,
+                    cancel_event,
                     prompt="",
                     system_prompt=system_prompt,
                     provider=provider,
@@ -93,7 +117,9 @@ def iter_agent_events(
                     messages=current_messages,
                 )
             else:
-                result = orchestrator.generate(
+                result = _generate_with_cancel(
+                    orchestrator,
+                    cancel_event,
                     prompt=current_input,
                     system_prompt=system_prompt,
                     conversation_id=conv_id,
@@ -101,6 +127,16 @@ def iter_agent_events(
                     model=model,
                     tools=registry.get_schemas(),
                 )
+            if result is None:
+                yield {
+                    "type": "final",
+                    "content": "",
+                    "step": step,
+                    "conversation_id": conv_id,
+                    "full_content": "(cancelled)",
+                }
+                return
+            yield {"type": "llm_call", "status": "end", "step": step}
 
             if result["status"] == "error":
                 yield {
@@ -232,7 +268,54 @@ def iter_agent_events(
                         "step": step,
                     }
 
-                results = execute_tool_calls(parsed.tool_calls, step, tools=_tools)
+                question_calls = [tc for tc in parsed.tool_calls if tc.name == "ask_user_question"]
+                other_calls = [tc for tc in parsed.tool_calls if tc.name != "ask_user_question"]
+
+                if question_calls:
+                    if other_calls:
+                        results = [{
+                            "tool": "ask_user_question",
+                            "result": "Error: ask_user_question cannot be combined with other tools in the same turn.",
+                            "ok": False,
+                            "call_id": question_calls[0].call_id or "",
+                        }]
+                    else:
+                        tc = question_calls[0]
+                        arg = tc.arguments if isinstance(tc.arguments, dict) else {}
+                        arg["_session_id"] = session_id
+                        questions = arg.get("questions", [])
+                        yield {
+                            "type": "question",
+                            "questions": questions,
+                            "session_id": session_id,
+                            "step": step,
+                        }
+                        result_obj = _tools["ask_user_question"](arg)
+                        if isinstance(result_obj, ToolResult):
+                            result_str = result_obj.to_string()
+                            is_ok = result_obj.ok
+                        else:
+                            result_str = str(result_obj)
+                            is_ok = not result_str.startswith("Error")
+                        results = [{
+                            "tool": "ask_user_question",
+                            "result": result_str,
+                            "ok": is_ok,
+                            "call_id": tc.call_id or "",
+                        }]
+                else:
+                    results = execute_tool_calls(parsed.tool_calls, step, tools=_tools, cancel_event=cancel_event)
+
+                if cancel_event and cancel_event.is_set():
+                    yield {
+                        "type": "final",
+                        "content": "",
+                        "step": step,
+                        "conversation_id": conv_id,
+                        "full_content": "(cancelled)",
+                    }
+                    return
+
                 all_ok = all(r.get("ok", True) for r in results)
 
                 for tc, result in zip(parsed.tool_calls, results):
@@ -298,6 +381,17 @@ def iter_agent_events(
                     "input": input_str,
                     "step": step,
                 }
+
+                if tool == "ask_user_question":
+                    if isinstance(tool_input, dict):
+                        tool_input["_session_id"] = session_id
+                    questions = tool_input.get("questions", []) if isinstance(tool_input, dict) else []
+                    yield {
+                        "type": "question",
+                        "questions": questions,
+                        "session_id": session_id,
+                        "step": step,
+                    }
 
                 result_obj = _tools[tool](tool_input)
                 if isinstance(result_obj, ToolResult):

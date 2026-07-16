@@ -52,6 +52,7 @@ from agent_core.tools.code_rag import (
     get_callers_callees_tool,
     find_impact_tool,
 )
+from agent_core.tools.question_ops import ask_user_question
 from agent_core.tools.registry import ToolRegistry, CAT_FILE, CAT_KERNEL, CAT_SIM, CAT_META, CAT_GIT
 from agent_core.tools.schemas import TOOL_NAME_MAP
 
@@ -326,13 +327,19 @@ def _register_all():
               "input_format": "`{\"run_id\": \"...\"}`"},
         category=CAT_SIM)
 
+    # Ask user question tool
+    _reg.register("ask_user_question", _tc(ask_user_question), schema=_s["ask_user_question"],
+        meta={"description": "Ask the user for input, clarification, or a decision. Provide options (max 3) and ask multiple questions at once.",
+              "input_format": "`{\"questions\": [{\"question\": \"...\", \"options\": [\"A\", \"B\"]}]}`"},
+        category=CAT_META)
+
     # Code RAG tools (codebase atlas intelligence)
     _reg.register("get_symbol", _tc(get_symbol_tool), schema=_s["get_symbol"],
-        meta={"description": "Look up a function/class by name with source code, signature, and docstring",
-              "input_format": "`{\"name\": \"process_order\", \"file_path\": \"optional\"}`"},
+        meta={"description": "PRIMARY: look up exact function/class names (batch via names: [\"a\",\"b\"]). Prefer over search when user names symbols.",
+              "input_format": "`{\"names\": [\"func1\", \"func2\"]}` or `{\"name\": \"func1\", \"file_path\": \"...\"}`"},
         category=CAT_META)
     _reg.register("search_symbols", _tc(search_symbols_tool), schema=_s["search_symbols"],
-        meta={"description": "Full-text search across all symbol names, docstrings, and source code",
+        meta={"description": "Metadata search only when names unknown or get_symbol missing_names. Does not return full code.",
               "input_format": "`{\"query\": \"auth AND login\", \"type_filter\": \"function\", \"top_k\": 10}`"},
         category=CAT_META)
     _reg.register("get_callers_callees", _tc(get_callers_callees_tool), schema=_s["get_callers_callees"],

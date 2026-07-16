@@ -61,10 +61,12 @@ class LLMOrchestrator:
     ) -> Dict[str, Any]:
         started_at = time.time()
         self.total_requests += 1
+        call_num = self.total_requests
 
         provider_name = provider or self.default_provider
         model_name = model or self.default_model
 
+        print(f"[LLM call #{call_num}] {provider_name}/{model_name}", flush=True)
         logger.info(f"LLM request -> {provider_name}/{model_name}")
 
         last_error = ""

@@ -36,8 +36,19 @@ def resolve(path: str) -> str:
         raise PathEscapeError("path is required")
 
     root = get_user_workspace_root() or WORKSPACE_ROOT
-
     cleaned = path.strip()
+
+    # Absolute path — use directly if within workspace
+    if os.path.isabs(cleaned):
+        real_path = os.path.realpath(cleaned)
+        real_root = os.path.realpath(root)
+        if os.path.commonpath([real_path, real_root]) != real_root:
+            raise PathEscapeError(
+                f"'{path}' resolves outside the workspace ({root}). "
+                f"Use a path relative to the workspace root, e.g. 'src/app.py'."
+            )
+        return real_path
+
     cleaned = cleaned.lstrip("/\\")
     if cleaned in ("", "."):
         cleaned = "."

@@ -42,6 +42,9 @@ SECRETS_PATTERNS: list[str] = _CONFIG.get("secrets_patterns", [])
 RATE_LIMIT_LLM_CALLS: int = _CONFIG.get("rate_limits", {}).get("llm_calls_per_minute", 10)
 RATE_LIMIT_TOOL_WRITES: int = _CONFIG.get("rate_limits", {}).get("tool_writes_per_minute", 30)
 
+_raw_atlas_dir = _CONFIG.get("codebase_atlas_dir", "")
+CODEBASE_ATLAS_DIR: str = os.path.abspath(os.path.join(CODEBASE_ROOT, _raw_atlas_dir)) if _raw_atlas_dir else ""
+
 
 def load_config() -> dict:
     return _CONFIG

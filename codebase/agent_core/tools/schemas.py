@@ -258,6 +258,32 @@ TOOL_SCHEMAS: List[Dict[str, Any]] = [
             required=["run_id"],
         ),
     },
+    {
+        "name": "ask_user_question",
+        "description": "Ask the user for input, clarification, or a decision. Provide up to 3 options per question (a 4th 'custom answer' text input is always available). Can ask multiple questions at once — user answers them one by one.",
+        "parameters": _obj_schema(
+            properties={
+                "questions": {
+                    "type": "array",
+                    "description": "Questions to ask. User answers them sequentially. Max 3 options each (custom text input is always added as the last option).",
+                    "items": _obj_schema(
+                        properties={
+                            "question": _str_schema("The question text to display to the user"),
+                            "options": {
+                                "type": "array",
+                                "items": {"type": "string"},
+                                "description": "Up to 3 predefined answer choices. A custom text option is always appended.",
+                                "maxItems": 3,
+                            },
+                        },
+                        required=["question"],
+                    ),
+                    "minItems": 1,
+                },
+            },
+            required=["questions"],
+        ),
+    },
     _TEST_OPS_SCHEMA,
     {
         "name": "git_status",
@@ -311,19 +337,28 @@ TOOL_SCHEMAS: List[Dict[str, Any]] = [
     # Code RAG tools
     {
         "name": "get_symbol",
-        "description": "Look up a function or class by name with its source code, signature, docstring, and metadata. Optionally scope by file_path or parent_name to disambiguate.",
+        "description": (
+            "PRIMARY lookup when the user names functions/classes. "
+            "Batch: names=['func1','func2']. Returns full source, signature, docstring. "
+            "Prefer this over search_symbols when exact names are known. "
+            "On missing names, response includes missing_names — then search_symbols only for those."
+        ),
         "parameters": _obj_schema(
             properties={
-                "name": _str_schema("Function or class name to look up"),
-                "file_path": _str_schema("Optional file path to narrow search (when multiple files have the same symbol)"),
-                "parent_name": _str_schema("Optional parent class name (to disambiguate methods with the same name)"),
+                "names": {"type": "array", "items": {"type": "string"}, "description": "Exact function/class names to look up in one batch (e.g. ['func1', 'func2'])."},
+                "file_path": _str_schema("Optional file path to narrow all lookups to one file"),
             },
-            required=["name"],
+            required=["names"],
         ),
     },
     {
         "name": "search_symbols",
-        "description": "Full-text search across all function/class names, docstrings, and source code. Returns matching symbols ranked by relevance.",
+        "description": (
+            "Metadata-only full-text search over symbol names/docstrings/code. "
+            "Use when names are unknown or get_symbol returned missing_names (misspelling). "
+            "Does NOT return full source — pick relevant names then call get_symbol. "
+            "Do not use as the first step when the user already gave exact symbol names."
+        ),
         "parameters": _obj_schema(
             properties={
                 "query": _str_schema("Search query (supports FTS5 syntax, e.g. 'auth AND login', 'process_order')"),
