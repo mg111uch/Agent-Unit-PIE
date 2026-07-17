@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import sqlite3
 import threading
 from datetime import datetime, timezone
@@ -8,13 +9,14 @@ from typing import Any, Optional, List
 
 from agent_core.secrets_redactor import redact
 
-DB_PATH = "agent_sessions.db"
+DB_PATH = "logs/agent_sessions.db"
 
 
 class MessageStore:
     def __init__(self, db_path: str = DB_PATH):
         self._db_path = db_path
         self._lock = threading.Lock()
+        os.makedirs(os.path.dirname(db_path) or ".", exist_ok=True)
         self._conn = sqlite3.connect(db_path, check_same_thread=False)
         self._conn.execute("PRAGMA journal_mode=WAL")
         self._conn.execute("PRAGMA foreign_keys=ON")

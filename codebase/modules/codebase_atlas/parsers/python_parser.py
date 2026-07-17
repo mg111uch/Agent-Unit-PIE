@@ -121,13 +121,17 @@ class PythonParser(BaseParser):
                 method_info = self._parse_function(item, content, is_method=True)
                 methods.append(method_info)
         
-        # Create ClassInfo
+        lines = content.split('\n')
+        end_lineno = getattr(node, 'end_lineno', node.lineno)
+        source_code = '\n'.join(lines[node.lineno - 1:end_lineno])
+
         class_info = ClassInfo(
             name=node.name,
             bases=bases,
             methods=methods,
             docstring=ast.get_docstring(node),
             line_number=node.lineno,
+            source_code=source_code,
         )
         
         # Extract component usage (for ECS patterns)
@@ -164,7 +168,10 @@ class PythonParser(BaseParser):
         # Check if entry point
         is_entry = self._is_entry_point_function(node.name, decorators)
         
-        # Create FunctionInfo
+        lines = content.split('\n')
+        end_lineno = getattr(node, 'end_lineno', node.lineno)
+        source_code = '\n'.join(lines[node.lineno - 1:end_lineno])
+
         func_info = FunctionInfo(
             name=node.name,
             args=args,
@@ -175,6 +182,7 @@ class PythonParser(BaseParser):
             is_async=isinstance(node, ast.AsyncFunctionDef),
             decorators=decorators,
             line_number=node.lineno,
+            source_code=source_code,
         )
         
         # Extract function calls and variable usage

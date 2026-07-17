@@ -23,6 +23,49 @@ Keep as separate modules, connect via kernel.
 
 ---
 
+## Commands
+
+## /auto - Auto-Research
+Goal-autonomous research using the shared agent loop.
+
+```
+>> /auto "research question"
+>> /auto Why is population declining?
+```
+
+**Behavior:**
+- Uses `run_agent_turn()` from the shared loop (same parsing, failure breaker, streaming)
+- No hard kernel dependency — proceeds with file/shell tools if kernel is unavailable
+- Findings stored to kernel memory if available
+- Max iterations configurable (default: 5)
+
+---
+
+## Simulation Usage
+
+### Via Agent
+```
+Run a simulation with 50 years and 100 initial population
+```
+
+### Via Python
+```python
+from modules.simulators.simulation_connector import SimulationConnector
+conn = SimulationConnector()
+result = conn.run_and_extract({'years': 20, 'initial_pop': 50}, 'run_001')
+print(conn.compare_runs(['run_001', 'run_002']))
+```
+
+### Parameters
+| Parameter | Default |
+|-----------|----------|
+| `years` | 50 |
+| `initial_pop` | 50 |
+| `initial_healers` | 1 |
+| `grid_width` | 10 |
+
+---
+
 ### Phase 1 Completed: Behavior Registry Refactoring
 
 **What was done:**
@@ -50,6 +93,8 @@ Keep as separate modules, connect via kernel.
 - `list_agent_types()` - Lists all available types
 
 ---
+
+
 
 ### Phase 3 Completed: Spatial Engine
 

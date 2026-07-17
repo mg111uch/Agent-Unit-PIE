@@ -5,6 +5,11 @@ Target file: `codebase/rag_pipeline/dummy/fabo/fibonacci.py`
 
 ---
 
+# Prompt 1 
+Give short details of functions get_counter_argument and index_graph
+
+---
+
 ## 1. Orientation (get_workspace_info + list_files + read_file)
 
 ```

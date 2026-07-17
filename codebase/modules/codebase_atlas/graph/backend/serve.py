@@ -21,17 +21,6 @@ _POS_FILE = {
     "unified": "node_positions.json",
 }
 
-def _read_project_id(output_dir: Path) -> str | None:
-    meta_file = output_dir / "atlas_meta.json"
-    if not meta_file.exists():
-        return None
-    try:
-        return json.loads(
-            meta_file.read_text(encoding="utf-8")
-        ).get("project_id")
-    except Exception:
-        return None
-
 def _load_positions_with_meta(
     output_dir: Path,
     graph_type: str,
@@ -68,7 +57,7 @@ def _merge_positions(
 ) -> None:
     """Overwrite node.x / node.y from saved positions file if it exists."""
 
-    current_project_id = _read_project_id(output_dir)
+    current_project_id = graph.metadata.get("project_id")
 
     if current_project_id is None:
         return

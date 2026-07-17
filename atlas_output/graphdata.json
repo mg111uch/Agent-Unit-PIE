@@ -1,8 +1,7 @@
 {
+  "project_id": "/home/manigupt/Hello/Agentic_Unit_PIE/codebase/modules/argu_god",
   "graph_type": "unified",
-  "metadata": {
-    "graph_type": "unified"
-  },
+  "metadata": {},
   "nodes": [
     {
       "id": "F001",
@@ -97,19 +96,6 @@
     },
     {
       "id": "F008",
-      "label": "cli.py",
-      "type": "file",
-      "risk_level": "none",
-      "entry_point": false,
-      "cluster_id": null,
-      "parent_id": null,
-      "scope": "file",
-      "metadata": {
-        "path": "/home/manigupt/Hello/Agentic_Unit_PIE/codebase/modules/argu_god/engine/cli.py"
-      }
-    },
-    {
-      "id": "F009",
       "label": "kernel_bridge.py",
       "type": "file",
       "risk_level": "high",
@@ -122,7 +108,7 @@
       }
     },
     {
-      "id": "F010",
+      "id": "F009",
       "label": "vector_store.py",
       "type": "file",
       "risk_level": "none",
@@ -135,7 +121,7 @@
       }
     },
     {
-      "id": "F011",
+      "id": "F010",
       "label": "graph.js",
       "type": "file",
       "risk_level": "high",
@@ -148,7 +134,7 @@
       }
     },
     {
-      "id": "F012",
+      "id": "F011",
       "label": "index.html",
       "type": "file",
       "risk_level": "none",
@@ -161,7 +147,7 @@
       }
     },
     {
-      "id": "F013",
+      "id": "F012",
       "label": "graph.json",
       "type": "file",
       "risk_level": "none",
@@ -174,7 +160,7 @@
       }
     },
     {
-      "id": "F014",
+      "id": "F013",
       "label": "metadata.json",
       "type": "file",
       "risk_level": "none",
@@ -187,7 +173,7 @@
       }
     },
     {
-      "id": "F015",
+      "id": "F014",
       "label": "belief_state.json",
       "type": "file",
       "risk_level": "none",
@@ -200,7 +186,7 @@
       }
     },
     {
-      "id": "F016",
+      "id": "F015",
       "label": "interaction_log.json",
       "type": "file",
       "risk_level": "none",
@@ -213,7 +199,7 @@
       }
     },
     {
-      "id": "F017",
+      "id": "F016",
       "label": "mindmap.json",
       "type": "file",
       "risk_level": "none",
@@ -226,7 +212,7 @@
       }
     },
     {
-      "id": "F018",
+      "id": "F017",
       "label": "session_20260517_181303.json",
       "type": "file",
       "risk_level": "none",
@@ -239,8 +225,8 @@
       }
     },
     {
-      "id": "F009_emit_contradiction_signal",
-      "label": "emit_contradiction_signal()",
+      "id": "F009__get_client",
+      "label": "_get_client()",
       "type": "function",
       "risk_level": "low",
       "entry_point": false,
@@ -249,264 +235,54 @@
       "scope": "call",
       "metadata": {
         "file_ref": "F009",
-        "function_name": "emit_contradiction_signal"
+        "function_name": "_get_client"
       }
     },
     {
-      "id": "F009_get_hypothesis_for_argument",
-      "label": "get_hypothesis_for_argument()",
-      "type": "function",
-      "risk_level": "low",
-      "entry_point": false,
-      "cluster_id": null,
-      "parent_id": "F009",
-      "scope": "call",
-      "metadata": {
-        "file_ref": "F009",
-        "function_name": "get_hypothesis_for_argument"
-      }
-    },
-    {
-      "id": "F009_emit_belief_changed_event",
-      "label": "emit_belief_changed_event()",
-      "type": "function",
-      "risk_level": "low",
-      "entry_point": false,
-      "cluster_id": null,
-      "parent_id": "F009",
-      "scope": "call",
-      "metadata": {
-        "file_ref": "F009",
-        "function_name": "emit_belief_changed_event"
-      }
-    },
-    {
-      "id": "F011_loadGraph",
-      "label": "loadGraph()",
+      "id": "F009__get_collection",
+      "label": "_get_collection()",
       "type": "function",
       "risk_level": "medium",
       "entry_point": false,
       "cluster_id": null,
-      "parent_id": "F011",
-      "scope": "call",
-      "metadata": {
-        "file_ref": "F011",
-        "function_name": "loadGraph"
-      }
-    },
-    {
-      "id": "F004_get_counter_argument",
-      "label": "get_counter_argument()",
-      "type": "function",
-      "risk_level": "low",
-      "entry_point": false,
-      "cluster_id": null,
-      "parent_id": "F004",
-      "scope": "call",
-      "metadata": {
-        "file_ref": "F004",
-        "function_name": "get_counter_argument"
-      }
-    },
-    {
-      "id": "F002_run_gemini_agent",
-      "label": "run_gemini_agent()",
-      "type": "function",
-      "risk_level": "low",
-      "entry_point": false,
-      "cluster_id": null,
-      "parent_id": "F002",
-      "scope": "call",
-      "metadata": {
-        "file_ref": "F002",
-        "function_name": "run_gemini_agent"
-      }
-    },
-    {
-      "id": "F003_load_graph",
-      "label": "load_graph()",
-      "type": "function",
-      "risk_level": "low",
-      "entry_point": false,
-      "cluster_id": null,
-      "parent_id": "F003",
-      "scope": "call",
-      "metadata": {
-        "file_ref": "F003",
-        "function_name": "load_graph"
-      }
-    },
-    {
-      "id": "F009_emit_session_end_event",
-      "label": "emit_session_end_event()",
-      "type": "function",
-      "risk_level": "low",
-      "entry_point": false,
-      "cluster_id": null,
       "parent_id": "F009",
       "scope": "call",
       "metadata": {
         "file_ref": "F009",
-        "function_name": "emit_session_end_event"
+        "function_name": "_get_collection"
       }
     },
     {
-      "id": "F011_setupMouseControls",
-      "label": "setupMouseControls()",
+      "id": "F010_createNode",
+      "label": "createNode()",
       "type": "function",
-      "risk_level": "low",
+      "risk_level": "medium",
       "entry_point": false,
       "cluster_id": null,
-      "parent_id": "F011",
+      "parent_id": "F010",
       "scope": "call",
       "metadata": {
-        "file_ref": "F011",
-        "function_name": "setupMouseControls"
+        "file_ref": "F010",
+        "function_name": "createNode"
       }
     },
     {
-      "id": "F007_load_state",
-      "label": "load_state()",
+      "id": "F008_list_debate_sessions",
+      "label": "list_debate_sessions()",
       "type": "function",
-      "risk_level": "low",
+      "risk_level": "medium",
       "entry_point": false,
       "cluster_id": null,
-      "parent_id": "F007",
+      "parent_id": "F008",
       "scope": "call",
       "metadata": {
-        "file_ref": "F007",
-        "function_name": "load_state"
+        "file_ref": "F008",
+        "function_name": "list_debate_sessions"
       }
     },
     {
-      "id": "F004_index_arguments",
-      "label": "index_arguments()",
-      "type": "function",
-      "risk_level": "low",
-      "entry_point": false,
-      "cluster_id": null,
-      "parent_id": "F004",
-      "scope": "call",
-      "metadata": {
-        "file_ref": "F004",
-        "function_name": "index_arguments"
-      }
-    },
-    {
-      "id": "F009_emit_argument_viewed_event",
-      "label": "emit_argument_viewed_event()",
-      "type": "function",
-      "risk_level": "low",
-      "entry_point": false,
-      "cluster_id": null,
-      "parent_id": "F009",
-      "scope": "call",
-      "metadata": {
-        "file_ref": "F009",
-        "function_name": "emit_argument_viewed_event"
-      }
-    },
-    {
-      "id": "F011_setupWebSocket",
-      "label": "setupWebSocket()",
-      "type": "function",
-      "risk_level": "low",
-      "entry_point": false,
-      "cluster_id": null,
-      "parent_id": "F011",
-      "scope": "call",
-      "metadata": {
-        "file_ref": "F011",
-        "function_name": "setupWebSocket"
-      }
-    },
-    {
-      "id": "F009_save_debate_session",
-      "label": "save_debate_session()",
-      "type": "function",
-      "risk_level": "low",
-      "entry_point": false,
-      "cluster_id": null,
-      "parent_id": "F009",
-      "scope": "call",
-      "metadata": {
-        "file_ref": "F009",
-        "function_name": "save_debate_session"
-      }
-    },
-    {
-      "id": "F009_add_belief_evidence",
-      "label": "add_belief_evidence()",
-      "type": "function",
-      "risk_level": "low",
-      "entry_point": false,
-      "cluster_id": null,
-      "parent_id": "F009",
-      "scope": "call",
-      "metadata": {
-        "file_ref": "F009",
-        "function_name": "add_belief_evidence"
-      }
-    },
-    {
-      "id": "F009_emit_contradiction_event",
-      "label": "emit_contradiction_event()",
-      "type": "function",
-      "risk_level": "low",
-      "entry_point": false,
-      "cluster_id": null,
-      "parent_id": "F009",
-      "scope": "call",
-      "metadata": {
-        "file_ref": "F009",
-        "function_name": "emit_contradiction_event"
-      }
-    },
-    {
-      "id": "F009_emit_user_response_event",
-      "label": "emit_user_response_event()",
-      "type": "function",
-      "risk_level": "low",
-      "entry_point": false,
-      "cluster_id": null,
-      "parent_id": "F009",
-      "scope": "call",
-      "metadata": {
-        "file_ref": "F009",
-        "function_name": "emit_user_response_event"
-      }
-    },
-    {
-      "id": "F009_emit_confidence_signal",
-      "label": "emit_confidence_signal()",
-      "type": "function",
-      "risk_level": "low",
-      "entry_point": false,
-      "cluster_id": null,
-      "parent_id": "F009",
-      "scope": "call",
-      "metadata": {
-        "file_ref": "F009",
-        "function_name": "emit_confidence_signal"
-      }
-    },
-    {
-      "id": "F006_build_question",
-      "label": "build_question()",
-      "type": "function",
-      "risk_level": "low",
-      "entry_point": false,
-      "cluster_id": null,
-      "parent_id": "F006",
-      "scope": "call",
-      "metadata": {
-        "file_ref": "F006",
-        "function_name": "build_question"
-      }
-    },
-    {
-      "id": "F008_argu_cli",
-      "label": "argu_cli()",
+      "id": "F008_emit_session_start_event",
+      "label": "emit_session_start_event()",
       "type": "function",
       "risk_level": "none",
       "entry_point": false,
@@ -515,427 +291,7 @@
       "scope": "call",
       "metadata": {
         "file_ref": "F008",
-        "function_name": "argu_cli"
-      }
-    },
-    {
-      "id": "F011_if",
-      "label": "if()",
-      "type": "function",
-      "risk_level": "high",
-      "entry_point": false,
-      "cluster_id": null,
-      "parent_id": "F011",
-      "scope": "call",
-      "metadata": {
-        "file_ref": "F011",
-        "function_name": "if"
-      }
-    },
-    {
-      "id": "F001_compile_topic",
-      "label": "compile_topic()",
-      "type": "function",
-      "risk_level": "none",
-      "entry_point": false,
-      "cluster_id": null,
-      "parent_id": "F001",
-      "scope": "call",
-      "metadata": {
-        "file_ref": "F001",
-        "function_name": "compile_topic"
-      }
-    },
-    {
-      "id": "F009_validate_belief_hypothesis",
-      "label": "validate_belief_hypothesis()",
-      "type": "function",
-      "risk_level": "low",
-      "entry_point": false,
-      "cluster_id": null,
-      "parent_id": "F009",
-      "scope": "call",
-      "metadata": {
-        "file_ref": "F009",
-        "function_name": "validate_belief_hypothesis"
-      }
-    },
-    {
-      "id": "F007_save_beliefs",
-      "label": "save_beliefs()",
-      "type": "function",
-      "risk_level": "low",
-      "entry_point": false,
-      "cluster_id": null,
-      "parent_id": "F007",
-      "scope": "call",
-      "metadata": {
-        "file_ref": "F007",
-        "function_name": "save_beliefs"
-      }
-    },
-    {
-      "id": "F005_detect_contradictions",
-      "label": "detect_contradictions()",
-      "type": "function",
-      "risk_level": "low",
-      "entry_point": false,
-      "cluster_id": null,
-      "parent_id": "F005",
-      "scope": "call",
-      "metadata": {
-        "file_ref": "F005",
-        "function_name": "detect_contradictions"
-      }
-    },
-    {
-      "id": "F011_createGraph",
-      "label": "createGraph()",
-      "type": "function",
-      "risk_level": "high",
-      "entry_point": false,
-      "cluster_id": null,
-      "parent_id": "F011",
-      "scope": "call",
-      "metadata": {
-        "file_ref": "F011",
-        "function_name": "createGraph"
-      }
-    },
-    {
-      "id": "F009_get_current_session_info",
-      "label": "get_current_session_info()",
-      "type": "function",
-      "risk_level": "low",
-      "entry_point": false,
-      "cluster_id": null,
-      "parent_id": "F009",
-      "scope": "call",
-      "metadata": {
-        "file_ref": "F009",
-        "function_name": "get_current_session_info"
-      }
-    },
-    {
-      "id": "F010_search_similar",
-      "label": "search_similar()",
-      "type": "function",
-      "risk_level": "low",
-      "entry_point": false,
-      "cluster_id": null,
-      "parent_id": "F010",
-      "scope": "call",
-      "metadata": {
-        "file_ref": "F010",
-        "function_name": "search_similar"
-      }
-    },
-    {
-      "id": "F003_run_explore_loop",
-      "label": "run_explore_loop()",
-      "type": "function",
-      "risk_level": "low",
-      "entry_point": false,
-      "cluster_id": null,
-      "parent_id": "F003",
-      "scope": "call",
-      "metadata": {
-        "file_ref": "F003",
-        "function_name": "run_explore_loop"
-      }
-    },
-    {
-      "id": "F009_load_debate_session",
-      "label": "load_debate_session()",
-      "type": "function",
-      "risk_level": "low",
-      "entry_point": false,
-      "cluster_id": null,
-      "parent_id": "F009",
-      "scope": "call",
-      "metadata": {
-        "file_ref": "F009",
-        "function_name": "load_debate_session"
-      }
-    },
-    {
-      "id": "F011_init",
-      "label": "init()",
-      "type": "function",
-      "risk_level": "none",
-      "entry_point": false,
-      "cluster_id": null,
-      "parent_id": "F011",
-      "scope": "call",
-      "metadata": {
-        "file_ref": "F011",
-        "function_name": "init"
-      }
-    },
-    {
-      "id": "F002_write_question_to_file",
-      "label": "write_question_to_file()",
-      "type": "function",
-      "risk_level": "low",
-      "entry_point": false,
-      "cluster_id": null,
-      "parent_id": "F002",
-      "scope": "call",
-      "metadata": {
-        "file_ref": "F002",
-        "function_name": "write_question_to_file"
-      }
-    },
-    {
-      "id": "F009_emit_topic_signal",
-      "label": "emit_topic_signal()",
-      "type": "function",
-      "risk_level": "low",
-      "entry_point": false,
-      "cluster_id": null,
-      "parent_id": "F009",
-      "scope": "call",
-      "metadata": {
-        "file_ref": "F009",
-        "function_name": "emit_topic_signal"
-      }
-    },
-    {
-      "id": "F003_map_choice_to_stance",
-      "label": "map_choice_to_stance()",
-      "type": "function",
-      "risk_level": "low",
-      "entry_point": false,
-      "cluster_id": null,
-      "parent_id": "F003",
-      "scope": "call",
-      "metadata": {
-        "file_ref": "F003",
-        "function_name": "map_choice_to_stance"
-      }
-    },
-    {
-      "id": "F007_add_response",
-      "label": "add_response()",
-      "type": "function",
-      "risk_level": "low",
-      "entry_point": false,
-      "cluster_id": null,
-      "parent_id": "F007",
-      "scope": "call",
-      "metadata": {
-        "file_ref": "F007",
-        "function_name": "add_response"
-      }
-    },
-    {
-      "id": "F009_emit_debate_event",
-      "label": "emit_debate_event()",
-      "type": "function",
-      "risk_level": "high",
-      "entry_point": false,
-      "cluster_id": null,
-      "parent_id": "F009",
-      "scope": "call",
-      "metadata": {
-        "file_ref": "F009",
-        "function_name": "emit_debate_event"
-      }
-    },
-    {
-      "id": "F009_emit_session_start_event",
-      "label": "emit_session_start_event()",
-      "type": "function",
-      "risk_level": "low",
-      "entry_point": false,
-      "cluster_id": null,
-      "parent_id": "F009",
-      "scope": "call",
-      "metadata": {
-        "file_ref": "F009",
         "function_name": "emit_session_start_event"
-      }
-    },
-    {
-      "id": "F002_read_answer_from_file",
-      "label": "read_answer_from_file()",
-      "type": "function",
-      "risk_level": "low",
-      "entry_point": false,
-      "cluster_id": null,
-      "parent_id": "F002",
-      "scope": "call",
-      "metadata": {
-        "file_ref": "F002",
-        "function_name": "read_answer_from_file"
-      }
-    },
-    {
-      "id": "F009__get_session_path",
-      "label": "_get_session_path()",
-      "type": "function",
-      "risk_level": "medium",
-      "entry_point": false,
-      "cluster_id": null,
-      "parent_id": "F009",
-      "scope": "call",
-      "metadata": {
-        "file_ref": "F009",
-        "function_name": "_get_session_path"
-      }
-    },
-    {
-      "id": "F011_loadTopics",
-      "label": "loadTopics()",
-      "type": "function",
-      "risk_level": "medium",
-      "entry_point": false,
-      "cluster_id": null,
-      "parent_id": "F011",
-      "scope": "call",
-      "metadata": {
-        "file_ref": "F011",
-        "function_name": "loadTopics"
-      }
-    },
-    {
-      "id": "F007_load_beliefs",
-      "label": "load_beliefs()",
-      "type": "function",
-      "risk_level": "low",
-      "entry_point": false,
-      "cluster_id": null,
-      "parent_id": "F007",
-      "scope": "call",
-      "metadata": {
-        "file_ref": "F007",
-        "function_name": "load_beliefs"
-      }
-    },
-    {
-      "id": "F010_index_graph",
-      "label": "index_graph()",
-      "type": "function",
-      "risk_level": "low",
-      "entry_point": false,
-      "cluster_id": null,
-      "parent_id": "F010",
-      "scope": "call",
-      "metadata": {
-        "file_ref": "F010",
-        "function_name": "index_graph"
-      }
-    },
-    {
-      "id": "F004_get_best_counter",
-      "label": "get_best_counter()",
-      "type": "function",
-      "risk_level": "low",
-      "entry_point": false,
-      "cluster_id": null,
-      "parent_id": "F004",
-      "scope": "call",
-      "metadata": {
-        "file_ref": "F004",
-        "function_name": "get_best_counter"
-      }
-    },
-    {
-      "id": "F007_save_state",
-      "label": "save_state()",
-      "type": "function",
-      "risk_level": "low",
-      "entry_point": false,
-      "cluster_id": null,
-      "parent_id": "F007",
-      "scope": "call",
-      "metadata": {
-        "file_ref": "F007",
-        "function_name": "save_state"
-      }
-    },
-    {
-      "id": "F011_createNode",
-      "label": "createNode()",
-      "type": "function",
-      "risk_level": "medium",
-      "entry_point": false,
-      "cluster_id": null,
-      "parent_id": "F011",
-      "scope": "call",
-      "metadata": {
-        "file_ref": "F011",
-        "function_name": "createNode"
-      }
-    },
-    {
-      "id": "F003_get_next_argument",
-      "label": "get_next_argument()",
-      "type": "function",
-      "risk_level": "low",
-      "entry_point": false,
-      "cluster_id": null,
-      "parent_id": "F003",
-      "scope": "call",
-      "metadata": {
-        "file_ref": "F003",
-        "function_name": "get_next_argument"
-      }
-    },
-    {
-      "id": "F009_create_belief_hypothesis",
-      "label": "create_belief_hypothesis()",
-      "type": "function",
-      "risk_level": "low",
-      "entry_point": false,
-      "cluster_id": null,
-      "parent_id": "F009",
-      "scope": "call",
-      "metadata": {
-        "file_ref": "F009",
-        "function_name": "create_belief_hypothesis"
-      }
-    },
-    {
-      "id": "F009_emit_belief_signal",
-      "label": "emit_belief_signal()",
-      "type": "function",
-      "risk_level": "low",
-      "entry_point": false,
-      "cluster_id": null,
-      "parent_id": "F009",
-      "scope": "call",
-      "metadata": {
-        "file_ref": "F009",
-        "function_name": "emit_belief_signal"
-      }
-    },
-    {
-      "id": "F011_onMouseClick",
-      "label": "onMouseClick()",
-      "type": "function",
-      "risk_level": "low",
-      "entry_point": false,
-      "cluster_id": null,
-      "parent_id": "F011",
-      "scope": "call",
-      "metadata": {
-        "file_ref": "F011",
-        "function_name": "onMouseClick"
-      }
-    },
-    {
-      "id": "F003_get_user_choice",
-      "label": "get_user_choice()",
-      "type": "function",
-      "risk_level": "low",
-      "entry_point": false,
-      "cluster_id": null,
-      "parent_id": "F003",
-      "scope": "call",
-      "metadata": {
-        "file_ref": "F003",
-        "function_name": "get_user_choice"
       }
     },
     {
@@ -953,8 +309,246 @@
       }
     },
     {
-      "id": "F010_embed",
-      "label": "embed()",
+      "id": "F008_emit_belief_changed_event",
+      "label": "emit_belief_changed_event()",
+      "type": "function",
+      "risk_level": "none",
+      "entry_point": false,
+      "cluster_id": null,
+      "parent_id": "F008",
+      "scope": "call",
+      "metadata": {
+        "file_ref": "F008",
+        "function_name": "emit_belief_changed_event"
+      }
+    },
+    {
+      "id": "F009_search_similar",
+      "label": "search_similar()",
+      "type": "function",
+      "risk_level": "low",
+      "entry_point": false,
+      "cluster_id": null,
+      "parent_id": "F009",
+      "scope": "call",
+      "metadata": {
+        "file_ref": "F009",
+        "function_name": "search_similar"
+      }
+    },
+    {
+      "id": "F008_load_debate_session",
+      "label": "load_debate_session()",
+      "type": "function",
+      "risk_level": "none",
+      "entry_point": false,
+      "cluster_id": null,
+      "parent_id": "F008",
+      "scope": "call",
+      "metadata": {
+        "file_ref": "F008",
+        "function_name": "load_debate_session"
+      }
+    },
+    {
+      "id": "F004_get_best_counter",
+      "label": "get_best_counter()",
+      "type": "function",
+      "risk_level": "none",
+      "entry_point": false,
+      "cluster_id": null,
+      "parent_id": "F004",
+      "scope": "call",
+      "metadata": {
+        "file_ref": "F004",
+        "function_name": "get_best_counter"
+      }
+    },
+    {
+      "id": "F010_init",
+      "label": "init()",
+      "type": "function",
+      "risk_level": "none",
+      "entry_point": false,
+      "cluster_id": null,
+      "parent_id": "F010",
+      "scope": "call",
+      "metadata": {
+        "file_ref": "F010",
+        "function_name": "init"
+      }
+    },
+    {
+      "id": "F008_emit_argument_viewed_event",
+      "label": "emit_argument_viewed_event()",
+      "type": "function",
+      "risk_level": "none",
+      "entry_point": false,
+      "cluster_id": null,
+      "parent_id": "F008",
+      "scope": "call",
+      "metadata": {
+        "file_ref": "F008",
+        "function_name": "emit_argument_viewed_event"
+      }
+    },
+    {
+      "id": "F008_emit_debate_event",
+      "label": "emit_debate_event()",
+      "type": "function",
+      "risk_level": "high",
+      "entry_point": false,
+      "cluster_id": null,
+      "parent_id": "F008",
+      "scope": "call",
+      "metadata": {
+        "file_ref": "F008",
+        "function_name": "emit_debate_event"
+      }
+    },
+    {
+      "id": "F008_emit_user_response_event",
+      "label": "emit_user_response_event()",
+      "type": "function",
+      "risk_level": "none",
+      "entry_point": false,
+      "cluster_id": null,
+      "parent_id": "F008",
+      "scope": "call",
+      "metadata": {
+        "file_ref": "F008",
+        "function_name": "emit_user_response_event"
+      }
+    },
+    {
+      "id": "F009_index_graph",
+      "label": "index_graph()",
+      "type": "function",
+      "risk_level": "none",
+      "entry_point": false,
+      "cluster_id": null,
+      "parent_id": "F009",
+      "scope": "call",
+      "metadata": {
+        "file_ref": "F009",
+        "function_name": "index_graph"
+      }
+    },
+    {
+      "id": "F008_emit_session_end_event",
+      "label": "emit_session_end_event()",
+      "type": "function",
+      "risk_level": "none",
+      "entry_point": false,
+      "cluster_id": null,
+      "parent_id": "F008",
+      "scope": "call",
+      "metadata": {
+        "file_ref": "F008",
+        "function_name": "emit_session_end_event"
+      }
+    },
+    {
+      "id": "F002_write_question_to_file",
+      "label": "write_question_to_file()",
+      "type": "function",
+      "risk_level": "low",
+      "entry_point": false,
+      "cluster_id": null,
+      "parent_id": "F002",
+      "scope": "call",
+      "metadata": {
+        "file_ref": "F002",
+        "function_name": "write_question_to_file"
+      }
+    },
+    {
+      "id": "F002_read_answer_from_file",
+      "label": "read_answer_from_file()",
+      "type": "function",
+      "risk_level": "low",
+      "entry_point": false,
+      "cluster_id": null,
+      "parent_id": "F002",
+      "scope": "call",
+      "metadata": {
+        "file_ref": "F002",
+        "function_name": "read_answer_from_file"
+      }
+    },
+    {
+      "id": "F008_get_current_session_info",
+      "label": "get_current_session_info()",
+      "type": "function",
+      "risk_level": "none",
+      "entry_point": false,
+      "cluster_id": null,
+      "parent_id": "F008",
+      "scope": "call",
+      "metadata": {
+        "file_ref": "F008",
+        "function_name": "get_current_session_info"
+      }
+    },
+    {
+      "id": "F008__get_session_path",
+      "label": "_get_session_path()",
+      "type": "function",
+      "risk_level": "medium",
+      "entry_point": false,
+      "cluster_id": null,
+      "parent_id": "F008",
+      "scope": "call",
+      "metadata": {
+        "file_ref": "F008",
+        "function_name": "_get_session_path"
+      }
+    },
+    {
+      "id": "F010_if",
+      "label": "if()",
+      "type": "function",
+      "risk_level": "high",
+      "entry_point": false,
+      "cluster_id": null,
+      "parent_id": "F010",
+      "scope": "call",
+      "metadata": {
+        "file_ref": "F010",
+        "function_name": "if"
+      }
+    },
+    {
+      "id": "F008_emit_contradiction_event",
+      "label": "emit_contradiction_event()",
+      "type": "function",
+      "risk_level": "none",
+      "entry_point": false,
+      "cluster_id": null,
+      "parent_id": "F008",
+      "scope": "call",
+      "metadata": {
+        "file_ref": "F008",
+        "function_name": "emit_contradiction_event"
+      }
+    },
+    {
+      "id": "F010_createGraph",
+      "label": "createGraph()",
+      "type": "function",
+      "risk_level": "high",
+      "entry_point": false,
+      "cluster_id": null,
+      "parent_id": "F010",
+      "scope": "call",
+      "metadata": {
+        "file_ref": "F010",
+        "function_name": "createGraph"
+      }
+    },
+    {
+      "id": "F010_loadGraph",
+      "label": "loadGraph()",
       "type": "function",
       "risk_level": "medium",
       "entry_point": false,
@@ -963,12 +557,110 @@
       "scope": "call",
       "metadata": {
         "file_ref": "F010",
-        "function_name": "embed"
+        "function_name": "loadGraph"
       }
     },
     {
-      "id": "F009_list_debate_sessions",
-      "label": "list_debate_sessions()",
+      "id": "F008_save_debate_session",
+      "label": "save_debate_session()",
+      "type": "function",
+      "risk_level": "none",
+      "entry_point": false,
+      "cluster_id": null,
+      "parent_id": "F008",
+      "scope": "call",
+      "metadata": {
+        "file_ref": "F008",
+        "function_name": "save_debate_session"
+      }
+    },
+    {
+      "id": "F010_setupMouseControls",
+      "label": "setupMouseControls()",
+      "type": "function",
+      "risk_level": "low",
+      "entry_point": false,
+      "cluster_id": null,
+      "parent_id": "F010",
+      "scope": "call",
+      "metadata": {
+        "file_ref": "F010",
+        "function_name": "setupMouseControls"
+      }
+    },
+    {
+      "id": "F010_setupWebSocket",
+      "label": "setupWebSocket()",
+      "type": "function",
+      "risk_level": "low",
+      "entry_point": false,
+      "cluster_id": null,
+      "parent_id": "F010",
+      "scope": "call",
+      "metadata": {
+        "file_ref": "F010",
+        "function_name": "setupWebSocket"
+      }
+    },
+    {
+      "id": "F010_onMouseClick",
+      "label": "onMouseClick()",
+      "type": "function",
+      "risk_level": "low",
+      "entry_point": false,
+      "cluster_id": null,
+      "parent_id": "F010",
+      "scope": "call",
+      "metadata": {
+        "file_ref": "F010",
+        "function_name": "onMouseClick"
+      }
+    },
+    {
+      "id": "F010_loadTopics",
+      "label": "loadTopics()",
+      "type": "function",
+      "risk_level": "medium",
+      "entry_point": false,
+      "cluster_id": null,
+      "parent_id": "F010",
+      "scope": "call",
+      "metadata": {
+        "file_ref": "F010",
+        "function_name": "loadTopics"
+      }
+    },
+    {
+      "id": "F002_run_gemini_agent",
+      "label": "run_gemini_agent()",
+      "type": "function",
+      "risk_level": "low",
+      "entry_point": false,
+      "cluster_id": null,
+      "parent_id": "F002",
+      "scope": "call",
+      "metadata": {
+        "file_ref": "F002",
+        "function_name": "run_gemini_agent"
+      }
+    },
+    {
+      "id": "F001_compile_topic",
+      "label": "compile_topic()",
+      "type": "function",
+      "risk_level": "none",
+      "entry_point": false,
+      "cluster_id": null,
+      "parent_id": "F001",
+      "scope": "call",
+      "metadata": {
+        "file_ref": "F001",
+        "function_name": "compile_topic"
+      }
+    },
+    {
+      "id": "F009_embed",
+      "label": "embed()",
       "type": "function",
       "risk_level": "medium",
       "entry_point": false,
@@ -977,7 +669,7 @@
       "scope": "call",
       "metadata": {
         "file_ref": "F009",
-        "function_name": "list_debate_sessions"
+        "function_name": "embed"
       }
     }
   ],
@@ -1007,9 +699,9 @@
       "type": "calls"
     },
     {
-      "id": "call:F002_compile_topic_llm->F002_write_question_to_file",
+      "id": "call:F002_compile_topic_llm->F002_read_answer_from_file",
       "source": "F002_compile_topic_llm",
-      "target": "F002_write_question_to_file",
+      "target": "F002_read_answer_from_file",
       "edge_type": "calls",
       "label": null,
       "weight": 1.0,
@@ -1019,9 +711,9 @@
       "type": "calls"
     },
     {
-      "id": "call:F002_compile_topic_llm->F002_read_answer_from_file",
+      "id": "call:F002_compile_topic_llm->F002_write_question_to_file",
       "source": "F002_compile_topic_llm",
-      "target": "F002_read_answer_from_file",
+      "target": "F002_write_question_to_file",
       "edge_type": "calls",
       "label": null,
       "weight": 1.0,
@@ -1043,393 +735,9 @@
       "type": "calls"
     },
     {
-      "id": "call:F003_run_explore_loop->F009_emit_contradiction_signal",
-      "source": "F003_run_explore_loop",
-      "target": "F009_emit_contradiction_signal",
-      "edge_type": "calls",
-      "label": null,
-      "weight": 1.0,
-      "strength": 1.0,
-      "metadata": {},
-      "hidden": false,
-      "type": "calls"
-    },
-    {
-      "id": "call:F003_run_explore_loop->F009_get_hypothesis_for_argument",
-      "source": "F003_run_explore_loop",
-      "target": "F009_get_hypothesis_for_argument",
-      "edge_type": "calls",
-      "label": null,
-      "weight": 1.0,
-      "strength": 1.0,
-      "metadata": {},
-      "hidden": false,
-      "type": "calls"
-    },
-    {
-      "id": "call:F003_run_explore_loop->F009_emit_belief_changed_event",
-      "source": "F003_run_explore_loop",
-      "target": "F009_emit_belief_changed_event",
-      "edge_type": "calls",
-      "label": null,
-      "weight": 1.0,
-      "strength": 1.0,
-      "metadata": {},
-      "hidden": false,
-      "type": "calls"
-    },
-    {
-      "id": "call:F003_run_explore_loop->F004_get_counter_argument",
-      "source": "F003_run_explore_loop",
-      "target": "F004_get_counter_argument",
-      "edge_type": "calls",
-      "label": null,
-      "weight": 1.0,
-      "strength": 1.0,
-      "metadata": {},
-      "hidden": false,
-      "type": "calls"
-    },
-    {
-      "id": "call:F003_run_explore_loop->F003_load_graph",
-      "source": "F003_run_explore_loop",
-      "target": "F003_load_graph",
-      "edge_type": "calls",
-      "label": null,
-      "weight": 1.0,
-      "strength": 1.0,
-      "metadata": {},
-      "hidden": false,
-      "type": "calls"
-    },
-    {
-      "id": "call:F003_run_explore_loop->F009_emit_session_end_event",
-      "source": "F003_run_explore_loop",
-      "target": "F009_emit_session_end_event",
-      "edge_type": "calls",
-      "label": null,
-      "weight": 1.0,
-      "strength": 1.0,
-      "metadata": {},
-      "hidden": false,
-      "type": "calls"
-    },
-    {
-      "id": "call:F003_run_explore_loop->F007_load_state",
-      "source": "F003_run_explore_loop",
-      "target": "F007_load_state",
-      "edge_type": "calls",
-      "label": null,
-      "weight": 1.0,
-      "strength": 1.0,
-      "metadata": {},
-      "hidden": false,
-      "type": "calls"
-    },
-    {
-      "id": "call:F003_run_explore_loop->F004_index_arguments",
-      "source": "F003_run_explore_loop",
-      "target": "F004_index_arguments",
-      "edge_type": "calls",
-      "label": null,
-      "weight": 1.0,
-      "strength": 1.0,
-      "metadata": {},
-      "hidden": false,
-      "type": "calls"
-    },
-    {
-      "id": "call:F003_run_explore_loop->F009_emit_argument_viewed_event",
-      "source": "F003_run_explore_loop",
-      "target": "F009_emit_argument_viewed_event",
-      "edge_type": "calls",
-      "label": null,
-      "weight": 1.0,
-      "strength": 1.0,
-      "metadata": {},
-      "hidden": false,
-      "type": "calls"
-    },
-    {
-      "id": "call:F003_run_explore_loop->F009_save_debate_session",
-      "source": "F003_run_explore_loop",
-      "target": "F009_save_debate_session",
-      "edge_type": "calls",
-      "label": null,
-      "weight": 1.0,
-      "strength": 1.0,
-      "metadata": {},
-      "hidden": false,
-      "type": "calls"
-    },
-    {
-      "id": "call:F003_run_explore_loop->F009_add_belief_evidence",
-      "source": "F003_run_explore_loop",
-      "target": "F009_add_belief_evidence",
-      "edge_type": "calls",
-      "label": null,
-      "weight": 1.0,
-      "strength": 1.0,
-      "metadata": {},
-      "hidden": false,
-      "type": "calls"
-    },
-    {
-      "id": "call:F003_run_explore_loop->F009_emit_contradiction_event",
-      "source": "F003_run_explore_loop",
-      "target": "F009_emit_contradiction_event",
-      "edge_type": "calls",
-      "label": null,
-      "weight": 1.0,
-      "strength": 1.0,
-      "metadata": {},
-      "hidden": false,
-      "type": "calls"
-    },
-    {
-      "id": "call:F003_run_explore_loop->F009_emit_user_response_event",
-      "source": "F003_run_explore_loop",
-      "target": "F009_emit_user_response_event",
-      "edge_type": "calls",
-      "label": null,
-      "weight": 1.0,
-      "strength": 1.0,
-      "metadata": {},
-      "hidden": false,
-      "type": "calls"
-    },
-    {
-      "id": "call:F003_run_explore_loop->F009_emit_confidence_signal",
-      "source": "F003_run_explore_loop",
-      "target": "F009_emit_confidence_signal",
-      "edge_type": "calls",
-      "label": null,
-      "weight": 1.0,
-      "strength": 1.0,
-      "metadata": {},
-      "hidden": false,
-      "type": "calls"
-    },
-    {
-      "id": "call:F003_run_explore_loop->F006_build_question",
-      "source": "F003_run_explore_loop",
-      "target": "F006_build_question",
-      "edge_type": "calls",
-      "label": null,
-      "weight": 1.0,
-      "strength": 1.0,
-      "metadata": {},
-      "hidden": false,
-      "type": "calls"
-    },
-    {
-      "id": "call:F003_run_explore_loop->F009_validate_belief_hypothesis",
-      "source": "F003_run_explore_loop",
-      "target": "F009_validate_belief_hypothesis",
-      "edge_type": "calls",
-      "label": null,
-      "weight": 1.0,
-      "strength": 1.0,
-      "metadata": {},
-      "hidden": false,
-      "type": "calls"
-    },
-    {
-      "id": "call:F003_run_explore_loop->F007_save_beliefs",
-      "source": "F003_run_explore_loop",
-      "target": "F007_save_beliefs",
-      "edge_type": "calls",
-      "label": null,
-      "weight": 1.0,
-      "strength": 1.0,
-      "metadata": {},
-      "hidden": false,
-      "type": "calls"
-    },
-    {
-      "id": "call:F003_run_explore_loop->F005_detect_contradictions",
-      "source": "F003_run_explore_loop",
-      "target": "F005_detect_contradictions",
-      "edge_type": "calls",
-      "label": null,
-      "weight": 1.0,
-      "strength": 1.0,
-      "metadata": {},
-      "hidden": false,
-      "type": "calls"
-    },
-    {
-      "id": "call:F003_run_explore_loop->F009_get_current_session_info",
-      "source": "F003_run_explore_loop",
-      "target": "F009_get_current_session_info",
-      "edge_type": "calls",
-      "label": null,
-      "weight": 1.0,
-      "strength": 1.0,
-      "metadata": {},
-      "hidden": false,
-      "type": "calls"
-    },
-    {
-      "id": "call:F003_run_explore_loop->F009_load_debate_session",
-      "source": "F003_run_explore_loop",
-      "target": "F009_load_debate_session",
-      "edge_type": "calls",
-      "label": null,
-      "weight": 1.0,
-      "strength": 1.0,
-      "metadata": {},
-      "hidden": false,
-      "type": "calls"
-    },
-    {
-      "id": "call:F003_run_explore_loop->F009_emit_topic_signal",
-      "source": "F003_run_explore_loop",
-      "target": "F009_emit_topic_signal",
-      "edge_type": "calls",
-      "label": null,
-      "weight": 1.0,
-      "strength": 1.0,
-      "metadata": {},
-      "hidden": false,
-      "type": "calls"
-    },
-    {
-      "id": "call:F003_run_explore_loop->F003_map_choice_to_stance",
-      "source": "F003_run_explore_loop",
-      "target": "F003_map_choice_to_stance",
-      "edge_type": "calls",
-      "label": null,
-      "weight": 1.0,
-      "strength": 1.0,
-      "metadata": {},
-      "hidden": false,
-      "type": "calls"
-    },
-    {
-      "id": "call:F003_run_explore_loop->F007_add_response",
-      "source": "F003_run_explore_loop",
-      "target": "F007_add_response",
-      "edge_type": "calls",
-      "label": null,
-      "weight": 1.0,
-      "strength": 1.0,
-      "metadata": {},
-      "hidden": false,
-      "type": "calls"
-    },
-    {
-      "id": "call:F003_run_explore_loop->F009_emit_session_start_event",
-      "source": "F003_run_explore_loop",
-      "target": "F009_emit_session_start_event",
-      "edge_type": "calls",
-      "label": null,
-      "weight": 1.0,
-      "strength": 1.0,
-      "metadata": {},
-      "hidden": false,
-      "type": "calls"
-    },
-    {
-      "id": "call:F003_run_explore_loop->F007_load_beliefs",
-      "source": "F003_run_explore_loop",
-      "target": "F007_load_beliefs",
-      "edge_type": "calls",
-      "label": null,
-      "weight": 1.0,
-      "strength": 1.0,
-      "metadata": {},
-      "hidden": false,
-      "type": "calls"
-    },
-    {
-      "id": "call:F003_run_explore_loop->F010_index_graph",
-      "source": "F003_run_explore_loop",
-      "target": "F010_index_graph",
-      "edge_type": "calls",
-      "label": null,
-      "weight": 1.0,
-      "strength": 1.0,
-      "metadata": {},
-      "hidden": false,
-      "type": "calls"
-    },
-    {
-      "id": "call:F003_run_explore_loop->F004_get_best_counter",
-      "source": "F003_run_explore_loop",
-      "target": "F004_get_best_counter",
-      "edge_type": "calls",
-      "label": null,
-      "weight": 1.0,
-      "strength": 1.0,
-      "metadata": {},
-      "hidden": false,
-      "type": "calls"
-    },
-    {
-      "id": "call:F003_run_explore_loop->F007_save_state",
-      "source": "F003_run_explore_loop",
-      "target": "F007_save_state",
-      "edge_type": "calls",
-      "label": null,
-      "weight": 1.0,
-      "strength": 1.0,
-      "metadata": {},
-      "hidden": false,
-      "type": "calls"
-    },
-    {
-      "id": "call:F003_run_explore_loop->F003_get_next_argument",
-      "source": "F003_run_explore_loop",
-      "target": "F003_get_next_argument",
-      "edge_type": "calls",
-      "label": null,
-      "weight": 1.0,
-      "strength": 1.0,
-      "metadata": {},
-      "hidden": false,
-      "type": "calls"
-    },
-    {
-      "id": "call:F003_run_explore_loop->F009_create_belief_hypothesis",
-      "source": "F003_run_explore_loop",
-      "target": "F009_create_belief_hypothesis",
-      "edge_type": "calls",
-      "label": null,
-      "weight": 1.0,
-      "strength": 1.0,
-      "metadata": {},
-      "hidden": false,
-      "type": "calls"
-    },
-    {
-      "id": "call:F003_run_explore_loop->F009_emit_belief_signal",
-      "source": "F003_run_explore_loop",
-      "target": "F009_emit_belief_signal",
-      "edge_type": "calls",
-      "label": null,
-      "weight": 1.0,
-      "strength": 1.0,
-      "metadata": {},
-      "hidden": false,
-      "type": "calls"
-    },
-    {
-      "id": "call:F003_run_explore_loop->F003_get_user_choice",
-      "source": "F003_run_explore_loop",
-      "target": "F003_get_user_choice",
-      "edge_type": "calls",
-      "label": null,
-      "weight": 1.0,
-      "strength": 1.0,
-      "metadata": {},
-      "hidden": false,
-      "type": "calls"
-    },
-    {
-      "id": "call:F004_get_best_counter->F010_search_similar",
+      "id": "call:F004_get_best_counter->F009_search_similar",
       "source": "F004_get_best_counter",
-      "target": "F010_search_similar",
+      "target": "F009_search_similar",
       "edge_type": "calls",
       "label": null,
       "weight": 1.0,
@@ -1439,9 +747,9 @@
       "type": "calls"
     },
     {
-      "id": "call:F008_argu_cli->F003_run_explore_loop",
-      "source": "F008_argu_cli",
-      "target": "F003_run_explore_loop",
+      "id": "call:F008_save_debate_session->F008__get_session_path",
+      "source": "F008_save_debate_session",
+      "target": "F008__get_session_path",
       "edge_type": "calls",
       "label": null,
       "weight": 1.0,
@@ -1451,9 +759,9 @@
       "type": "calls"
     },
     {
-      "id": "call:F009_save_debate_session->F009__get_session_path",
-      "source": "F009_save_debate_session",
-      "target": "F009__get_session_path",
+      "id": "call:F008_load_debate_session->F008_list_debate_sessions",
+      "source": "F008_load_debate_session",
+      "target": "F008_list_debate_sessions",
       "edge_type": "calls",
       "label": null,
       "weight": 1.0,
@@ -1463,9 +771,9 @@
       "type": "calls"
     },
     {
-      "id": "call:F009_load_debate_session->F009__get_session_path",
-      "source": "F009_load_debate_session",
-      "target": "F009__get_session_path",
+      "id": "call:F008_load_debate_session->F008__get_session_path",
+      "source": "F008_load_debate_session",
+      "target": "F008__get_session_path",
       "edge_type": "calls",
       "label": null,
       "weight": 1.0,
@@ -1475,9 +783,9 @@
       "type": "calls"
     },
     {
-      "id": "call:F009_load_debate_session->F009_list_debate_sessions",
-      "source": "F009_load_debate_session",
-      "target": "F009_list_debate_sessions",
+      "id": "call:F008_get_current_session_info->F008_list_debate_sessions",
+      "source": "F008_get_current_session_info",
+      "target": "F008_list_debate_sessions",
       "edge_type": "calls",
       "label": null,
       "weight": 1.0,
@@ -1487,9 +795,9 @@
       "type": "calls"
     },
     {
-      "id": "call:F009_get_current_session_info->F009_list_debate_sessions",
-      "source": "F009_get_current_session_info",
-      "target": "F009_list_debate_sessions",
+      "id": "call:F008_emit_session_start_event->F008_emit_debate_event",
+      "source": "F008_emit_session_start_event",
+      "target": "F008_emit_debate_event",
       "edge_type": "calls",
       "label": null,
       "weight": 1.0,
@@ -1499,9 +807,9 @@
       "type": "calls"
     },
     {
-      "id": "call:F009_emit_session_start_event->F009_emit_debate_event",
-      "source": "F009_emit_session_start_event",
-      "target": "F009_emit_debate_event",
+      "id": "call:F008_emit_argument_viewed_event->F008_emit_debate_event",
+      "source": "F008_emit_argument_viewed_event",
+      "target": "F008_emit_debate_event",
       "edge_type": "calls",
       "label": null,
       "weight": 1.0,
@@ -1511,9 +819,9 @@
       "type": "calls"
     },
     {
-      "id": "call:F009_emit_argument_viewed_event->F009_emit_debate_event",
-      "source": "F009_emit_argument_viewed_event",
-      "target": "F009_emit_debate_event",
+      "id": "call:F008_emit_user_response_event->F008_emit_debate_event",
+      "source": "F008_emit_user_response_event",
+      "target": "F008_emit_debate_event",
       "edge_type": "calls",
       "label": null,
       "weight": 1.0,
@@ -1523,9 +831,9 @@
       "type": "calls"
     },
     {
-      "id": "call:F009_emit_user_response_event->F009_emit_debate_event",
-      "source": "F009_emit_user_response_event",
-      "target": "F009_emit_debate_event",
+      "id": "call:F008_emit_belief_changed_event->F008_emit_debate_event",
+      "source": "F008_emit_belief_changed_event",
+      "target": "F008_emit_debate_event",
       "edge_type": "calls",
       "label": null,
       "weight": 1.0,
@@ -1535,9 +843,9 @@
       "type": "calls"
     },
     {
-      "id": "call:F009_emit_belief_changed_event->F009_emit_debate_event",
-      "source": "F009_emit_belief_changed_event",
-      "target": "F009_emit_debate_event",
+      "id": "call:F008_emit_contradiction_event->F008_emit_debate_event",
+      "source": "F008_emit_contradiction_event",
+      "target": "F008_emit_debate_event",
       "edge_type": "calls",
       "label": null,
       "weight": 1.0,
@@ -1547,9 +855,9 @@
       "type": "calls"
     },
     {
-      "id": "call:F009_emit_contradiction_event->F009_emit_debate_event",
-      "source": "F009_emit_contradiction_event",
-      "target": "F009_emit_debate_event",
+      "id": "call:F008_emit_session_end_event->F008_emit_debate_event",
+      "source": "F008_emit_session_end_event",
+      "target": "F008_emit_debate_event",
       "edge_type": "calls",
       "label": null,
       "weight": 1.0,
@@ -1559,9 +867,9 @@
       "type": "calls"
     },
     {
-      "id": "call:F009_emit_session_end_event->F009_emit_debate_event",
-      "source": "F009_emit_session_end_event",
-      "target": "F009_emit_debate_event",
+      "id": "call:F009__get_collection->F009__get_client",
+      "source": "F009__get_collection",
+      "target": "F009__get_client",
       "edge_type": "calls",
       "label": null,
       "weight": 1.0,
@@ -1571,9 +879,9 @@
       "type": "calls"
     },
     {
-      "id": "call:F010_index_graph->F010_embed",
-      "source": "F010_index_graph",
-      "target": "F010_embed",
+      "id": "call:F009_index_graph->F009__get_collection",
+      "source": "F009_index_graph",
+      "target": "F009__get_collection",
       "edge_type": "calls",
       "label": null,
       "weight": 1.0,
@@ -1583,9 +891,9 @@
       "type": "calls"
     },
     {
-      "id": "call:F010_search_similar->F010_embed",
-      "source": "F010_search_similar",
-      "target": "F010_embed",
+      "id": "call:F009_index_graph->F009_embed",
+      "source": "F009_index_graph",
+      "target": "F009_embed",
       "edge_type": "calls",
       "label": null,
       "weight": 1.0,
@@ -1595,9 +903,9 @@
       "type": "calls"
     },
     {
-      "id": "call:F011_init->F011_setupMouseControls",
-      "source": "F011_init",
-      "target": "F011_setupMouseControls",
+      "id": "call:F009_search_similar->F009__get_collection",
+      "source": "F009_search_similar",
+      "target": "F009__get_collection",
       "edge_type": "calls",
       "label": null,
       "weight": 1.0,
@@ -1607,9 +915,9 @@
       "type": "calls"
     },
     {
-      "id": "call:F011_setupMouseControls->F011_if",
-      "source": "F011_setupMouseControls",
-      "target": "F011_if",
+      "id": "call:F009_search_similar->F009_embed",
+      "source": "F009_search_similar",
+      "target": "F009_embed",
       "edge_type": "calls",
       "label": null,
       "weight": 1.0,
@@ -1619,9 +927,9 @@
       "type": "calls"
     },
     {
-      "id": "call:F011_if->F011_onMouseClick",
-      "source": "F011_if",
-      "target": "F011_onMouseClick",
+      "id": "call:F010_init->F010_setupMouseControls",
+      "source": "F010_init",
+      "target": "F010_setupMouseControls",
       "edge_type": "calls",
       "label": null,
       "weight": 1.0,
@@ -1631,9 +939,9 @@
       "type": "calls"
     },
     {
-      "id": "call:F011_onMouseClick->F011_loadTopics",
-      "source": "F011_onMouseClick",
-      "target": "F011_loadTopics",
+      "id": "call:F010_setupMouseControls->F010_if",
+      "source": "F010_setupMouseControls",
+      "target": "F010_if",
       "edge_type": "calls",
       "label": null,
       "weight": 1.0,
@@ -1643,9 +951,9 @@
       "type": "calls"
     },
     {
-      "id": "call:F011_onMouseClick->F011_setupWebSocket",
-      "source": "F011_onMouseClick",
-      "target": "F011_setupWebSocket",
+      "id": "call:F010_if->F010_onMouseClick",
+      "source": "F010_if",
+      "target": "F010_onMouseClick",
       "edge_type": "calls",
       "label": null,
       "weight": 1.0,
@@ -1655,9 +963,9 @@
       "type": "calls"
     },
     {
-      "id": "call:F011_onMouseClick->F011_if",
-      "source": "F011_onMouseClick",
-      "target": "F011_if",
+      "id": "call:F010_onMouseClick->F010_loadTopics",
+      "source": "F010_onMouseClick",
+      "target": "F010_loadTopics",
       "edge_type": "calls",
       "label": null,
       "weight": 1.0,
@@ -1667,9 +975,9 @@
       "type": "calls"
     },
     {
-      "id": "call:F011_setupWebSocket->F011_if",
-      "source": "F011_setupWebSocket",
-      "target": "F011_if",
+      "id": "call:F010_onMouseClick->F010_if",
+      "source": "F010_onMouseClick",
+      "target": "F010_if",
       "edge_type": "calls",
       "label": null,
       "weight": 1.0,
@@ -1679,9 +987,9 @@
       "type": "calls"
     },
     {
-      "id": "call:F011_setupWebSocket->F011_loadTopics",
-      "source": "F011_setupWebSocket",
-      "target": "F011_loadTopics",
+      "id": "call:F010_onMouseClick->F010_setupWebSocket",
+      "source": "F010_onMouseClick",
+      "target": "F010_setupWebSocket",
       "edge_type": "calls",
       "label": null,
       "weight": 1.0,
@@ -1691,9 +999,9 @@
       "type": "calls"
     },
     {
-      "id": "call:F011_setupWebSocket->F011_createGraph",
-      "source": "F011_setupWebSocket",
-      "target": "F011_createGraph",
+      "id": "call:F010_setupWebSocket->F010_loadTopics",
+      "source": "F010_setupWebSocket",
+      "target": "F010_loadTopics",
       "edge_type": "calls",
       "label": null,
       "weight": 1.0,
@@ -1703,9 +1011,9 @@
       "type": "calls"
     },
     {
-      "id": "call:F011_setupWebSocket->F011_loadGraph",
-      "source": "F011_setupWebSocket",
-      "target": "F011_loadGraph",
+      "id": "call:F010_setupWebSocket->F010_loadGraph",
+      "source": "F010_setupWebSocket",
+      "target": "F010_loadGraph",
       "edge_type": "calls",
       "label": null,
       "weight": 1.0,
@@ -1715,9 +1023,9 @@
       "type": "calls"
     },
     {
-      "id": "call:F011_loadTopics->F011_if",
-      "source": "F011_loadTopics",
-      "target": "F011_if",
+      "id": "call:F010_setupWebSocket->F010_if",
+      "source": "F010_setupWebSocket",
+      "target": "F010_if",
       "edge_type": "calls",
       "label": null,
       "weight": 1.0,
@@ -1727,9 +1035,9 @@
       "type": "calls"
     },
     {
-      "id": "call:F011_loadTopics->F011_createGraph",
-      "source": "F011_loadTopics",
-      "target": "F011_createGraph",
+      "id": "call:F010_setupWebSocket->F010_createGraph",
+      "source": "F010_setupWebSocket",
+      "target": "F010_createGraph",
       "edge_type": "calls",
       "label": null,
       "weight": 1.0,
@@ -1739,9 +1047,9 @@
       "type": "calls"
     },
     {
-      "id": "call:F011_loadTopics->F011_loadGraph",
-      "source": "F011_loadTopics",
-      "target": "F011_loadGraph",
+      "id": "call:F010_loadTopics->F010_loadGraph",
+      "source": "F010_loadTopics",
+      "target": "F010_loadGraph",
       "edge_type": "calls",
       "label": null,
       "weight": 1.0,
@@ -1751,9 +1059,9 @@
       "type": "calls"
     },
     {
-      "id": "call:F011_loadGraph->F011_createNode",
-      "source": "F011_loadGraph",
-      "target": "F011_createNode",
+      "id": "call:F010_loadTopics->F010_if",
+      "source": "F010_loadTopics",
+      "target": "F010_if",
       "edge_type": "calls",
       "label": null,
       "weight": 1.0,
@@ -1763,9 +1071,9 @@
       "type": "calls"
     },
     {
-      "id": "call:F011_loadGraph->F011_createGraph",
-      "source": "F011_loadGraph",
-      "target": "F011_createGraph",
+      "id": "call:F010_loadTopics->F010_createGraph",
+      "source": "F010_loadTopics",
+      "target": "F010_createGraph",
       "edge_type": "calls",
       "label": null,
       "weight": 1.0,
@@ -1775,9 +1083,9 @@
       "type": "calls"
     },
     {
-      "id": "call:F011_loadGraph->F011_if",
-      "source": "F011_loadGraph",
-      "target": "F011_if",
+      "id": "call:F010_loadGraph->F010_createNode",
+      "source": "F010_loadGraph",
+      "target": "F010_createNode",
       "edge_type": "calls",
       "label": null,
       "weight": 1.0,
@@ -1787,9 +1095,9 @@
       "type": "calls"
     },
     {
-      "id": "call:F011_createGraph->F011_createNode",
-      "source": "F011_createGraph",
-      "target": "F011_createNode",
+      "id": "call:F010_loadGraph->F010_if",
+      "source": "F010_loadGraph",
+      "target": "F010_if",
       "edge_type": "calls",
       "label": null,
       "weight": 1.0,
@@ -1799,9 +1107,33 @@
       "type": "calls"
     },
     {
-      "id": "call:F011_createGraph->F011_if",
-      "source": "F011_createGraph",
-      "target": "F011_if",
+      "id": "call:F010_loadGraph->F010_createGraph",
+      "source": "F010_loadGraph",
+      "target": "F010_createGraph",
+      "edge_type": "calls",
+      "label": null,
+      "weight": 1.0,
+      "strength": 1.0,
+      "metadata": {},
+      "hidden": false,
+      "type": "calls"
+    },
+    {
+      "id": "call:F010_createGraph->F010_if",
+      "source": "F010_createGraph",
+      "target": "F010_if",
+      "edge_type": "calls",
+      "label": null,
+      "weight": 1.0,
+      "strength": 1.0,
+      "metadata": {},
+      "hidden": false,
+      "type": "calls"
+    },
+    {
+      "id": "call:F010_createGraph->F010_createNode",
+      "source": "F010_createGraph",
+      "target": "F010_createNode",
       "edge_type": "calls",
       "label": null,
       "weight": 1.0,

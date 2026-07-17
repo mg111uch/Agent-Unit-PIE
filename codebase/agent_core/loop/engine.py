@@ -268,14 +268,16 @@ def iter_agent_events(
                         "step": step,
                     }
 
-                question_calls = [tc for tc in parsed.tool_calls if tc.name == "ask_user_question"]
-                other_calls = [tc for tc in parsed.tool_calls if tc.name != "ask_user_question"]
+                QUESTION_TOOLS = {"ask_user_question", "debate_step"}
+                question_calls = [tc for tc in parsed.tool_calls if tc.name in QUESTION_TOOLS]
+                other_calls = [tc for tc in parsed.tool_calls if tc.name not in QUESTION_TOOLS]
 
                 if question_calls:
-                    if other_calls:
+                    if other_calls or len(question_calls) > 1:
+                        name = question_calls[0].name
                         results = [{
-                            "tool": "ask_user_question",
-                            "result": "Error: ask_user_question cannot be combined with other tools in the same turn.",
+                            "tool": name,
+                            "result": f"Error: {name} cannot be combined with other tools in the same turn.",
                             "ok": False,
                             "call_id": question_calls[0].call_id or "",
                         }]
@@ -283,14 +285,38 @@ def iter_agent_events(
                         tc = question_calls[0]
                         arg = tc.arguments if isinstance(tc.arguments, dict) else {}
                         arg["_session_id"] = session_id
-                        questions = arg.get("questions", [])
-                        yield {
-                            "type": "question",
-                            "questions": questions,
-                            "session_id": session_id,
-                            "step": step,
-                        }
-                        result_obj = _tools["ask_user_question"](arg)
+
+                        if tc.name == "ask_user_question":
+                            questions = arg.get("questions", [])
+                            yield {
+                                "type": "question",
+                                "questions": questions,
+                                "session_id": session_id,
+                                "step": step,
+                            }
+                            result_obj = _tools["ask_user_question"](arg)
+
+                        elif tc.name == "debate_step":
+                            arg["prepare_only"] = True
+                            prepare_raw = _tools["debate_step"](arg)
+                            try:
+                                prepare_result = json.loads(prepare_raw) if isinstance(prepare_raw, str) else {}
+                            except Exception:
+                                prepare_result = {}
+
+                            if prepare_result.get("done"):
+                                result_obj = prepare_raw
+                            else:
+                                questions = prepare_result.get("questions", [])
+                                yield {
+                                    "type": "question",
+                                    "questions": questions,
+                                    "session_id": session_id,
+                                    "step": step,
+                                }
+                                arg["prepare_only"] = False
+                                result_obj = _tools["debate_step"](arg)
+
                         if isinstance(result_obj, ToolResult):
                             result_str = result_obj.to_string()
                             is_ok = result_obj.ok
@@ -298,7 +324,7 @@ def iter_agent_events(
                             result_str = str(result_obj)
                             is_ok = not result_str.startswith("Error")
                         results = [{
-                            "tool": "ask_user_question",
+                            "tool": tc.name,
                             "result": result_str,
                             "ok": is_ok,
                             "call_id": tc.call_id or "",
@@ -392,8 +418,41 @@ def iter_agent_events(
                         "session_id": session_id,
                         "step": step,
                     }
+                    result_obj = _tools[tool](tool_input)
 
-                result_obj = _tools[tool](tool_input)
+                elif tool == "debate_step":
+                    if isinstance(tool_input, str):
+                        try:
+                            tool_input = json.loads(tool_input)
+                        except json.JSONDecodeError:
+                            tool_input = {}
+                    if isinstance(tool_input, dict):
+                        tool_input["_session_id"] = session_id
+                        tool_input["prepare_only"] = True
+                    else:
+                        tool_input = {"_session_id": session_id, "prepare_only": True, "topic": str(tool_input)}
+                    prepare_raw = _tools[tool](tool_input)
+                    try:
+                        prepare_result = json.loads(prepare_raw) if isinstance(prepare_raw, str) else {}
+                    except Exception:
+                        prepare_result = {}
+
+                    if prepare_result.get("done"):
+                        result_obj = prepare_raw
+                    else:
+                        questions = prepare_result.get("questions", [])
+                        yield {
+                            "type": "question",
+                            "questions": questions,
+                            "session_id": session_id,
+                            "step": step,
+                        }
+                        if isinstance(tool_input, dict):
+                            tool_input["prepare_only"] = False
+                        result_obj = _tools[tool](tool_input)
+
+                else:
+                    result_obj = _tools[tool](tool_input)
                 if isinstance(result_obj, ToolResult):
                     result_str = result_obj.to_string()
                     is_error = not result_obj.ok

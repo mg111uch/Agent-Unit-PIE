@@ -53,6 +53,7 @@ from agent_core.tools.code_rag import (
     find_impact_tool,
 )
 from agent_core.tools.question_ops import ask_user_question
+from agent_core.tools.debate_ops import debate_step
 from agent_core.tools.registry import ToolRegistry, CAT_FILE, CAT_KERNEL, CAT_SIM, CAT_META, CAT_GIT
 from agent_core.tools.schemas import TOOL_NAME_MAP
 
@@ -331,6 +332,12 @@ def _register_all():
     _reg.register("ask_user_question", _tc(ask_user_question), schema=_s["ask_user_question"],
         meta={"description": "Ask the user for input, clarification, or a decision. Provide options (max 3) and ask multiple questions at once.",
               "input_format": "`{\"questions\": [{\"question\": \"...\", \"options\": [\"A\", \"B\"]}]}`"},
+        category=CAT_META)
+
+    # Debate tool
+    _reg.register("debate_step", debate_step, schema=_s["debate_step"],
+        meta={"description": "Present next debate argument for a topic and get user response. Handles argument selection, belief tracking, contradiction detection.",
+              "input_format": "`{\"topic\": \"theism_atheism\"}`"},
         category=CAT_META)
 
     # Code RAG tools (codebase atlas intelligence)

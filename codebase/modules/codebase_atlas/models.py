@@ -49,6 +49,7 @@ class FunctionInfo:
     is_async: bool = False
     decorators: List[str] = field(default_factory=list)
     line_number: int = 0
+    source_code: str = ""
     
     # Impact analysis
     calls: Set[str] = field(default_factory=set)  # Function names called
@@ -87,6 +88,7 @@ class ClassInfo:
     methods: List[FunctionInfo] = field(default_factory=list)
     docstring: Optional[str] = None
     line_number: int = 0
+    source_code: str = ""
     
     # Composition
     uses_components: Set[str] = field(default_factory=set)  # Component names

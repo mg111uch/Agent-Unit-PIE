@@ -391,6 +391,16 @@ TOOL_SCHEMAS: List[Dict[str, Any]] = [
             required=["name"],
         ),
     },
+    {
+        "name": "debate_step",
+        "description": "Present the next debate argument for a topic and get the user's response. Handles argument selection, user question, belief tracking, and contradiction detection in one call. Call repeatedly until done=true.",
+        "parameters": _obj_schema(
+            properties={
+                "topic": _str_schema("Topic name to explore (e.g. 'theism_atheism')"),
+            },
+            required=["topic"],
+        ),
+    },
 ]
 
 TOOL_NAME_MAP: Dict[str, dict] = {s["name"]: s for s in TOOL_SCHEMAS}

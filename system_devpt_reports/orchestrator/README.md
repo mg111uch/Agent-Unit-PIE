@@ -1,15 +1,12 @@
 # Agent Orchestrator Reference
 
-Single reference for project usage.
-
----
-
 ## Getting Started
 
 ### Run Agent
 ```bash
-cd Agentic_Unit_PIE/codebase
-conda run -n myenv python server.py
+cd /path/to/Agentic_Unit_PIE/codebase
+conda activate myenv
+python server.py
 ```
 
 #### Environment Variables
@@ -28,11 +25,6 @@ conda run -n myenv python server.py
 - `max_checkpoints` — max checkpoint files to keep (default: 50)
 - `agents_md_enabled` — enable/disable AGENTS.md bootstrap (default: true)
 
-### Exit
-```bash
-exit
-```
-
 ---
 
 ## Features Overview
@@ -49,89 +41,7 @@ exit
 | Provider Switching | Swap LLM provider/model at runtime via API |
 | Tool Pack Filtering | Enable/disable tool categories via env or config.json |
 | MCP Integration | Expose kernel + simulation tools to any MCP host (Claude Code, Cursor) |
-| Code RAG | SQLite-based symbol search + call graph from codebase atlas output — `get_symbol`, `search_symbols`, `get_callers_callees`, `find_impact` |
-
----
-
-## Commands
-
-## `/argu explore <topic>` - Debate Mode
-
-Explore topics through structured debate with belief tracking.
-
-Interactive guided exploration.
-
-### Behavior:
-
-* Shows one argument at a time
-* User selects from **4 options only**
-
-```
-1. Agree (argument)
-2. Counter (relevant opposing argument)
-3. Explore / unsure
-4. Write own response
-```
-
-* Stores response
-* Moves to next argument
-* Resumes from previous state
-
-### Run via Python directly
-```python
-from argu_god.engine.loop import run_explore_loop
-run_explore_loop("theism_atheism")
-```
-
-### Run via Web Server
-```bash
-conda run -n myenv python -m argu_god.main
-# Open http://localhost:8000
-```
-
-### Topics
-- `theism_atheism` (default)
-- Add new topics in `modules/argu_god/topics/<topic>/graph.json`
-
----
-
-**Example:**
-```
->> /argu explore theism_atheism
-```
-
-**Response options:**
-| Option | Meaning |
-|--------|---------|
-| 1 | Agree |
-| 2 | Counter |
-| 3 | Explore/Uncertain |
-| 4 | Write own response |
-
-System tracks beliefs, detects contradictions, stores in kernel.
-
----
-
-### /auto - Auto-Research
-Goal-autonomous research using the shared agent loop.
-
-```
-/auto "research question"
-```
-
-**Examples:**
-```
->> /auto Why is population declining?
->> /auto Compare healer vs no-healer scenarios
-```
-
-**Behavior:**
-- Uses `run_agent_turn()` from the shared loop (same parsing, failure breaker, streaming)
-- No hard kernel dependency — proceeds with file/shell tools if kernel is unavailable
-- Findings stored to kernel memory if available
-- Max iterations configurable (default: 5)
-
----
+| Code RAG | SQLite-based symbol search + call graph from codebase atlas output |
 
 ## Tools
 
@@ -192,31 +102,6 @@ All tools support **native function calling** (JSON Schema via `tools/schemas.py
 | `simulation_compare` | Compare runs |
 | `simulation_list` | List runs |
 | `simulation_get_signals` | Get signals |
-
----
-
-## Simulation Usage
-
-### Via Agent
-```
-Run a simulation with 50 years and 100 initial population
-```
-
-### Via Python
-```python
-from modules.simulators.simulation_connector import SimulationConnector
-conn = SimulationConnector()
-result = conn.run_and_extract({'years': 20, 'initial_pop': 50}, 'run_001')
-print(conn.compare_runs(['run_001', 'run_002']))
-```
-
-### Parameters
-| Parameter | Default |
-|-----------|----------|
-| `years` | 50 |
-| `initial_pop` | 50 |
-| `initial_healers` | 1 |
-| `grid_width` | 10 |
 
 ---
 
@@ -349,3 +234,11 @@ Token-bucket per user: `llm_calls_per_minute` (default: 10) and `tool_writes_per
 ## Audit Log
 
 Every tool invocation is logged to SQLite (`agent_audit.db`) with user_id, tool name, input hash, and timestamp. Queryable via `/api/audit` endpoint.
+
+### Code RAG: 
+- Named lookups: agent should call `get_symbol(names=[...])` first; `search_symbols` only on `missing_names` / unknown names
+- Removed `prefetched_symbols` + `batch_get_symbol_hint` from `search_symbols` (bulk-prefetching unrelated FTS hits)
+- `get_symbol_tool` returns `missing_names` + hint when some names fail
+- `executor.py` result truncation raised 500→10000 chars to stop mid-function cuts
+- `code_rag.py`: `get_symbols(names, file_path)` + `BUDGET_CHARS=10000` auto-batching in `get_symbol_tool`
+- Tool functions must be plain (no `@tool_call`) in ops module to avoid circular import; decorator applied in `__init__.py` registration.

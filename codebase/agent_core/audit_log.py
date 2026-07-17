@@ -1,19 +1,21 @@
 from __future__ import annotations
 
 import json
+import os
 import sqlite3
 import threading
 import hashlib
 from datetime import datetime, timezone
 from typing import Optional
 
-AUDIT_DB_PATH = "agent_audit.db"
+AUDIT_DB_PATH = "logs/agent_audit.db"
 
 
 class AuditLog:
     def __init__(self, db_path: str = AUDIT_DB_PATH):
         self._db_path = db_path
         self._lock = threading.Lock()
+        os.makedirs(os.path.dirname(db_path) or ".", exist_ok=True)
         self._conn = sqlite3.connect(db_path, check_same_thread=False)
         self._conn.execute("PRAGMA journal_mode=WAL")
         self._init_db()

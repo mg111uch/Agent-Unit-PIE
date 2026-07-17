@@ -83,7 +83,7 @@ async def websocket_agent(websocket: WebSocket, token: str = Query(...)):
                 cancel_event.clear()
                 command = data.get("command", "")
                 args = data.get("args", "")
-                conv_id = await handle_slash(websocket, command, args)
+                conv_id = await handle_slash(websocket, command, args, conv_id=conv_id, user_key=user_key, cancel_event=cancel_event)
                 _srv.conversations[user_key] = conv_id
     except WebSocketDisconnect:
         _srv.log_output(f"[WS] User {user.get('username')} disconnected")
@@ -97,6 +97,9 @@ async def handle_slash(
     websocket: WebSocket,
     command: str,
     args: str,
+    conv_id: Optional[str] = None,
+    user_key: str = "",
+    cancel_event: Optional[threading.Event] = None,
 ) -> Optional[str]:
     if command in ("/new", "/clear", "/reset", "/session"):
         await websocket.send_json(
@@ -117,17 +120,22 @@ async def handle_slash(
                 {"type": "error", "message": "Usage: /argu explore <topic>"}
             )
             return None
-        try:
-            from modules.argu_god.engine.cli import argu_cli
-            output = argu_cli(mode, topic)
+        if mode != "explore":
             await websocket.send_json(
-                {"type": "final", "content": output, "step": 0}
+                {"type": "error", "message": f"Unsupported mode: {mode}. Use 'explore'."}
             )
-        except Exception as e:
-            await websocket.send_json(
-                {"type": "error", "message": f"ArguGod error: {e}"}
-            )
-        return None
+            return None
+        debate_msg = (
+            f"[DEBATE] You are a debate moderator exploring topic '{topic}'. "
+            f"Call 'debate_step' with topic='{topic}' repeatedly to present each argument "
+            f"and get the user's response. After each step, briefly summarize what happened. "
+            f"Continue until debate_step returns 'done': true."
+        )
+        conv_id = await handle_chat(
+            websocket, debate_msg, conv_id,
+            user_key=user_key, cancel_event=cancel_event,
+        )
+        return conv_id
 
     if command == "/auto":
         if not args.strip():

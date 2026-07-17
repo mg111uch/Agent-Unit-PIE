@@ -120,8 +120,7 @@ project_dir/
 │   │   ├── api.md              # Layer 2: API module details
 │   │   ├── utils.md            # Layer 2: Utils module details
 │   │   └── tests.md            # Layer 2: Tests module details
-│   ├── atlas_meta.json    
-│   ├── graphdata.json          # Always generated (not just --serve). Consumed by code_rag agent tools.
+│   ├── graphdata.json          # Always generated (not just --serve). Consumed by code_rag agent tools. Contains project_id in metadata.
 │   ├── code_rag.db             # Auto-generated SQLite DB with FTS5 from graphdata.json + source code
 │   └── node_positions.json     # Only persisted during --serve interactive sessions
 └── codebase/                      # Layer 3: Agent reads only when implementing

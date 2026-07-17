@@ -51,7 +51,6 @@ class GraphBuilder:
         graph = GraphData(graph_type=GraphType.DEPENDENCY)
         self._add_file_nodes(graph)
         self._add_dependency_edges(graph)
-        graph.metadata["graph_type"] = "dependency"
         return graph
 
     def build_call_graph(self) -> GraphData:
@@ -62,7 +61,6 @@ class GraphBuilder:
         self._add_function_clusters(graph)
         self._add_function_nodes(graph)
         self._add_call_edges(graph)
-        graph.metadata["graph_type"] = "call"
         return graph
 
     def build_unified_graph(self) -> GraphData:
@@ -75,7 +73,6 @@ class GraphBuilder:
         self._add_dependency_edges(graph)
         self._add_function_nodes_unified(graph)
         self._add_call_edges(graph)
-        graph.metadata["graph_type"] = "unified"
         return graph
 
     # Dependency Graph

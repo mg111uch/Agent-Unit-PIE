@@ -45,22 +45,27 @@ class GraphSerializer:
         cls,
         graph: GraphData,
     ) -> Dict[str, Any]:
-        return {
-            "graph_type": graph.graph_type.value,
-            "metadata": graph.metadata,
-            "nodes": [
-                cls._node_to_dict(node)
-                for node in graph.nodes.values()
-            ],
-            "edges": [
-                cls._edge_to_dict(edge)
-                for edge in graph.edges.values()
-            ],
-            "clusters": [
-                cls._cluster_to_dict(cluster)
-                for cluster in graph.clusters.values()
-            ],
+        result = {}
+        if "project_id" in graph.metadata:
+            result["project_id"] = graph.metadata["project_id"]
+        result["graph_type"] = graph.graph_type.value
+        result["metadata"] = {
+            k: v for k, v in graph.metadata.items()
+            if k != "project_id"
         }
+        result["nodes"] = [
+            cls._node_to_dict(node)
+            for node in graph.nodes.values()
+        ]
+        result["edges"] = [
+            cls._edge_to_dict(edge)
+            for edge in graph.edges.values()
+        ]
+        result["clusters"] = [
+            cls._cluster_to_dict(cluster)
+            for cluster in graph.clusters.values()
+        ]
+        return result
     @classmethod
     def to_nested_dict(
         cls,
@@ -178,14 +183,14 @@ class GraphSerializer:
         cls,
         data: Dict[str, Any],
     ) -> GraphData:
+        metadata = data.get("metadata", {}).copy()
+        if "project_id" in data:
+            metadata.setdefault("project_id", data["project_id"])
         graph = GraphData(
             graph_type=GraphType(
                 data["graph_type"]
             ),
-            metadata=data.get(
-                "metadata",
-                {},
-            ),
+            metadata=metadata,
         )
         #
         # Clusters first
