@@ -8,7 +8,7 @@ from typing import Dict, List, Optional
 from agent_core.config import CODEBASE_ROOT, AGENTS_MD_ENABLED
 from agent_core.workspace import WORKSPACE_ROOT
 from agent_core.tools import log_output, registry
-from agent_core.tools.registry import CAT_FILE, CAT_KERNEL, CAT_SIM, CAT_META
+from agent_core.tools.registry import CAT_FILE, CAT_KERNEL, CAT_SIM, CAT_META, CAT_CODE_RAG
 
 DEFAULT_SYSTEM_PROMPT = "You are a helpful assistant."
 PROMPT_FRAGMENTS_DIR = os.path.join(CODEBASE_ROOT, "prompt_fragments")
@@ -17,7 +17,7 @@ FRAGMENT_ORDER: List[tuple[str, Optional[List[str]], Optional[List[str]]]] = [
     ("00_base_persona.md",       None,         None),
     ("10_tool_list.md",          None,         None),
     ("20_file_ops_workflow.md",  [CAT_FILE],   None),
-    ("25_code_rag.md",          [CAT_META],   None),
+    ("25_code_rag.md",          [CAT_CODE_RAG], None),
     ("30_kernel_playbook.md",    [CAT_KERNEL], None),
     ("40_sim_playbook.md",       [CAT_SIM],    None),
     ("50_tool_input_formats.md", None,         None),

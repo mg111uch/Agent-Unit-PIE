@@ -4,11 +4,14 @@ from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi import WebSocket
 import os, json
+import asyncio
 from llm_compiler import compile_topic_llm
+
+BASE_PATH = os.path.dirname(os.path.abspath(__file__))
 
 app = FastAPI(title="ArguGod")
 
-static_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static")
+static_dir = os.path.join(BASE_PATH, "static")
 if os.path.exists(static_dir):
     app.mount("/static", StaticFiles(directory=static_dir), name="static")
 
@@ -16,29 +19,33 @@ app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], all
 
 @app.get("/")
 async def root():
-    return FileResponse("static/index.html")
+    return FileResponse(os.path.join(BASE_PATH, "static", "index.html"))
 
 @app.websocket("/ws")
 async def websocket_endpoint(ws: WebSocket):
     await ws.accept()
-    while True:
-        await ws.send_json({"type": "ping"})
+    try:
+        while True:
+            await ws.send_json({"type": "ping"})
+            await asyncio.sleep(5)
+    except Exception:
+        pass
 
 @app.get("/api/topics")
 async def list_topics():
-    topics_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "topics")
+    topics_dir = os.path.join(BASE_PATH, "topics")
     return {"topics": os.listdir(topics_dir) if os.path.exists(topics_dir) else []}
 
 @app.get("/api/graph")
 async def get_graph(topic: str = "theism_atheism"):
-    path = os.path.join("topics", topic, "graph.json")
+    path = os.path.join(BASE_PATH, "topics", topic, "graph.json")
     if os.path.exists(path):
         try:
             with open(path) as f:
                 return json.load(f)
         except Exception as e:
             print("Invalid graph.json:", e)
-    return {"nodes": [], "edges": []}   # safe fallback - no crash
+    return {"nodes": [], "edges": []}
 
 @app.post("/api/compile/{topic}")
 async def compile_topic(topic: str):
@@ -46,7 +53,7 @@ async def compile_topic(topic: str):
 
 @app.get("/api/mindmap")
 async def get_mindmap():
-    path = os.path.join("mindmaps", "local_user", "mindmap.json")
+    path = os.path.join(BASE_PATH, "mindmaps", "local_user", "mindmap.json")
     if os.path.exists(path):
         with open(path) as f:
             return json.load(f)

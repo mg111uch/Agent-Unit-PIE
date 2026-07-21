@@ -2,6 +2,13 @@ from kernel.signals.signal_engine import signal_engine
 from kernel.patterns.pattern_engine import pattern_engine
 from kernel.memory.working_memory import working_memory
 from kernel.utils.logger import get_child_logger
+from kernel.config.kernel_config import (
+    BELIEF_SHIFT_TTL,
+    CONTRADICTION_TTL,
+    CONFIDENCE_CHANGE_TTL,
+    PATTERN_IMPORTANCE,
+    PATTERN_CONFIDENCE,
+)
 
 logger = get_child_logger("belief_signal_handler")
 
@@ -35,7 +42,7 @@ def handle_belief_shift_signal(signal):
                 "signal_id": signal.signal_id,
                 "topic": topic,
             },
-            ttl_seconds=7200,
+            ttl_seconds=BELIEF_SHIFT_TTL,
         )
         logger.info(
             f"Belief shift stored in working memory: {argument}"
@@ -60,14 +67,14 @@ def handle_contradiction_signal(signal):
                     "contradicted_arguments": contradicted_args,
                     "topic": topic,
                 },
-                importance=0.9,
+                importance=PATTERN_IMPORTANCE,
                 confidence=signal.metrics.confidence,
                 tags=["contradiction", "argu_god", topic],
                 metadata={
                     "signal_id": signal.signal_id,
                     "topic": topic,
                 },
-                ttl_seconds=14400,
+                ttl_seconds=CONTRADICTION_TTL,
             )
             from kernel.signals.signal_engine import signal_engine
             signal_engine.create_signal(
@@ -82,8 +89,8 @@ def handle_contradiction_signal(signal):
                 subtype="pattern",
                 title=f"Belief contradiction pattern",
                 description=f"User holds contradictory beliefs on {topic}",
-                confidence=0.9,
-                importance=0.9,
+                confidence=PATTERN_CONFIDENCE,
+                importance=PATTERN_IMPORTANCE,
                 tags=["pattern", "contradiction"],
                 metadata={
                     "arguments": contradicted_args,
@@ -118,7 +125,7 @@ def handle_confidence_change_signal(signal):
             metadata={
                 "signal_id": signal.signal_id,
             },
-            ttl_seconds=3600,
+            ttl_seconds=CONFIDENCE_CHANGE_TTL,
         )
         logger.info(
             f"Confidence change stored"

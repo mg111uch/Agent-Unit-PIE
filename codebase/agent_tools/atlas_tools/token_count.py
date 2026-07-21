@@ -126,6 +126,25 @@ def count_tokens(file_path, encoding_name="cl100k_base"):
         print(f"Error: {str(e)}")
         return 0
 
+def count_tokens_string(text, encoding_name="cl100k_base"):
+    """
+    Count the number of tokens in a string using a specified tokenizer encoding.
+
+    Args:
+        text (str): The text string to tokenize.
+        encoding_name (str): Name of the tokenizer encoding (e.g., 'cl100k_base' for GPT-4).
+
+    Returns:
+        int: Number of tokens in the text.
+    """
+    try:
+        encoding = load_encoding_locally(encoding_name)
+        tokens = encoding.encode(text)
+        return len(tokens)
+    except Exception as e:
+        print(f"Error counting tokens: {str(e)}")
+        return 0
+
 # Main entry point when script is executed directly
 if __name__ == "__main__":
     # Set up command line argument parser

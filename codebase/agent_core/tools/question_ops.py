@@ -38,7 +38,10 @@ def ask_user_question(raw_input: Any) -> str:
         "event": event,
         "answers": None,
     }
-    event.wait()
+    answered = event.wait(timeout=300)
+    if not answered:
+        _pending.pop(_session_id, None)
+        return json.dumps({"answers": [], "cancelled": True, "reason": "timeout"})
 
     result = _pending[_session_id].get("answers")
     del _pending[_session_id]

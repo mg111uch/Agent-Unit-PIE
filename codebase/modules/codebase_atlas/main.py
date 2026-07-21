@@ -9,7 +9,6 @@ Orchestrates the complete pipeline:
 """
 
 import sys
-import json
 import sqlite3
 import argparse
 from pathlib import Path
@@ -29,182 +28,8 @@ from .analyzers import (
 from .generators import BaseGenerator, DetailGenerator
 from .graph.backend.graph_builder import GraphBuilder
 from .graph.backend.graph_serializer import GraphSerializer
+from .rag.db import DB_FILENAME, init_schema, insert_file_symbols, update_from_graph
 from .utils import clean_directory, ensure_directory
-
-DB_FILENAME = "code_rag.db"
-
-
-def _init_code_rag_schema(conn: sqlite3.Connection):
-    conn.executescript("""
-        DROP TABLE IF EXISTS symbols_fts;
-        DROP TABLE IF EXISTS call_edges;
-        DROP TABLE IF EXISTS symbols;
-        DROP TABLE IF EXISTS meta;
-        CREATE TABLE symbols (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            file_path TEXT NOT NULL,
-            symbol_name TEXT NOT NULL,
-            symbol_type TEXT NOT NULL,
-            parent_name TEXT,
-            signature TEXT,
-            docstring TEXT,
-            code TEXT,
-            start_line INTEGER,
-            end_line INTEGER,
-            risk_level TEXT DEFAULT 'none',
-            entry_point INTEGER DEFAULT 0
-        );
-        CREATE TABLE call_edges (
-            source_id INTEGER NOT NULL,
-            target_id INTEGER NOT NULL,
-            edge_type TEXT NOT NULL,
-            PRIMARY KEY (source_id, target_id, edge_type),
-            FOREIGN KEY (source_id) REFERENCES symbols(id),
-            FOREIGN KEY (target_id) REFERENCES symbols(id)
-        );
-        CREATE TABLE meta (
-            key TEXT PRIMARY KEY,
-            value TEXT
-        );
-        CREATE INDEX idx_sym_name ON symbols(symbol_name);
-        CREATE INDEX idx_sym_file ON symbols(file_path);
-        CREATE INDEX idx_call_source ON call_edges(source_id);
-        CREATE INDEX idx_call_target ON call_edges(target_id);
-    """)
-    try:
-        conn.execute("""
-            CREATE VIRTUAL TABLE symbols_fts USING fts5(
-                symbol_name, docstring, code, file_path,
-                tokenize='porter'
-            )
-        """)
-    except sqlite3.OperationalError:
-        pass
-    conn.commit()
-
-
-def _insert_file_symbols(
-    conn: sqlite3.Connection,
-    file_path: str,
-    file_info,
-    name_to_id: Dict,
-) -> None:
-    is_python = file_path.endswith(".py")
-
-    if is_python and file_info.error is None and (file_info.functions or file_info.classes):
-        for func in file_info.functions:
-            _insert_function(conn, file_path, func, "", name_to_id)
-        for cls in file_info.classes:
-            _insert_class(conn, file_path, cls, name_to_id)
-            for method in cls.methods:
-                _insert_function(conn, file_path, method, cls.name, name_to_id)
-    else:
-        _insert_file_as_symbol(conn, file_path, name_to_id)
-
-
-def _insert_function(
-    conn: sqlite3.Connection,
-    file_path: str,
-    func,
-    parent_name: str,
-    name_to_id: Dict,
-) -> int:
-    args_str = ', '.join(a[0] for a in func.args)
-    signature = f"{func.name}({args_str})"
-    docstring = func.docstring or ""
-    start_line = func.line_number
-    end_line = start_line + func.source_code.count('\n') if func.source_code else start_line
-
-    cur = conn.execute(
-        """INSERT INTO symbols
-           (file_path, symbol_name, symbol_type, parent_name,
-            signature, docstring, code, start_line, end_line,
-            risk_level, entry_point)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-        (file_path, func.name,
-         "method" if parent_name else "function",
-         parent_name, signature, docstring,
-         func.source_code, start_line, end_line,
-         func.risk_level.value if func.risk_level else "none",
-         1 if func.is_entry else 0)
-    )
-    sym_id = cur.lastrowid
-    name_to_id[(file_path, func.name)] = sym_id
-
-    try:
-        conn.execute(
-            "INSERT INTO symbols_fts (rowid, symbol_name, docstring, code, file_path) VALUES (?, ?, ?, ?, ?)",
-            (sym_id, func.name, docstring, func.source_code, file_path)
-        )
-    except sqlite3.OperationalError:
-        pass
-    return sym_id
-
-
-def _insert_class(
-    conn: sqlite3.Connection,
-    file_path: str,
-    cls,
-    name_to_id: Dict,
-) -> int:
-    docstring = cls.docstring or ""
-    start_line = cls.line_number
-    end_line = start_line + cls.source_code.count('\n') if cls.source_code else start_line
-    signature = f"class {cls.name}"
-
-    cur = conn.execute(
-        """INSERT INTO symbols
-           (file_path, symbol_name, symbol_type, parent_name,
-            signature, docstring, code, start_line, end_line)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-        (file_path, cls.name, "class", "",
-         signature, docstring, cls.source_code,
-         start_line, end_line)
-    )
-    sym_id = cur.lastrowid
-    name_to_id[(file_path, cls.name)] = sym_id
-
-    try:
-        conn.execute(
-            "INSERT INTO symbols_fts (rowid, symbol_name, docstring, code, file_path) VALUES (?, ?, ?, ?, ?)",
-            (sym_id, cls.name, docstring, cls.source_code, file_path)
-        )
-    except sqlite3.OperationalError:
-        pass
-    return sym_id
-
-
-def _insert_file_as_symbol(
-    conn: sqlite3.Connection,
-    file_path: str,
-    name_to_id: Dict,
-) -> int:
-    try:
-        content = Path(file_path).read_text(encoding='utf-8')
-    except Exception:
-        return 0
-    name = Path(file_path).name
-    lines = content.split('\n')
-
-    cur = conn.execute(
-        """INSERT INTO symbols
-           (file_path, symbol_name, symbol_type, parent_name,
-            signature, docstring, code, start_line, end_line)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-        (file_path, name, "file", "",
-         "", "", content, 1, len(lines))
-    )
-    sym_id = cur.lastrowid
-    name_to_id[(file_path, name)] = sym_id
-
-    try:
-        conn.execute(
-            "INSERT INTO symbols_fts (rowid, symbol_name, docstring, code, file_path) VALUES (?, ?, ?, ?, ?)",
-            (sym_id, name, "", content, file_path)
-        )
-    except sqlite3.OperationalError:
-        pass
-    return sym_id
 
 
 def generate_atlas(
@@ -281,7 +106,7 @@ def generate_atlas(
         name_to_id: Dict[Tuple[str, str], int] = {}
         code_rag_path = Path(output_dir) / DB_FILENAME
         rag_conn = sqlite3.connect(str(code_rag_path))
-        _init_code_rag_schema(rag_conn)
+        init_schema(rag_conn)
         
         for file_info in files:
             # Find appropriate parser
@@ -306,7 +131,7 @@ def generate_atlas(
             
             # Insert symbols into code_rag.db
             if file_info.error is None:
-                _insert_file_symbols(rag_conn, str(file_info.path), file_info, name_to_id)
+                insert_file_symbols(rag_conn, str(file_info.path), file_info, name_to_id)
             
             # Free source_code memory after DB insertion
             for func in file_info.functions:
@@ -353,7 +178,9 @@ def generate_atlas(
         clean_directory(
             output_dir,
             keep_files=[
-                "node_pos.json"
+                "node_pos.json",
+                "mini_atlas.md",
+                DB_FILENAME,
             ],
         )
         
@@ -390,47 +217,7 @@ def generate_atlas(
             )
             print(f"✓ Graph data saved: {output_path / 'graphdata.json'}")
 
-            # Build call edges and update risk/entry for code_rag.db
-            file_refs = {
-                n.id: n.metadata.get("path", "")
-                for n in unified_graph.nodes.values()
-                if n.node_type.value == "file"
-            }
-            func_node_to_sym: Dict[str, int] = {}
-            for node in unified_graph.nodes.values():
-                if node.node_type.value != "function":
-                    continue
-                func_name = node.metadata.get("function_name", "")
-                file_ref = node.metadata.get("file_ref", "")
-                file_path = file_refs.get(file_ref, "")
-                sym_id = name_to_id.get((file_path, func_name))
-                if sym_id is not None:
-                    func_node_to_sym[node.id] = sym_id
-                    risk = node.risk_level.value if node.risk_level else "none"
-                    entry = 1 if node.entry_point else 0
-                    rag_conn.execute(
-                        "UPDATE symbols SET risk_level = ?, entry_point = ? WHERE id = ?",
-                        (risk, entry, sym_id)
-                    )
-
-            edge_count = 0
-            for edge in unified_graph.edges.values():
-                if edge.edge_type.value != "calls":
-                    continue
-                source_id = func_node_to_sym.get(edge.source)
-                target_id = func_node_to_sym.get(edge.target)
-                if source_id is not None and target_id is not None:
-                    try:
-                        rag_conn.execute(
-                            "INSERT INTO call_edges (source_id, target_id, edge_type) VALUES (?, ?, ?)",
-                            (source_id, target_id, "calls")
-                        )
-                        edge_count += 1
-                    except sqlite3.IntegrityError:
-                        pass
-
-            rag_conn.execute("INSERT OR REPLACE INTO meta (key, value) VALUES ('ingested', '1')")
-            rag_conn.commit()
+            edge_count = update_from_graph(rag_conn, unified_graph, name_to_id)
             print(f"✓ Code RAG database: {output_path / DB_FILENAME} ({edge_count} call edges)")
         except Exception as e:
             print(f"  ⚠️  Graph generation skipped: {e}")

@@ -225,6 +225,10 @@ TOOL_SCHEMAS: List[Dict[str, Any]] = [
                     "description": "Simulation parameters (e.g. years, initial_pop, grid_width)",
                     "additionalProperties": True,
                 },
+                "timeout": {
+                    "type": "integer",
+                    "description": "Max run time in seconds (omit for no limit)",
+                },
             },
             required=["run_id"],
         ),
@@ -369,6 +373,21 @@ TOOL_SCHEMAS: List[Dict[str, Any]] = [
         ),
     },
     {
+        "name": "get_symbols_meta",
+        "description": (
+            "Batch metadata lookup for multiple function/class names. "
+            "Returns signature, docstring, token_count, risk_level, line numbers — but NOT full source code. "
+            "Use this to browse many definitions cheaply, then call get_symbol only for the ones worth fetching in full."
+        ),
+        "parameters": _obj_schema(
+            properties={
+                "names": {"type": "array", "items": {"type": "string"}, "description": "Exact function/class names to look up (e.g. ['func1', 'func2'])."},
+                "file_path": _str_schema("Optional file path to narrow all lookups to one file"),
+            },
+            required=["names"],
+        ),
+    },
+    {
         "name": "get_callers_callees",
         "description": "Show which functions call a given symbol (callers) and which functions it calls (callees). Uses recursive graph traversal up to the specified depth.",
         "parameters": _obj_schema(
@@ -392,13 +411,132 @@ TOOL_SCHEMAS: List[Dict[str, Any]] = [
         ),
     },
     {
+        "name": "get_index_info",
+        "description": "Return real-time statistics about the indexed codebase (total symbols, call edges, token ranges, risk distribution). Use this once at the start of a session to calibrate token budget and batch sizes.",
+        "parameters": _obj_schema(properties={}),
+    },
+    {
         "name": "debate_step",
-        "description": "Present the next debate argument for a topic and get the user's response. Handles argument selection, user question, belief tracking, and contradiction detection in one call. Call repeatedly until done=true.",
+        "description": "Present the next debate argument for a topic and get the user's response. Handles argument selection, user question, belief tracking, and contradiction detection in one call. When the graph is exhausted (done=true), pass llm_generated with a new argument object to continue.",
         "parameters": _obj_schema(
             properties={
                 "topic": _str_schema("Topic name to explore (e.g. 'theism_atheism')"),
+                "llm_generated": _obj_schema(
+                    properties={
+                        "name": _str_schema("Unique argument name"),
+                        "premise": _str_schema("The argument premise"),
+                        "side": _str_schema("One of: pro, con, neutral"),
+                    },
+                    required=["name", "premise", "side"],
+                ),
             },
             required=["topic"],
+        ),
+    },
+    {
+        "name": "expand_topic",
+        "description": "Add new nodes and edges to a topic's argument graph. Validates no duplicate names, persists to graph.json, and re-indexes the vector store.",
+        "parameters": _obj_schema(
+            properties={
+                "topic": _str_schema("Topic name to expand (e.g. 'theism_atheism')"),
+                "new_nodes": {
+                    "type": "array",
+                    "description": "New argument nodes to add",
+                    "items": _obj_schema(
+                        properties={
+                            "name": _str_schema("Unique argument name"),
+                            "premise": _str_schema("The argument premise"),
+                            "side": _str_schema("Side: pro, con, or neutral"),
+                        },
+                        required=["name", "premise", "side"],
+                    ),
+                },
+                "new_edges": {
+                    "type": "array",
+                    "description": "New edges between arguments",
+                    "items": _obj_schema(
+                        properties={
+                            "source": _str_schema("Source argument name"),
+                            "target": _str_schema("Target argument name"),
+                            "relation": _str_schema("Edge relation (e.g. refutes, supports)"),
+                        },
+                        required=["source", "target", "relation"],
+                    ),
+                },
+            },
+            required=["topic", "new_nodes"],
+        ),
+    },
+    {
+        "name": "kernel_reload",
+        "description": "Reload tool modules from disk to pick up code changes without restart",
+        "parameters": _obj_schema(
+            properties={
+                "modules": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Optional list of module names to reload (default: all hot modules)",
+                },
+            },
+            required=[],
+        ),
+    },
+    {
+        "name": "file_api",
+        "description": (
+            "Return the public API surface of a file: class names + method signatures "
+            "(with docstring first line), module-level function signatures, and exported "
+            "symbols — without any method bodies. Use for orientation before making changes."
+        ),
+        "parameters": _obj_schema(
+            properties={
+                "path": _str_schema("File path relative to workspace root"),
+            },
+            required=["path"],
+        ),
+    },
+    {
+        "name": "call_chain",
+        "description": (
+            "Trace the shortest call chain from one function to any function in another "
+            "module. Uses the existing call-edge index. Example: call_chain('detect_contradictions', "
+            "'kernel.semantic_memory')."
+        ),
+        "parameters": _obj_schema(
+            properties={
+                "start_fn": _str_schema("Starting function or class name"),
+                "end_module": _str_schema("Target module path substring (e.g. 'kernel.semantic_memory')"),
+                "file_path": _str_schema("Optional file path to disambiguate start_fn"),
+            },
+            required=["start_fn", "end_module"],
+        ),
+    },
+    {
+        "name": "compare_apis",
+        "description": (
+            "Diff two files by method name + signature only, ignoring method bodies. "
+            "Shows methods present in one but not the other, and signature mismatches."
+        ),
+        "parameters": _obj_schema(
+            properties={
+                "path_a": _str_schema("First file path relative to workspace root"),
+                "path_b": _str_schema("Second file path relative to workspace root"),
+            },
+            required=["path_a", "path_b"],
+        ),
+    },
+    {
+        "name": "symbols_by_file",
+        "description": (
+            "List every symbol (class, function, global variable) in a file with its type, "
+            "line range, risk level, and signature — without requiring exact names. Unlike "
+            "search_symbols, this doesn't need a query — it returns everything in the file."
+        ),
+        "parameters": _obj_schema(
+            properties={
+                "path": _str_schema("File path relative to workspace root"),
+            },
+            required=["path"],
         ),
     },
 ]

@@ -40,8 +40,10 @@ python server.py
 | Planning | Task todo lists, checkpoints, undo |
 | Provider Switching | Swap LLM provider/model at runtime via API |
 | Tool Pack Filtering | Enable/disable tool categories via env or config.json |
-| MCP Integration | Expose kernel + simulation tools to any MCP host (Claude Code, Cursor) |
+| MCP Integration | Expose kernel + simulation + code_rag tools to any MCP host (Claude Code, Cursor, opencode) |
 | Code RAG | SQLite-based symbol search + call graph from codebase atlas output |
+| Hot-Reload | Auto-detect file changes to tool modules and reload without restart |
+| Simulation Timeout | Cap simulation run time via `timeout` parameter |
 
 ## Tools
 
@@ -78,13 +80,19 @@ All tools support **native function calling** (JSON Schema via `tools/schemas.py
 | `checkpoint_info` | List available checkpoints |
 | `ask_user_question` | Ask the user for input/clarification with up to 3 options per question (a custom text option is always added). Multiple questions can be asked at once — the user sees them one by one with a progress bar. Tool blocks until all answers are submitted. |
 
-### Code RAG Tools (from codebase atlas)
+### Code RAG Tools (from codebase atlas, separate `code_rag` category)
 | Tool | Purpose |
 |------|---------|
 | `get_symbol` | Look up a function/class by name with full source code, signature, and docstring |
+| `get_symbols_meta` | Batch metadata lookup (name, signature, token_count, risk_level, lines) without full source — browse cheaply then call `get_symbol` for the ones worth fetching |
 | `search_symbols` | FTS5 full-text search across symbol names, docstrings, and code |
 | `get_callers_callees` | Recursive graph traversal — who calls this symbol and what it calls |
 | `find_impact` | List everything that depends on a symbol (all transitive callers) |
+| `get_index_info` | Real-time atlas stats (symbols, edges, token ranges, risk distribution) — call once at session start to calibrate budget |
+| `file_api` | Public API surface of a file: classes → method signatures (with docstring first line), module-level functions, no bodies. Hierarchical, class-organized. |
+| `call_chain` | Shortest call chain from a function to any symbol in another module via BFS over `call_edges` |
+| `compare_apis` | API-level diff between two files (only_in_a, only_in_b, signature_mismatches) |
+| `symbols_by_file` | Complete flat symbol inventory of a file by path alone — no query needed |
 
 ### Kernel Tools
 | Tool | Purpose |
@@ -94,11 +102,12 @@ All tools support **native function calling** (JSON Schema via `tools/schemas.py
 | `kernel_store_context` | Store in memory |
 | `kernel_get_memory` | Retrieve memory |
 | `kernel_create_event` | Create event |
+| `kernel_reload` | Reload tool modules from disk without restart |
 
 ### Simulation Tools
 | Tool | Purpose |
 |------|---------|
-| `simulation_run` | Run simulation |
+| `simulation_run` | Run simulation (opt. `timeout` param in secs) |
 | `simulation_compare` | Compare runs |
 | `simulation_list` | List runs |
 | `simulation_get_signals` | Get signals |
@@ -112,7 +121,7 @@ Central registry for tool functions, schemas, and metadata, defined in `agent_co
 
 ```python
 from agent_core.tools import registry
-from agent_core.tools.registry import CAT_FILE, CAT_KERNEL, CAT_SIM, CAT_META, CAT_GIT
+from agent_core.tools.registry import CAT_FILE, CAT_KERNEL, CAT_SIM, CAT_META, CAT_GIT, CAT_CODE_RAG
 
 # Get tools filtered by category (no file_ops for embedders)
 kernel_sim = registry.get_tools(categories=[CAT_KERNEL, CAT_SIM])
@@ -122,7 +131,7 @@ schemas = registry.get_schemas(provider_name="gemini")  # function_declarations 
 schemas = registry.get_schemas()                         # OpenAI "type: function" format
 
 # Export as MCP tools
-mcp_tools = registry.to_mcp_tools(categories=[CAT_KERNEL, CAT_SIM])
+mcp_tools = registry.to_mcp_tools(categories=[CAT_KERNEL, CAT_SIM, CAT_CODE_RAG])
 
 # Add middleware (wraps every tool)
 registry.add_middleware(lambda name, fn: audit_wrap(name, fn, ...))
@@ -132,15 +141,23 @@ registry.add_middleware(lambda name, fn: audit_wrap(name, fn, ...))
 | Category | Tools | Config key |
 |----------|-------|------------|
 | `file` | read_file, list_files, write_to_file, edit_file, execute_command, glob_search, grep_search, get_workspace_info | `file` |
-| `kernel` | kernel_retrieve, kernel_emit_signal, kernel_store_context, kernel_get_memory, kernel_create_event | `kernel` |
+| `kernel` | kernel_retrieve, kernel_emit_signal, kernel_store_context, kernel_get_memory, kernel_create_event, kernel_reload | `kernel` |
 | `sim` | simulation_run, simulation_compare, simulation_list, simulation_get_signals | `sim` |
-| `meta` | todo_write, todo_read, run_tests, undo_last_edit, checkpoint_info, get_symbol, search_symbols, get_callers_callees, find_impact, ask_user_question | `meta` |
+| `meta` | todo_write, todo_read, run_tests, undo_last_edit, checkpoint_info, ask_user_question, debate_step | `meta` |
+| `code_rag` | get_symbol, get_symbols_meta, search_symbols, get_callers_callees, find_impact, get_index_info, file_api, call_chain, compare_apis, symbols_by_file | `code_rag` |
 | `git` | git_status, git_diff, git_commit, git_log | `git` |
 
 ### Config-Based Tool Pack Filtering
 Set `AGENT_TOOL_PACKS=file,kernel,sim` env var or `"tool_packs": ["kernel","sim"]` in `config.json` to control which tools are active. Default: all five packs.
 
-For MCP integration (expose kernel+sim to Claude Code, Cursor, etc.), see `ADAPTERS.md`.
+For MCP integration (expose kernel+sim+code_rag to Claude Code, Cursor, opencode, etc.), see `ADAPTERS.md`.
+
+### Hot-Reload Support
+The MCP server (`agent_core/mcp_server.py`) auto-reloads tool modules when their source files change on disk:
+- Tracks `st_mtime_ns` of `sim_ops.py`, `kernel_ops.py`, `code_rag.py`, `tools/__init__.py`
+- Detects changes on the next tool call and re-imports + re-registers all tools
+- No server restart needed — edits apply on next `pie_*` call
+- Also available as explicit tool: `kernel_reload` (`pie_kernel_reload` via MCP)
 
 ---
 
@@ -239,6 +256,16 @@ Every tool invocation is logged to SQLite (`agent_audit.db`) with user_id, tool 
 - Named lookups: agent should call `get_symbol(names=[...])` first; `search_symbols` only on `missing_names` / unknown names
 - Removed `prefetched_symbols` + `batch_get_symbol_hint` from `search_symbols` (bulk-prefetching unrelated FTS hits)
 - `get_symbol_tool` returns `missing_names` + hint when some names fail
-- `executor.py` result truncation raised 500→10000 chars to stop mid-function cuts
-- `code_rag.py`: `get_symbols(names, file_path)` + `BUDGET_CHARS=10000` auto-batching in `get_symbol_tool`
 - Tool functions must be plain (no `@tool_call`) in ops module to avoid circular import; decorator applied in `__init__.py` registration.
+- `file_api` / `symbols_by_file`: accept relative or absolute paths; resolved via `_resolve_path()` which prepends `CODEBASE_ROOT` for relative paths.
+- `call_chain` uses BFS over `call_edges` table (undirected traversal). Returns shortest path or clear error.
+- `compare_apis` delegates to `file_api` internally for both files, then diffs by `(parent_name, symbol_name)` key.
+- `pie_file_api`, `pie_call_chain`, `pie_compare_apis`, `pie_symbols_by_file`
+All 4 added to `code_rag.py` (`CodeRAG` class methods + tool functions), registered in `schemas.py` + `__init__.py` under `CAT_CODE_RAG`. Path resolution via `_resolve_path()` prepending `CODEBASE_ROOT`.
+
+### Hot-Reload Notes:
+- `_register_all()` in `__init__.py` imports functions inside the function body — supports `importlib.reload` + re-registration on hot-reload
+- `mcp_server.py:_reload_if_changed()` compares `st_mtime_ns` before every tool call — only reloads when file timestamps changed
+- `mcp_server.py:_do_reload()` calls `importlib.reload` on each hot module, then re-runs `_register_all()`
+- Explicit `kernel_reload` tool (`kernel_ops.py`) does the same via tool call
+- `.pyc` cache (`__pycache__/`) is automatically invalidated by `importlib.reload` — no manual cleanup needed

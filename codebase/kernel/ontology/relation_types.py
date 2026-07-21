@@ -500,6 +500,48 @@ RELATION_TYPES: Dict[str, RelationTypeDefinition] = {
         description="Knowledge/model derivation relation.",
 
         directed=True
+    ),
+
+    "requires": RelationTypeDefinition(
+        relation_type="requires",
+
+        category="knowledge",
+
+        description="Entity A requires entity B — if B is rejected, A is invalidated.",
+
+        directed=True,
+
+        inverse_relation="required_by",
+
+        tags=["logic", "dependency"]
+    ),
+
+    "required_by": RelationTypeDefinition(
+        relation_type="required_by",
+
+        category="knowledge",
+
+        description="Entity A is required by entity B — inverse of requires.",
+
+        directed=True,
+
+        inverse_relation="requires",
+
+        tags=["logic", "dependency"]
+    ),
+
+    "depends_on": RelationTypeDefinition(
+        relation_type="depends_on",
+
+        category="knowledge",
+
+        description="Generic dependency relation between two entities.",
+
+        directed=True,
+
+        inverse_relation="supports",
+
+        tags=["logic", "dependency"]
     )
 }
 

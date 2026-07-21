@@ -34,13 +34,5 @@ def get_next_argument(topic, graph, state, beliefs):
 
     return None
 
-def map_choice_to_stance(choice):
-    if choice == 1:
-        return "agree", 0.7
-    elif choice == 2:
-        return "disagree", 0.7
-    elif choice == 3:
-        return "neutral", 0.5
-    elif choice == 4:
-        return "custom", 0.6
+
 

@@ -18,8 +18,6 @@ PROJECT_ROOT = KERNEL_DIR.parent
 
 DATA_DIR = PROJECT_ROOT / "data"
 
-MEMORY_DIR = DATA_DIR / "memory"
-
 KB_DIR = DATA_DIR / "kb"
 
 SIMULATION_DIR = DATA_DIR / "simulations"
@@ -48,18 +46,6 @@ PATTERN_KB_DIR = KB_DIR / "patterns"
 
 GLOBAL_KB_DIR = KB_DIR / "global"
 
-# MEMORY DIRECTORIES
-
-WORKING_MEMORY_DIR = MEMORY_DIR / "working"
-
-EPISODIC_MEMORY_DIR = MEMORY_DIR / "episodic"
-
-SEMANTIC_MEMORY_DIR = MEMORY_DIR / "semantic"
-
-PATTERN_MEMORY_DIR = MEMORY_DIR / "patterns"
-
-HYPOTHESIS_MEMORY_DIR = MEMORY_DIR / "hypotheses"
-
 # SIMULATION DIRECTORIES
 
 CITY_SIM_DIR = SIMULATION_DIR / "cities"
@@ -76,19 +62,12 @@ DEFAULT_DIRS = [
 
     DATA_DIR,
 
-    MEMORY_DIR,
     KB_DIR,
     SIMULATION_DIR,
 
     LOGS_DIR,
     CACHE_DIR,
     TEMP_DIR,
-
-    WORKING_MEMORY_DIR,
-    EPISODIC_MEMORY_DIR,
-    SEMANTIC_MEMORY_DIR,
-    PATTERN_MEMORY_DIR,
-    HYPOTHESIS_MEMORY_DIR,
 
     CITY_KB_DIR,
     COUNTRY_KB_DIR,
@@ -123,17 +102,6 @@ def get_kb_path(
     """
 
     return KB_DIR / domain / entity_name.lower()
-
-def get_memory_path(
-    memory_type: str,
-    entity_id: str
-) -> Path:
-    """
-    Example:
-        data/memory/semantic/human_abc123/
-    """
-
-    return MEMORY_DIR / memory_type / entity_id
 
 def get_simulation_path(
     simulation_type: str,

@@ -1,50 +1,58 @@
 # 📂 static
-Generated: 2026-07-17 18:00:11
-Files: 2
+Generated: 2026-07-21 18:31:40
+Files: 4
 
 ---
 
-F010│graph.js│193
+F264│game.html│415
+T: Static HTML
+---
+
+F300│graph.js│193
 C: GraphVisualization│[init,setupMouseControls,if,onMouseClick,if,setupWebSocket,if,loadTopics,loadGraph,createGraph,+2]
 C: GraphVisualization│[init,setupMouseControls,if,onMouseClick,if,setupWebSocket,if,loadTopics,loadGraph,createGraph,+2]
    F: init()
-   ↳Calls: F010:setupMouseControls
+   ↳Calls: F300:setupMouseControls
    F: setupMouseControls()
-   ↳Called by: F010:init | Calls: F010:if
-   ↳Impact: 🟢LOW (1 dependents) | Breaks: [F010:init]
+   ↳Called by: F300:init | Calls: F250:if,F244:if,F238:if
+   ↳Impact: 🟢LOW (1 dependents) | Breaks: [F300:init]
    F: if(isMouseDown)
-   ↳Called by: F010:loadGraph,F010:setupWebSocket,F010:setupMouseControls | Calls: F010:onMouseClick
-   ↳Impact: 🔴HIGH (6 dependents) | Breaks: [F010:loadGraph],[F010:setupWebSocket],[F010:setupMouseControls]
+   ↳Called by: F234:setZoom,F234:updateTransform,F231:hideLoadingOverlay | Calls: F300:onMouseClick
+   ↳Impact: 🔴HIGH (149 dependents) | Breaks: [F234:setZoom],[F234:updateTransform],[F231:hideLoadingOverlay]
    F: onMouseClick(event)
-   ↳Called by: F010:if | Calls: F010:loadTopics,F010:if,F010:setupWebSocket
-   ↳Impact: 🟢LOW (1 dependents) | Breaks: [F010:if]
+   ↳Called by: F300:if | Calls: F249:if,F248:if,F241:if
+   ↳Impact: 🟢LOW (1 dependents) | Breaks: [F300:if]
    F: if(intersects.length > 0)
-   ↳Called by: F010:loadGraph,F010:setupWebSocket,F010:setupMouseControls | Calls: F010:onMouseClick
-   ↳Impact: 🔴HIGH (6 dependents) | Breaks: [F010:loadGraph],[F010:setupWebSocket],[F010:setupMouseControls]
+   ↳Called by: F234:setZoom,F234:updateTransform,F231:hideLoadingOverlay | Calls: F300:onMouseClick
+   ↳Impact: 🔴HIGH (149 dependents) | Breaks: [F234:setZoom],[F234:updateTransform],[F231:hideLoadingOverlay]
    F: setupWebSocket()
-   ↳Called by: F010:onMouseClick | Calls: F010:loadTopics,F010:loadGraph,F010:if
-   ↳Impact: 🟢LOW (1 dependents) | Breaks: [F010:onMouseClick]
+   ↳Called by: F300:onMouseClick | Calls: F249:if,F248:if,F241:if
+   ↳Impact: 🟢LOW (1 dependents) | Breaks: [F300:onMouseClick]
    F: if(message.type)
-   ↳Called by: F010:loadGraph,F010:setupWebSocket,F010:setupMouseControls | Calls: F010:onMouseClick
-   ↳Impact: 🔴HIGH (6 dependents) | Breaks: [F010:loadGraph],[F010:setupWebSocket],[F010:setupMouseControls]
+   ↳Called by: F234:setZoom,F234:updateTransform,F231:hideLoadingOverlay | Calls: F300:onMouseClick
+   ↳Impact: 🔴HIGH (149 dependents) | Breaks: [F234:setZoom],[F234:updateTransform],[F231:hideLoadingOverlay]
    F: loadTopics()
-   ↳Called by: F010:onMouseClick,F010:setupWebSocket | Calls: F010:loadGraph,F010:if,F010:createGraph
-   ↳Impact: 🟡MEDIUM (2 dependents) | Breaks: [F010:onMouseClick],[F010:setupWebSocket]
+   ↳Called by: F300:setupWebSocket,F300:onMouseClick | Calls: F249:if,F248:if,F241:if
+   ↳Impact: 🟡MEDIUM (2 dependents) | Breaks: [F300:setupWebSocket],[F300:onMouseClick]
    F: loadGraph()
-   ↳Called by: F010:loadTopics,F010:setupWebSocket | Calls: F010:createNode,F010:if,F010:createGraph
-   ↳Impact: 🟡MEDIUM (2 dependents) | Breaks: [F010:loadTopics],[F010:setupWebSocket]
+   ↳Called by: F300:setupWebSocket,F300:loadTopics | Calls: F249:if,F248:if,F241:if
+   ↳Impact: 🟡MEDIUM (2 dependents) | Breaks: [F300:setupWebSocket],[F300:loadTopics]
    F: createGraph()
-   ↳Called by: F010:loadTopics,F010:loadGraph,F010:setupWebSocket | Calls: F010:if,F010:createNode
-   ↳Impact: 🔴HIGH (3 dependents) | Breaks: [F010:loadTopics],[F010:loadGraph],[F010:setupWebSocket]
+   ↳Called by: F300:setupWebSocket,F300:loadGraph,F300:loadTopics | Calls: F249:if,F248:if,F241:if
+   ↳Impact: 🔴HIGH (3 dependents) | Breaks: [F300:setupWebSocket],[F300:loadGraph],[F300:loadTopics]
    F: if(edge)
-   ↳Called by: F010:loadGraph,F010:setupWebSocket,F010:setupMouseControls | Calls: F010:onMouseClick
-   ↳Impact: 🔴HIGH (6 dependents) | Breaks: [F010:loadGraph],[F010:setupWebSocket],[F010:setupMouseControls]
+   ↳Called by: F234:setZoom,F234:updateTransform,F231:hideLoadingOverlay | Calls: F300:onMouseClick
+   ↳Impact: 🔴HIGH (149 dependents) | Breaks: [F234:setZoom],[F234:updateTransform],[F231:hideLoadingOverlay]
    F: createNode(nodeData,index)
-   ↳Called by: F010:loadGraph,F010:createGraph
-   ↳Impact: 🟡MEDIUM (2 dependents) | Breaks: [F010:loadGraph],[F010:createGraph]
+   ↳Called by: F245:render,F300:loadGraph,F300:createGraph
+   ↳Impact: 🔴HIGH (4 dependents) | Breaks: [F245:render],[F300:loadGraph],[F300:createGraph]
 ---
 
-F011│index.html│32
+F020│index.html│411
+T: Static HTML
+---
+
+F301│index.html│32
 D: ●/static/graph.js
 T: Static HTML
 ---

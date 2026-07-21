@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Any
 from collections import defaultdict
 import time
@@ -10,6 +9,8 @@ from kernel.utils.logger import get_child_logger
 from kernel.schemas.pattern_schema import PatternSchema
 from kernel.schemas.signal_schema import SignalSchema
 from kernel.schemas.event_schema import EventSchema
+from kernel.schemas.hypothesis_schema import HypothesisSchema
+from kernel.config.kernel_config import HYPOTHESIS_CONFIDENCE_BUMP, HYPOTHESIS_CONFIDENCE_PENALTY
 
 from kernel.patterns.pattern_engine import pattern_engine
 
@@ -21,81 +22,7 @@ logger = get_child_logger(
     "hypothesis_engine"
 )
 
-# HYPOTHESIS
-
-@dataclass
-class Hypothesis:
-    hypothesis_id: str
-    title: str
-    description: str
-    hypothesis_type: str
-    category: str = "general"
-    confidence: float = 0.5
-    plausibility: float = 0.5
-    novelty: float = 0.5
-    status: str = "proposed"
-    supporting_evidence: List[str] = field(
-        default_factory=list
-    )
-    contradicting_evidence: List[str] = field(
-        default_factory=list
-    )
-    related_patterns: List[str] = field(
-        default_factory=list
-    )
-    related_concepts: List[str] = field(
-        default_factory=list
-    )
-    predictions: List[str] = field(
-        default_factory=list
-    )
-    created_at: float = field(
-        default_factory=time.time
-    )
-    updated_at: float = field(
-        default_factory=time.time
-    )
-    metadata: Dict[str, Any] = field(
-        default_factory=dict
-    )
-    # SERIALIZATION
-    def to_dict(self) -> Dict[str, Any]:
-        return {
-            "hypothesis_id":
-            self.hypothesis_id,
-            "title":
-            self.title,
-            "description":
-            self.description,
-            "hypothesis_type":
-            self.hypothesis_type,
-            "category":
-            self.category,
-            "confidence":
-            self.confidence,
-            "plausibility":
-            self.plausibility,
-            "novelty":
-            self.novelty,
-            "status":
-            self.status,
-            "supporting_evidence":
-            self.supporting_evidence,
-            "contradicting_evidence":
-            self.contradicting_evidence,
-            "related_patterns":
-            self.related_patterns,
-            "related_concepts":
-            self.related_concepts,
-            "predictions":
-            self.predictions,
-            "created_at":
-            self.created_at,
-            "updated_at":
-            self.updated_at,
-            "metadata":
-            self.metadata,
-        }
+Hypothesis = HypothesisSchema
 
 # HYPOTHESIS ENGINE
 
@@ -254,9 +181,9 @@ class HypothesisEngine:
             hypothesis.supporting_evidence.append(
                 evidence_id
             )
-            hypothesis.confidence = min(
+                hypothesis.confidence = min(
                 1.0,
-                hypothesis.confidence + 0.05
+                hypothesis.confidence + HYPOTHESIS_CONFIDENCE_BUMP
             )
             hypothesis.updated_at = (
                 time.time()
@@ -279,9 +206,9 @@ class HypothesisEngine:
             hypothesis.contradicting_evidence.append(
                 evidence_id
             )
-            hypothesis.confidence = max(
+                hypothesis.confidence = max(
                 0.0,
-                hypothesis.confidence - 0.05
+                hypothesis.confidence - HYPOTHESIS_CONFIDENCE_PENALTY
             )
             hypothesis.updated_at = (
                 time.time()

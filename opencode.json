@@ -1,0 +1,16 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "pie": {
+      "type": "local",
+      "command": ["/home/manigupt/miniconda3/envs/myenv/bin/python", "-m", "agent_core.mcp_server"],
+      "cwd": "/home/manigupt/Hello/Agentic_Unit_PIE/codebase",
+      "enabled": true,
+      "environment": {
+        "PYTHONPATH": "/home/manigupt/Hello/Agentic_Unit_PIE/codebase",
+        "WORKSPACE_ROOT": "/home/manigupt/Hello/Agentic_Unit_PIE",
+        "AGENT_WORKSPACE_ROOT": "/home/manigupt/Hello/Agentic_Unit_PIE"
+      }
+    }
+  }
+}

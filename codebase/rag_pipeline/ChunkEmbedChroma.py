@@ -238,7 +238,7 @@ if __name__ == "__main__":
     print("--- Testing Code Parser & Chunking ---")
     all_chunks = []
     # Find all Python files in a dummy project directory
-    project_root = "./dummy_project"
+    project_root = "./temp/dummy"
     for root, _, files in os.walk(project_root):
         for file in files:
             if file.endswith(".py") and not file.startswith('.'): # Exclude hidden files

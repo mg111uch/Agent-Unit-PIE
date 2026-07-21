@@ -62,12 +62,119 @@ class SemanticSearchResult:
             self.metadata,
         }
 
+# EMBEDDING BACKEND PROTOCOL
+
+class EmbeddingBackend:
+    def search_similar(self, text: str, top_k: int = 5) -> List[Dict[str, Any]]:
+        raise NotImplementedError
+
+    def index_text(self, node_id: str, text: str) -> None:
+        raise NotImplementedError
+
+
+class ChromaBackend(EmbeddingBackend):
+    def __init__(self, collection_name: str = "kernel_semantic", persist_dir: str = "./chroma_db"):
+        self._collection = None
+        self._collection_name = collection_name
+        self._persist_dir = persist_dir
+
+    def _get_collection(self):
+        if self._collection is None:
+            import chromadb
+            client = chromadb.Client(
+                settings=chromadb.config.Settings(
+                    persist_directory=self._persist_dir
+                )
+            )
+            self._collection = client.get_or_create_collection(name=self._collection_name)
+        return self._collection
+
+    def _get_model(self):
+        try:
+            from sentence_transformers import SentenceTransformer
+            return SentenceTransformer("all-MiniLM-L6-v2")
+        except ImportError:
+            logger.error(
+                "sentence_transformers not installed — embedding search disabled. "
+                "Install with: pip install sentence-transformers"
+            )
+            raise
+
+    def _embed(self, text: str) -> List[float]:
+        return self._get_model().encode(text).tolist()
+
+    def search_similar(self, text: str, top_k: int = 5) -> List[Dict[str, Any]]:
+        collection = self._get_collection()
+        results = collection.query(
+            query_embeddings=[self._embed(text)],
+            n_results=top_k
+        )
+        output = []
+        if results and results.get("ids") and results["ids"][0]:
+            for i, doc_id in enumerate(results["ids"][0]):
+                score = results["distances"][0][i] if results.get("distances") else 0
+                metadata = (results["metadatas"][0][i] or {}) if results.get("metadatas") else {}
+                output.append({
+                    "node_id": doc_id,
+                    "score": 1.0 - score,
+                    "metadata": metadata,
+                })
+        return output
+
+    def index_text(self, node_id: str, text: str, metadata: Optional[Dict] = None):
+        collection = self._get_collection()
+        try:
+            collection.add(
+                documents=[text],
+                embeddings=[self._embed(text)],
+                metadatas=[metadata or {}],
+                ids=[node_id],
+            )
+        except Exception:
+            pass
+
+
 # SEMANTIC RETRIEVER
 
 class SemanticRetriever:
     def __init__(self):
         self.max_traversal_depth = 3
         self.semantic_decay = 0.8
+        self.embedding_backend: Optional[EmbeddingBackend] = None
+
+    def set_embedding_backend(self, backend: EmbeddingBackend):
+        self.embedding_backend = backend
+        logger.info(f"Embedding backend set: {type(backend).__name__}")
+
+    def search_by_embedding(
+        self,
+        query: str,
+        limit: int = 10,
+    ) -> List[SemanticSearchResult]:
+        if not self.embedding_backend:
+            return self.search_by_concept(query, limit=limit)
+
+        try:
+            results = self.embedding_backend.search_similar(query, top_k=limit)
+        except Exception as e:
+            logger.warning(f"Embedding search failed, falling back to keyword: {e}")
+            return self.search_by_concept(query, limit=limit)
+
+        output = []
+        for r in results:
+            node = semantic_memory.get_node(r["node_id"])
+            if not node:
+                continue
+            neighbors = semantic_memory.get_neighbors(node.node_id)
+            output.append(SemanticSearchResult(
+                node_id=node.node_id,
+                score=r["score"],
+                depth=0,
+                node=node.to_dict(),
+                metadata=r.get("metadata", {}),
+                related_nodes=[n.node_id for n in neighbors],
+            ))
+        return output[:limit]
 
     # CONCEPT SEARCH
     def search_by_concept(

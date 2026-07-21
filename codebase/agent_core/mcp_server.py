@@ -11,7 +11,9 @@ Integration with Claude Code:
 from __future__ import annotations
 
 import asyncio
+import importlib
 import json
+import os
 import sys
 from typing import Any
 
@@ -27,11 +29,47 @@ from mcp.types import (
 )
 
 from agent_core.tools import registry
-from agent_core.tools.registry import CAT_FILE, CAT_KERNEL, CAT_SIM, CAT_META, CAT_GIT
-from agent_core.workspace import WORKSPACE_ROOT
+from agent_core.tools.registry import CAT_FILE, CAT_KERNEL, CAT_SIM, CAT_META, CAT_GIT, CAT_CODE_RAG
 
-# Expose only kernel + sim tools (the PIE differentiator)
-EXPOSED_CATEGORIES = [CAT_KERNEL, CAT_SIM]
+# Expose kernel + sim + code_rag tools (the PIE differentiator)
+EXPOSED_CATEGORIES = [CAT_KERNEL, CAT_SIM, CAT_CODE_RAG]
+
+# Hot-reload support: tracks file mtime_ns and only reloads when files change
+_HOT_MODULES = {
+    "agent_core.tools.sim_ops":    "agent_core/tools/sim_ops.py",
+    "agent_core.tools.kernel_ops": "agent_core/tools/kernel_ops.py",
+    "agent_core.tools.code_rag":   "agent_core/tools/code_rag.py",
+    "agent_core.tools":            "agent_core/tools/__init__.py",
+}
+_mtime_cache: dict[str, int] = {}
+
+
+def _do_reload():
+    for mod_name in _HOT_MODULES:
+        if mod_name in sys.modules:
+            importlib.reload(sys.modules[mod_name])
+    from agent_core.tools import _register_all
+    _register_all()
+
+
+def _reload_if_changed():
+    """Reload modules when source file mtime_ns has changed."""
+    codebase = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    changed = False
+    for mod_name, rel_path in _HOT_MODULES.items():
+        src = os.path.join(codebase, rel_path)
+        try:
+            st = os.stat(src)
+            mtime_ns = st.st_mtime_ns
+        except OSError:
+            continue
+        last = _mtime_cache.get(mod_name)
+        if last is None or mtime_ns > last:
+            _mtime_cache[mod_name] = mtime_ns
+            changed = True
+    if changed:
+        _do_reload()
+
 
 server = Server("pie-kernel-sim")
 
@@ -43,11 +81,13 @@ def _build_tool_list() -> list[Tool]:
 
 @server.list_tools()
 async def list_mcp_tools() -> list[Tool]:
+    _reload_if_changed()
     return _build_tool_list()
 
 
 @server.call_tool()
 async def call_mcp_tool(name: str, arguments: dict[str, Any] | None) -> CallToolResult:
+    _reload_if_changed()
     tools = registry.get_tools(categories=EXPOSED_CATEGORIES)
     if name not in tools:
         return CallToolResult(

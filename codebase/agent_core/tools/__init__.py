@@ -48,13 +48,20 @@ from agent_core.tools.sim_ops import (
 )
 from agent_core.tools.code_rag import (
     get_symbol_tool,
+    get_symbols_meta_tool,
     search_symbols_tool,
     get_callers_callees_tool,
     find_impact_tool,
+    get_index_info_tool,
+    file_api_tool,
+    call_chain_tool,
+    compare_apis_tool,
+    symbols_by_file_tool,
 )
 from agent_core.tools.question_ops import ask_user_question
 from agent_core.tools.debate_ops import debate_step
-from agent_core.tools.registry import ToolRegistry, CAT_FILE, CAT_KERNEL, CAT_SIM, CAT_META, CAT_GIT
+from agent_core.tools.expand_ops import expand_topic
+from agent_core.tools.registry import ToolRegistry, CAT_FILE, CAT_KERNEL, CAT_SIM, CAT_META, CAT_GIT, CAT_CODE_RAG
 from agent_core.tools.schemas import TOOL_NAME_MAP
 
 LOG_FILE = "tui_output.txt"
@@ -210,6 +217,22 @@ def _register_all():
     _reg = registry
     _s = TOOL_NAME_MAP
 
+    # Fresh imports inside the function for reload support
+    from agent_core.tools.kernel_ops import (
+        kernel_retrieve, kernel_emit_signal, kernel_reload,
+        kernel_store_context, kernel_get_memory, kernel_create_event,
+    )
+    from agent_core.tools.sim_ops import (
+        simulation_run, simulation_compare,
+        simulation_list, simulation_get_signals,
+    )
+    from agent_core.tools.code_rag import (
+        get_symbol_tool, get_symbols_meta_tool,
+        search_symbols_tool, get_callers_callees_tool, find_impact_tool,
+        get_index_info_tool,
+        file_api_tool, call_chain_tool, compare_apis_tool, symbols_by_file_tool,
+    )
+
     # File tools
     _reg.register("read_file", _tc(read_file), schema=_s["read_file"],
         meta={"description": "Read file (returns line-numbered output; lists nearby files on error)",
@@ -309,6 +332,10 @@ def _register_all():
         meta={"description": "Create an event in the kernel timeline",
               "input_format": "`{\"event_type\": \"action\", \"title\": \"...\", ...}`"},
         category=CAT_KERNEL)
+    _reg.register("kernel_reload", _tc(kernel_reload), schema=_s["kernel_reload"],
+        meta={"description": "Reload tool modules from disk to pick up code changes without restart",
+              "input_format": "omit or `{}`"},
+        category=CAT_KERNEL)
 
     # Simulation tools
     _reg.register("simulation_run", _tc(simulation_run), schema=_s["simulation_run"],
@@ -334,29 +361,59 @@ def _register_all():
               "input_format": "`{\"questions\": [{\"question\": \"...\", \"options\": [\"A\", \"B\"]}]}`"},
         category=CAT_META)
 
-    # Debate tool
+    # Debate tools
     _reg.register("debate_step", debate_step, schema=_s["debate_step"],
-        meta={"description": "Present next debate argument for a topic and get user response. Handles argument selection, belief tracking, contradiction detection.",
+        meta={"description": "Present next debate argument for a topic and get user response. Handles argument selection, belief tracking, contradiction detection. When graph is exhausted, pass llm_generated to add a new argument.",
               "input_format": "`{\"topic\": \"theism_atheism\"}`"},
+        category=CAT_META)
+    _reg.register("expand_topic", expand_topic, schema=_s["expand_topic"],
+        meta={"description": "Add new nodes and edges to a topic's argument graph. Validates no duplicate names, persists to graph.json, and re-indexes the vector store.",
+              "input_format": "`{\"topic\": \"theism_atheism\", \"new_nodes\": [...], \"new_edges\": [...]}`"},
         category=CAT_META)
 
     # Code RAG tools (codebase atlas intelligence)
     _reg.register("get_symbol", _tc(get_symbol_tool), schema=_s["get_symbol"],
         meta={"description": "PRIMARY: look up exact function/class names (batch via names: [\"a\",\"b\"]). Prefer over search when user names symbols.",
               "input_format": "`{\"names\": [\"func1\", \"func2\"]}` or `{\"name\": \"func1\", \"file_path\": \"...\"}`"},
-        category=CAT_META)
+        category=CAT_CODE_RAG)
+    _reg.register("get_symbols_meta", _tc(get_symbols_meta_tool), schema=_s["get_symbols_meta"],
+        meta={"description": "Batch metadata lookup (name, signature, token_count, risk_level) without full source code. Browse cheaply then call get_symbol for the ones you want.",
+              "input_format": "`{\"names\": [\"func1\", \"func2\"]}`"},
+        category=CAT_CODE_RAG)
     _reg.register("search_symbols", _tc(search_symbols_tool), schema=_s["search_symbols"],
         meta={"description": "Metadata search only when names unknown or get_symbol missing_names. Does not return full code.",
               "input_format": "`{\"query\": \"auth AND login\", \"type_filter\": \"function\", \"top_k\": 10}`"},
-        category=CAT_META)
+        category=CAT_CODE_RAG)
     _reg.register("get_callers_callees", _tc(get_callers_callees_tool), schema=_s["get_callers_callees"],
         meta={"description": "Show callers and callees of a function via recursive graph traversal",
               "input_format": "`{\"name\": \"validate_user\", \"direction\": \"both\"}`"},
-        category=CAT_META)
+        category=CAT_CODE_RAG)
     _reg.register("find_impact", _tc(find_impact_tool), schema=_s["find_impact"],
         meta={"description": "Find all functions affected by changing the given symbol",
               "input_format": "`{\"name\": \"validate_user\"}`"},
-        category=CAT_META)
+        category=CAT_CODE_RAG)
+    _reg.register("get_index_info", _tc(get_index_info_tool), schema=_s["get_index_info"],
+        meta={"description": "Real-time atlas stats (symbols, edges, token ranges, risk). Call once at session start to calibrate budget.",
+              "input_format": "`{}`"},
+        category=CAT_CODE_RAG)
+
+    # Proposed MCP tools (improvement.md)
+    _reg.register("file_api", _tc(file_api_tool), schema=_s["file_api"],
+        meta={"description": "Return public API surface of a file: class/method signatures, function signatures — no bodies.",
+              "input_format": "`{\"path\": \"agent_core/tools/code_rag.py\"}`"},
+        category=CAT_CODE_RAG)
+    _reg.register("call_chain", _tc(call_chain_tool), schema=_s["call_chain"],
+        meta={"description": "Shortest call chain from one function to any function in another module.",
+              "input_format": "`{\"start_fn\": \"detect_contradictions\", \"end_module\": \"kernel.semantic_memory\"}`"},
+        category=CAT_CODE_RAG)
+    _reg.register("compare_apis", _tc(compare_apis_tool), schema=_s["compare_apis"],
+        meta={"description": "API-level diff between two files by method name + signature (ignores bodies).",
+              "input_format": "`{\"path_a\": \"...\", \"path_b\": \"...\"}`"},
+        category=CAT_CODE_RAG)
+    _reg.register("symbols_by_file", _tc(symbols_by_file_tool), schema=_s["symbols_by_file"],
+        meta={"description": "Complete symbol inventory of a file: every symbol with type, line range, risk level — no query needed.",
+              "input_format": "`{\"path\": \"agent_core/tools/code_rag.py\"}`"},
+        category=CAT_CODE_RAG)
 
 
 _register_all()

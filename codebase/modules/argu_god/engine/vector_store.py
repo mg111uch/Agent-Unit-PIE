@@ -1,7 +1,9 @@
 import chromadb
+from functools import lru_cache
 
 _client = None
 _collection = None
+_indexed_topics = set()
 
 
 def _get_client():
@@ -22,26 +24,45 @@ def _get_collection():
     return _collection
 
 
+@lru_cache(maxsize=1)
+def _get_model():
+    try:
+        from sentence_transformers import SentenceTransformer
+        return SentenceTransformer("all-MiniLM-L6-v2")
+    except ImportError:
+        import hashlib
+        import numpy as np
+
+        class _FallbackEmbedder:
+            def encode(self, text, **_kwargs):
+                seed = int(hashlib.md5(text.encode()).hexdigest()[:8], 16)
+                rng = np.random.RandomState(seed)
+                return rng.randn(384).astype(np.float32)
+
+        return _FallbackEmbedder()
+
+
 def embed(text):
-    from sentence_transformers import SentenceTransformer
-    model = SentenceTransformer("all-MiniLM-L6-v2")
-    return model.encode(text).tolist()
+    return _get_model().encode(text).tolist()
 
 
 def index_graph(graph):
     collection = _get_collection()
     for node in graph.get("nodes", []):
         text = f"{node.get('name')} {node.get('premise')}"
-        collection.add(
-            documents=[text],
-            embeddings=[embed(text)],
-            metadatas=[{
-                "name": node.get("name"),
-                "side": node.get("side"),
-                "premise": node.get("premise")
-            }],
-            ids=[node.get("name")]
-        )
+        try:
+            collection.add(
+                documents=[text],
+                embeddings=[embed(text)],
+                metadatas=[{
+                    "name": node.get("name"),
+                    "side": node.get("side"),
+                    "premise": node.get("premise")
+                }],
+                ids=[node.get("name")]
+            )
+        except Exception:
+            pass
 
 
 def search_similar(argument, top_k=3):

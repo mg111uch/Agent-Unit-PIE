@@ -218,3 +218,20 @@ def kernel_create_event(input_data) -> str:
 
     except Exception as e:
         return f"Error in kernel_create_event: {str(e)}"
+
+
+def kernel_reload(input_data) -> str:
+    """Reload tool modules from disk to pick up code changes without restart."""
+    import importlib, sys
+    modules = [
+        "agent_core.tools.sim_ops",
+        "agent_core.tools.kernel_ops",
+        "agent_core.tools.code_rag",
+        "agent_core.tools",
+    ]
+    for mod_name in modules:
+        if mod_name in sys.modules:
+            importlib.reload(sys.modules[mod_name])
+    from agent_core.tools import _register_all
+    _register_all()
+    return json.dumps({"status": "reloaded", "modules": modules})

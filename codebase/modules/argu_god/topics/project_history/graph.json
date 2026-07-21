@@ -1,0 +1,174 @@
+{
+  "nodes": [
+    {
+      "name": "Hypothesis engine calls removed from argu_god",
+      "side": "decision",
+      "premise": "Functions save_debate_session, load_debate_session, create_belief_hypothesis, add_belief_evidence, emit_debate_event and friends were removed from the argu_god module because no consumer used their output.",
+      "evidence": ["No call sites found for integration functions", "Session persistence produced no visible effect on debate flow"],
+      "examples": ["save_debate_session() had zero callers", "create_belief_hypothesis() results were never surfaced"],
+      "sources": ["system_devpt_reports/kernel_core/kernel.md"],
+      "discipline": "Project Archaeology",
+      "confidence": 1.0
+    },
+    {
+      "name": "No consumer exists for argu_god integration output",
+      "side": "reason",
+      "premise": "At the time of the refactoring, nothing downstream consumed the hypothesis tracking, session persistence, or event timeline produced by argu_god's integration layer.",
+      "evidence": ["No UI displayed hypothesis data", "No downstream system read session history", "Event timeline had no visualization"],
+      "sources": ["system_devpt_reports/kernel_core/improvement.md"],
+      "discipline": "Project Archaeology",
+      "confidence": 1.0
+    },
+    {
+      "name": "kernel_bridge.py relocated to sub-agents/debate_agent.py",
+      "side": "decision",
+      "premise": "The three bridge functions (emit_belief_signal, emit_confidence_signal, emit_contradiction_signal) were moved from modules/argu_god/engine/kernel_bridge.py to sub-agents/debate_agent.py because kernel_bridge was a thin shim calling signal_extractor with a hardcoded unit ID.",
+      "evidence": ["kernel_bridge.py deleted", "debate.py imports from debate_agent", "Same function signatures preserved"],
+      "examples": ["emit_belief_signal moved with identical parameters", "ARGU_GOD_UNIT_ID constant migrated"],
+      "sources": ["sub-agents/debate_agent.py", "modules/argu_god/engine/debate.py"],
+      "discipline": "Project Archaeology",
+      "confidence": 1.0
+    },
+    {
+      "name": "debate_agent.py exists in sub-agents/",
+      "side": "precondition",
+      "premise": "The sub-agents/debate_agent.py file was created as the canonical location for debate agent bridge functions imported by the argu_god module.",
+      "evidence": ["File exists at sub-agents/debate_agent.py", "Contains emit_belief_signal, emit_confidence_signal, emit_contradiction_signal"],
+      "sources": ["sub-agents/debate_agent.py"],
+      "discipline": "Project Archaeology",
+      "confidence": 1.0
+    },
+    {
+      "name": "vector_store.index_graph consolidated into _populate_semantic_memory",
+      "side": "decision",
+      "premise": "Two separate indexing steps for the same graph.json data were consolidated — _populate_semantic_memory in debate.py now calls vector_store.index_graph internally instead of requiring a separate call in debate_step.",
+      "evidence": ["_populate_semantic_memory calls index_graph internally", "Separate _index_graph import removed from debate_step"],
+      "examples": ["debate.py line 142-146 try/except block removed"],
+      "sources": ["modules/argu_god/engine/debate.py"],
+      "discipline": "Project Archaeology",
+      "confidence": 1.0
+    },
+    {
+      "name": "analyzer.py deleted from argu_god",
+      "side": "decision",
+      "premise": "The file modules/argu_god/engine/analyzer.py (28 LOC) was deleted because debate.py no longer called from .analyzer import detect_contradictions after contradiction detection was generalized into kernel/patterns/contradiction_detector.py.",
+      "evidence": ["No imports of .analyzer remain in debate.py", "No other module imports analyzer", "Contradiction detection happens via kernel path"],
+      "sources": ["kernel/patterns/contradiction_detector.py"],
+      "discipline": "Project Archaeology",
+      "confidence": 1.0
+    },
+    {
+      "name": "Magic numbers centralized to kernel/config/kernel_config.py",
+      "side": "decision",
+      "premise": "Hardcoded TTLs (7200, 14400, 3600), importance/confidence defaults (0.9), and confidence nudges (0.05) were extracted from belief_signal_handler.py and hypothesis_engine.py into a centralized config module.",
+      "evidence": ["kernel/config/kernel_config.py created", "belief_signal_handler.py imports BELIEF_SHIFT_TTL, CONTRADICTION_TTL, CONFIDENCE_CHANGE_TTL", "hypothesis_engine.py imports HYPOTHESIS_CONFIDENCE_BUMP, HYPOTHESIS_CONFIDENCE_PENALTY"],
+      "examples": ["handle_belief_shift_signal now uses BELIEF_SHIFT_TTL instead of 7200", "add_supporting_evidence uses HYPOTHESIS_CONFIDENCE_BUMP instead of +0.05"],
+      "sources": ["kernel/config/kernel_config.py", "kernel/signals/belief_signal_handler.py", "kernel/hypothesis/hypothesis_engine.py"],
+      "discipline": "Project Archaeology",
+      "confidence": 1.0
+    },
+    {
+      "name": "sentence_transformers graceful import fallback",
+      "side": "decision",
+      "premise": "ChromaBackend._get_model() in semantic_retriever.py now wraps the sentence_transformers import in try/except ImportError with a descriptive error message pointing to the missing dependency.",
+      "evidence": ["kernel/retrieval/semantic_retriever.py contains try/except around import", "Error message tells user to pip install sentence-transformers"],
+      "sources": ["kernel/retrieval/semantic_retriever.py"],
+      "discipline": "Project Archaeology",
+      "confidence": 1.0
+    },
+    {
+      "name": "SQLite was additive before migration",
+      "side": "superseded",
+      "premise": "SQLite logging and persistence was initially added alongside existing JSON file writes. The use_sqlite=True flag existed but defaulted to False, keeping JSON as the primary persistence path. This state was intentionally temporary — the plan was always to commit to SQLite as sole backend.",
+      "evidence": ["memory_engine.save_object wrote JSON + optional SQLite", "use_sqlite flag was opt-in", "JSON files were the primary persistence"],
+      "sources": ["kernel/memory/memory_engine.py"],
+      "discipline": "Project Archaeology",
+      "confidence": 1.0
+    },
+    {
+      "name": "SQLite made sole persistence backend",
+      "side": "decision",
+      "premise": "SQLite was made the sole backend — memory_engine.save_object no longer writes JSON files. All persistence goes through kernel.persistence.db.KernelDB with a generic_memory catch-all table for episodic signals/events and future types. The use_sqlite parameter and storage/unit_storage write_json/read_json imports were removed from memory_engine. Memory directories in kernel/utils/paths.py were cleaned up.",
+      "evidence": ["memory_engine.py no longer imports from storage.unit_storage", "save_object unconditionally calls db.save_generic_memory + _persist_structured", "load_object reads from generic_memory table", "list_objects queries generic_memory by type"],
+      "examples": ["save_signal writes to generic_memory (no JSON file)", "load_node_from_disk reads from generic_memory (no JSON file)"],
+      "sources": ["kernel/memory/memory_engine.py", "kernel/persistence/db.py"],
+      "discipline": "Project Archaeology",
+      "confidence": 1.0
+    },
+    {
+      "name": "JSON file paths removed from kernel",
+      "side": "decision",
+      "premise": "The memory directory structure in kernel/utils/paths.py (WORKING_MEMORY_DIR, EPISODIC_MEMORY_DIR, SEMANTIC_MEMORY_DIR, etc.) and get_memory_path were removed since nothing writes JSON files anymore.",
+      "evidence": ["paths.py no longer defines memory directory constants", "DEFAULT_DIRS no longer includes memory directories", "MEMORY_DIR and get_memory_path removed"],
+      "sources": ["kernel/utils/paths.py"],
+      "discipline": "Project Archaeology",
+      "confidence": 1.0
+    },
+    {
+      "name": "Contradiction detection generalized to semantic_memory",
+      "side": "decision",
+      "premise": "Contradiction detection was rebuilt in kernel/patterns/contradiction_detector.py using semantic_memory edges with relation_type == contradicts instead of the old debate-specific graph.json refutes edges.",
+      "evidence": ["detect_contradictions iterates semantic_memory.edges", "detect_contradictions_for_beliefs accepts beliefs dict and resolves to node IDs", "DEFAULT_CONTRADICTION_TYPES = [contradicts]"],
+      "sources": ["kernel/patterns/contradiction_detector.py"],
+      "discipline": "Project Archaeology",
+      "confidence": 1.0
+    }
+  ],
+  "edges": [
+    {
+      "source": "Hypothesis engine calls removed from argu_god",
+      "target": "No consumer exists for argu_god integration output",
+      "relation": "requires"
+    },
+    {
+      "source": "Session persistence removed from argu_god",
+      "target": "No consumer exists for argu_god integration output",
+      "relation": "requires"
+    },
+    {
+      "source": "Event timeline removed from argu_god",
+      "target": "No consumer exists for argu_god integration output",
+      "relation": "requires"
+    },
+    {
+      "source": "No consumer exists for argu_god integration output",
+      "target": "Re-adding argu_god integration functions",
+      "relation": "required_by"
+    },
+    {
+      "source": "kernel_bridge.py relocated to sub-agents/debate_agent.py",
+      "target": "debate_agent.py exists in sub-agents/",
+      "relation": "depends_on"
+    },
+    {
+      "source": "kernel_bridge.py relocated to sub-agents/debate_agent.py",
+      "target": "Hypothesis engine calls removed from argu_god",
+      "relation": "related"
+    },
+    {
+      "source": "vector_store.index_graph consolidated into _populate_semantic_memory",
+      "target": "analyzer.py deleted from argu_god",
+      "relation": "related"
+    },
+    {
+      "source": "Contradiction detection generalized to semantic_memory",
+      "target": "analyzer.py deleted from argu_god",
+      "relation": "requires"
+    },
+    {
+      "source": "Magic numbers centralized to kernel/config/kernel_config.py",
+      "target": "kernel/config/kernel_config.py created",
+      "relation": "depends_on"
+    },
+    {
+      "source": "JSON file paths removed from kernel",
+      "target": "SQLite made sole persistence backend",
+      "relation": "depends_on"
+    },
+    {
+      "source": "SQLite made sole persistence backend",
+      "target": "SQLite was additive before migration",
+      "relation": "contradicts"
+    }
+  ]
+}

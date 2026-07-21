@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import logging
-from logging.handlers import RotatingFileHandler
 from pathlib import Path
 from typing import Optional
 
@@ -32,18 +31,41 @@ VALID_LOG_LEVELS = {
     "critical": logging.CRITICAL,
 }
 
+# SQLITE LOG HANDLER (replaces per-module RotatingFileHandler)
+
+class SqliteLogHandler(logging.Handler):
+    def __init__(self):
+        super().__init__()
+        self._db = None
+
+    @property
+    def db(self):
+        if self._db is None:
+            from kernel.persistence.db import kernel_db
+            self._db = kernel_db
+        return self._db
+
+    def emit(self, record: logging.LogRecord):
+        try:
+            self.db.insert_log(
+                level=record.levelname.lower(),
+                module=record.name,
+                message=record.getMessage(),
+            )
+        except Exception:
+            pass
+
 # CREATE LOGGER
 
 def get_logger(
     name: str = "agent_unit_pie",
     level: str = "info",
     log_to_console: bool = True,
-    log_to_file: bool = True,
-    max_bytes: int = 10 * 1024 * 1024,
-    backup_count: int = 5,
+    log_to_sqlite: bool = True,
 ) -> logging.Logger:
     """
     Create or retrieve cached logger.
+    Log entries go to console and SQLite (replaces per-file log handlers).
     """
 
     cache_key = f"{name}_{level}"
@@ -81,22 +103,15 @@ def get_logger(
 
         logger.addHandler(console_handler)
 
-    # FILE HANDLER
+    # SQLITE HANDLER (replaces per-module RotatingFileHandler)
 
-    if log_to_file:
+    if log_to_sqlite:
 
-        log_file = LOGS_DIR / f"{name}.log"
+        sqlite_handler = SqliteLogHandler()
 
-        file_handler = RotatingFileHandler(
-            filename=log_file,
-            maxBytes=max_bytes,
-            backupCount=backup_count,
-            encoding="utf-8"
-        )
+        sqlite_handler.setFormatter(formatter)
 
-        file_handler.setFormatter(formatter)
-
-        logger.addHandler(file_handler)
+        logger.addHandler(sqlite_handler)
 
     _LOGGER_CACHE[cache_key] = logger
 

@@ -375,31 +375,47 @@ class UnitStorage:
         path: Path,
         data: Dict[str, Any],
     ) -> None:
-        path.parent.mkdir(
-            parents=True,
-            exist_ok=True,
-        )
-        with open(
-            path,
-            "w",
-            encoding="utf-8",
-        ) as f:
-            json.dump(
-                data,
-                f,
-                indent=2,
-                ensure_ascii=False,
-            )
+        write_json(path, data)
+
     def read_json(
         self,
         path: Path,
     ) -> Dict[str, Any]:
-        with open(
-            path,
-            "r",
-            encoding="utf-8",
-        ) as f:
-            return json.load(f)
+        return read_json(path)
+
+
+# STANDALONE JSON HELPERS (canonical I/O — used by both storage/ and kernel/memory)
+
+def write_json(
+    path: Path,
+    data: Dict[str, Any],
+) -> None:
+    path.parent.mkdir(
+        parents=True,
+        exist_ok=True,
+    )
+    with open(
+        path,
+        "w",
+        encoding="utf-8",
+    ) as f:
+        json.dump(
+            data,
+            f,
+            indent=2,
+            ensure_ascii=False,
+        )
+
+
+def read_json(
+    path: Path,
+) -> Dict[str, Any]:
+    with open(
+        path,
+        "r",
+        encoding="utf-8",
+    ) as f:
+        return json.load(f)
     # HELPERS
     @staticmethod
     def utc_now() -> str:

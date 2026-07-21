@@ -59,10 +59,23 @@ def cmd_get_symbol(rag, args):
     print(f"Parent:     {result['parent_name'] or '-'}")
     print(f"Signature:  {result['signature'] or '-'}")
     print(f"Risk:       {result['risk_level']}")
+    print(f"Tokens:     {result.get('token_count', '-')}")
     if result.get("docstring"):
         print(f"Docstring:  {result['docstring'][:200]}")
     print("--- code ---")
     print(result.get("code", "") or "(no code)")
+
+
+def cmd_get_symbols_meta(rag, args):
+    result = rag.get_symbols_meta(args.names, args.file_path)
+    if not result:
+        print("No symbols found.")
+        return
+    print(f"{len(result)} symbols:")
+    for r in result:
+        print(f"  {r['symbol_name']:30s} ({r['symbol_type']:>6})  {r['file_path']}")
+        print(f"         sig: {r.get('signature','')[:60]}")
+        print(f"         tokens: {r.get('token_count','-')}  risk: {r['risk_level']}  lines: {r['start_line']}-{r['end_line']}")
 
 
 def cmd_search_symbols(rag, args):
@@ -124,6 +137,19 @@ def cmd_index_info(rag, args):
         print("No code_rag.db found — run a tool command first to index.")
 
 
+def cmd_get_index_info(rag, args):
+    info = rag.get_index_info()
+    print(f"Total symbols:     {info['total_symbols']} ({info['functions_methods']} functions/methods, {info['classes']} classes, {info['file_symbols']} files)")
+    print(f"Unique files:      {info['unique_files']}")
+    print(f"Call edges:        {info['call_edges']}")
+    print(f"Entry points:      {info['entry_points']}")
+    print(f"Over 500 tokens:   {info['symbols_over_500_tokens']}")
+    print(f"Function tokens:   min={info['function_tokens']['min']}  avg={info['function_tokens']['avg']}  max={info['function_tokens']['max']}  total={info['function_tokens']['total']}")
+    print(f"File tokens:       min={info['file_tokens']['min']}  avg={info['file_tokens']['avg']}  max={info['file_tokens']['max']}  total={info['file_tokens']['total']}")
+    print(f"Total code tokens: {info['total_codebase_tokens']}")
+    print(f"Risk distribution: {info['risk_distribution']}")
+
+
 def main():
     parser = argparse.ArgumentParser(description="Test code_rag agent tools")
     parser.add_argument("--atlas-dir", help="Path to atlas_output directory")
@@ -134,6 +160,10 @@ def main():
     p.add_argument("name")
     p.add_argument("--file-path", help="Disambiguate by file path")
     p.add_argument("--parent-name", help="Disambiguate by parent class")
+
+    p = sub.add_parser("get_symbols_meta", help="Batch metadata lookup without full code")
+    p.add_argument("names", nargs="+")
+    p.add_argument("--file-path", help="Narrow to one file")
 
     p = sub.add_parser("search_symbols", help="Full-text search across symbols")
     p.add_argument("query")
@@ -152,11 +182,15 @@ def main():
 
     p = sub.add_parser("index_info", help="Show indexing stats")
 
+    p = sub.add_parser("get_index_info", help="Show real-time atlas stats (symbols, edges, token ranges, risk)")
+
     args = parser.parse_args()
     rag = _resolve_rag(args)
 
     dispatch = {
         "get_symbol": cmd_get_symbol,
+        "get_symbols_meta": cmd_get_symbols_meta,
+        "get_index_info": cmd_get_index_info,
         "search_symbols": cmd_search_symbols,
         "get_callers_callees": cmd_callers_callees,
         "find_impact": cmd_find_impact,

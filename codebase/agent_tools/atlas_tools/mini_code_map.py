@@ -5,8 +5,8 @@ import yaml
 from pathlib import Path
 
 # --- CONFIGURATION ---
-LEGACY_DIR = "/home/manigupt/Hello/python/Agentic_Unit_PIE/codebase/kernel"  # Point this to your legacy folder
-OUTPUT_FILE = "/home/manigupt/Hello/python/Agentic_Unit_PIE/atlas_output/legacy_atlas.md"
+PROJECT_DIR = "/home/manigupt/Hello/Agentic_Unit_PIE/codebase/kernel"  # Point this to your legacy folder
+OUTPUT_FILE = "/home/manigupt/Hello/Agentic_Unit_PIE/atlas_output/mini_atlas.md"
 IGNORE_DIRS = {'.git', '__pycache__', 'venv', '.ipynb_checkpoints'}
 # ---------------------
 
@@ -51,7 +51,7 @@ class AtlasGenerator:
             return f"Error reading: {str(e)}"
 
     def generate(self):
-        markdown = ["# LEGACY CODE ATLAS\n", f"Generated from: `{self.root_dir}`\n"]
+        markdown = ["# MINI CODE ATLAS\n", f"Generated from: `{self.root_dir}`\n"]
         
         for root, dirs, files in os.walk(self.root_dir):
             dirs[:] = [d for d in dirs if d not in IGNORE_DIRS]
@@ -93,8 +93,8 @@ class AtlasGenerator:
         print(f"Success! Atlas generated at {OUTPUT_FILE}")
 
 if __name__ == "__main__":
-    if os.path.exists(LEGACY_DIR):
-        generator = AtlasGenerator(LEGACY_DIR)
+    if os.path.exists(PROJECT_DIR):
+        generator = AtlasGenerator(PROJECT_DIR)
         generator.generate()
     else:
-        print(f"Directory {LEGACY_DIR} not found. Please update LEGACY_DIR in the script.")
+        print(f"Directory {PROJECT_DIR} not found. Please update PROJECT_DIR in the script.")

@@ -23,6 +23,7 @@ Usage
 """
 
 import json
+import os
 import yaml
 from pathlib import Path
 from datetime import datetime
@@ -30,6 +31,11 @@ from typing import Dict, Any, List, Optional
 
 from modules.simulators.popula_dyn.core.simulation_model import SimulationModel
 from modules.simulators.popula_dyn.constants import PARAMS
+
+
+def _codebase_root():
+    return os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 
 class SimulationConnector:
     """
@@ -40,6 +46,8 @@ class SimulationConnector:
         base_path: str = "units/simulations",
         emit_to_kernel: bool = True,
     ):
+        if not os.path.isabs(base_path):
+            base_path = os.path.join(_codebase_root(), base_path)
         self.base_path = Path(base_path)
         self.base_path.mkdir(parents=True, exist_ok=True)
         self.emit_to_kernel = emit_to_kernel
