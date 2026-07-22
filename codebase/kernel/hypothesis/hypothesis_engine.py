@@ -181,7 +181,7 @@ class HypothesisEngine:
             hypothesis.supporting_evidence.append(
                 evidence_id
             )
-                hypothesis.confidence = min(
+            hypothesis.confidence = min(
                 1.0,
                 hypothesis.confidence + HYPOTHESIS_CONFIDENCE_BUMP
             )
@@ -206,7 +206,7 @@ class HypothesisEngine:
             hypothesis.contradicting_evidence.append(
                 evidence_id
             )
-                hypothesis.confidence = max(
+            hypothesis.confidence = max(
                 0.0,
                 hypothesis.confidence - HYPOTHESIS_CONFIDENCE_PENALTY
             )

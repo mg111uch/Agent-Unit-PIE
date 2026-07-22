@@ -11,7 +11,7 @@ def _get_client():
     if _client is None:
         _client = chromadb.Client(
             settings=chromadb.config.Settings(
-                persist_directory="./chroma_db"
+                persist_directory="../../data/chroma_db"
             )
         )
     return _client

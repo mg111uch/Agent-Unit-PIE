@@ -1,10 +1,13 @@
 import json
 import os
 
-BASE_PATH = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DATA_ROOT = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)),
+    "..", "..", "..", "..", "data",
+)
 
 def load_graph(topic: str):
-    path = os.path.join(BASE_PATH, "topics", topic, "graph.json")
+    path = os.path.join(DATA_ROOT, "topics", topic, "graph.json")
     
     if not os.path.exists(path):
         return None

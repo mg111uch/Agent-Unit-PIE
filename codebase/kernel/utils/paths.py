@@ -16,13 +16,13 @@ PROJECT_ROOT = KERNEL_DIR.parent
 
 # CORE DIRECTORIES
 
-DATA_DIR = PROJECT_ROOT / "data"
+DATA_DIR = PROJECT_ROOT.parent / "data"
 
 KB_DIR = DATA_DIR / "kb"
 
 SIMULATION_DIR = DATA_DIR / "simulations"
 
-LOGS_DIR = PROJECT_ROOT / "logs"
+LOGS_DIR = DATA_DIR / "logs"
 
 CACHE_DIR = PROJECT_ROOT / "cache"
 

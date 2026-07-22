@@ -6,12 +6,12 @@ import time
 from pathlib import Path
 from typing import Dict, List, Optional, Any, Tuple
 
+from kernel.config.kernel_config import DATA_ROOT
 from kernel.utils.logger import get_child_logger
-from kernel.utils.paths import DATA_DIR
 
 logger = get_child_logger("kernel_db")
 
-DB_PATH = DATA_DIR / "kernel.db"
+DB_PATH = DATA_ROOT / "kernel.db"
 
 SCHEMA_SQL = """
 CREATE TABLE IF NOT EXISTS logs (
@@ -33,7 +33,8 @@ CREATE TABLE IF NOT EXISTS semantic_nodes (
     importance REAL DEFAULT 0.5,
     confidence REAL DEFAULT 1.0,
     created_at REAL NOT NULL,
-    updated_at REAL NOT NULL
+    updated_at REAL NOT NULL,
+    topic_id TEXT DEFAULT ''
 );
 
 CREATE TABLE IF NOT EXISTS semantic_edges (
@@ -43,7 +44,8 @@ CREATE TABLE IF NOT EXISTS semantic_edges (
     relation_type TEXT NOT NULL,
     weight REAL DEFAULT 1.0,
     confidence REAL DEFAULT 1.0,
-    created_at REAL NOT NULL
+    created_at REAL NOT NULL,
+    topic_id TEXT DEFAULT ''
 );
 
 CREATE TABLE IF NOT EXISTS patterns (
@@ -93,9 +95,11 @@ CREATE INDEX IF NOT EXISTS idx_logs_level ON logs(level);
 CREATE INDEX IF NOT EXISTS idx_logs_module ON logs(module);
 CREATE INDEX IF NOT EXISTS idx_logs_ts ON logs(ts);
 CREATE INDEX IF NOT EXISTS idx_semantic_nodes_type ON semantic_nodes(node_type);
+CREATE INDEX IF NOT EXISTS idx_semantic_nodes_topic ON semantic_nodes(topic_id);
 CREATE INDEX IF NOT EXISTS idx_semantic_edges_relation ON semantic_edges(relation_type);
 CREATE INDEX IF NOT EXISTS idx_semantic_edges_source ON semantic_edges(source_node_id);
 CREATE INDEX IF NOT EXISTS idx_semantic_edges_target ON semantic_edges(target_node_id);
+CREATE INDEX IF NOT EXISTS idx_semantic_edges_topic ON semantic_edges(topic_id);
 CREATE INDEX IF NOT EXISTS idx_patterns_type ON patterns(pattern_type);
 CREATE INDEX IF NOT EXISTS idx_hypotheses_type ON hypotheses(hypothesis_type);
 CREATE INDEX IF NOT EXISTS idx_hypotheses_status ON hypotheses(status);
@@ -125,6 +129,14 @@ class KernelDB:
             stripped = statement.strip()
             if stripped:
                 self.conn.execute(stripped)
+        for col_sql in [
+            "ALTER TABLE semantic_nodes ADD COLUMN topic_id TEXT DEFAULT ''",
+            "ALTER TABLE semantic_edges ADD COLUMN topic_id TEXT DEFAULT ''",
+        ]:
+            try:
+                self.conn.execute(col_sql)
+            except sqlite3.OperationalError:
+                pass
         self.conn.commit()
 
     def close(self):
@@ -184,13 +196,14 @@ class KernelDB:
         confidence: float = 1.0,
         created_at: Optional[float] = None,
         updated_at: Optional[float] = None,
+        topic_id: str = "",
     ):
         now = time.time()
         self.conn.execute(
             """INSERT OR REPLACE INTO semantic_nodes
                (node_id, node_type, title, content, concepts_json, tags_json,
-                importance, confidence, created_at, updated_at)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                importance, confidence, created_at, updated_at, topic_id)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
             (
                 node_id,
                 node_type,
@@ -202,6 +215,7 @@ class KernelDB:
                 confidence,
                 created_at or now,
                 updated_at or now,
+                topic_id,
             ),
         )
         self.conn.commit()
@@ -218,6 +232,12 @@ class KernelDB:
         rows = self.conn.execute("SELECT * FROM semantic_nodes").fetchall()
         return [self._row_to_node(dict(r)) for r in rows]
 
+    def load_semantic_nodes_by_topic(self, topic_id: str) -> List[Dict[str, Any]]:
+        rows = self.conn.execute(
+            "SELECT * FROM semantic_nodes WHERE topic_id = ?", (topic_id,)
+        ).fetchall()
+        return [self._row_to_node(dict(r)) for r in rows]
+
     def search_semantic_nodes(self, query: str, limit: int = 20) -> List[Dict[str, Any]]:
         like = f"%{query}%"
         rows = self.conn.execute(
@@ -232,6 +252,7 @@ class KernelDB:
     def _row_to_node(row: Dict[str, Any]) -> Dict[str, Any]:
         row["concepts"] = json.loads(row.pop("concepts_json", "[]"))
         row["tags"] = json.loads(row.pop("tags_json", "[]"))
+        row["topic_id"] = row.get("topic_id", "")
         return row
 
     # --- SEMANTIC EDGES ---
@@ -245,12 +266,13 @@ class KernelDB:
         weight: float = 1.0,
         confidence: float = 1.0,
         created_at: Optional[float] = None,
+        topic_id: str = "",
     ):
         self.conn.execute(
             """INSERT OR REPLACE INTO semantic_edges
                (edge_id, source_node_id, target_node_id, relation_type,
-                weight, confidence, created_at)
-               VALUES (?, ?, ?, ?, ?, ?, ?)""",
+                weight, confidence, created_at, topic_id)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
             (
                 edge_id,
                 source_node_id,
@@ -259,6 +281,7 @@ class KernelDB:
                 weight,
                 confidence,
                 created_at or time.time(),
+                topic_id,
             ),
         )
         self.conn.commit()
@@ -277,6 +300,12 @@ class KernelDB:
 
     def load_all_semantic_edges(self) -> List[Dict[str, Any]]:
         rows = self.conn.execute("SELECT * FROM semantic_edges").fetchall()
+        return [dict(r) for r in rows]
+
+    def load_semantic_edges_by_topic(self, topic_id: str) -> List[Dict[str, Any]]:
+        rows = self.conn.execute(
+            "SELECT * FROM semantic_edges WHERE topic_id = ?", (topic_id,)
+        ).fetchall()
         return [dict(r) for r in rows]
 
     # --- PATTERNS ---

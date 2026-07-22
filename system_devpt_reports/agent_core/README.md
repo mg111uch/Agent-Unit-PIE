@@ -1,32 +1,5 @@
 # Agent Orchestrator Reference
 
-## Getting Started
-
-### Run Agent
-```bash
-cd /path/to/Agentic_Unit_PIE/codebase
-conda activate myenv
-python server.py
-```
-
-#### Environment Variables
-- `GEMINI_API_KEY`
-- `OPENROUTER_API_KEY`
-- `AGENT_WORKSPACE_ROOT` — override workspace root (default: process CWD)
-- `JWT_SECRET` — JWT signing secret (default: auto-generated random hex)
-- `CORS_ORIGINS` — comma-separated allowed origins (default: `http://localhost:3000,http://localhost:8001`)
-- `AGENT_PORT` — server port (default: 8001)
-- `CODEBASE_ATLAS_DIR` — path to atlas output dir with `graphdata.json` (default: `<workspace>/atlas_output/`)
-
-#### Config File (`config.json`)
-- `allowed_commands` — list of allowed shell commands for `execute_command`
-- `git_tools_enabled` — enable/disable git tools (default: true)
-- `enable_checkpoints` — enable/disable checkpoint system (default: true)
-- `max_checkpoints` — max checkpoint files to keep (default: 50)
-- `agents_md_enabled` — enable/disable AGENTS.md bootstrap (default: true)
-
----
-
 ## Features Overview
 
 | Capability | Description |
@@ -54,6 +27,7 @@ All tools support **native function calling** (JSON Schema via `tools/schemas.py
 |------|---------|
 | `read_file` | Read file (returns line-numbered output; lists nearby files on error) |
 | `read_file_range` | Read portion of a file with offset (1-based) and optional limit |
+| `batch_read` | Read multiple non-kernel files in one call (warns on kernel files) — faster than sequential `read_file` calls |
 | `list_files` | List directory (recursive, depth-capped, skips noise dirs) |
 | `write_to_file` | Write file (create/overwrite/append modes — no patch mode) |
 | `edit_file` | Targeted replacement (unique old_string → new_string; rejects 0/>1 matches; shows diff) |
@@ -93,6 +67,10 @@ All tools support **native function calling** (JSON Schema via `tools/schemas.py
 | `call_chain` | Shortest call chain from a function to any symbol in another module via BFS over `call_edges` |
 | `compare_apis` | API-level diff between two files (only_in_a, only_in_b, signature_mismatches) |
 | `symbols_by_file` | Complete flat symbol inventory of a file by path alone — no query needed |
+| `atlas_status` | Check if atlas is indexed, ingestion timestamp, file/symbol/call-edge counts |
+| `project_root` | Return absolute project root and codebase root paths |
+| `batch_file_api` | Query atlas for API surfaces of multiple kernel files in one call — avoids sequential `file_api` round trips |
+| `report_freshness` | Scan all `system_devpt_reports/*.md` for stale `_Last verified` stamps and broken citations |
 
 ### Kernel Tools
 | Tool | Purpose |

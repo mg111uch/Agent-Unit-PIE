@@ -14,7 +14,7 @@ JWT_SECRET = os.getenv("JWT_SECRET", "your_jwt_secret")
 AGENT_PORT = int(os.getenv("AGENT_PORT", "8001"))
 CORS_ORIGINS = os.getenv("CORS_ORIGINS", "http://localhost:3000,http://localhost:8001").split(",")
 WORKSPACE_BASE = os.getenv("AGENT_WORKSPACE_BASE",
-    os.path.abspath(os.path.join(CODEBASE_ROOT, "..", "workspaces")))
+    os.path.abspath(os.path.join(CODEBASE_ROOT, "..", "data", "workspaces")))
 
 with open(CONFIG_PATH, "r", encoding="utf-8") as _f:
     _CONFIG = json.load(_f)

@@ -2,8 +2,13 @@ import json
 import os
 from datetime import datetime
 
+DATA_ROOT = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)),
+    "..", "..", "..", "..", "data",
+)
+
 STATE_PATH = os.path.join(
-    os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+    DATA_ROOT,
     "mindmaps",
     "local_user",
     "interaction_log.json"
@@ -26,7 +31,7 @@ def save_state(state):
         json.dump(state, f, indent=2)
 
 BELIEF_PATH = os.path.join(
-    os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+    DATA_ROOT,
     "mindmaps",
     "local_user",
     "belief_state.json"

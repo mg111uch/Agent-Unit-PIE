@@ -1,3 +1,7 @@
+from pathlib import Path
+
+DATA_ROOT = Path(__file__).resolve().parent.parent.parent.parent / "data"
+
 # Working memory TTLs (seconds)
 BELIEF_SHIFT_TTL = 7200
 CONTRADICTION_TTL = 14400

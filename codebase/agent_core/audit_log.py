@@ -7,8 +7,12 @@ import threading
 import hashlib
 from datetime import datetime, timezone
 from typing import Optional
+from pathlib import Path
 
-AUDIT_DB_PATH = "logs/agent_audit.db"
+_AGENT_DIR = Path(__file__).resolve().parent
+_CODEBASE_DIR = _AGENT_DIR.parent
+_PROJECT_ROOT = _CODEBASE_DIR.parent
+AUDIT_DB_PATH = str(_PROJECT_ROOT / "data" / "logs" / "agent_audit.db")
 
 
 class AuditLog:

@@ -39,6 +39,7 @@ class MemoryEngine:
                     confidence=data.get("confidence", 1.0),
                     created_at=data.get("created_at"),
                     updated_at=data.get("updated_at"),
+                    topic_id=data.get("topic_id", ""),
                 )
             elif memory_type == "pattern":
                 self.db.save_pattern(

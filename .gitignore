@@ -5,10 +5,7 @@ chroma_data
 __pycache__
 encoding_cache
 .pytest_cache
-atlas_output
 .adk
 .agent_checkpoints
 cache
-logs
-data
 

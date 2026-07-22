@@ -26,6 +26,7 @@ class SemanticNode:
     created_at: float = field(default_factory=time.time)
     updated_at: float = field(default_factory=time.time)
     source_refs: List[str] = field(default_factory=list)
+    topic_id: str = ""
     # SERIALIZATION
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -41,6 +42,7 @@ class SemanticNode:
             "created_at": self.created_at,
             "updated_at": self.updated_at,
             "source_refs": self.source_refs,
+            "topic_id": self.topic_id,
         }
 
 # SEMANTIC EDGE
@@ -55,6 +57,7 @@ class SemanticEdge:
     confidence: float = 1.0
     metadata: Dict[str, Any] = field(default_factory=dict)
     created_at: float = field(default_factory=time.time)
+    topic_id: str = ""
     # SERIALIZATION
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -66,6 +69,7 @@ class SemanticEdge:
             "confidence": self.confidence,
             "metadata": self.metadata,
             "created_at": self.created_at,
+            "topic_id": self.topic_id,
         }
 
 # SEMANTIC MEMORY
@@ -120,6 +124,7 @@ class SemanticMemory:
         confidence: float = 1.0,
         importance: float = 0.5,
         source_refs: Optional[List[str]] = None,
+        topic_id: str = "",
         persist: bool = True,
     ) -> SemanticNode:
         node = SemanticNode(
@@ -133,6 +138,7 @@ class SemanticMemory:
             confidence=confidence,
             importance=importance,
             source_refs=source_refs or [],
+            topic_id=topic_id,
         )
         self.add_node(
             node,
@@ -172,6 +178,7 @@ class SemanticMemory:
         weight: float = 1.0,
         confidence: float = 1.0,
         metadata: Optional[Dict[str, Any]] = None,
+        topic_id: str = "",
         persist: bool = True,
     ) -> SemanticEdge:
         edge = SemanticEdge(
@@ -182,6 +189,7 @@ class SemanticMemory:
             weight=weight,
             confidence=confidence,
             metadata=metadata or {},
+            topic_id=topic_id,
         )
         self.add_edge(
             edge,
@@ -212,6 +220,14 @@ class SemanticMemory:
             self.nodes[nid]
             for nid in node_ids
             if nid in self.nodes
+        ]
+    def search_by_topic(
+        self,
+        topic_id: str
+    ) -> List[SemanticNode]:
+        return [
+            node for node in self.nodes.values()
+            if node.topic_id == topic_id
         ]
     def search_by_concept(
         self,

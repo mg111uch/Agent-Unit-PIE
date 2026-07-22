@@ -1,13 +1,4 @@
-## Handoff — end of session 2026-07-21
-
-### ✅ Completed this session
-
-**Test suite:**
-- Created `tests/kernel/test_integration.py` — 11 tests covering:
-  - `detect_contradictions_for_beliefs` flags known contradictions (5 tests)
-  - Signal pipeline: `signal_extractor.extract_and_emit` → `belief_signal_handler` → `working_memory` (3 tests)
-  - Semantic population: `_populate_semantic_memory` creates nodes+edges and indexes into ChromaDB (3 tests)
-  - Run: `conda run -n myenv python -m pytest codebase/tests/kernel/ --rootdir=codebase/tests/kernel -v`
+# Session Log — append only, newest first
 
 **Free-text redesign of `debate.py:debate_step()`:**
 - `modules/argu_god/engine/debate.py` refactored (418 LOC) with three new phases:
@@ -16,10 +7,6 @@
   - **Write-back with provenance** (`_store_user_knowledge`)
   - `_generate_next_question` replaces old linear pipeline
   - `_get_untouched_knowledge` walks `semantic_memory` for unseen/unknown nodes
-
----
-
-### ✅ Completed next session (2026-07-21 follow-up)
 
 **LLM generation integration:**
 - `llm_compiler.py` rewritten — `compile_topic_llm()` now calls `LLMOrchestrator` (from `agent_core.providers_setup`) to generate full debate graphs via LLM. Fallback: returns error dict if no provider configured.

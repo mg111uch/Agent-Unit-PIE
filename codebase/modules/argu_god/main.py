@@ -8,6 +8,7 @@ import asyncio
 from llm_compiler import compile_topic_llm
 
 BASE_PATH = os.path.dirname(os.path.abspath(__file__))
+DATA_ROOT = os.path.join(BASE_PATH, "..", "..", "..", "data")
 
 app = FastAPI(title="ArguGod")
 
@@ -33,12 +34,12 @@ async def websocket_endpoint(ws: WebSocket):
 
 @app.get("/api/topics")
 async def list_topics():
-    topics_dir = os.path.join(BASE_PATH, "topics")
+    topics_dir = os.path.join(DATA_ROOT, "topics")
     return {"topics": os.listdir(topics_dir) if os.path.exists(topics_dir) else []}
 
 @app.get("/api/graph")
 async def get_graph(topic: str = "theism_atheism"):
-    path = os.path.join(BASE_PATH, "topics", topic, "graph.json")
+    path = os.path.join(DATA_ROOT, "topics", topic, "graph.json")
     if os.path.exists(path):
         try:
             with open(path) as f:
@@ -53,7 +54,7 @@ async def compile_topic(topic: str):
 
 @app.get("/api/mindmap")
 async def get_mindmap():
-    path = os.path.join(BASE_PATH, "mindmaps", "local_user", "mindmap.json")
+    path = os.path.join(DATA_ROOT, "mindmaps", "local_user", "mindmap.json")
     if os.path.exists(path):
         with open(path) as f:
             return json.load(f)

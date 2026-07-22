@@ -1,4 +1,7 @@
-## Kernel development progress report 
+## Kernel development progress report
+_Last verified: 2026-07-22_
+
+> Note: Capability claims are also tracked as `Hypothesis` objects in `HypothesisEngine`. Run `python scripts/validate_capabilities.py` to re-validate citations live.
 
 ## ArguGod Integration (Completed)
 
@@ -43,59 +46,6 @@ belief_signal_handler (kernel/signals/belief_signal_handler.py):
     ↓
 Kernel: patterns available for retrieval via pattern_engine
 ```
-
----
-
-## Development paths
-
-### Full Kernel Cognition
-
-| Item | Description |
-|------|-------------|
-| Simulation → Pattern Pipeline | Trigger patterns from sim signals |
-| Digital Twin + Simulation | Run scenarios from twin data |
-| Policy Injection | Test policies via simulation |
-| Recursive Hypothesis Testing | Generate sims from hypotheses |
-
-### Kernel Hot-Reload
-
-| Item | Description |
-|------|-------------|
-| `kernel_reload` tool | Reloads sim_ops, kernel_ops, code_rag, and tools/__init__.py from disk without restart |
-| Auto-reload (MCP) | MCP server detects `st_mtime_ns` changes and re-imports modules on next tool call |
-| Use case | Edit simulation/kernel code → next `pie_*` call picks up changes — no server restart |
-
-### Enhanced Debate Features
-
-| Item | Description |
-|------|-------------|
-| Multi-Person Debate | Multiple users/perspectives |
-| Debate Analytics | Show session stats (arguments seen, time, belief changes) |
-| Multiple Perspectives | Store beliefs per user/persona |
-| Side Tracking | Track which side user favors |
-| Argument Quality | Score arguments by evidence strength |
-| Debate Summary | Generate summary report |
-| Progress Indicator | "5/23 arguments explored" |
-| Export Belief Graph | Export as JSON |
-| Argument Quality Scoring | Score by evidence |
-| Topic Browser | List and select from available topics |
-| Cross-Topic Linking | Connect beliefs across topics |
-| Recursive Counterarguments | Explore counter-counterarguments |
-| Evidence Search | Auto-find supporting evidence |
-| belief_graph Visualization | Render belief network |
-
-### Self-Evolution
-
-| Item | Description |
-|------|-------------|
-| Auto-Pattern Discovery | Discover new patterns |
-| Hypothesis Auto-Generation | Auto-generate from signals |
-| Auto-Topic Generation | Generate new topics from knowledge |
-| Self-Contradiction Detection | Check consistency |
-| Knowledge Compression | Auto-summarization |
-| System Self-Check | Detect internal contradictions |
-
----
 
 ## Files Added/Modified
 
@@ -169,6 +119,7 @@ The 3 bridge functions (`emit_belief_signal`, `emit_confidence_signal`, `emit_co
 All 4 added to `code_rag.py` (`CodeRAG` class methods + tool functions), registered in `schemas.py` + `__init__.py` under `CAT_CODE_RAG`. Path resolution via `_resolve_path()` prepending `CODEBASE_ROOT`.
 
 ### 7. SQLite made sole persistence backend
+- 2026-07-22: Capability claims seeded as Hypothesis objects — `scripts/seed_hypotheses.py`, `scripts/validate_capabilities.py`
 `memory_engine.py` refactored to use SQLite as the only storage backend:
 - `save_object()` unconditionally persists to `generic_memory` table (full JSON blob) plus structured tables (semantic_nodes, patterns, etc. for querying)
 - `load_object()` reads from `generic_memory`, preserving full dict round-trip
@@ -178,3 +129,11 @@ All 4 added to `code_rag.py` (`CodeRAG` class methods + tool functions), registe
 - Added `generic_memory` table to `kernel/persistence/db.py` with `save_generic_memory`, `load_generic_memory`, `list_generic_memory_ids`, `delete_generic_memory`, `generic_memory_exists`
 - Cleaned up `kernel/utils/paths.py` — removed `MEMORY_DIR`, all 5 memory subdirectory constants, `get_memory_path()`
 
+### ✅ Completed - 2026-07-21
+
+**Test suite:**
+- Created `tests/kernel/test_integration.py` — 11 tests covering:
+  - `detect_contradictions_for_beliefs` flags known contradictions (5 tests)
+  - Signal pipeline: `signal_extractor.extract_and_emit` → `belief_signal_handler` → `working_memory` (3 tests)
+  - Semantic population: `_populate_semantic_memory` creates nodes+edges and indexes into ChromaDB (3 tests)
+  - Run: `conda run -n myenv python -m pytest codebase/tests/kernel/ --rootdir=codebase/tests/kernel -v`

@@ -9,7 +9,11 @@ from typing import Any, Optional, List
 
 from agent_core.secrets_redactor import redact
 
-DB_PATH = "logs/agent_sessions.db"
+from pathlib import Path
+_AGENT_DIR = Path(__file__).resolve().parent
+_CODEBASE_DIR = _AGENT_DIR.parent
+_PROJECT_ROOT = _CODEBASE_DIR.parent
+DB_PATH = str(_PROJECT_ROOT / "data" / "logs" / "agent_sessions.db")
 
 
 class MessageStore:

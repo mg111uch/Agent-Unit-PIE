@@ -539,6 +539,88 @@ TOOL_SCHEMAS: List[Dict[str, Any]] = [
             required=["path"],
         ),
     },
+    {
+        "name": "atlas_status",
+        "description": (
+            "Show whether the codebase atlas is indexed, when it was last ingested, "
+            "and how many files/symbols/call edges it contains. "
+            "Call this first when you suspect the atlas is stale or missing."
+        ),
+        "parameters": _obj_schema(properties={}),
+    },
+    {
+        "name": "project_root",
+        "description": "Return the project root and codebase root absolute paths. Useful for path resolution across scripts.",
+        "parameters": _obj_schema(properties={}),
+    },
+    {
+        "name": "batch_read",
+        "description": (
+            "Read multiple non-kernel files at once. Accepts a list of paths relative to the codebase root. "
+            "Returns line count and full content for each file. "
+            "Blocks kernel file reads and redirects to atlas tools. "
+            "Use this instead of multiple sequential Read calls for efficiency."
+        ),
+        "parameters": _obj_schema(
+            properties={
+                "paths": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "List of file paths relative to codebase root (e.g. ['modules/argu_god/engine/debate.py', 'system_devpt_reports/kernel_core/kernel.md'])",
+                },
+            },
+            required=["paths"],
+        ),
+    },
+    {
+        "name": "batch_file_api",
+        "description": (
+            "Query the codebase atlas for the public API surface of multiple files in one call. "
+            "Each file returns class names + method signatures, module-level function signatures, "
+            "and exported symbols — without any method bodies. "
+            "Use this instead of calling file_api sequentially for each file."
+        ),
+        "parameters": _obj_schema(
+            properties={
+                "paths": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "List of file paths relative to workspace root (e.g. ['kernel/hypothesis/hypothesis_engine.py', 'kernel/events/event_engine.py'])",
+                },
+            },
+            required=["paths"],
+        ),
+    },
+    {
+        "name": "minimal_context_dump",
+        "description": (
+            "Generate a compact context file for an external LLM by chaining existing "
+            "atlas tools. Given a problem description and symbols, it resolves the blast "
+            "radius, fetches only relevant symbol source (not whole files), includes "
+            "API signatures for peripheral files, and writes one capped file. "
+            "Prefer this over full-file dumps like copyContent.py."
+        ),
+        "parameters": _obj_schema(
+            properties={
+                "problem_description": _str_schema("The problem or question that needs external LLM context"),
+                "symbol_names": {"type": "array", "items": {"type": "string"}, "description": "Starting function/class names to investigate (blast radius is auto-resolved)"},
+                "file_paths": {"type": "array", "items": {"type": "string"}, "description": "Optional peripheral file paths for API-surface-only inclusion"},
+                "output_path": _str_schema("Optional output path (default: project_root/context_dump.txt)"),
+                "max_tokens": {"type": "integer", "description": "Optional token budget cap (default: 8000)"},
+            },
+            required=["problem_description", "symbol_names"],
+        ),
+    },
+    {
+        "name": "report_freshness",
+        "description": (
+            "Scan all system_devpt_reports/*.md files, parse their _Last verified date stamps, "
+            "and flag any that are stale (file's last git change is newer than the stamp, "
+            "or cited file:function() symbols no longer resolve in the atlas). "
+            "Use this before relying on a status report for planning."
+        ),
+        "parameters": _obj_schema(properties={}),
+    },
 ]
 
 TOOL_NAME_MAP: Dict[str, dict] = {s["name"]: s for s in TOOL_SCHEMAS}

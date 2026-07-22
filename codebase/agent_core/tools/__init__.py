@@ -11,6 +11,7 @@ from agent_core.tools.file_ops import (
     get_workspace_info,
     glob_search,
     grep_search,
+    batch_read_tool,
 )
 from agent_core.tools.plan_ops import (
     todo_write,
@@ -57,10 +58,14 @@ from agent_core.tools.code_rag import (
     call_chain_tool,
     compare_apis_tool,
     symbols_by_file_tool,
+    atlas_status_tool,
+    project_root_tool,
+    report_freshness_tool,
 )
 from agent_core.tools.question_ops import ask_user_question
 from agent_core.tools.debate_ops import debate_step
 from agent_core.tools.expand_ops import expand_topic
+from agent_core.tools.context_dump import minimal_context_dump
 from agent_core.tools.registry import ToolRegistry, CAT_FILE, CAT_KERNEL, CAT_SIM, CAT_META, CAT_GIT, CAT_CODE_RAG
 from agent_core.tools.schemas import TOOL_NAME_MAP
 
@@ -226,12 +231,15 @@ def _register_all():
         simulation_run, simulation_compare,
         simulation_list, simulation_get_signals,
     )
+    from agent_core.tools.file_ops import batch_read_tool
     from agent_core.tools.code_rag import (
-        get_symbol_tool, get_symbols_meta_tool,
-        search_symbols_tool, get_callers_callees_tool, find_impact_tool,
-        get_index_info_tool,
-        file_api_tool, call_chain_tool, compare_apis_tool, symbols_by_file_tool,
-    )
+    get_symbol_tool, get_symbols_meta_tool,
+    search_symbols_tool, get_callers_callees_tool, find_impact_tool,
+    get_index_info_tool,
+    file_api_tool, call_chain_tool, compare_apis_tool, symbols_by_file_tool,
+    atlas_status_tool, project_root_tool, report_freshness_tool,
+    batch_file_api_tool,
+)
 
     # File tools
     _reg.register("read_file", _tc(read_file), schema=_s["read_file"],
@@ -269,6 +277,10 @@ def _register_all():
     _reg.register("grep_search", _tc(grep_search), schema=_s["grep_search"],
         meta={"description": "Search file contents by regex across the workspace",
               "input_format": "`{\"pattern\": \"...\", \"include\": \"*.py\", \"max_results\": 50}`"},
+        category=CAT_FILE)
+    _reg.register("batch_read", _tc(batch_read_tool), schema=_s["batch_read"],
+        meta={"description": "Read multiple non-kernel files at once. Saves token overhead vs sequential Read calls. Warns on kernel files.",
+              "input_format": "`{\"paths\": [\"file1.py\", \"file2.py\"]}`"},
         category=CAT_FILE)
 
     # Meta tools (planning, tests, undo)
@@ -413,6 +425,30 @@ def _register_all():
     _reg.register("symbols_by_file", _tc(symbols_by_file_tool), schema=_s["symbols_by_file"],
         meta={"description": "Complete symbol inventory of a file: every symbol with type, line range, risk level — no query needed.",
               "input_format": "`{\"path\": \"agent_core/tools/code_rag.py\"}`"},
+        category=CAT_CODE_RAG)
+
+    # Developer experience tools
+    _reg.register("atlas_status", _tc(atlas_status_tool), schema=_s["atlas_status"],
+        meta={"description": "Check if the codebase atlas is indexed and see its stats. Call first when you suspect a stale atlas.",
+              "input_format": "`{}`"},
+        category=CAT_CODE_RAG)
+    _reg.register("project_root", _tc(project_root_tool), schema=_s["project_root"],
+        meta={"description": "Return project root and codebase root paths for path resolution.",
+              "input_format": "`{}`"},
+        category=CAT_CODE_RAG)
+    _reg.register("report_freshness", _tc(report_freshness_tool), schema=_s["report_freshness"],
+        meta={"description": "Scan all status reports and flag any that are stale (last git change newer than _Last verified, or broken citations).",
+              "input_format": "`{}`"},
+        category=CAT_CODE_RAG)
+    _reg.register("batch_file_api", _tc(batch_file_api_tool), schema=_s["batch_file_api"],
+        meta={"description": "Query the atlas for API surfaces of multiple kernel files at once. Saves token overhead vs sequential file_api calls.",
+              "input_format": "`{\"paths\": [\"file1.py\", \"file2.py\"]}`"},
+        category=CAT_CODE_RAG)
+
+    # Developer experience: minimal context dump for external LLM
+    _reg.register("minimal_context_dump", _tc(minimal_context_dump), schema=_s["minimal_context_dump"],
+        meta={"description": "Generate a compact context file for an external LLM by chaining atlas tools (blast radius, symbol source, peripheral API signatures). Prefer over full-file dumps.",
+              "input_format": "`{\"problem_description\": \"...\", \"symbol_names\": [\"func1\", \"func2\"], \"file_paths\": [\"...\"], \"max_tokens\": 8000}`"},
         category=CAT_CODE_RAG)
 
 

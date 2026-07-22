@@ -1,7 +1,7 @@
 import json
 import os
 
-from .loop import BASE_PATH, load_graph
+from .loop import DATA_ROOT, load_graph
 from .vector_store import index_graph
 
 
@@ -21,7 +21,7 @@ def expand_topic(topic: str, new_nodes: list, new_edges: list) -> dict:
     graph.setdefault("nodes", []).extend(new_nodes)
     graph.setdefault("edges", []).extend(new_edges)
 
-    path = os.path.join(BASE_PATH, "topics", topic, "graph.json")
+    path = os.path.join(DATA_ROOT, "topics", topic, "graph.json")
     with open(path, "w") as f:
         json.dump(graph, f, indent=2)
 

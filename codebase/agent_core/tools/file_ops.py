@@ -3,6 +3,7 @@ from pathlib import Path
 
 from agent_core.workspace import resolve, WORKSPACE_ROOT, PathEscapeError, to_relative
 from agent_core.tools.undo_ops import save_checkpoint
+from agent_core.config import CODEBASE_ROOT
 
 MAX_FILE_SIZE = 512 * 1024  # 512 KB
 
@@ -349,3 +350,38 @@ def grep_search(input_data) -> str:
         return out
     except Exception as e:
         return f"Error grepping '{pattern}': {e}"
+
+
+def batch_read_tool(params: dict) -> str:
+    if isinstance(params, str):
+        try:
+            params = json.loads(params)
+        except json.JSONDecodeError:
+            return "Error: invalid JSON input."
+    paths = params.get("paths", []) if isinstance(params, dict) else []
+    if not paths or not isinstance(paths, list):
+        return "Error: 'paths' (list) parameter is required."
+    codebase = Path(CODEBASE_ROOT)
+    results = {}
+    for p in paths:
+        resolved = (codebase / p) if not Path(p).is_absolute() else Path(p)
+        kernel_dir = codebase / "kernel"
+        is_kernel = False
+        try:
+            is_kernel = kernel_dir in resolved.parents
+        except ValueError:
+            pass
+        if not resolved.exists():
+            results[p] = {"error": "File not found."}
+            continue
+        if resolved.is_dir():
+            results[p] = {"error": "Path is a directory. Use glob_search or list_files instead."}
+            continue
+        content = resolved.read_text(encoding="utf-8", errors="replace")
+        lines = content.split("\n")
+        entry = {"lines": len(lines), "content": content}
+        if is_kernel:
+            entry["warning"] = "Prefer file_api or symbols_by_file for kernel files — this is a raw file read."
+        results[p] = entry
+    counts = {"ok": sum(1 for v in results.values() if "content" in v), "errors": sum(1 for v in results.values() if "error" in v)}
+    return json.dumps({"files": results, "summary": counts}, indent=2)
