@@ -26,8 +26,10 @@ All tools support **native function calling** (JSON Schema via `tools/schemas.py
 | Tool | Purpose |
 |------|---------|
 | `read_file` | Read file (returns line-numbered output; lists nearby files on error) |
-| `read_file_range` | Read portion of a file with offset (1-based) and optional limit |
 | `batch_read` | Read multiple non-kernel files in one call (warns on kernel files) — faster than sequential `read_file` calls |
+| `read_section` | Read file content around a regex pattern match |
+| `minimal_context_dump` | Chains blast radius → symbol source → peripheral API sigs into one capped file |
+| `extract_symbols_to_file` | Fetch bodies of named symbols from atlas, write to destination with headers |
 | `list_files` | List directory (recursive, depth-capped, skips noise dirs) |
 | `write_to_file` | Write file (create/overwrite/append modes — no patch mode) |
 | `edit_file` | Targeted replacement (unique old_string → new_string; rejects 0/>1 matches; shows diff) |

@@ -1,10 +1,10 @@
 # 📂 digital_twins
-Generated: 2026-07-21 18:31:40
+Generated: 2026-07-23 14:15:38
 Files: 4
 
 ---
 
-F309│city_twin.py│677
+F150│city_twin.py│677
 S: digital_twins/city_twin.py
 D: ●__future__,copy,datetime,logging,typing
 C: CityTwin│[__init__,update_profile,add_gis_layer,ingest_newspaper_patterns,update_economy,update_governance,add_financial_flow,detect_corruption_patterns,analyze_growth_opportunities,compute_resource_pressure,+8]
@@ -44,11 +44,11 @@ C: CityTwin│[__init__,update_profile,add_gis_layer,ingest_newspaper_patterns,u
       S: Export full city twin.
    F: summary(self)→Any
    F: utc_now()→str
-   ↳Called by: F072:update_timestamp,F073:update_timestamp,F076:mark_interaction
-   ↳Impact: 🔴HIGH (9 dependents) | Breaks: [F072:update_timestamp],[F073:update_timestamp],[F076:mark_interaction]
+   ↳Called by: F034:update_timestamp,F036:deactivate,F035:deactivate
+   ↳Impact: 🔴HIGH (9 dependents) | Breaks: [F034:update_timestamp],[F036:deactivate],[F035:deactivate]
 ---
 
-F312│company_twin.py│752
+F153│company_twin.py│752
 S: digital_twins/company_twin.py
 D: ●__future__,copy,datetime,logging,typing
 C: CompanyTwin│[__init__,update_profile,ingest_financial_report,add_financial_flow,update_market_data,update_organization,detect_fraud_patterns,analyze_growth_opportunities,compute_resource_pressure,analyze_stock_patterns,+8]
@@ -88,11 +88,11 @@ C: CompanyTwin│[__init__,update_profile,ingest_financial_report,add_financial_
       S: Export full twin state.
    F: summary(self)→Any
    F: utc_now()→str
-   ↳Called by: F072:update_timestamp,F073:update_timestamp,F076:mark_interaction
-   ↳Impact: 🔴HIGH (9 dependents) | Breaks: [F072:update_timestamp],[F073:update_timestamp],[F076:mark_interaction]
+   ↳Called by: F034:update_timestamp,F036:deactivate,F035:deactivate
+   ↳Impact: 🔴HIGH (9 dependents) | Breaks: [F034:update_timestamp],[F036:deactivate],[F035:deactivate]
 ---
 
-F310│digital_twin_manager.py│620
+F151│digital_twin_manager.py│620
 S: digital_twins/digital_twin_manager.py
 D: ●__future__,copy,datetime,logging,typing
 C: DigitalTwinManager│[__init__,create_twin,get_twin,remove_twin,sync_twin,create_snapshot,get_snapshots,simulate_future,compare_prediction_vs_reality,build_behavior_model,+8]
@@ -131,11 +131,11 @@ C: DigitalTwinManager│[__init__,create_twin,get_twin,remove_twin,sync_twin,cre
    F: health_check(self)→Any
    F: resolve_unit(self,unit_id)→Any
    F: utc_now()→str
-   ↳Called by: F072:update_timestamp,F073:update_timestamp,F076:mark_interaction
-   ↳Impact: 🔴HIGH (9 dependents) | Breaks: [F072:update_timestamp],[F073:update_timestamp],[F076:mark_interaction]
+   ↳Called by: F034:update_timestamp,F036:deactivate,F035:deactivate
+   ↳Impact: 🔴HIGH (9 dependents) | Breaks: [F034:update_timestamp],[F036:deactivate],[F035:deactivate]
 ---
 
-F311│human_twin.py│608
+F152│human_twin.py│608
 S: digital_twins/human_twin.py
 D: ●__future__,copy,datetime,logging,typing
 C: HumanTwin│[__init__,update_profile,record_interaction,update_behavior_map,update_emotional_state,update_financial_behavior,set_astrology_profile,set_numerology_profile,set_palmistry_profile,compare_symbolic_predictions,+7]
@@ -174,6 +174,6 @@ C: HumanTwin│[__init__,update_profile,record_interaction,update_behavior_map,u
       S: Export full twin state.
    F: summary(self)→Any
    F: utc_now()→str
-   ↳Called by: F072:update_timestamp,F073:update_timestamp,F076:mark_interaction
-   ↳Impact: 🔴HIGH (9 dependents) | Breaks: [F072:update_timestamp],[F073:update_timestamp],[F076:mark_interaction]
+   ↳Called by: F034:update_timestamp,F036:deactivate,F035:deactivate
+   ↳Impact: 🔴HIGH (9 dependents) | Breaks: [F034:update_timestamp],[F036:deactivate],[F035:deactivate]
 ---

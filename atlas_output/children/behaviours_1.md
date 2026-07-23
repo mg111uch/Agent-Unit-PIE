@@ -1,15 +1,15 @@
 # 📂 behaviours_1
-Generated: 2026-07-21 18:31:40
+Generated: 2026-07-23 14:15:38
 Files: 10
 
 ---
 
-F282│__init__.py│48
+F129│__init__.py│48
 S: behaviours/
-D: ►F277,F278,F279,F280,F281,F283,F284,F285,F286,F287,F288,F289
+D: ►F124,F125,F126,F127,F128,F130,F131,F132,F133,F134,F135,F136
 ---
 
-F285│base_behavior.py│39
+F132│base_behavior.py│39
 S: behaviours/base_behavior.py
 D: ●typing
 C: BaseBehavior│[execute]
@@ -24,9 +24,9 @@ C: BaseBehavior│[execute]
       S: The unit executing the behavior.
 ---
 
-F277│consume.py│50
+F124│consume.py│50
 S: behaviours/consume.py
-D: ►F285
+D: ►F132
 C: ConsumeResourcesBehavior←BaseBehavior│[execute]
    S: Generic resource consumption - decay all resources.
 C: ConsumeMetabolismBehavior←BaseBehavior│[execute]
@@ -39,9 +39,9 @@ C: ConsumeMetabolismBehavior←BaseBehavior│[execute]
    F: execute(self,unit,world_state)
 ---
 
-F286│harvest.py│48
+F133│harvest.py│48
 S: behaviours/harvest.py
-D: ►F285
+D: ►F132
 C: HarvestBehavior←BaseBehavior│[execute]
    S: Harvest crops from land patch at current position.
 C: HarvestBehavior←BaseBehavior│[execute]
@@ -49,9 +49,9 @@ C: HarvestBehavior←BaseBehavior│[execute]
    F: execute(self,unit,world_state)
 ---
 
-F279│idle.py│21
+F126│idle.py│21
 S: behaviours/idle.py
-D: ►F285
+D: ►F132
 C: IdleBehavior←BaseBehavior│[execute]
    S: Unit remains idle.
 C: IdleBehavior←BaseBehavior│[execute]
@@ -59,9 +59,9 @@ C: IdleBehavior←BaseBehavior│[execute]
    F: execute(self,unit,world_state)
 ---
 
-F280│learn.py│31
+F127│learn.py│31
 S: behaviours/learn.py
-D: ►F285
+D: ►F132
 C: LearnBehavior←BaseBehavior│[execute]
    S: Learning behavior - increase intelligence.
 C: LearnBehavior←BaseBehavior│[execute]
@@ -69,9 +69,9 @@ C: LearnBehavior←BaseBehavior│[execute]
    F: execute(self,unit,world_state)
 ---
 
-F281│produce.py│62
+F128│produce.py│62
 S: behaviours/produce.py
-D: ►F285 ●numpy
+D: ►F132 ●numpy
 C: ProduceBehavior←BaseBehavior│[execute]
    S: Produce tools and sell them to nearby farmers.
 C: ProduceBehavior←BaseBehavior│[execute]
@@ -79,9 +79,9 @@ C: ProduceBehavior←BaseBehavior│[execute]
    F: execute(self,unit,world_state)
 ---
 
-F283│regrow.py│36
+F130│regrow.py│36
 S: behaviours/regrow.py
-D: ►F285
+D: ►F132
 C: RegrowBehavior←BaseBehavior│[execute]
    S: Regrow crops towards base fertility.
 C: RegrowBehavior←BaseBehavior│[execute]
@@ -89,9 +89,9 @@ C: RegrowBehavior←BaseBehavior│[execute]
    F: execute(self,unit,world_state)
 ---
 
-F278│survival.py│73
+F125│survival.py│73
 S: behaviours/survival.py
-D: ►F285 ●numpy
+D: ►F132 ●numpy
 C: SurvivalBehavior←BaseBehavior│[execute]
    S: Check if the unit dies based on various factors.
 C: RegenerateEnergyBehavior←BaseBehavior│[execute]
@@ -104,9 +104,9 @@ C: RegenerateEnergyBehavior←BaseBehavior│[execute]
    F: execute(self,unit,world_state)
 ---
 
-F284│trade.py│107
+F131│trade.py│107
 S: behaviours/trade.py
-D: ►F285 ●numpy
+D: ►F132 ●numpy
 C: TradeBehavior←BaseBehavior│[execute]
    S: Generic trading behavior.
 C: TradeBehaviorAg←BaseBehavior│[execute]

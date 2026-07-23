@@ -1,7 +1,7 @@
 # ArguGod Module Status
-_Last verified: 2026-07-22_
+_Last verified: 2026-07-23_
 
-> Note: Capability claims and gaps are now also tracked as `Hypothesis` objects in `HypothesisEngine`. Run `python scripts/validate_capabilities.py` to re-validate citations live.
+> Capability claims are hypotheses. Re-validate: `python scripts/validate_capabilities.py`
 
 ## Current Capability
 - Debate loop with belief tracking, contradiction detection, and kernel signal emission — `modules/argu_god/engine/debate.py:debate_step()`
@@ -9,7 +9,7 @@ _Last verified: 2026-07-22_
 - Semantic memory populated from topic graph.json for cross-session knowledge — `modules/argu_god/engine/debate.py:_populate_semantic_memory()`
 - Contradiction detection via kernel's generalized detector — `kernel/patterns/contradiction_detector.py:detect_contradictions_for_beliefs()`
 - LLM-generated question fallback when graph.json arguments exhausted — `modules/argu_god/llm_compiler.py:generate_llm_question()`
-- Helper extraction for testable knowledge check, novelty check, and write-back phases — `modules/argu_god/engine/debate_helpers.py`
+- Helper extraction for testable knowledge check, novelty check, and write-back phases — `modules/argu_god/engine/debate_helpers.py:_build_knowledge_context()`
 
 ## Known Gaps
 - `debate_step()` integration test blocked by circular dependency on `question_ops._pending` — blocker

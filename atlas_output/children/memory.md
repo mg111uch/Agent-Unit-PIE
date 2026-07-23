@@ -1,11 +1,11 @@
 # 📂 memory
-Generated: 2026-07-21 18:31:40
+Generated: 2026-07-23 14:15:38
 Files: 5
 
 ---
 
-F090│episodic_memory.py│297
-D: ●__future__,collections,kernel,time,typing,+1
+F050│episodic_memory.py│297
+D: ●__future__,collections,dataclasses,kernel,time,+1
 C: Episode│[to_dict]
 C: EpisodicMemory│[__init__,add_episode,create_episode,get_episode,get_recent_episodes,search_by_tag,search_by_entity,search_by_event,search_by_importance,get_timeline,+4]
 C: Episode│[to_dict]
@@ -25,11 +25,9 @@ C: EpisodicMemory│[__init__,add_episode,create_episode,get_episode,get_recent_
    F: load_episode_from_disk(self,episode_id)→Optional[Episode]
    F: stats(self)→Any
    F: clear(self)
-   ↳Called by: F236:emit,F236:catch,F236:for
-   ↳Impact: 🔴HIGH (5 dependents) | Breaks: [F236:emit],[F236:catch],[F236:for]
 ---
 
-F089│memory_engine.py│196
+F049│memory_engine.py│197
 D: ●__future__,kernel,typing
 C: MemoryEngine│[__init__,db,_persist_structured,save_object,load_object,delete_object,list_objects,search_by_prefix,object_exists,save_unit,+9]
 C: MemoryEngine│[__init__,db,_persist_structured,save_object,load_object,delete_object,list_objects,search_by_prefix,object_exists,save_unit,+9]
@@ -54,29 +52,30 @@ C: MemoryEngine│[__init__,db,_persist_structured,save_object,load_object,delet
    F: load_relation(self,relation_id,memory_type)→Any
 ---
 
-F092│pattern_memory.py│0
+F052│pattern_memory.py│0
 ---
 
-F091│semantic_memory.py│407
-D: ●__future__,collections,kernel,time,typing,+1
+F051│semantic_memory.py│423
+D: ●__future__,collections,dataclasses,kernel,time,+1
 C: SemanticNode│[to_dict]
 C: SemanticEdge│[to_dict]
-C: SemanticMemory│[__init__,add_node,create_node,add_edge,create_edge,get_node,get_edge,search_by_tag,search_by_concept,search_by_type,+8]
+C: SemanticMemory│[__init__,add_node,create_node,add_edge,create_edge,get_node,get_edge,search_by_tag,search_by_topic,search_by_concept,+9]
 C: SemanticNode│[to_dict]
    F: to_dict(self)→Any
 C: SemanticEdge│[to_dict]
    F: to_dict(self)→Any
-C: SemanticMemory│[__init__,add_node,create_node,add_edge,create_edge,get_node,get_edge,search_by_tag,search_by_concept,search_by_type,+8]
+C: SemanticMemory│[__init__,add_node,create_node,add_edge,create_edge,get_node,get_edge,search_by_tag,search_by_topic,search_by_concept,+9]
    F: __init__(self)
    F: add_node(self,node,persist)
-   ↳Calls: F074:add,F051:add
-   F: create_node(self,node_id,node_type,title,content,concepts,tags,metadata,confidence,importance,source_refs,persist)→SemanticNode
+   ↳Calls: F034:add
+   F: create_node(self,node_id,node_type,title,content,concepts,tags,metadata,confidence,importance,source_refs,topic_id,persist)→SemanticNode
    F: add_edge(self,edge,persist)
-   ↳Calls: F074:add,F051:add
-   F: create_edge(self,edge_id,source_node_id,target_node_id,relation_type,weight,confidence,metadata,persist)→SemanticEdge
+   ↳Calls: F034:add
+   F: create_edge(self,edge_id,source_node_id,target_node_id,relation_type,weight,confidence,metadata,topic_id,persist)→SemanticEdge
    F: get_node(self,node_id)→Optional[SemanticNode]
    F: get_edge(self,edge_id)→Optional[SemanticEdge]
    F: search_by_tag(self,tag)→List[SemanticNode]
+   F: search_by_topic(self,topic_id)→List[SemanticNode]
    F: search_by_concept(self,concept)→List[SemanticNode]
    F: search_by_type(self,node_type)→List[SemanticNode]
    F: search_content(self,query)→List[SemanticNode]
@@ -87,12 +86,10 @@ C: SemanticMemory│[__init__,add_node,create_node,add_edge,create_edge,get_node
    F: load_node_from_disk(self,node_id)→Optional[SemanticNode]
    F: stats(self)→Any
    F: clear(self)
-   ↳Called by: F236:emit,F236:catch,F236:for
-   ↳Impact: 🔴HIGH (5 dependents) | Breaks: [F236:emit],[F236:catch],[F236:for]
 ---
 
-F088│working_memory.py│233
-D: ●__future__,collections,kernel,time,typing,+1
+F048│working_memory.py│233
+D: ●__future__,collections,dataclasses,kernel,time,+1
 C: WorkingMemoryItem│[touch,is_expired,to_dict]
 C: WorkingMemory│[__init__,add_memory,get_memory,update_memory,remove_memory,search_by_tag,search_by_type,search_by_importance,cleanup_expired,get_top_memories,+3]
 C: WorkingMemoryItem│[touch,is_expired,to_dict]
@@ -112,7 +109,5 @@ C: WorkingMemory│[__init__,add_memory,get_memory,update_memory,remove_memory,s
    F: get_top_memories(self,limit)→List[WorkingMemoryItem]
    F: stats(self)→Any
    F: clear(self)
-   ↳Called by: F236:emit,F236:catch,F236:for
-   ↳Impact: 🔴HIGH (5 dependents) | Breaks: [F236:emit],[F236:catch],[F236:for]
    F: _evict_oldest(self)
 ---

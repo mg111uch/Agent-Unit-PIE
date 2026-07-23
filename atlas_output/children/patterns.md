@@ -1,11 +1,11 @@
 # 📂 patterns
-Generated: 2026-07-21 18:31:40
+Generated: 2026-07-23 14:15:38
 Files: 5
 
 ---
 
-F110│anomaly_detector.py│386
-D: ●__future__,kernel,math,time,typing,+2
+F070│anomaly_detector.py│386
+D: ●__future__,kernel,math,statistics,time,+2
 C: AnomalyResult│[to_dict]
 C: AnomalyDetector│[__init__,detect_zscore_anomalies,detect_spikes,detect_dropouts,register_anomaly_patterns,analyze_signals,summarize_anomaly]
 C: AnomalyResult│[to_dict]
@@ -20,27 +20,27 @@ C: AnomalyDetector│[__init__,detect_zscore_anomalies,detect_spikes,detect_drop
    F: summarize_anomaly(self,anomaly)→str
 ---
 
-F114│causal_engine.py│0
+F074│causal_engine.py│0
 ---
 
-F111│contradiction_detector.py│98
+F071│contradiction_detector.py│98
 D: ●__future__,dataclasses,kernel,typing
 C: ContradictionResult│[to_dict]
 F: detect_contradictions(believed_node_ids,relation_types,min_confidence,min_edge_weight)→List[ContradictionResult]
-   ↳Called by: F111:detect_contradictions_for_beliefs
-   ↳Impact: 🟢LOW (1 dependents) | Breaks: [F111:detect_contradictions_for_beliefs]
+   ↳Called by: F071:detect_contradictions_for_beliefs
+   ↳Impact: 🟢LOW (1 dependents) | Breaks: [F071:detect_contradictions_for_beliefs]
 F: _resolve_to_node_id(key,info,id_field)→str
-   ↳Called by: F111:detect_contradictions_for_beliefs
-   ↳Impact: 🟢LOW (1 dependents) | Breaks: [F111:detect_contradictions_for_beliefs]
+   ↳Called by: F071:detect_contradictions_for_beliefs
+   ↳Impact: 🟢LOW (1 dependents) | Breaks: [F071:detect_contradictions_for_beliefs]
 F: detect_contradictions_for_beliefs(beliefs,id_field,stance_field,confidence_field,agree_stances,claim_filter)→List[ContradictionResult]
-   ↳Called by: F316:test_no_false_positive_when_not_agreed,F316:test_detects_contradiction_in_agreed_beliefs,F316:test_no_results_for_nonexistent_filter | Calls: F111:_resolve_to_node_id,F111:detect_contradictions
-   ↳Impact: 🔴HIGH (6 dependents) | Breaks: [F316:test_no_false_positive_when_not_agreed],[F316:test_detects_contradiction_in_agreed_beliefs],[F316:test_no_results_for_nonexistent_filter]
+   ↳Called by: F139:debate_step | Calls: F071:_resolve_to_node_id,F071:detect_contradictions
+   ↳Impact: 🟢LOW (1 dependents) | Breaks: [F139:debate_step]
 C: ContradictionResult│[to_dict]
    F: to_dict(self)→Any
 ---
 
-F113│pattern_engine.py│383
-D: ●__future__,kernel,statistics,time,typing,+1
+F073│pattern_engine.py│383
+D: ●__future__,collections,kernel,statistics,time,+1
 C: PatternEngine│[__init__,register_pattern,create_pattern,detect_numeric_trend,detect_repeated_events,detect_shared_sources,get_pattern,get_patterns_by_type,get_patterns_by_source,get_recent_patterns,+3]
 C: PatternEngine│[__init__,register_pattern,create_pattern,detect_numeric_trend,detect_repeated_events,detect_shared_sources,get_pattern,get_patterns_by_type,get_patterns_by_source,get_recent_patterns,+3]
    F: __init__(self)
@@ -56,12 +56,10 @@ C: PatternEngine│[__init__,register_pattern,create_pattern,detect_numeric_tren
    F: remove_pattern(self,pattern_id)→bool
    F: stats(self)→Any
    F: clear(self)
-   ↳Called by: F236:emit,F236:catch,F236:for
-   ↳Impact: 🔴HIGH (5 dependents) | Breaks: [F236:emit],[F236:catch],[F236:for]
 ---
 
-F112│trend_detector.py│369
-D: ●__future__,kernel,math,time,typing,+2
+F072│trend_detector.py│369
+D: ●__future__,kernel,math,statistics,time,+2
 C: TrendResult│[to_dict]
 C: TrendDetector│[__init__,detect_trend,detect_and_register_pattern,_calculate_slope,_calculate_volatility,_calculate_confidence,_get_direction,_classify_trend,moving_average,detect_anomalies,+2]
 C: TrendResult│[to_dict]

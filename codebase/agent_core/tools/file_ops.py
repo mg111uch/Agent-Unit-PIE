@@ -59,26 +59,12 @@ def _count_lines(path: str) -> int:
         return 0
 
 
-def _coerce_str_arg(value, *keys: str, default: str = "") -> str:
-    """Accept a plain string or a dict of tool args (native function calling)."""
-    if value is None:
-        return default
-    if isinstance(value, str):
-        return value
-    if isinstance(value, dict):
-        for k in keys:
-            if value.get(k) is not None and value.get(k) != "":
-                return str(value[k])
-        if len(value) == 1:
-            only = next(iter(value.values()))
-            if only is not None:
-                return str(only)
-        return default
-    return str(value)
-
-
-def read_file(path: str = "") -> str:
-    path = _coerce_str_arg(path, "path", "input", "file", default="")
+def read_file(path: str = "", **kwargs) -> str:
+    path = kwargs.get("path") or kwargs.get("input") or kwargs.get("file") or path
+    offset = int(kwargs.get("offset", 0))
+    limit = kwargs.get("limit")
+    if limit is not None:
+        limit = int(limit)
     try:
         full = resolve(path)
         if not os.path.exists(full):
@@ -91,28 +77,6 @@ def read_file(path: str = "") -> str:
                 f"Resolved to: {to_relative(full)} (workspace-relative)\n"
                 f"Files in that directory: {nearby if nearby else '(directory does not exist)'}"
             )
-        return _read_file_content(full)
-    except PathEscapeError as e:
-        return f"Error: {e}"
-    except Exception as e:
-        return f"Error reading {path}: {e}"
-
-
-def read_file_range(input_data) -> str:
-    """Read a portion of a file with offset (1-based) and optional limit.
-    
-    input_data = {"path": "...", "offset": 1, "limit": 50}
-    """
-    try:
-        data = json.loads(input_data) if isinstance(input_data, str) else input_data
-        path = data.get("path", "")
-        offset = int(data.get("offset", 0))
-        limit = data.get("limit")
-        if limit is not None:
-            limit = int(limit)
-        full = resolve(path)
-        if not os.path.exists(full):
-            return f"Error: file not found: {path}"
         return _read_file_content(full, offset=offset, limit=limit)
     except PathEscapeError as e:
         return f"Error: {e}"
@@ -120,8 +84,8 @@ def read_file_range(input_data) -> str:
         return f"Error reading {path}: {e}"
 
 
-def list_files(path: str = ".") -> str:
-    path = _coerce_str_arg(path, "path", "input", "directory", "dir", default=".")
+def list_files(path: str = ".", **kwargs) -> str:
+    path = kwargs.get("path") or kwargs.get("directory") or kwargs.get("dir") or kwargs.get("input") or path
     if not path:
         path = "."
     try:
@@ -268,9 +232,9 @@ def get_workspace_info(_input=None) -> str:
     )
 
 
-def glob_search(pattern: str = "") -> str:
+def glob_search(pattern: str = "", **kwargs) -> str:
     """Find files matching a glob pattern (e.g. '**/*.py', 'src/**/*.ts')."""
-    pattern = _coerce_str_arg(pattern, "pattern", "glob", "input", default="")
+    pattern = kwargs.get("pattern") or kwargs.get("glob") or kwargs.get("input") or pattern
     try:
         matches = sorted(Path(WORKSPACE_ROOT).rglob(pattern))
         relative = [str(Path(p).relative_to(WORKSPACE_ROOT)) for p in matches if p.is_file()]
@@ -350,6 +314,106 @@ def grep_search(input_data) -> str:
         return out
     except Exception as e:
         return f"Error grepping '{pattern}': {e}"
+
+
+def read_section_tool(params: dict) -> str:
+    if isinstance(params, str):
+        try:
+            params = json.loads(params)
+        except json.JSONDecodeError:
+            return "Error: invalid JSON input."
+    path = params.get("path", "")
+    if not path:
+        return "Error: 'path' parameter is required."
+    pattern = params.get("pattern", "")
+    if not pattern:
+        return "Error: 'pattern' (regex) parameter is required."
+    context_lines = params.get("context_lines", 10)
+    ignore_case = params.get("ignore_case", False)
+    try:
+        full = resolve(path)
+        if not os.path.isfile(full):
+            return f"Error: file not found: {path}"
+        flags = re.IGNORECASE if ignore_case else 0
+        compiled = re.compile(pattern, flags)
+        with open(full, "r", encoding="utf-8", errors="replace") as f:
+            lines = f.readlines()
+        matches = []
+        for i, line in enumerate(lines):
+            if compiled.search(line):
+                start = max(0, i - context_lines)
+                end = min(len(lines), i + context_lines + 1)
+                block = "".join(
+                    f"{j+1:>6}: {lines[j]}"
+                    for j in range(start, end)
+                )
+                matches.append({
+                    "match_line": i + 1,
+                    "matched_text": line.rstrip()[:200],
+                    "context": f"Lines {start+1}-{end} (match at {i+1}):\n{block}",
+                })
+        if not matches:
+            return json.dumps({
+                "path": path,
+                "pattern": pattern,
+                "matches": [],
+                "total_lines": len(lines),
+            }, indent=2)
+        return json.dumps({
+            "path": path,
+            "pattern": pattern,
+            "match_count": len(matches),
+            "total_lines": len(lines),
+            "matches": matches,
+        }, indent=2)
+    except re.error as e:
+        return f"Error: invalid regex pattern '{pattern}': {e}"
+    except Exception as e:
+        return f"Error reading '{path}': {e}"
+
+
+def batch_edit_tool(params: dict) -> str:
+    if isinstance(params, str):
+        try:
+            params = json.loads(params)
+        except json.JSONDecodeError:
+            return "Error: invalid JSON input."
+    path = params.get("path", "")
+    edits = params.get("edits", [])
+    if not path:
+        return "Error: 'path' parameter is required."
+    if not edits or not isinstance(edits, list):
+        return "Error: 'edits' (list) parameter is required."
+    results = []
+    for i, edit in enumerate(edits):
+        old_str = edit.get("old_string", "")
+        new_str = edit.get("new_string", "")
+        if not old_str:
+            results.append({"edit": i, "status": "error", "message": "old_string is required"})
+            continue
+        try:
+            full = resolve(path)
+            if not os.path.exists(full):
+                results.append({"edit": i, "status": "error", "message": "file not found"})
+                continue
+            with open(full, "r", encoding="utf-8") as f:
+                content = f.read()
+            count = content.count(old_str)
+            if count == 0:
+                results.append({"edit": i, "status": "error", "message": "old_string not found"})
+                continue
+            if count > 1 and not edit.get("replace_all"):
+                results.append({"edit": i, "status": "error", "message": f"old_string has {count} matches — set replace_all=true or refine"})
+                continue
+            replacement_count = count if edit.get("replace_all") else 1
+            updated = content.replace(old_str, new_str, replacement_count)
+            with open(full, "w", encoding="utf-8") as f:
+                f.write(updated)
+            results.append({"edit": i, "status": "ok", "replaced": replacement_count})
+        except Exception as e:
+            results.append({"edit": i, "status": "error", "message": str(e)})
+    ok_count = sum(1 for r in results if r["status"] == "ok")
+    return json.dumps({"file": path, "edits": results, "summary": f"{ok_count}/{len(edits)} edits applied"}, indent=2)
 
 
 def batch_read_tool(params: dict) -> str:

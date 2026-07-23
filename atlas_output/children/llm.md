@@ -1,13 +1,13 @@
 # 📂 llm
-Generated: 2026-07-21 18:31:40
+Generated: 2026-07-23 14:15:38
 Files: 3
 
 ---
 
-F358│__init__.py│0
+F198│__init__.py│0
 ---
 
-F356│context_builder.py│385
+F196│context_builder.py│385
 S: llm/context_builder.py
 D: ●__future__,datetime,json,logging,typing
 C: ContextBuilder│[__init__,build_context,retrieve_relevant_memory,prioritize_context,compress_context,compress_section,trim_to_token_limit,build_prompt_context,health_check,utc_now]
@@ -31,11 +31,11 @@ C: ContextBuilder│[__init__,build_context,retrieve_relevant_memory,prioritize_
       S: Convert context into prompt-safe text.
    F: health_check(self)→Any
    F: utc_now()→str
-   ↳Called by: F072:update_timestamp,F073:update_timestamp,F076:mark_interaction
-   ↳Impact: 🔴HIGH (9 dependents) | Breaks: [F072:update_timestamp],[F073:update_timestamp],[F076:mark_interaction]
+   ↳Called by: F034:update_timestamp,F036:deactivate,F035:deactivate
+   ↳Impact: 🔴HIGH (9 dependents) | Breaks: [F034:update_timestamp],[F036:deactivate],[F035:deactivate]
 ---
 
-F357│llm_orchestrator.py│171
+F197│llm_orchestrator.py│171
 S: agent_core/llm/llm_orchestrator.py
 D: ●__future__,datetime,logging,time,typing
 C: LLMOrchestrator│[__init__,generate,register_provider,remove_provider,generate_stream]

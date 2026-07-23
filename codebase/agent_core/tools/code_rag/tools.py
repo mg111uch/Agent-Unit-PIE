@@ -1,6 +1,7 @@
 import json
 import re
 import subprocess
+import sys
 from pathlib import Path
 from datetime import datetime
 from typing import Dict, Any, List
@@ -269,12 +270,62 @@ def batch_file_api_tool(params: dict) -> str:
     return json.dumps(result, indent=2)
 
 
+def extract_symbols_to_file_tool(params: dict) -> str:
+    rag = _get_rag()
+    if rag is None:
+        return "Error: Codebase atlas not found."
+    if not rag.ensure_indexed():
+        return "Error: Atlas not indexed."
+    names = params.get("names", [])
+    if isinstance(names, str):
+        names = [names]
+    if not names:
+        return "Error: 'names' (list) parameter is required."
+    dest = params.get("destination", "")
+    if not dest:
+        return "Error: 'destination' (file path) parameter is required."
+    file_path = params.get("file_path")
+    symbols = rag.get_symbols(names, file_path)
+    if not symbols:
+        return json.dumps({
+            "error": f"No symbols found: {names}",
+            "hint": "Use search_symbols to find correct names.",
+        }, indent=2)
+    dest_path = Path(dest)
+    if not dest_path.is_absolute():
+        dest_path = _project_root() / dest_path
+    dest_path.parent.mkdir(parents=True, exist_ok=True)
+    lines_written = 0
+    written = []
+    missing = []
+    for sym in symbols:
+        name = sym.get("symbol_name", "?")
+        code = sym.get("code", "")
+        if not code:
+            missing.append(name)
+            continue
+        header = f"# === {name} ({sym.get('symbol_type', '?')}) — {sym.get('file_path', '?')} ==="
+        if sym.get("signature"):
+            header += f"\n# Signature: {sym['signature']}"
+        block = f"\n\n{header}\n\n{code}\n"
+        with open(dest_path, "a") as f:
+            f.write(block)
+        lines_written += code.count("\n") + 1
+        written.append(name)
+    return json.dumps({
+        "destination": str(dest_path),
+        "symbols_written": written,
+        "total_lines": lines_written,
+        "missing_code": missing if missing else None,
+    }, indent=2)
+
+
 def report_freshness_tool(params: dict) -> str:
     reports_dir = _project_root() / "system_devpt_reports"
     if not reports_dir.is_dir():
         return "Error: system_devpt_reports/ not found."
     date_re = re.compile(r'_Last verified:\s*(\d{4}-\d{2}-\d{2})_')
-    citation_re = re.compile(r'`([\w\./]+\.py:\w+\(\))`')
+    citation_re = re.compile(r'`([\w./-]+\.py:\w+\(\))`')
     stale = []
     ok = []
     not_found = []
@@ -322,3 +373,128 @@ def report_freshness_tool(params: dict) -> str:
                 continue
         ok.append({"file": str(rel), "last_verified": verified_str, "citations": len(citations)})
     return json.dumps({"ok": ok, "stale": stale, "no_date_stamp": not_found}, indent=2)
+
+
+def report_inventory_tool(params: dict) -> str:
+    reports_dir = _project_root() / "system_devpt_reports"
+    if not reports_dir.is_dir():
+        return json.dumps({"error": "system_devpt_reports/ not found"})
+    date_re = re.compile(r'_Last verified:\s*(\d{4}-\d{2}-\d{2})_')
+    citation_re = re.compile(r'`([\w./-]+\.py:\w+\(\))`')
+    entries = []
+    for md_file in sorted(reports_dir.rglob("*.md")):
+        rel = md_file.relative_to(_project_root())
+        text = md_file.read_text(encoding="utf-8", errors="replace")
+        lines = text.count("\n") + 1
+        parent = md_file.parent.name
+        fname = md_file.name
+        if fname == "status.md":
+            role = "status"
+        elif fname == "roadmap.md":
+            role = "roadmap"
+        elif fname == "README.md":
+            role = "readme"
+        else:
+            role = "other"
+        has_stamp = bool(date_re.search(text))
+        citations = len(citation_re.findall(text))
+        is_empty = lines <= 1 and not text.strip()
+        entries.append({
+            "path": str(rel), "role": role, "module": parent,
+            "lines": lines, "has_last_verified": has_stamp,
+            "citations": citations, "empty": is_empty,
+        })
+    return json.dumps({"reports": entries, "count": len(entries)}, indent=2)
+
+
+def report_schema_check_tool(params: dict) -> str:
+    reports_dir = _project_root() / "system_devpt_reports"
+    date_re = re.compile(r'_Last verified:\s*(\d{4}-\d{2}-\d{2})_')
+    citation_re = re.compile(r'`([\w./-]+\.py:\w+\(\))`')
+    roadmap_lang = re.compile(r'phase|completed|planned|roadmap|not implemented', re.I)
+    results = []
+    for md_file in sorted(reports_dir.glob("*/status.md")):
+        rel = md_file.relative_to(_project_root())
+        text = md_file.read_text(encoding="utf-8", errors="replace")
+        issues = []
+        if not date_re.search(text):
+            issues.append("missing _Last verified")
+        has_cap = "## Current Capability" in text
+        has_gaps = "## Known Gaps" in text
+        has_recent = "## Recent Changes" in text
+        if not has_cap:
+            issues.append("missing ## Current Capability")
+        if not has_gaps:
+            issues.append("missing ## Known Gaps")
+        if not has_recent:
+            issues.append("missing ## Recent Changes")
+        bullets = [l for l in text.splitlines() if l.strip().startswith("- ")]
+        bullets_with_citation = sum(1 for b in bullets if citation_re.search(b))
+        bullets_no_citation = len(bullets) - bullets_with_citation
+        if bullets_no_citation:
+            issues.append(f"{bullets_no_citation} bullet(s) without citation")
+        if roadmap_lang.search(text) and has_cap:
+            issues.append("possible roadmap language in status")
+        results.append({
+            "file": str(rel), "issues": issues, "clean": len(issues) == 0,
+        })
+    return json.dumps({"reports": results}, indent=2)
+
+
+def list_capabilities_tool(params: dict) -> str:
+    try:
+        import sys as _sys2
+        _sys2.path.insert(0, str(_project_root()))
+        _sys2.path.insert(0, str(_project_root() / "codebase"))
+        _sys2.path.insert(0, str(_project_root() / "scripts"))
+        from kernel.hypothesis.hypothesis_engine import hypothesis_engine
+        from scripts.seed_hypotheses import seed_all
+        seed_all(hypothesis_engine)
+    except Exception as e:
+        return json.dumps({"error": f"HypothesisEngine not available: {e}"})
+    htype = params.get("type", "")
+    hyps = hypothesis_engine.hypotheses.values()
+    if htype:
+        hyps = [h for h in hyps if h.hypothesis_type == htype]
+    entries = []
+    for h in sorted(hyps, key=lambda x: x.hypothesis_id):
+        entries.append({
+            "id": h.hypothesis_id,
+            "type": h.hypothesis_type,
+            "status": h.status,
+            "title": h.title,
+            "evidence_path": h.metadata.get("evidence_path", ""),
+            "evidence_symbol": h.metadata.get("evidence_symbol", ""),
+        })
+    return json.dumps({
+        "hypotheses": entries,
+        "count": len(entries),
+        "filter_type": htype or "all",
+    }, indent=2)
+
+
+def resolve_citations_tool(params: dict) -> str:
+    citations = params.get("citations", [])
+    if isinstance(citations, str):
+        citations = [citations]
+    if not citations:
+        return json.dumps({"error": "Provide citations list e.g. ['file.py:func()']"})
+    cit_re = re.compile(r'([\w./-]+\.py):(\w+)\(\)')
+    results = []
+    for cit in citations:
+        m = cit_re.match(cit)
+        if not m:
+            results.append({"citation": cit, "valid": False, "error": "bad format"})
+            continue
+        filename, funcname = m.group(1), m.group(2)
+        sys.path.insert(0, str(_project_root()))
+        sys.path.insert(0, str(_project_root() / "codebase"))
+        from scripts.lib.citations import resolve_symbol
+        found, resolved_path = resolve_symbol(filename, funcname)
+        results.append({
+            "citation": cit,
+            "valid": True,
+            "resolved": found,
+            "path": resolved_path or filename,
+        })
+    return json.dumps({"results": results}, indent=2)

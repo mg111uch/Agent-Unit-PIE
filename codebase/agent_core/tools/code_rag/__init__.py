@@ -14,4 +14,9 @@ from agent_core.tools.code_rag.tools import (
     project_root_tool,
     batch_file_api_tool,
     report_freshness_tool,
+    extract_symbols_to_file_tool,
+    report_inventory_tool,
+    report_schema_check_tool,
+    list_capabilities_tool,
+    resolve_citations_tool,
 )

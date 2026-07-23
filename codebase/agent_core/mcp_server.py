@@ -16,6 +16,7 @@ import json
 import logging
 import os
 import sys
+from pathlib import Path
 from typing import Any
 
 from mcp.server import Server
@@ -32,41 +33,37 @@ from mcp.types import (
 from agent_core.tools import registry
 from agent_core.tools.registry import CAT_FILE, CAT_KERNEL, CAT_SIM, CAT_META, CAT_GIT, CAT_CODE_RAG
 
-# Expose kernel + sim + code_rag + file tools (file tools include Read for MCP clients)
+# Expose kernel, sim, code_rag, and unique file-MCP tools only
+# CAT_FILE (read_file, write_to_file, etc.) kept internal — redundant with opencode built-ins
 EXPOSED_CATEGORIES = [CAT_KERNEL, CAT_SIM, CAT_CODE_RAG, CAT_FILE]
 
-# Hot-reload support: tracks file mtime_ns and only reloads when files change
-_HOT_MODULES = {
-    "agent_core.tools.sim_ops":    "agent_core/tools/sim_ops.py",
-    "agent_core.tools.kernel_ops": "agent_core/tools/kernel_ops.py",
-    "agent_core.tools.code_rag":   "agent_core/tools/code_rag.py",
-    "agent_core.tools":            "agent_core/tools/__init__.py",
-}
+# Hot-reload support: watches all .py files under agent_core/tools/
+_WATCH_DIR = "agent_core/tools/"
 _mtime_cache: dict[str, int] = {}
 
 
 def _do_reload():
-    for mod_name in _HOT_MODULES:
-        if mod_name in sys.modules:
+    prefix = "agent_core.tools"
+    for mod_name in list(sys.modules.keys()):
+        if mod_name.startswith(prefix):
             importlib.reload(sys.modules[mod_name])
     from agent_core.tools import _register_all
     _register_all()
 
 
 def _reload_if_changed():
-    """Reload modules when source file mtime_ns has changed."""
+    """Reload all tool modules when any .py file under _WATCH_DIR changes."""
     codebase = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    watch_path = os.path.join(codebase, _WATCH_DIR)
     changed = False
-    for mod_name, rel_path in _HOT_MODULES.items():
-        src = os.path.join(codebase, rel_path)
+    for py_file in Path(watch_path).rglob("*.py"):
         try:
-            st = os.stat(src)
-            mtime_ns = st.st_mtime_ns
+            mtime_ns = os.stat(py_file).st_mtime_ns
         except OSError:
             continue
-        last = _mtime_cache.get(mod_name)
+        last = _mtime_cache.get(str(py_file))
         if last is None or mtime_ns > last:
-            _mtime_cache[mod_name] = mtime_ns
+            _mtime_cache[str(py_file)] = mtime_ns
             changed = True
     if changed:
         _do_reload()
@@ -77,7 +74,7 @@ server = Server("pie-kernel-sim")
 
 def _check_kernel_read(name: str, arguments: dict[str, Any] | None) -> str | None:
     """Return warning message if this is a Read call on a kernel file, else None."""
-    if name not in ("read_file", "read_file_range"):
+    if name not in ("read_file",):
         return None
     if os.environ.get("OVERRIDE_KERNEL_READ") == "1":
         return None
@@ -116,15 +113,18 @@ async def call_mcp_tool(name: str, arguments: dict[str, Any] | None) -> CallTool
 
     kernel_read_warning = _check_kernel_read(name, arguments)
 
+    prefix = registry._mcp_prefix
+    reg_name = name[len(prefix):] if prefix and name.startswith(prefix) else name
+
     tools = registry.get_tools(categories=EXPOSED_CATEGORIES)
-    if name not in tools:
+    if reg_name not in tools:
         return CallToolResult(
             content=[TextContent(type="text", text=f"Unknown tool: {name}")],
             isError=True,
         )
 
     try:
-        fn = tools[name]
+        fn = tools[reg_name]
         result = fn(arguments or {})
 
         from agent_core.tools import ToolResult as TR

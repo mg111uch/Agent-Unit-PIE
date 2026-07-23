@@ -1,11 +1,11 @@
 # 📂 retrieval
-Generated: 2026-07-21 18:31:40
+Generated: 2026-07-23 14:15:38
 Files: 7
 
 ---
 
-F098│hierarchy_retriever.py│394
-D: ●__future__,collections,kernel,time,typing,+1
+F058│hierarchy_retriever.py│394
+D: ●__future__,collections,dataclasses,kernel,time,+1
 C: HierarchyNode│[to_dict]
 C: HierarchyRetriever│[__init__,add_node,create_node,build_from_semantic_memory,retrieve_hierarchy_context,_recursive_collect,get_node_path,get_subtree_nodes,_collect_subtree,retrieve_topic_context,+5]
 C: HierarchyNode│[to_dict]
@@ -26,11 +26,9 @@ C: HierarchyRetriever│[__init__,add_node,create_node,build_from_semantic_memor
    F: search_hierarchy(self,query)→List[HierarchyNode]
    F: stats(self)→Any
    F: clear(self)
-   ↳Called by: F236:emit,F236:catch,F236:for
-   ↳Impact: 🔴HIGH (5 dependents) | Breaks: [F236:emit],[F236:catch],[F236:for]
 ---
 
-F096│pattern_retriever.py│539
+F056│pattern_retriever.py│539
 S: kernel/retrieval/pattern_retriever.py
 D: ●__future__,logging,typing
 C: PatternRetriever│[__init__,get_pattern,get_patterns_by_type,get_patterns_by_category,get_unit_patterns,get_high_confidence_patterns,get_anomaly_patterns,get_opportunity_patterns,get_risk_patterns,get_temporal_patterns,+8]
@@ -73,7 +71,7 @@ C: PatternRetriever│[__init__,get_pattern,get_patterns_by_type,get_patterns_by
    F: health_check(self)→Any
 ---
 
-F099│relation_retriever.py│7
+F059│relation_retriever.py│7
 C: RelationEngine│[link,get_relations,detect_cross_unit_correlations]
 C: RelationEngine│[link,get_relations,detect_cross_unit_correlations]
    F: link(self,source_unit,target_unit,relation_type,confidence)
@@ -84,8 +82,8 @@ C: RelationEngine│[link,get_relations,detect_cross_unit_correlations]
       S: Find patterns that span multiple units
 ---
 
-F097│retrieval_engine.py│386
-D: ●__future__,kernel,math,time,typing,+1
+F057│retrieval_engine.py│386
+D: ●__future__,collections,kernel,math,time,+1
 C: RetrievalResult│[__init__,to_dict]
 C: RetrievalEngine│[__init__,search,search_semantic_memory,search_episodic_memory,search_working_memory,retrieve_patterns,retrieve_recent_timeline,build_context,_calculate_text_score,memory_summary,+1]
 C: RetrievalResult│[__init__,to_dict]
@@ -105,8 +103,8 @@ C: RetrievalEngine│[__init__,search,search_semantic_memory,search_episodic_mem
    F: clear_all_retrieval_cache(self)
 ---
 
-F094│semantic_retriever.py│518
-D: ●__future__,chromadb,kernel,time,typing,+4
+F054│semantic_retriever.py│518
+D: ●__future__,kernel,math,sentence_transformers,time,+4
 C: SemanticSearchResult│[to_dict]
 C: EmbeddingBackend│[search_similar,index_text]
 C: ChromaBackend←EmbeddingBackend│[__init__,_get_collection,_get_model,_embed,search_similar,index_text]
@@ -115,21 +113,21 @@ C: SemanticSearchResult│[to_dict]
    F: to_dict(self)→Any
 C: EmbeddingBackend│[search_similar,index_text]
    F: search_similar(self,text,top_k)→Any
-   ↳Called by: F294:get_best_counter
-   ↳Impact: 🟢LOW (1 dependents) | Breaks: [F294:get_best_counter]
+   ↳Called by: F141:get_best_counter
+   ↳Impact: 🟢LOW (1 dependents) | Breaks: [F141:get_best_counter]
    F: index_text(self,node_id,text)→None
 C: ChromaBackend←EmbeddingBackend│[__init__,_get_collection,_get_model,_embed,search_similar,index_text]
    F: __init__(self,collection_name,persist_dir)
    F: _get_collection(self)
-   ↳Called by: F298:search_similar,F316:test_populates_vector_store,F298:index_graph
-   ↳Impact: 🔴HIGH (4 dependents) | Breaks: [F298:search_similar],[F316:test_populates_vector_store],[F298:index_graph]
+   ↳Called by: F146:index_graph,F146:search_similar,F145:_store_user_knowledge
+   ↳Impact: 🔴HIGH (3 dependents) | Breaks: [F146:index_graph],[F146:search_similar],[F145:_store_user_knowledge]
    F: _get_model(self)
-   ↳Called by: F298:embed
-   ↳Impact: 🟢LOW (1 dependents) | Breaks: [F298:embed]
+   ↳Called by: F146:embed
+   ↳Impact: 🟢LOW (1 dependents) | Breaks: [F146:embed]
    F: _embed(self,text)→List[float]
    F: search_similar(self,text,top_k)→Any
-   ↳Called by: F294:get_best_counter
-   ↳Impact: 🟢LOW (1 dependents) | Breaks: [F294:get_best_counter]
+   ↳Called by: F141:get_best_counter
+   ↳Impact: 🟢LOW (1 dependents) | Breaks: [F141:get_best_counter]
    F: index_text(self,node_id,text,metadata)
 C: SemanticRetriever│[__init__,set_embedding_backend,search_by_embedding,search_by_concept,semantic_traversal,_traverse_recursive,multi_concept_search,build_semantic_context,retrieve_related_knowledge,detect_semantic_clusters,+2]
    F: __init__(self)
@@ -146,7 +144,7 @@ C: SemanticRetriever│[__init__,set_embedding_backend,search_by_embedding,searc
    F: summary(self)→Any
 ---
 
-F093│timeline_retriever.py│514
+F053│timeline_retriever.py│514
 S: kernel/retrieval/timeline_retriever.py
 D: ●__future__,datetime,logging,typing
 C: TimelineRetriever│[__init__,retrieve_events,retrieve_memories,retrieve_patterns,retrieve_window,build_chronology_chain,detect_temporal_clusters,retrieve_historical_snapshot,retrieve_future_projection,summarize_timeline,+2]
@@ -176,7 +174,7 @@ C: TimelineRetriever│[__init__,retrieve_events,retrieve_memories,retrieve_patt
    F: parse_time(timestamp)→Optional[datetime]
 ---
 
-F095│unit_retriever.py│395
+F055│unit_retriever.py│395
 S: kernel/retrieval/unit_retriever.py
 D: ●__future__,logging,typing
 C: UnitRetriever│[__init__,get_unit,get_units_by_type,query_units,get_related_units,get_units_by_pattern,get_units_by_behavior,semantic_search,retrieve_near_timeline,get_all_units,+3]

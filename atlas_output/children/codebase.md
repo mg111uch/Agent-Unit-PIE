@@ -1,5 +1,5 @@
 # 📂 codebase
-Generated: 2026-07-21 18:31:40
+Generated: 2026-07-23 14:15:38
 Files: 3
 
 ---
@@ -9,7 +9,7 @@ F002│__init__.py│1
 
 F001│server.py│47│⚡
 S: server.py - FastAPI WebSocket server for browser-based agent control.
-D: ●__future__,agent_core,base64,cryptography,getpass,+4
+D: ●__future__,base64,cryptography,getpass,json,+4
 F: _derive_key(password,salt)→bytes
    ↳Called by: F001:_try_unlock_env
    ↳Impact: 🟢LOW (1 dependents) | Breaks: [F001:_try_unlock_env]
@@ -19,7 +19,7 @@ F: _try_unlock_env()→None
 
 F004│tool_client.py│169│⚡
 S: Thin CLI to test code_rag agent tools directly (no server, no LLM).
-D: ●agent_core,argparse,os,sqlite3,sys,+1
+D: ●agent_core,argparse,json,os,sqlite3,+1
 F: _resolve_rag(args)→CodeRAG
    ↳Called by: F004:main
    ↳Impact: 🟢LOW (1 dependents) | Breaks: [F004:main]

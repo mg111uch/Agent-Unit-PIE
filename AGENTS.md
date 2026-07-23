@@ -1,5 +1,13 @@
 # AI Agent Development Guidelines 
 
+## TASK
+
+During git commit one citations using `Agentic_Unit_PIE/scripts/verify_citations.py` failed with error: FAIL  [grep ] system_devpt_reports/codebase_atlas/status.md:12  modules/codebase_atlas/graph/backend/serve.py:save_positions()
+
+System development reports are given in `Agentic_Unit_PIE/system_devpt_reports`. 
+
+Do not give code or make any changes. Just give a plan or an answer. 
+
 ## Kernel Probing Rules (Mandatory)
 
 **Never `Read` a file under `kernel/` — use `pie_file_api` first, always.**
@@ -70,11 +78,6 @@ conda run -n myenv python -m codebase_atlas.main \
 - **Source_code:** (Working directory) `/home/manigupt/Hello/Agentic_Unit_PIE/codebase`
 - **Agent frontend** `/home/manigupt/Hello/reddit-clone/frontend/app/agent/page.tsx`
 
-## Data Layout Rationale
-
-- `data/` — portable user state (beliefs, topics, knowledge base, logs, DBs). Agent C migration target.
-- `data/workspaces/` — session-scoped scratch directories per user. Under `data/` for consistency but excluded from user-data exports — they hold only ephemeral agent-execution artifacts (scratch files, temp outputs) with no meaning outside a live session.
-
 ## Code Execution & Validation Environment
 
 - **Command to run project:** `cd /home/manigupt/Hello/Agentic_Unit_PIE/codebase && conda run -n myenv python server.py`
@@ -87,6 +90,11 @@ conda run -n myenv python -m codebase_atlas.main \
 - Ask the user before running tests and verifying implementation.
 - Smoke tests are allowed. Keep them small.
 - Optimize for handling large codebases while maintaining output quality.
+- Generate code which is less verbose to save tokens without compromising on functionality.
+- Max 400–500 lines per file (including tests & comments).
+- One public class/struct/interface per file (ECS: one component OR one system).
+- Split large files ruthlessly when they exceed 500 LOC or violate single responsibility.
+- Keep all files in `/system_development_report` under 1000 lines.
 
 ## Dev Report Integrity Rule
 
@@ -100,10 +108,19 @@ Every status claim in `system_devpt_reports/` must include a file path + functio
 4. **One persistence path** — SQLite only now; don't let a future module invent a second.
 5. **Every removal needs a reason on record** — already enforced by the project_history topic's `contradicts` edges.
 
+## Tooling Workflow Rules
+
+1. **Use `batch_edit` for repetitive edits across a single file** — Instead of many sequential `edit_file` calls for the same file (e.g., adding the same parameter to every registration), use one `batch_edit` call with all replacements. The tool applies edits sequentially and supports `replace_all` for bulk renames.
+
+2. **Verify directory paths with `list_files` before reading** — When uncertain about a file's location or the directory structure, call `list_files` on the suspected parent directory first. Guessing paths (e.g. `kernel/tools/` when the actual prefix is `agent_core/tools/`) wastes a round trip on a file-not-found error.
+
+3. **Prefer `pie_batch_file_api` when ≥2 files** — batch reduces token overhead vs. serial `pie_file_api` calls.
+
 ## system_devpt_reports/ File Convention
 
 - `README.md` = how to use/run the module (user-facing docs)
 - `status.md` = current verified capability with citations (agent-facing, verified before every session)
+- Prefer `status.md` over `roadmap.md` for determining "what works."
 - `roadmap.md` = speculative/planned work, never cited as working
 
 ## Report Freshness Rule
@@ -116,14 +133,30 @@ Every status claim in `system_devpt_reports/` must include a file path + functio
 
 Status reports are subject to the same verify-before-trusting rule as code — see rule 1 in Operating Rules.
 
-## Recent Changes
-- 2026-07-22: Capability claims seeded as Hypothesis objects — `scripts/seed_hypotheses.py`, `scripts/validate_capabilities.py`
-- 2026-07-22: Git integration — pre-commit citation hook, commit-linked hypothesis evidence, tag script — `.git/hooks/pre-commit`, `scripts/tag_checkpoint.py`, `scripts/validate_capabilities.py`
+## Report maintenance protocol
 
-## File & Module Size Rules
+### Session start (read path)
+- Call `pie_report_freshness`.
+- If any status is stale or missing stamp → re-validate before trusting.
+- Prefer `status.md` over `roadmap.md` for "what works."
 
-- Max 400–500 lines per file (including tests & comments).
-- One public class/struct/interface per file (ECS: one component OR one system).
-- Split large files ruthlessly when they exceed 500 LOC or violate single responsibility.
-- Keep all files in `/system_development_report` under 1000 lines.
+### Session end (write path) — if code changed
+- Update only modules you touched.
+- For each new/changed public behavior: add/adjust one capability line with citation.
+- For removed behavior: delete capability line; if intentional removal, record reason in `project_history` (`contradicts` / why).
+- Append one Recent Changes line; trim to 10.
+- Bump `_Last verified`.
+- Optionally: `python scripts/validate_capabilities.py` (must exit 0 for touched modules).
 
+### Schema enforcement
+- Status files without `_Last verified` are treated as empty.
+- Capability lines without `file:function()` are deleted on sight (existing Dev Report Integrity Rule).
+- Roadmap content found in status → move to roadmap, do not leave dual.
+
+### Empty-file rule
+- Empty `status.md` is a defect. Either fill minimal schema within the session that touches the module, or remove the module report directory if the module is abandoned.
+
+### Single writer for automated claims
+- Prefer regenerate-from-hypotheses over hand-editing long tables once generator exists. Until then, hand-edit only the thin template.
+
+One-command validation: `python scripts/seed_hypotheses.py && python scripts/validate_capabilities.py`

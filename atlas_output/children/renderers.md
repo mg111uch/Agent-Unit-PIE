@@ -1,20 +1,18 @@
 # 📂 renderers
-Generated: 2026-07-21 18:31:40
+Generated: 2026-07-23 14:15:38
 Files: 2
 
 ---
 
-F228│__init__.py│0
+F097│__init__.py│0
 ---
 
-F227│interactive_renderer.py│104
+F096│interactive_renderer.py│104
 S: interactive_renderer.py
-D: ►F222 ●__future__,typing
+D: ►F091 ●__future__,typing
 C: InteractiveRenderer│[render,_node_to_dict,_edge_to_dict,_cluster_to_dict]
 C: InteractiveRenderer│[render,_node_to_dict,_edge_to_dict,_cluster_to_dict]
    F: render(cls,graph)→Any
-   ↳Called by: F242:initialize,F242:whenMeasured,F242:check
-   ↳Impact: 🔴HIGH (3 dependents) | Breaks: [F242:initialize],[F242:whenMeasured],[F242:check]
    F: _node_to_dict(node)→Any
    F: _edge_to_dict(edge)→Any
    F: _cluster_to_dict(cluster)→Any

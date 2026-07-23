@@ -1,21 +1,21 @@
 # 📂 simulators
-Generated: 2026-07-21 18:31:40
+Generated: 2026-07-23 14:15:38
 Files: 1
 
 ---
 
-F259│simulation_connector.py│301
+F106│simulation_connector.py│301
 S: simulation_connector.py
-D: ●kernel,modules,os,pathlib,typing,+3
+D: ●json,kernel,modules,pathlib,yaml,+3
 C: SimulationConnector│[__init__,run_and_extract,_emit_signals_to_kernel,_extract_signals,_store_run,_generate_summary,get_signals,get_params,compare_runs,inject_policy,+1]
    S: Bridge between popula_dyn and kernel cognition.
 F: _codebase_root()
-   ↳Called by: F259:__init__
-   ↳Impact: 🟢LOW (1 dependents) | Breaks: [F259:__init__]
+   ↳Called by: F106:__init__
+   ↳Impact: 🟢LOW (1 dependents) | Breaks: [F106:__init__]
 C: SimulationConnector│[__init__,run_and_extract,_emit_signals_to_kernel,_extract_signals,_store_run,_generate_summary,get_signals,get_params,compare_runs,inject_policy,+1]
    S: Bridge between popula_dyn and kernel cognition.
    F: __init__(self,base_path,emit_to_kernel)
-   ↳Calls: F259:_codebase_root
+   ↳Calls: F106:_codebase_root
    F: run_and_extract(self,params,run_id,emit_signals)→str
       S: Run simulation, extract signals, store in KB.
       S: Args:

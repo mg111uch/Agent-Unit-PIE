@@ -1,15 +1,15 @@
 # 📂 kernel
-Generated: 2026-07-21 18:31:40
-Files: 6
+Generated: 2026-07-23 14:15:38
+Files: 5
 
 ---
 
-F060│__init__.py│141
+F020│__init__.py│141
 S: agent_unit_pie.kernel
-D: ►F056,F057,F058,F059,F109,F117 ●memory,patterns,relations,retrieval,timeline
+D: ►F016,F017,F018,F019,F069 ●memory,patterns,relations,signals,timeline,+1
 ---
 
-F057│compression_engine.py│302
+F017│compression_engine.py│302
 S: kernel/compression_engine.py
 D: ●__future__,datetime,logging,typing
 C: CompressionEngine│[__init__,run_cycle,compress_observations,compress_events,aggregate_signals,generate_higher_patterns,compress_timelines,archive_old_memory,prune_low_value_memory,compute_memory_value,+4]
@@ -41,11 +41,11 @@ C: CompressionEngine│[__init__,run_cycle,compress_observations,compress_events
       S: Build higher-order abstraction from lower patterns.
    F: health_check(self)→Any
    F: utc_now()→str
-   ↳Called by: F072:update_timestamp,F073:update_timestamp,F076:mark_interaction
-   ↳Impact: 🔴HIGH (9 dependents) | Breaks: [F072:update_timestamp],[F073:update_timestamp],[F076:mark_interaction]
+   ↳Called by: F034:update_timestamp,F036:deactivate,F035:deactivate
+   ↳Impact: 🔴HIGH (9 dependents) | Breaks: [F034:update_timestamp],[F036:deactivate],[F035:deactivate]
 ---
 
-F056│observation_pipeline.py│276
+F016│observation_pipeline.py│276
 S: kernel/observation_pipeline.py
 D: ●__future__,datetime,logging,typing,uuid
 C: ObservationPipeline│[__init__,process,normalize_observation,generate_events,generate_signals,detect_patterns,update_memory,run_compression_if_needed,utc_now,health_check]
@@ -72,14 +72,14 @@ C: ObservationPipeline│[__init__,process,normalize_observation,generate_events
    F: run_compression_if_needed(self)→None
       S: Optional memory compression step.
    F: utc_now()→str
-   ↳Called by: F072:update_timestamp,F073:update_timestamp,F076:mark_interaction
-   ↳Impact: 🔴HIGH (9 dependents) | Breaks: [F072:update_timestamp],[F073:update_timestamp],[F076:mark_interaction]
+   ↳Called by: F034:update_timestamp,F036:deactivate,F035:deactivate
+   ↳Impact: 🔴HIGH (9 dependents) | Breaks: [F034:update_timestamp],[F036:deactivate],[F035:deactivate]
       S: UTC ISO timestamp.
    F: health_check(self)→Any
       S: Pipeline component status.
 ---
 
-F059│ontology_registry.py│388
+F019│ontology_registry.py│388
 S: kernel/ontology_registry.py
 D: ●__future__,kernel,logging,typing
 C: OntologyRegistry│[__init__,is_valid,get_category,get_types_by_category,list_types,list_categories,register_ontology,remove_ontology,search,export_registry,+1]
@@ -108,47 +108,7 @@ C: OntologyRegistry│[__init__,is_valid,get_category,get_types_by_category,list
    F: summary(self)→Any
 ---
 
-F316│test_integration.py│231
-D: ●kernel,modules,os,tempfile,unittest,+4
-C: TestContradictionDetection│[sem_mem,test_detects_contradiction_in_agreed_beliefs,test_no_false_positive_when_not_agreed,test_no_false_positive_no_contradiction_edge,test_no_contradiction_when_filter_matches_only_one_side,test_no_results_for_nonexistent_filter]
-   S: detect_contradictions_for_beliefs flags known contradictions.
-C: TestSignalPipeline│[cleanup,test_belief_shift_signal_stored_in_working_memory,test_contradiction_signal_triggers_pattern,test_confidence_change_signal_stored]
-   S: signal_extractor.extract_and_emit reaches belief_signal_handler.
-C: TestPopulateSemanticMemory│[cleanup_semantic,_populate_semantic_memory,test_populates_semantic_nodes_and_edges,test_populates_vector_store,test_populate_handles_duplicate_calls]
-   S: Semantic population: nodes, edges, and ChromaDB indexing.
-C: TestContradictionDetection│[sem_mem,test_detects_contradiction_in_agreed_beliefs,test_no_false_positive_when_not_agreed,test_no_false_positive_no_contradiction_edge,test_no_contradiction_when_filter_matches_only_one_side,test_no_results_for_nonexistent_filter]
-   S: detect_contradictions_for_beliefs flags known contradictions.
-   F: sem_mem(self)
-   F: test_detects_contradiction_in_agreed_beliefs(self,sem_mem)
-   ↳Calls: F111:detect_contradictions_for_beliefs
-   F: test_no_false_positive_when_not_agreed(self,sem_mem)
-   ↳Calls: F111:detect_contradictions_for_beliefs
-   F: test_no_false_positive_no_contradiction_edge(self,sem_mem)
-   ↳Calls: F111:detect_contradictions_for_beliefs
-   F: test_no_contradiction_when_filter_matches_only_one_side(self,sem_mem)
-   ↳Calls: F111:detect_contradictions_for_beliefs
-   F: test_no_results_for_nonexistent_filter(self,sem_mem)
-   ↳Calls: F111:detect_contradictions_for_beliefs
-C: TestSignalPipeline│[cleanup,test_belief_shift_signal_stored_in_working_memory,test_contradiction_signal_triggers_pattern,test_confidence_change_signal_stored]
-   S: signal_extractor.extract_and_emit reaches belief_signal_handler.
-   F: cleanup(self)
-   ↳Calls: F104:register_handlers,F104:unregister_handlers
-   F: test_belief_shift_signal_stored_in_working_memory(self)
-   F: test_contradiction_signal_triggers_pattern(self)
-   F: test_confidence_change_signal_stored(self)
-C: TestPopulateSemanticMemory│[cleanup_semantic,_populate_semantic_memory,test_populates_semantic_nodes_and_edges,test_populates_vector_store,test_populate_handles_duplicate_calls]
-   S: Semantic population: nodes, edges, and ChromaDB indexing.
-   F: cleanup_semantic(self)
-   F: _populate_semantic_memory(self,graph,topic)
-   ↳Called by: F292:debate_step | Calls: F298:index_graph
-   ↳Impact: 🟢LOW (1 dependents) | Breaks: [F292:debate_step]
-   F: test_populates_semantic_nodes_and_edges(self)
-   F: test_populates_vector_store(self)
-   ↳Calls: F094:_get_collection,F298:_get_collection
-   F: test_populate_handles_duplicate_calls(self)
----
-
-F058│unit_registry.py│415
+F018│unit_registry.py│415
 S: kernel/unit_registry.py
 D: ●__future__,datetime,logging,typing
 C: UnitRegistry│[__init__,register_unit,unregister_unit,load_unit,get_unit,unit_exists,get_units_by_type,query_units,add_relation,get_relations,+6]
@@ -157,7 +117,7 @@ C: UnitRegistry│[__init__,register_unit,unregister_unit,load_unit,get_unit,uni
    S: Global runtime unit registry.
    F: __init__(self,unit_storage,ontology_registry,config)
    F: register_unit(self,unit)→bool
-   ↳Calls: F074:add,F051:add
+   ↳Calls: F034:add
       S: Register active unit.
    F: unregister_unit(self,unit_id)→bool
       S: Remove unit from active registry.
@@ -184,6 +144,6 @@ C: UnitRegistry│[__init__,register_unit,unregister_unit,load_unit,get_unit,uni
       S: Export lightweight registry metadata.
    F: summary(self)→Any
    F: utc_now()→str
-   ↳Called by: F072:update_timestamp,F073:update_timestamp,F076:mark_interaction
-   ↳Impact: 🔴HIGH (9 dependents) | Breaks: [F072:update_timestamp],[F073:update_timestamp],[F076:mark_interaction]
+   ↳Called by: F034:update_timestamp,F036:deactivate,F035:deactivate
+   ↳Impact: 🔴HIGH (9 dependents) | Breaks: [F034:update_timestamp],[F036:deactivate],[F035:deactivate]
 ---
