@@ -147,7 +147,7 @@ def register_handlers():
         "confidence_change",
         handle_confidence_change_signal
     )
-    logger.info("Belief signal handlers registered")
+    logger.debug("Belief signal handlers registered")
 
 def unregister_handlers():
     """Unregister all belief signal handlers."""

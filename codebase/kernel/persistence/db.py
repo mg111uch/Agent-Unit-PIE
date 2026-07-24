@@ -105,6 +105,30 @@ CREATE INDEX IF NOT EXISTS idx_hypotheses_type ON hypotheses(hypothesis_type);
 CREATE INDEX IF NOT EXISTS idx_hypotheses_status ON hypotheses(status);
 CREATE INDEX IF NOT EXISTS idx_working_memory_type ON working_memory(memory_type);
 CREATE INDEX IF NOT EXISTS idx_generic_memory_type ON generic_memory(memory_type);
+
+CREATE TABLE IF NOT EXISTS tool_stats (
+    tool_name TEXT PRIMARY KEY,
+    call_count INTEGER DEFAULT 1,
+    last_called_at REAL NOT NULL,
+    total_duration_ms REAL DEFAULT 0,
+    error_count INTEGER DEFAULT 0,
+    output_chars INTEGER DEFAULT 0,
+    token_estimate INTEGER DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS file_access (
+    file_path TEXT NOT NULL,
+    operation TEXT NOT NULL,
+    access_count INTEGER DEFAULT 1,
+    last_accessed_at REAL NOT NULL,
+    PRIMARY KEY (file_path, operation)
+);
+
+CREATE TABLE IF NOT EXISTS daily_read_budget (
+    date TEXT PRIMARY KEY,
+    lines_used INTEGER DEFAULT 0,
+    budget INTEGER DEFAULT 500
+);
 """
 
 
@@ -132,6 +156,8 @@ class KernelDB:
         for col_sql in [
             "ALTER TABLE semantic_nodes ADD COLUMN topic_id TEXT DEFAULT ''",
             "ALTER TABLE semantic_edges ADD COLUMN topic_id TEXT DEFAULT ''",
+            "ALTER TABLE tool_stats ADD COLUMN output_chars INTEGER DEFAULT 0",
+            "ALTER TABLE tool_stats ADD COLUMN token_estimate INTEGER DEFAULT 0",
         ]:
             try:
                 self.conn.execute(col_sql)
@@ -522,6 +548,96 @@ class KernelDB:
         ).fetchone()
         return row is not None
 
+    # --- TOOL STATS ---
+
+    def record_tool_call(self, tool_name: str, duration_ms: float = 0, is_error: bool = False, output_chars: int = 0):
+        now = time.time()
+        tokens = output_chars // 4
+        self.conn.execute(
+            """INSERT INTO tool_stats (tool_name, call_count, last_called_at, total_duration_ms, error_count, output_chars, token_estimate)
+               VALUES (?, 1, ?, ?, ?, ?, ?)
+               ON CONFLICT(tool_name) DO UPDATE SET
+                   call_count = call_count + 1,
+                   last_called_at = ?,
+                   total_duration_ms = total_duration_ms + ?,
+                   error_count = error_count + ?,
+                   output_chars = output_chars + ?,
+                   token_estimate = token_estimate + ?""",
+            (tool_name, now, duration_ms, 1 if is_error else 0, output_chars, tokens,
+             now, duration_ms, 1 if is_error else 0, output_chars, tokens),
+        )
+        self.conn.commit()
+
+    def get_tool_stats(self) -> List[Dict[str, Any]]:
+        rows = self.conn.execute(
+            "SELECT tool_name, call_count, last_called_at, total_duration_ms, error_count, "
+            "output_chars, token_estimate, "
+            "CASE WHEN call_count > 0 THEN total_duration_ms / call_count ELSE 0 END AS avg_duration_ms, "
+            "CASE WHEN call_count > 0 THEN CAST(error_count AS REAL) / call_count ELSE 0 END AS error_rate, "
+            "CASE WHEN call_count > 0 THEN output_chars / call_count ELSE 0 END AS avg_chars, "
+            "CASE WHEN call_count > 0 THEN token_estimate / call_count ELSE 0 END AS avg_tokens "
+            "FROM tool_stats ORDER BY call_count DESC"
+        ).fetchall()
+        return [dict(r) for r in rows]
+
+    # --- FILE ACCESS ---
+
+    def record_file_access(self, file_path: str, operation: str):
+        now = time.time()
+        self.conn.execute(
+            """INSERT INTO file_access (file_path, operation, access_count, last_accessed_at)
+               VALUES (?, ?, 1, ?)
+               ON CONFLICT(file_path, operation) DO UPDATE SET
+                   access_count = access_count + 1,
+                   last_accessed_at = ?""",
+            (file_path, operation, now, now),
+        )
+        self.conn.commit()
+
+    def get_file_stats(self, limit: int = 20) -> List[Dict[str, Any]]:
+        rows = self.conn.execute(
+            "SELECT file_path, operation, access_count, last_accessed_at "
+            "FROM file_access ORDER BY access_count DESC LIMIT ?",
+            (limit,),
+        ).fetchall()
+        return [dict(r) for r in rows]
+
+    # --- DAILY READING BUDGET ---
+
+    def record_llm_output_lines(self, lines: int):
+        today = time.strftime("%Y-%m-%d")
+        self.conn.execute(
+            """INSERT INTO daily_read_budget (date, lines_used, budget)
+               VALUES (?, ?, 500)
+               ON CONFLICT(date) DO UPDATE SET
+                   lines_used = lines_used + ?""",
+            (today, lines, lines),
+        )
+        self.conn.commit()
+
+    def get_daily_budget(self, date_str: Optional[str] = None) -> Dict[str, Any]:
+        if date_str is None:
+            date_str = time.strftime("%Y-%m-%d")
+        row = self.conn.execute(
+            "SELECT date, lines_used, budget FROM daily_read_budget WHERE date = ?",
+            (date_str,),
+        ).fetchone()
+        if row:
+            result = dict(row)
+        else:
+            result = {"date": date_str, "lines_used": 0, "budget": 500}
+        result["remaining"] = max(0, result["budget"] - result["lines_used"])
+        return result
+
+    def reset_daily_budget(self, budget: int = 500):
+        today = time.strftime("%Y-%m-%d")
+        self.conn.execute(
+            "INSERT INTO daily_read_budget (date, lines_used, budget) VALUES (?, 0, ?) "
+            "ON CONFLICT(date) DO UPDATE SET lines_used = 0, budget = ?",
+            (today, budget, budget),
+        )
+        self.conn.commit()
+
     # --- MAINTENANCE ---
 
     def vacuum(self):
@@ -537,6 +653,9 @@ class KernelDB:
             "hypotheses",
             "working_memory",
             "generic_memory",
+            "tool_stats",
+            "file_access",
+            "daily_read_budget",
         ]:
             row = self.conn.execute(
                 f"SELECT COUNT(*) as cnt FROM {table}"

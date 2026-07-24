@@ -13,42 +13,11 @@ import json
 import os
 import sys
 
-from cryptography.fernet import Fernet, InvalidToken
-from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
+from agent_tools.encrypt_env import _try_unlock_env
 
 ENCRYPTED_ENV_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env.enc")
-
-
-def _derive_key(password: str, salt: bytes) -> bytes:
-    kdf = PBKDF2HMAC(
-        algorithm=hashes.SHA256(),
-        length=32,
-        salt=salt,
-        iterations=600_000,
-    )
-    return base64.urlsafe_b64encode(kdf.derive(password.encode()))
-
-
-def _try_unlock_env() -> None:
-    if not os.path.exists(ENCRYPTED_ENV_FILE):
-        return
-    password = getpass.getpass("Enter password to unlock API keys: ")
-    with open(ENCRYPTED_ENV_FILE, "rb") as f:
-        salt = f.read(16)
-        encrypted_data = f.read()
-    key = _derive_key(password, salt)
-    try:
-        payload = json.loads(Fernet(key).decrypt(encrypted_data))
-    except InvalidToken:
-        print("Invalid password.")
-        sys.exit(1)
-    for k, v in payload.items():
-        os.environ.setdefault(k, v)
-    print("API keys unlocked.")
-
-
-_try_unlock_env()
+print(ENCRYPTED_ENV_FILE)
+_try_unlock_env(ENCRYPTED_ENV_FILE)
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 

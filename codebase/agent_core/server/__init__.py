@@ -115,3 +115,9 @@ from agent_core.server.routes import (
 )
 
 from agent_core.server.ws_handler import websocket_agent
+
+# Serve frontend at /
+_frontend_dir = os.path.normpath(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "..", "frontend"))
+if os.path.isdir(_frontend_dir):
+    from fastapi.staticfiles import StaticFiles
+    app.mount("/", StaticFiles(directory=_frontend_dir, html=True), name="frontend")

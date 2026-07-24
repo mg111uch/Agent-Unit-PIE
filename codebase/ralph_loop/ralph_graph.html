@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8"/>
+<title>Ralph Agent Loop</title>
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<script src="https://dagrejs.github.io/project/dagre-d3/latest/dagre-d3.js"></script>
+<style>
+  html,body { margin:0; height:100%; font-family:sans-serif; background:#2a2a2a; color:#fff; overflow:hidden; }
+  svg { display:block; width:100vw; height:100vh; background:#2a2a2a; }
+  .node rect, .node ellipse, .node polygon { stroke:#ccc; stroke-width:1.5; }
+  .label { font-size:13px; pointer-events:none; fill:#000; }
+  .edgePath path { stroke:#ccc; stroke-width:1.5; fill:none; }
+  .edgeLabel { font-size:11px; fill:#fff; background:#2a2a2a; }
+</style>
+</head>
+<body>
+<svg id="graph"></svg>
+<script>
+const data = {"nodes":[["start","Start Session","ellipse","#d4f0c0"],["end","All Features Done\nExit","ellipse","#f0c0c0"],["read","Read next feature\nfrom devpt_state.md","rect","#ffffff"],["gen","LLM generates\ncode + tests","rect","#e0e0ff"],["test","Run tests\n(CodeExecTool)","diamond","#ffffff"],["pass_","Tests pass?","diamond","#ffffff"],["mark_done","Mark feature\n\"done\"","rect","#d4f0c0"],["mark_fail","Mark feature\n\"failed\"","rect","#f0c0c0"],["retry_check","Retries < 3?","diamond","#ffffff"],["check_features","More features\nremaining?","diamond","#ffffff"]],"edges":[["start","read",""],["read","gen",""],["gen","test",""],["test","pass_",""],["pass_","mark_done","Yes"],["pass_","mark_fail","No"],["mark_fail","retry_check",""],["retry_check","gen","Yes (retry)"],["mark_done","check_features",""],["retry_check","check_features","No (escalate)"],["check_features","read","Yes"],["check_features","end","No"]]};
+
+const g = new dagreD3.graphlib.Graph().setGraph({
+  rankdir: 'TB', splines: 'ortho', nodesep: 20, ranksep: 30
+});
+
+data.nodes.forEach(([id, label, shape, color]) => {
+  const a = { label, style: `fill:${color}` };
+  if (shape === 'ellipse') a.shape = 'ellipse';
+  else if (shape === 'diamond') a.shape = 'diamond';
+  else a.shape = 'rect';
+  g.setNode(id, a);
+});
+
+data.edges.forEach(([from, to, label]) => {
+  g.setEdge(from, to, { label, curve: d3.curveBasis });
+});
+
+const svg = d3.select('#graph');
+const zoomG = svg.append('g');
+const inner = zoomG.append('g');
+const render = new dagreD3.render();
+render(inner, g);
+
+inner.selectAll('.edgeLabel text').attr('fill', '#fff');
+
+const pad = 30;
+const gw = g.graph().width;
+const gh = g.graph().height;
+const s = Math.max(gw, gh) + pad * 2;
+const cx = (s - gw) / 2;
+const cy = pad;
+svg.attr('viewBox', `0 0 ${s} ${s}`).attr('preserveAspectRatio', 'xMidYMid meet');
+inner.attr('transform', `translate(${cx},${cy})`);
+
+svg.call(d3.zoom().on('zoom', (e) => zoomG.attr('transform', e.transform)));
+</script>
+</body>
+</html>

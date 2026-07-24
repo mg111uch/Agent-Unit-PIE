@@ -4,6 +4,7 @@ from pathlib import Path
 from agent_core.workspace import resolve, WORKSPACE_ROOT, PathEscapeError, to_relative
 from agent_core.tools.undo_ops import save_checkpoint
 from agent_core.config import CODEBASE_ROOT
+from kernel.persistence.db import kernel_db
 
 MAX_FILE_SIZE = 512 * 1024  # 512 KB
 
@@ -67,6 +68,8 @@ def read_file(path: str = "", **kwargs) -> str:
         limit = int(limit)
     try:
         full = resolve(path)
+        try: kernel_db.record_file_access(to_relative(full), "read")
+        except: pass
         if not os.path.exists(full):
             parent = os.path.dirname(full) or WORKSPACE_ROOT
             nearby = []
@@ -137,6 +140,8 @@ def write_to_file(input_data) -> str:
             return "Error: 'path' and 'mode' are required"
 
         full_path = resolve(path)
+        try: kernel_db.record_file_access(to_relative(full_path), mode)
+        except: pass
         exists = os.path.exists(full_path)
 
         if mode == "create":
@@ -178,6 +183,8 @@ def edit_file(input_data) -> str:
         data = json.loads(input_data) if isinstance(input_data, str) else input_data
         path, old, new = data["path"], data["old_string"], data["new_string"]
         full = resolve(path)
+        try: kernel_db.record_file_access(to_relative(full), "edit")
+        except: pass
         if not os.path.exists(full):
             parent = os.path.dirname(full) or WORKSPACE_ROOT
             nearby = []

@@ -1,18 +1,21 @@
 ## Codebase size
-Total files processed: 266
-Total lines of code: 47068
-Total tokens: 318663
+Total files processed: 275
+Total lines of code: 47740
+Total tokens: 328965
 ## End Codebase size
 
 ## Directory Structure 
 - **Project path:** `/home/manigupt/Hello/Agentic_Unit_PIE`
 ### FILE_MAP Tree
-├── scripts/ [515 LOC, 3842 tokens]
-│   ├── [] verify_citations.py [124 LOC, 943 tokens]
+├── scripts/ [442 LOC, 3443 tokens]
+│   ├── lib/ [118 LOC, 799 tokens]
+│   │   ├── __init__.py
+│   │   └── [] citations.py [118 LOC, 799 tokens]
+│   ├── [] verify_citations.py [57 LOC, 440 tokens]
 │   ├── [] tag_checkpoint.py [49 LOC, 342 tokens]
-│   ├── [] seed_hypotheses.py [183 LOC, 1350 tokens]
-│   └── [] validate_capabilities.py [159 LOC, 1207 tokens]
-├── codebase/ [51204 LOC, 309642 tokens]
+│   ├── [] seed_hypotheses.py [102 LOC, 747 tokens]
+│   └── [] validate_capabilities.py [116 LOC, 1115 tokens]
+├── codebase/ [51941 LOC, 319472 tokens]
 │   ├── storage/ [808 LOC, 3826 tokens]
 │   │   ├── raw_observation_storage.py
 │   │   ├── [] unit_storage.py [432 LOC, 2036 tokens]
@@ -26,7 +29,7 @@ Total tokens: 318663
 │   │   ├── summarizer_agent.py
 │   │   ├── simulation_agent.py
 │   │   └── pattern_agent.py
-│   ├── agent_tools/ [3363 LOC, 26697 tokens]
+│   ├── agent_tools/ [3393 LOC, 26915 tokens]
 │   │   ├── atlas_tools/ [2127 LOC, 17683 tokens]
 │   │   │   ├── [] make_directree.py [221 LOC, 2084 tokens]
 │   │   │   ├── [] token_count.py [171 LOC, 1305 tokens]
@@ -44,15 +47,15 @@ Total tokens: 318663
 │   │   ├── [] screenshot_region.py [34 LOC, 352 tokens]
 │   │   ├── [] record_browser.py [66 LOC, 506 tokens]
 │   │   ├── [] ask_gemini.py [216 LOC, 1530 tokens]
+│   │   ├── [] openrouter_api.py [27 LOC, 159 tokens]
 │   │   ├── [] run_process.py [210 LOC, 1407 tokens]
-│   │   ├── [] Llama_test.py [24 LOC, 156 tokens]
 │   │   ├── [] run_and_record.py [170 LOC, 1177 tokens]
 │   │   ├── [] inference_api_hf.py [25 LOC, 176 tokens]
 │   │   ├── [] swapFiles.py [53 LOC, 434 tokens]
 │   │   ├── [] gemini_api_state.json [1 LOC, 14 tokens]
 │   │   ├── [] play_sound.py [13 LOC, 114 tokens]
 │   │   ├── [] screenRecord.py [144 LOC, 971 tokens]
-│   │   ├── [] encrypt_env.py [85 LOC, 571 tokens]
+│   │   ├── [] encrypt_env.py [112 LOC, 786 tokens]
 │   │   └── [] gemini_doc_clean.py [86 LOC, 622 tokens]
 │   ├── prompt_fragments/ [105 LOC, 1692 tokens]
 │   │   ├── [] 20_file_ops_workflow.md [12 LOC, 402 tokens]
@@ -65,9 +68,9 @@ Total tokens: 318663
 │   │   ├── [] 70_embed_mode.md [8 LOC, 150 tokens]
 │   │   ├── [] 00_base_persona.md [11 LOC, 158 tokens]
 │   │   └── [] 60_response_contract.md [19 LOC, 273 tokens]
-│   ├── kernel/ [14841 LOC, 74759 tokens]
-│   │   ├── persistence/ [548 LOC, 3996 tokens]
-│   │   │   ├── [] db.py [548 LOC, 3996 tokens]
+│   ├── kernel/ [14962 LOC, 75879 tokens]
+│   │   ├── persistence/ [667 LOC, 5100 tokens]
+│   │   │   ├── [] db.py [667 LOC, 5100 tokens]
 │   │   │   └── __init__.py
 │   │   ├── config/ [16 LOC, 128 tokens]
 │   │   │   ├── [] kernel_config.py [16 LOC, 128 tokens]
@@ -117,8 +120,8 @@ Total tokens: 318663
 │   │   │   ├── [] signal_extractor.py [210 LOC, 1442 tokens]
 │   │   │   ├── pattern_extractor.py
 │   │   │   └── hypothesis_extractor.py
-│   │   ├── signals/ [745 LOC, 4095 tokens]
-│   │   │   ├── [] signal_engine.py [322 LOC, 1710 tokens]
+│   │   ├── signals/ [747 LOC, 4111 tokens]
+│   │   │   ├── [] signal_engine.py [324 LOC, 1726 tokens]
 │   │   │   ├── [] belief_signal_handler.py [166 LOC, 1096 tokens]
 │   │   │   ├── signal_router.py
 │   │   │   └── [] signal_validator.py [257 LOC, 1289 tokens]
@@ -286,33 +289,44 @@ Total tokens: 318663
 │   │   ├── [] test_tool_pluggability.py [233 LOC, 1896 tokens]
 │   │   ├── [] __init__.py [1 LOC, 9 tokens]
 │   │   └── [] agent_test.py [178 LOC, 1168 tokens]
-│   ├── agent_core/ [7431 LOC, 58538 tokens]
-│   │   ├── server/ [648 LOC, 4770 tokens]
-│   │   │   ├── [] ws_handler.py [320 LOC, 2280 tokens]
+│   ├── frontend/ [691 LOC, 8060 tokens]
+│   │   ├── components/ [284 LOC, 2421 tokens]
+│   │   │   ├── [] QuestionPanel.js [43 LOC, 315 tokens]
+│   │   │   ├── [] AgentChat.js [55 LOC, 406 tokens]
+│   │   │   ├── [] AgentHeader.js [53 LOC, 415 tokens]
+│   │   │   └── [] AgentInput.js [133 LOC, 1285 tokens]
+│   │   ├── [] websocket.js [54 LOC, 489 tokens]
+│   │   ├── [] style.css [16 LOC, 314 tokens]
+│   │   ├── [] store.js [84 LOC, 610 tokens]
+│   │   ├── [] app.js [28 LOC, 154 tokens]
+│   │   └── [] index.html [225 LOC, 4072 tokens]
+│   ├── agent_core/ [7354 LOC, 59162 tokens]
+│   │   ├── server/ [665 LOC, 4933 tokens]
+│   │   │   ├── [] ws_handler.py [326 LOC, 2329 tokens]
 │   │   │   ├── [] routes.py [107 LOC, 867 tokens]
-│   │   │   ├── [] auth.py [31 LOC, 185 tokens]
-│   │   │   ├── [] __init__.py [117 LOC, 840 tokens]
+│   │   │   ├── [] auth.py [36 LOC, 230 tokens]
+│   │   │   ├── [] __init__.py [123 LOC, 909 tokens]
 │   │   │   └── [] audit.py [73 LOC, 598 tokens]
-│   │   ├── tools/ [3448 LOC, 30405 tokens]
-│   │   │   ├── code_rag/ [726 LOC, 6923 tokens]
-│   │   │   │   ├── [] tools.py [324 LOC, 2954 tokens]
-│   │   │   │   ├── [] __init__.py [17 LOC, 115 tokens]
+│   │   ├── tools/ [3318 LOC, 30585 tokens]
+│   │   │   ├── code_rag/ [907 LOC, 8675 tokens]
+│   │   │   │   ├── [] tools.py [500 LOC, 4677 tokens]
+│   │   │   │   ├── [] __init__.py [22 LOC, 144 tokens]
 │   │   │   │   └── [] engine.py [385 LOC, 3854 tokens]
 │   │   │   ├── [] plan_ops.py [71 LOC, 524 tokens]
 │   │   │   ├── [] question_ops.py [67 LOC, 514 tokens]
 │   │   │   ├── [] audit_ops.py [44 LOC, 272 tokens]
-│   │   │   ├── [] kernel_ops.py [237 LOC, 1579 tokens]
+│   │   │   ├── [] kernel_ops.py [235 LOC, 1563 tokens]
+│   │   │   ├── [] observer_ops.py [69 LOC, 844 tokens]
 │   │   │   ├── [] sim_ops.py [150 LOC, 924 tokens]
 │   │   │   ├── [] test_ops.py [98 LOC, 832 tokens]
 │   │   │   ├── [] debate_ops.py [9 LOC, 66 tokens]
 │   │   │   ├── [] undo_ops.py [143 LOC, 984 tokens]
 │   │   │   ├── [] context_dump.py [155 LOC, 1387 tokens]
-│   │   │   ├── [] schemas.py [634 LOC, 5754 tokens]
-│   │   │   ├── [] __init__.py [458 LOC, 5190 tokens]
+│   │   │   ├── [] __init__.py [564 LOC, 7058 tokens]
 │   │   │   ├── [] git_ops.py [136 LOC, 919 tokens]
-│   │   │   ├── [] file_ops.py [387 LOC, 3538 tokens]
+│   │   │   ├── [] file_ops.py [458 LOC, 4282 tokens]
 │   │   │   ├── [] expand_ops.py [9 LOC, 65 tokens]
-│   │   │   └── [] registry.py [124 LOC, 934 tokens]
+│   │   │   └── [] registry.py [203 LOC, 1676 tokens]
 │   │   ├── loop/ [907 LOC, 6252 tokens]
 │   │   │   ├── [] streaming.py [94 LOC, 579 tokens]
 │   │   │   ├── [] executor.py [127 LOC, 980 tokens]
@@ -332,7 +346,7 @@ Total tokens: 318663
 │   │   ├── [] context.py [45 LOC, 311 tokens]
 │   │   ├── [] response_parse.py [167 LOC, 1274 tokens]
 │   │   ├── [] providers_setup.py [89 LOC, 692 tokens]
-│   │   ├── [] mcp_server.py [174 LOC, 1211 tokens]
+│   │   ├── [] mcp_server.py [210 LOC, 1492 tokens]
 │   │   ├── [] auto_research.py [94 LOC, 694 tokens]
 │   │   ├── [] prompts.py [120 LOC, 1021 tokens]
 │   │   ├── [] config.py [67 LOC, 680 tokens]
@@ -343,13 +357,21 @@ Total tokens: 318663
 │   │   ├── [] secrets_redactor.py [20 LOC, 116 tokens]
 │   │   ├── [] message_store.py [161 LOC, 1296 tokens]
 │   │   └── [] commands.py [25 LOC, 199 tokens]
-│   ├── [] server.py [62 LOC, 430 tokens]
+│   ├── [] server.py [31 LOC, 200 tokens]
 │   ├── [] system_instruction.md [79 LOC, 1120 tokens]
 │   ├── [] __init__.py [1 LOC, 5 tokens]
 │   ├── [] tui_output.txt [4 LOC, 24 tokens]
-│   ├── [] config.json [59 LOC, 582 tokens]
+│   ├── [] config.json [62 LOC, 620 tokens]
 │   ├── [] tool_client.py [203 LOC, 2213 tokens]
 │   └── [] .env.enc [1 LOC, 222 tokens]
+├── project_docs/ [6883 LOC, 34396 tokens]
+│   ├── [] GPT_5-5_Chat.md [4962 LOC, 18724 tokens]
+│   ├── [] backupPlans.md [175 LOC, 3709 tokens]
+│   ├── [] agent_core_design.md [211 LOC, 2405 tokens]
+│   ├── [] ADAPTERS.md [219 LOC, 1399 tokens]
+│   ├── [] Devpt_phases.md [333 LOC, 2918 tokens]
+│   ├── [] agent_test_prompts.md [87 LOC, 775 tokens]
+│   └── [] README.md [896 LOC, 4466 tokens]
 ├── data/ [634 LOC, 6017 tokens]
 │   ├── chroma_db/
 │   ├── memory/
@@ -365,6 +387,9 @@ Total tokens: 318663
 │   │   ├── humans/
 │   │   ├── cities/
 │   │   └── patterns/
+│   ├── workspaces/
+│   │   ├── local/
+│   │   └── 1/
 │   ├── topics/ [546 LOC, 5395 tokens]
 │   │   ├── theism_atheism/ [372 LOC, 2976 tokens]
 │   │   │   ├── wiki/ [7 LOC, 255 tokens]
@@ -392,42 +417,35 @@ Total tokens: 318663
 │           ├── body/
 │           ├── profile/
 │           └── system_summery.md
-├── system_devpt_reports/ [8810 LOC, 55826 tokens]
-│   ├── debate_argu/ [584 LOC, 6337 tokens]
-│   │   ├── [] improvement.md [38 LOC, 700 tokens]
-│   │   ├── [] roadmap.md [234 LOC, 2423 tokens]
-│   │   ├── [] status.md [28 LOC, 693 tokens]
+├── system_devpt_reports/ [1694 LOC, 20271 tokens]
+│   ├── debate_argu/ [336 LOC, 3421 tokens]
+│   │   ├── [] roadmap.md [24 LOC, 224 tokens]
+│   │   ├── [] status.md [28 LOC, 676 tokens]
 │   │   └── [] README.md [284 LOC, 2521 tokens]
-│   ├── codebase_atlas/ [664 LOC, 7495 tokens]
+│   ├── codebase_atlas/ [473 LOC, 6433 tokens]
 │   │   ├── [] roadmap.md [202 LOC, 4004 tokens]
-│   │   ├── [] status.md [211 LOC, 1311 tokens]
+│   │   ├── [] status.md [20 LOC, 249 tokens]
 │   │   └── [] README.md [251 LOC, 2180 tokens]
-│   ├── populaDyn_simu/ [262 LOC, 1621 tokens]
+│   ├── populaDyn_simu/ [277 LOC, 1758 tokens]
 │   │   ├── roadmap.md
-│   │   ├── status.md
+│   │   ├── [] status.md [15 LOC, 137 tokens]
 │   │   └── [] README.md [262 LOC, 1621 tokens]
-│   ├── kernel/ [205 LOC, 3954 tokens]
+│   ├── kernel/ [90 LOC, 1623 tokens]
 │   │   ├── [] roadmap.md [66 LOC, 1205 tokens]
-│   │   ├── [] status.md [139 LOC, 2749 tokens]
-│   │   └── README.md
-│   ├── agent_core/ [460 LOC, 5900 tokens]
-│   │   ├── [] roadmap.md [211 LOC, 2405 tokens]
-│   │   ├── status.md
-│   │   └── [] README.md [249 LOC, 3495 tokens]
-│   ├── [] GPT_5-5_Chat.md [4962 LOC, 18724 tokens]
-│   ├── [] backupPlans.md [135 LOC, 2142 tokens]
-│   ├── [] ADAPTERS.md [219 LOC, 1399 tokens]
-│   ├── [] TODO.md [6 LOC, 97 tokens]
-│   ├── FeatureIdeas.md
-│   ├── FixesIssues.md
-│   ├── [] Devpt_phases.md [333 LOC, 2918 tokens]
-│   ├── [] agent_test_prompts.md [84 LOC, 773 tokens]
-│   └── [] README.md [896 LOC, 4466 tokens]
+│   │   └── [] status.md [24 LOC, 418 tokens]
+│   ├── agent_core/ [329 LOC, 4603 tokens]
+│   │   ├── [] roadmap.md [18 LOC, 131 tokens]
+│   │   ├── [] status.md [22 LOC, 284 tokens]
+│   │   └── [] README.md [289 LOC, 4188 tokens]
+│   ├── [] FeatureIdeas.md [17 LOC, 117 tokens]
+│   └── [] FixesIssues.md [172 LOC, 2316 tokens]
 ├── [] opencode.json [16 LOC, 163 tokens]
-├── [] AGENTS.md [129 LOC, 1952 tokens]
-├── code_dump.txt
-├── [] codefiles_map.md [433 LOC, 4660 tokens]
+├── [] Agent_graph.html [120 LOC, 1584 tokens]
+├── [] context_dump.txt [270 LOC, 3165 tokens]
+├── [] TODO.md [17 LOC, 318 tokens]
+├── [] AGENTS.md [162 LOC, 2383 tokens]
+├── [] codefiles_map.md [435 LOC, 7784 tokens]
 ├── [] .gitignore [11 LOC, 33 tokens]
-├── [] README.md [96 LOC, 600 tokens]
-└── [] project_tools.md [24 LOC, 900 tokens]
+├── [] README.md [96 LOC, 604 tokens]
+└── [] project_tools.md [24 LOC, 910 tokens]
 ### End Tree

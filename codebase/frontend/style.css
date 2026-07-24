@@ -1,0 +1,16 @@
+.connection-led { width:10px; height:10px; border-radius:50%; display:inline-block; }
+.connection-led.connected { background:#34d399; box-shadow:0 0 8px rgba(52,211,153,.6); }
+.connection-led.disconnected { background:#f59e0b; animation:pulse 2s infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+.tool-card pre { max-height:9rem; overflow-y:auto; font-size:.75rem; }
+.thinking-dots::after { content:'...'; animation:dots 1.5s steps(4) infinite; }
+@keyframes dots { 0%{content:''} 25%{content:'.'} 50%{content:'..'} 75%{content:'...'} }
+
+.stream-cursor { display:inline-block; width:8px; height:14px; background:#38bdf8; animation:blink .8s step-end infinite; vertical-align:text-bottom; margin-left:1px; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+
+textarea::-webkit-scrollbar { width:6px; }
+textarea::-webkit-scrollbar-thumb { background:#52525b; border-radius:3px; }
+::-webkit-scrollbar { width:6px; }
+::-webkit-scrollbar-thumb { background:#3f3f46; border-radius:3px; }

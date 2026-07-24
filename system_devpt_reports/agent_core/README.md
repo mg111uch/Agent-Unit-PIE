@@ -17,6 +17,11 @@
 | Code RAG | SQLite-based symbol search + call graph from codebase atlas output |
 | Hot-Reload | Auto-detect file changes to tool modules and reload without restart |
 | Simulation Timeout | Cap simulation run time via `timeout` parameter |
+| Tool Call Stats | Per-tool call count, avg duration, error rate, token estimate — tracked in `kernel.db` |
+| File Access Stats | Per-file read/write/edit count — tracks churn and most-accessed files |
+| User Reading Budget | Daily budget for LLM output lines shown to user; auto-alerts when &lt;20% remaining |
+| Hot-Reload MCP Tool | `hot_reload` re-registers tools + sends `notifications/tools/list_changed` to client — no restart needed for next session |
+| Tool Failure Logging | Failed tool calls auto-saved to `generic_memory` with error, args, and timestamp |
 
 ## Tools
 
@@ -92,6 +97,14 @@ All tools support **native function calling** (JSON Schema via `tools/schemas.py
 | `simulation_list` | List runs |
 | `simulation_get_signals` | Get signals |
 
+### Observer Tools (telemetry & observability)
+| Tool | Purpose |
+|------|---------|
+| `tool_stats` | Per-tool call count, avg duration, error rate, avg tokens — flags high-error tools |
+| `file_stats` | Most accessed files by read/write/edit, grouped by file — flags high-churn candidates |
+| `user_reading_budget` | Track daily LLM output lines read by user. Call with `record_lines=N` to log; warns when &lt;20% budget remains |
+| `hot_reload` | Built-in (handled by `mcp_server.py`). Re-registers all tools + sends `notifications/tools/list_changed` to MCP client |
+
 ---
 
 ## ToolRegistry (Pluggable Tools)
@@ -101,7 +114,7 @@ Central registry for tool functions, schemas, and metadata, defined in `agent_co
 
 ```python
 from agent_core.tools import registry
-from agent_core.tools.registry import CAT_FILE, CAT_KERNEL, CAT_SIM, CAT_META, CAT_GIT, CAT_CODE_RAG
+from agent_core.tools.registry import CAT_FILE, CAT_KERNEL, CAT_SIM, CAT_META, CAT_GIT, CAT_CODE_RAG, CAT_OBSERVER
 
 # Get tools filtered by category (no file_ops for embedders)
 kernel_sim = registry.get_tools(categories=[CAT_KERNEL, CAT_SIM])
@@ -126,6 +139,7 @@ registry.add_middleware(lambda name, fn: audit_wrap(name, fn, ...))
 | `meta` | todo_write, todo_read, run_tests, undo_last_edit, checkpoint_info, ask_user_question, debate_step | `meta` |
 | `code_rag` | get_symbol, get_symbols_meta, search_symbols, get_callers_callees, find_impact, get_index_info, file_api, call_chain, compare_apis, symbols_by_file | `code_rag` |
 | `git` | git_status, git_diff, git_commit, git_log | `git` |
+| `observer` | tool_stats, file_stats, user_reading_budget | `observer` |
 
 ### Config-Based Tool Pack Filtering
 Set `AGENT_TOOL_PACKS=file,kernel,sim` env var or `"tool_packs": ["kernel","sim"]` in `config.json` to control which tools are active. Default: all five packs.
@@ -137,7 +151,8 @@ The MCP server (`agent_core/mcp_server.py`) auto-reloads tool modules when their
 - Tracks `st_mtime_ns` of `sim_ops.py`, `kernel_ops.py`, `code_rag.py`, `tools/__init__.py`
 - Detects changes on the next tool call and re-imports + re-registers all tools
 - No server restart needed — edits apply on next `pie_*` call
-- Also available as explicit tool: `kernel_reload` (`pie_kernel_reload` via MCP)
+- Available as explicit tool: `kernel_reload` (`pie_kernel_reload` via MCP)
+- **`hot_reload` built-in tool**: re-registers all tools AND sends `notifications/tools/list_changed` MCP notification so the client re-fetches the tool list. New tools appear without restarting the MCP connection.
 
 ---
 
@@ -249,3 +264,26 @@ All 4 added to `code_rag.py` (`CodeRAG` class methods + tool functions), registe
 - `mcp_server.py:_do_reload()` calls `importlib.reload` on each hot module, then re-runs `_register_all()`
 - Explicit `kernel_reload` tool (`kernel_ops.py`) does the same via tool call
 - `.pyc` cache (`__pycache__/`) is automatically invalidated by `importlib.reload` — no manual cleanup needed
+
+### Observability (kernel.db)
+Three dedicated tables in `data/kernel.db` track telemetry:
+
+**`tool_stats`** — per-tool call log:
+- `tool_name`, `call_count`, `last_called_at`, `total_duration_ms`, `error_count`, `output_chars`, `token_estimate`
+- Auto-recorded in `mcp_server.py:call_mcp_tool()` finally block
+- Derived: `avg_duration_ms`, `error_rate`, `avg_chars`, `avg_tokens`
+- Exposed via `tool_stats` tool; flags tools with >30% error rate
+
+**`file_access`** — per-file operation log:
+- `file_path`, `operation` (read/write/edit), `access_count`, `last_accessed_at`
+- Recorded in `file_ops.py:read_file()`, `write_to_file()`, `edit_file()`
+- Exposed via `file_stats` tool; flags files with >5 total ops as churn candidates
+
+**`daily_read_budget`** — daily user reading cap:
+- `date`, `lines_used`, `budget` (default 500)
+- `user_reading_budget` tool: records LLM output lines, returns usage/remaining
+- Alerts at <20% remaining; resets daily
+
+**`generic_memory`** — tool failure auto-logging:
+- Failed tool calls saved with `memory_type="tool_failure"` in `call_mcp_tool()` except block
+- Payload: `{"tool": name, "error": text, "ts": timestamp, "args": truncated_args}`

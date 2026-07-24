@@ -25,17 +25,20 @@ from mcp.server.stdio import stdio_server
 from mcp.types import (
     CallToolResult,
     ServerCapabilities,
+    ServerNotification,
     TextContent,
     Tool,
+    ToolListChangedNotification,
     ToolsCapability,
 )
 
 from agent_core.tools import registry
-from agent_core.tools.registry import CAT_FILE, CAT_KERNEL, CAT_SIM, CAT_META, CAT_GIT, CAT_CODE_RAG
+from agent_core.tools.registry import CAT_FILE, CAT_KERNEL, CAT_SIM, CAT_META, CAT_GIT, CAT_CODE_RAG, CAT_OBSERVER
+from kernel.persistence.db import kernel_db
 
 # Expose kernel, sim, code_rag, and unique file-MCP tools only
 # CAT_FILE (read_file, write_to_file, etc.) kept internal — redundant with opencode built-ins
-EXPOSED_CATEGORIES = [CAT_KERNEL, CAT_SIM, CAT_CODE_RAG, CAT_FILE]
+EXPOSED_CATEGORIES = [CAT_KERNEL, CAT_SIM, CAT_CODE_RAG, CAT_FILE, CAT_OBSERVER]
 
 # Hot-reload support: watches all .py files under agent_core/tools/
 _WATCH_DIR = "agent_core/tools/"
@@ -116,6 +119,17 @@ async def call_mcp_tool(name: str, arguments: dict[str, Any] | None) -> CallTool
     prefix = registry._mcp_prefix
     reg_name = name[len(prefix):] if prefix and name.startswith(prefix) else name
 
+    # Built-in hot_reload — re-registers tools and notifies client
+    if reg_name == "hot_reload":
+        _do_reload()
+        ctx = server.request_context
+        await ctx.session.send_notification(
+            ServerNotification(ToolListChangedNotification())
+        )
+        return CallToolResult(
+            content=[TextContent(type="text", text="Tools reloaded. Client notified — new tools should appear.")]
+        )
+
     tools = registry.get_tools(categories=EXPOSED_CATEGORIES)
     if reg_name not in tools:
         return CallToolResult(
@@ -123,6 +137,10 @@ async def call_mcp_tool(name: str, arguments: dict[str, Any] | None) -> CallTool
             isError=True,
         )
 
+    import time
+    t0 = time.time()
+    is_error = False
+    result_text = ""
     try:
         fn = tools[reg_name]
         result = fn(arguments or {})
@@ -133,26 +151,44 @@ async def call_mcp_tool(name: str, arguments: dict[str, Any] | None) -> CallTool
                 text = result.data
                 if kernel_read_warning:
                     text = kernel_read_warning + text
+                result_text = text
                 return CallToolResult(
                     content=[TextContent(type="text", text=text)]
                 )
             else:
+                is_error = True
+                result_text = result.to_string()
                 return CallToolResult(
-                    content=[TextContent(type="text", text=result.to_string())],
+                    content=[TextContent(type="text", text=result_text)],
                     isError=True,
                 )
         else:
             text = str(result)
             if kernel_read_warning:
                 text = kernel_read_warning + text
+            result_text = text
             return CallToolResult(
                 content=[TextContent(type="text", text=text)]
             )
     except Exception as e:
+        is_error = True
+        result_text = f"Error: {e}"
         return CallToolResult(
-            content=[TextContent(type="text", text=f"Error: {e}")],
+            content=[TextContent(type="text", text=result_text)],
             isError=True,
         )
+    finally:
+        duration_ms = (time.time() - t0) * 1000
+        try:
+            kernel_db.record_tool_call(reg_name, duration_ms, is_error, len(result_text))
+            if is_error:
+                kernel_db.save_generic_memory(
+                    memory_id=f"tool_failure_{reg_name}_{int(t0)}",
+                    memory_type="tool_failure",
+                    data={"tool": reg_name, "error": result_text[:500], "ts": t0, "args": str(arguments)[:200]},
+                )
+        except Exception:
+            pass
 
 
 async def main():

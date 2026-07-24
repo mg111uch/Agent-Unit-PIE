@@ -13,7 +13,7 @@ import getpass
 import json
 import base64
 
-from cryptography.fernet import Fernet
+from cryptography.fernet import Fernet, InvalidToken
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 
@@ -50,6 +50,33 @@ def parse_env(path: str) -> dict[str, str]:
             k, v = line.split("=", 1)
             secrets[k.strip()] = v.strip()
     return secrets
+
+def _derive_key(password: str, salt: bytes) -> bytes:
+    kdf = PBKDF2HMAC(
+        algorithm=hashes.SHA256(),
+        length=32,
+        salt=salt,
+        iterations=600_000,
+    )
+    return base64.urlsafe_b64encode(kdf.derive(password.encode()))
+
+
+def _try_unlock_env(encrypt_env_file) -> None:
+    if not os.path.exists(encrypt_env_file):
+        return
+    password = getpass.getpass("Enter password to unlock API keys: ")
+    with open(encrypt_env_file, "rb") as f:
+        salt = f.read(16)
+        encrypted_data = f.read()
+    key = _derive_key(password, salt)
+    try:
+        payload = json.loads(Fernet(key).decrypt(encrypted_data))
+    except InvalidToken:
+        print("Invalid password.")
+        sys.exit(1)
+    for k, v in payload.items():
+        os.environ.setdefault(k, v)
+    print("API keys unlocked.")
 
 
 def main() -> None:

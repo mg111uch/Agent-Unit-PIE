@@ -75,7 +75,7 @@ pip install google-genai python-dotenv
 ```bash
 cd /path/to/Agentic_Unit_PIE/codebase
 conda activate myenv
-python server.py
+AGENT_SKIP_AUTH=true python server.py
 ```
 
 #### Environment Variables

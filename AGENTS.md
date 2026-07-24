@@ -76,7 +76,7 @@ conda run -n myenv python -m codebase_atlas.main \
 - **Project_root:**  `/home/manigupt/Hello/Agentic_Unit_PIE`
 - **Codebase atlas:** `/home/manigupt/Hello/Agentic_Unit_PIE/atlas_output`
 - **Source_code:** (Working directory) `/home/manigupt/Hello/Agentic_Unit_PIE/codebase`
-- **Agent frontend** `/home/manigupt/Hello/reddit-clone/frontend/app/agent/page.tsx`
+- **Agent frontend** `/home/manigupt/Hello/Agentic_Unit_PIE/codebase/frontend`
 
 ## Code Execution & Validation Environment
 

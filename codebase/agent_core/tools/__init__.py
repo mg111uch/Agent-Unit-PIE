@@ -69,9 +69,10 @@ from agent_core.tools.debate_ops import debate_step
 from agent_core.tools.expand_ops import expand_topic
 from agent_core.tools.context_dump import minimal_context_dump
 from agent_core.tools.registry import (
-    ToolRegistry, CAT_FILE, CAT_KERNEL, CAT_SIM, CAT_META, CAT_GIT, CAT_CODE_RAG,
+    ToolRegistry, CAT_FILE, CAT_KERNEL, CAT_SIM, CAT_META, CAT_GIT, CAT_OBSERVER, CAT_CODE_RAG,
     str_p, int_p, float_p, bool_p, arr_p, obj_p,
 )
+from agent_core.tools.observer_ops import tool_stats, file_stats, user_reading_budget
 
 
 PATHS_PARAM = {
@@ -370,6 +371,8 @@ def _register_kernel_tools(reg, tc):
         kernel_retrieve, kernel_emit_signal, kernel_reload,
         kernel_store_context, kernel_get_memory, kernel_create_event,
     )
+    from kernel.signals.belief_signal_handler import register_handlers
+    register_handlers()
 
     reg.register("kernel_retrieve", tc(kernel_retrieve),
         description="Query kernel memory for relevant context from past sessions",
@@ -526,6 +529,23 @@ def _register_code_rag_tools(reg, tc):
         params={"citations": arr_p("string", "List of citations like ['file.py:func()', 'path/to/module.py:ClassName()']", req=True)})
 
 
+def _register_observer_tools(reg, tc):
+    reg.set_default_category(CAT_OBSERVER)
+
+    reg.register("tool_stats", tc(tool_stats),
+        description="Show tool call statistics — counts, avg duration, error rate per tool. Most called first.",
+        params={})
+    reg.register("file_stats", tc(file_stats),
+        description="Show most accessed files by read/write/edit operations. Most accessed first.",
+        params={"limit": int_p("Max files to return (default 20)")})
+    reg.register("user_reading_budget", tc(user_reading_budget),
+        description="Track user reading budget. Call with record_lines=N to record N lines of LLM output. Returns current usage/budget/remaining. Alerts when <20% budget left.",
+        params={"record_lines": int_p("Number of LLM response lines to record for today's budget")})
+    reg.register("hot_reload", lambda _: "Tools reloaded.",
+        description="Hot-reload all tool modules and notify the client to refresh its tool list. No restart needed.",
+        params={})
+
+
 def _register_all():
     _tc = tool_call
     _reg = registry
@@ -535,6 +555,7 @@ def _register_all():
     _register_kernel_tools(_reg, _tc)
     _register_sim_tools(_reg, _tc)
     _register_code_rag_tools(_reg, _tc)
+    _register_observer_tools(_reg, _tc)
 
 
 _register_all()

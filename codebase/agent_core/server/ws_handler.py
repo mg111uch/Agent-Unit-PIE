@@ -9,18 +9,24 @@ from typing import Optional
 
 from fastapi import WebSocket, WebSocketDisconnect, Query
 
-from agent_core.server.auth import verify_token
+from agent_core.server.auth import verify_token, SKIP_AUTH
 from agent_core.server.audit import make_audit_wrapper
 from agent_core.server import app
 import agent_core.server as _srv
 
 
 @app.websocket("/ws/agent")
-async def websocket_agent(websocket: WebSocket, token: str = Query(...)):
-    user = verify_token(token)
-    if not user:
-        await websocket.close(code=4001, reason="Invalid or expired token")
-        return
+async def websocket_agent(websocket: WebSocket, token: str = Query(default=None)):
+    if SKIP_AUTH:
+        user = {"id": "local", "username": "local"}
+    else:
+        if not token:
+            await websocket.close(code=4001, reason="Missing token")
+            return
+        user = verify_token(token)
+        if not user:
+            await websocket.close(code=4001, reason="Invalid or expired token")
+            return
     await websocket.accept()
     user_key = str(user.get("id"))
     user_ws_root = _srv.set_user_workspace(user_key)

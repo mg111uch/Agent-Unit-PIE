@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8"/>
+<title>Agent Workflow — AGENTS.md</title>
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<script src="https://dagrejs.github.io/project/dagre-d3/latest/dagre-d3.js"></script>
+<style>
+  html,body { margin:0; height:100%; font-family:sans-serif; background:#2a2a2a; color:#fff; overflow:hidden; }
+  svg { display:block; width:100vw; height:100vh; background:#2a2a2a; }
+  .node rect, .node ellipse, .node polygon { stroke:#ccc; stroke-width:1.5; }
+  .label { font-size:12px; pointer-events:none; fill:#000; }
+  .edgePath path { stroke:#ccc; stroke-width:1.5; fill:none; }
+  .edgeLabel { font-size:10px; fill:#fff; background:#2a2a2a; }
+</style>
+</head>
+<body>
+<svg id="graph"></svg>
+<script>
+const data = {"nodes":[
+  ["start", "New Task\nfrom AGENTS.md", "ellipse", "#d4f0c0"],
+  ["read_task", "Read TASK\nsection", "rect", "#ffffff"],
+  ["kernel_rule", "Kernel Probing\nRules Apply?", "diamond", "#ffffff"],
+  ["use_pie_api", "Use pie_file_api\nfirst (no Read)", "rect", "#e0e0ff"],
+  ["scenario", "Pick tool by\nscenario", "diamond", "#ffffff"],
+  ["known_fn", "get_symbol\n(names=[...])", "rect", "#e0e0ff"],
+  ["search", "search_symbols\n(query=...)", "rect", "#e0e0ff"],
+  ["impact", "find_impact /\nget_callers_callees", "rect", "#e0e0ff"],
+  ["metadata", "get_symbols_meta\n(names=[...])", "rect", "#e0e0ff"],
+  ["workflow", "Token-saving\nworkflow", "diamond", "#ffffff"],
+  ["calibrate", "CALIBRATE:\nget_index_info", "rect", "#e0e0ff"],
+  ["orient", "ORIENT:\nfile_api/symbols_by_file", "rect", "#e0e0ff"],
+  ["meta", "META:\nget_symbols_meta", "rect", "#e0e0ff"],
+  ["fetch", "FETCH:\nget_symbol (2-3)", "rect", "#e0e0ff"],
+  ["trace", "TRACE:\ncallers/callees if needed", "rect", "#e0e0ff"],
+  ["atlas_miss", "Atlas returns\nempty?", "diamond", "#ffffff"],
+  ["search_fallback", "search_symbols\n(fuzzy)", "rect", "#e0e0ff"],
+  ["file_api_fallback", "file_api\n(partial index)", "rect", "#e0e0ff"],
+  ["read_fallback", "Read\n(last resort)", "rect", "#f0c0c0"],
+  ["report_check", "Check devpt\nreport freshness", "diamond", "#ffffff"],
+  ["stale_report", "Report stale?", "diamond", "#ffffff"],
+  ["revalidate", "Re-validate\nbefore trusting", "rect", "#ffe0b0"],
+  ["rules", "Follow Operating\n& Core Rules", "diamond", "#ffffff"],
+  ["operating", "Verify before trust\nKernel owns cognition\nOne persistence path", "rect", "#ffffff"],
+  ["tooling", "Tooling Workflow\nRules apply", "rect", "#ffffff"],
+  ["end", "Execute &\nGenerate Code", "ellipse", "#f0c0c0"],
+  ["sync_atlas", "Reindex atlas\nif kernel files changed", "rect", "#d4f0c0"]
+],"edges":[
+  ["start", "read_task", ""],
+  ["read_task", "kernel_rule", ""],
+  ["kernel_rule", "use_pie_api", "Yes"],
+  ["kernel_rule", "scenario", "No"],
+  ["use_pie_api", "scenario", ""],
+  ["scenario", "known_fn", "Known fn/class"],
+  ["scenario", "search", "Unsure of name"],
+  ["scenario", "impact", "Find impact"],
+  ["scenario", "metadata", "Cheap metadata"],
+  ["known_fn", "workflow", ""],
+  ["search", "workflow", ""],
+  ["impact", "workflow", ""],
+  ["metadata", "workflow", ""],
+  ["workflow", "calibrate", "Step 1"],
+  ["calibrate", "orient", "Step 2"],
+  ["orient", "meta", "Step 3"],
+  ["meta", "fetch", "Step 4"],
+  ["fetch", "trace", "Step 5"],
+  ["trace", "atlas_miss", ""],
+  ["atlas_miss", "search_fallback", "Yes"],
+  ["atlas_miss", "report_check", "No"],
+  ["search_fallback", "file_api_fallback", ""],
+  ["file_api_fallback", "read_fallback", "Still empty?"],
+  ["read_fallback", "report_check", ""],
+  ["report_check", "stale_report", ""],
+  ["stale_report", "revalidate", "Yes"],
+  ["stale_report", "rules", "No"],
+  ["revalidate", "rules", ""],
+  ["rules", "operating", "Core \u0026 Operating"],
+  ["operating", "tooling", ""],
+  ["tooling", "end", ""],
+  ["end", "sync_atlas", "If kernel\nfiles changed"],
+  ["sync_atlas", "read_task", "Next task"]
+]};
+
+const g = new dagreD3.graphlib.Graph().setGraph({
+  rankdir: 'TB', splines: 'ortho', nodesep: 15, ranksep: 25
+});
+
+data.nodes.forEach(([id, label, shape, color]) => {
+  const a = { label, style: `fill:${color}` };
+  if (shape === 'ellipse') a.shape = 'ellipse';
+  else if (shape === 'diamond') a.shape = 'diamond';
+  else a.shape = 'rect';
+  g.setNode(id, a);
+});
+
+data.edges.forEach(([from, to, label]) => {
+  g.setEdge(from, to, { label, curve: d3.curveBasis });
+});
+
+const svg = d3.select('#graph');
+const zoomG = svg.append('g');
+const inner = zoomG.append('g');
+const render = new dagreD3.render();
+render(inner, g);
+
+inner.selectAll('.edgeLabel text').attr('fill', '#fff');
+
+const pad = 30;
+const gw = g.graph().width;
+const gh = g.graph().height;
+const s = Math.max(gw, gh) + pad * 2;
+const cx = (s - gw) / 2;
+const cy = pad;
+svg.attr('viewBox', `0 0 ${s} ${s}`).attr('preserveAspectRatio', 'xMidYMid meet');
+inner.attr('transform', `translate(${cx},${cy})`);
+
+svg.call(d3.zoom().on('zoom', (e) => zoomG.attr('transform', e.transform)));
+</script>
+</body>
+</html>

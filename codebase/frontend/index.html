@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Coding Agent</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="style.css"/>
+</head>
+<body class="bg-zinc-950 text-zinc-100">
+<div id="app" class="flex h-screen flex-col">
+  <agent-header></agent-header>
+  <div class="min-h-0 flex-1">
+    <agent-chat></agent-chat>
+  </div>
+  <agent-input></agent-input>
+</div>
+
+<!-- Templates -->
+<template id="agent-header-tmpl">
+  <header class="border-b border-zinc-800/80 bg-zinc-950/95 backdrop-blur-md shrink-0">
+    <div class="mx-auto max-w-3xl flex items-center justify-between h-12 px-4">
+      <div class="flex items-center gap-2">
+        <span :class="['connection-led', store.connected ? 'connected' : 'disconnected']"></span>
+        <h1 class="text-sm font-medium">Coding Agent</h1>
+      </div>
+      <div class="relative">
+        <button @click="toggle" class="flex items-center gap-1.5 text-xs text-zinc-400 hover:text-zinc-200 transition-colors px-2 py-1 rounded-lg hover:bg-zinc-800/50">
+          <span v-if="catalog.active" class="truncate max-w-[11rem]">{{ catalog.active.provider }} · {{ catalog.active.model }}</span>
+          <span v-else>loading...</span>
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+        </button>
+        <div v-if="open" class="absolute right-0 top-full mt-1 w-60 rounded-xl border border-zinc-700/80 bg-zinc-900/95 shadow-xl shadow-black/40 z-20 max-h-72 overflow-y-auto">
+          <div class="sticky top-0 bg-zinc-900/95 px-3 py-2 text-[10px] font-medium uppercase tracking-wider text-zinc-500 border-b border-zinc-800">Model</div>
+          <div v-if="noProviders" class="px-3 py-4 text-xs text-zinc-500 text-center">No providers registered</div>
+          <div v-for="(entry, name) in providerList" :key="name">
+            <div class="px-3 pt-2 pb-1 text-[10px] font-medium uppercase tracking-wider text-zinc-500">{{ name }}</div>
+            <button v-for="m in entry.models" :key="m" @click="switchModel(name, m)"
+              class="w-full text-left px-3 py-1.5 text-xs flex items-center gap-2 hover:bg-zinc-800 transition-colors"
+              :class="isActive(name, m) ? 'text-zinc-100' : 'text-zinc-400'"
+              :disabled="!canChange">
+              <span class="w-1.5 h-1.5 rounded-full" :class="isActive(name, m) ? 'bg-sky-400' : 'bg-transparent'"></span>
+              {{ m }}
+            </button>
+          </div>
+        </div>
+        <p v-if="switchError" class="absolute right-0 top-full mt-1 text-xs text-red-400 whitespace-nowrap">{{ switchError }}</p>
+      </div>
+    </div>
+  </header>
+</template>
+
+<template id="agent-chat-tmpl">
+  <div ref="scrollRef" class="h-full overflow-y-auto">
+    <div class="mx-auto max-w-3xl px-4">
+      <!-- Error banner -->
+      <div v-if="store.error" class="mt-2 rounded-lg bg-red-500/10 border border-red-500/20 px-4 py-3">
+        <p class="text-sm text-red-400">{{ store.error }}</p>
+      </div>
+
+      <!-- Empty state -->
+      <div v-if="store.messages.length === 0" class="flex flex-col items-center justify-center h-full min-h-[60vh]">
+        <svg class="w-12 h-12 text-zinc-700 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17.25 6.75L22.5 12l-5.25 5.25m-10.5 0L1.5 12l5.25-5.25m7.5-3l-4.5 16.5"></path></svg>
+        <h2 class="text-lg font-medium text-zinc-300 mb-2">What should we work on?</h2>
+        <p class="text-sm text-zinc-500 mb-6">Describe a coding task or ask a question</p>
+        <div class="flex flex-wrap gap-2 justify-center max-w-md">
+          <button v-for="s in suggestions" :key="s" @click="send(s)" class="px-4 py-2 rounded-full border border-zinc-700/60 text-xs text-zinc-300 hover:border-zinc-500 hover:bg-zinc-800/50 transition-colors">{{ s }}</button>
+        </div>
+      </div>
+
+      <!-- Messages -->
+      <div v-for="msg in store.messages" :key="msg.id" class="py-3" :class="msg.role === 'user' ? '' : 'mb-4'">
+        <!-- User message -->
+        <div v-if="msg.role === 'user'" class="flex justify-end">
+          <div class="bg-sky-600/15 rounded-2xl px-4 py-2.5 max-w-[85%]">
+            <p class="text-sm leading-relaxed whitespace-pre-wrap">{{ msg.content }}</p>
+            <copy-button :text="msg.content" :toolCalls="msg.toolCalls"></copy-button>
+          </div>
+        </div>
+        <!-- Assistant message -->
+        <div v-else>
+          <div class="flex items-center gap-2 mb-2">
+            <span class="text-xs font-medium text-zinc-400">Agent</span>
+            <span v-if="msg.isThinking" class="text-xs text-zinc-500 italic thinking-dots">Thinking</span>
+            <span v-if="msg.isStreaming && !msg.isThinking" class="text-xs text-zinc-500">Streaming...</span>
+          </div>
+          <!-- Tool calls -->
+          <div v-if="msg.toolCalls && msg.toolCalls.length">
+            <tool-call-card v-for="tc in msg.toolCalls" :key="tc.step" :toolCall="tc"></tool-call-card>
+          </div>
+          <!-- Content -->
+          <p v-if="msg.content" class="text-sm leading-relaxed whitespace-pre-wrap">{{ msg.content }}<span v-if="msg.isStreaming && !msg.isThinking" class="stream-cursor"></span></p>
+          <p v-else-if="msg.isThinking" class="text-sm text-zinc-500 italic">Thinking<span class="thinking-dots"></span></p>
+          <copy-button v-if="msg.content" :text="msg.content" :toolCalls="msg.toolCalls"></copy-button>
+        </div>
+      </div>
+
+      <!-- Current tool running -->
+      <div v-if="store.currentToolCall" class="flex items-center gap-2 py-2 text-xs text-amber-400">
+        <svg class="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
+        Running {{ store.currentToolCall.tool }}...
+      </div>
+
+      <!-- Question panel -->
+      <question-panel v-if="store.pendingQuestions" :questions="store.pendingQuestions" @submit="onQuestionSubmit"></question-panel>
+
+      <div ref="anchorRef"></div>
+    </div>
+  </div>
+</template>
+
+<template id="tool-call-card-tmpl">
+  <div class="rounded-lg border border-zinc-700/60 bg-zinc-900/50 mb-2 overflow-hidden">
+    <button @click="expanded = !expanded" class="w-full flex items-center justify-between px-3 py-2 text-xs text-zinc-300 hover:bg-zinc-800/50 transition-colors">
+      <span class="font-mono">{{ toolCall.tool }}</span>
+      <svg class="w-3.5 h-3.5 transition-transform" :class="expanded ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+    </button>
+    <div v-show="expanded" class="border-t border-zinc-800 px-3 py-2 space-y-2">
+      <div>
+        <p class="text-[10px] font-medium uppercase tracking-wider text-zinc-500 mb-1">Input</p>
+        <pre class="text-xs text-zinc-400 bg-zinc-950 rounded p-2 overflow-x-auto">{{ formatInput(toolCall.input) }}</pre>
+      </div>
+      <div v-if="toolCall.result">
+        <p class="text-[10px] font-medium uppercase tracking-wider text-zinc-500 mb-1">Result</p>
+        <pre class="text-xs text-zinc-400 bg-zinc-950 rounded p-2 overflow-y-auto max-h-36">{{ toolCall.result }}</pre>
+      </div>
+    </div>
+  </div>
+</template>
+
+<template id="copy-button-tmpl">
+  <div class="flex justify-end mt-1">
+    <button @click="copy" class="text-[10px] text-zinc-600 hover:text-zinc-400 transition-colors">
+      <span v-if="copied" class="text-emerald-400">✓ Copied</span>
+      <span v-else>Copy</span>
+    </button>
+  </div>
+</template>
+
+<template id="question-panel-tmpl">
+  <div class="rounded-xl border border-zinc-700/80 bg-zinc-900/80 p-4 my-3">
+    <div v-if="questions.length > 1" class="flex items-center gap-2 mb-3">
+      <span class="text-[10px] text-zinc-500">Question {{ currentIndex + 1 }} of {{ questions.length }}</span>
+      <div class="flex gap-1">
+        <span v-for="(_, i) in questions" :key="i" class="w-2 h-2 rounded-full"
+          :class="i === currentIndex ? 'bg-sky-500' : i < currentIndex ? 'bg-sky-500/40' : 'bg-zinc-700'"></span>
+      </div>
+    </div>
+    <p class="text-sm text-zinc-200 mb-3">{{ current.question }}</p>
+    <div v-if="current.options && !customMode[currentIndex]" class="flex flex-wrap gap-2 mb-3">
+      <button v-for="(opt, i) in current.options" :key="i" @click="selectOption(opt)"
+        class="px-3 py-1.5 rounded-lg border text-xs transition-colors"
+        :class="answers[currentIndex] === opt ? 'border-sky-500 bg-sky-500/10 text-sky-300' : 'border-zinc-700 text-zinc-400 hover:border-zinc-500'">
+        {{ opt }}
+      </button>
+    </div>
+    <button @click="toggleCustom" class="text-xs text-zinc-500 hover:text-zinc-300 mb-2 block">
+      {{ customMode[currentIndex] ? 'Pick an option' : 'Custom answer...' }}
+    </button>
+    <textarea v-if="customMode[currentIndex]" v-model="customVal" rows="2" class="w-full text-xs bg-zinc-950 border border-zinc-700 rounded-lg p-2 text-zinc-200 resize-none mb-3"></textarea>
+    <button @click="submit" :disabled="!canSubmit"
+      class="w-full py-2 rounded-lg text-sm font-medium transition-colors"
+      :class="canSubmit ? 'bg-sky-600 hover:bg-sky-500 text-white' : 'bg-zinc-700 text-zinc-500 cursor-not-allowed'">
+      {{ currentIndex < questions.length - 1 ? 'Next Question' : 'Send Answer' }}
+    </button>
+  </div>
+</template>
+
+<template id="agent-input-tmpl">
+  <div class="shrink-0 border-t border-zinc-800/60 bg-zinc-950/95 pb-4 pt-3">
+    <div class="mx-auto max-w-3xl px-4">
+      <form @submit.prevent="submit" class="relative">
+        <div class="relative rounded-2xl border border-zinc-700/60 focus-within:border-sky-500/50 focus-within:ring-1 focus-within:ring-sky-500/30 bg-zinc-900/90">
+          <textarea ref="taRef" v-model="input" @keydown="onKeydown" @input="onInput"
+            placeholder="Ask the agent..."
+            class="block w-full bg-transparent text-sm text-zinc-100 placeholder-zinc-500 resize-none max-h-40 min-h-[48px] px-4 py-3 outline-none caret-zinc-100"
+            rows="1"></textarea>
+        </div>
+        <div class="flex items-center justify-between mt-2 px-1">
+          <span class="text-[10px] text-zinc-600 hidden sm:block">Enter send · Shift+Enter newline</span>
+          <span class="text-[10px] text-zinc-600 sm:hidden">Ready</span>
+          <button type="button" v-if="store.isBusy" @click="store.sendCancel()"
+            class="w-8 h-8 flex items-center justify-center rounded-lg bg-red-600 hover:bg-red-500 transition-colors">
+            <svg class="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"></rect></svg>
+          </button>
+          <button type="submit" v-else :disabled="!store.connected || !input.trim()"
+            class="w-8 h-8 flex items-center justify-center rounded-lg transition-colors"
+            :class="store.connected && input.trim() ? 'bg-sky-600 hover:bg-sky-500' : 'bg-zinc-700 text-zinc-500 cursor-not-allowed'">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M12 5l7 7-7 7"></path></svg>
+          </button>
+        </div>
+        <!-- Slash dropdown -->
+        <div v-if="slashOpen" class="absolute bottom-full left-0 right-0 mb-1 rounded-xl border border-zinc-700/80 bg-zinc-900/95 shadow-xl shadow-black/40 z-20 overflow-hidden">
+          <button v-for="(cmd, i) in slashCommands" :key="cmd.command" @mousedown.prevent="selectSlash(cmd)"
+            class="w-full text-left px-3 py-2 flex items-center gap-3 transition-colors"
+            :class="i === slashIndex ? 'bg-zinc-800' : 'hover:bg-zinc-800/50'">
+            <span class="font-mono text-xs text-sky-400">{{ cmd.command }}</span>
+            <span class="text-xs text-zinc-500">{{ cmd.desc }}</span>
+          </button>
+        </div>
+        <!-- File mention dropdown -->
+        <div v-if="atOpen" class="absolute bottom-full left-0 right-0 mb-1 rounded-xl border border-zinc-700/80 bg-zinc-900/95 shadow-xl shadow-black/40 z-20 max-h-48 overflow-y-auto">
+          <button v-for="(fp, i) in filteredFiles" :key="fp" @mousedown.prevent="insertFile(fp)"
+            class="w-full text-left px-3 py-1.5 text-xs transition-colors flex items-center gap-2"
+            :class="i === fileIndex ? 'bg-zinc-800' : 'hover:bg-zinc-800/50'">
+            <svg class="w-3.5 h-3.5 text-zinc-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+            {{ fp }}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</template>
+
+<!-- Scripts -->
+<script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+<script src="store.js"></script>
+<script src="websocket.js"></script>
+<script src="components/AgentHeader.js"></script>
+<script src="components/AgentChat.js"></script>
+<script src="components/AgentInput.js"></script>
+<script src="components/QuestionPanel.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

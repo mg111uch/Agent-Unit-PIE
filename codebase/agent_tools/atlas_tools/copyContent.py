@@ -11,7 +11,7 @@ Command line usage:
    python copyContent.py --mode copy --input_file paths.txt --output_file file_dump.txt --start_marker "// y" --end_marker "// n"
 
 2. To dump checked files from directory tree: Parses a directory tree from md_file, identifies files marked with [X], and dumps their full contents to output_file.
-   python copyContent.py --mode dump --md_file agent_harness.md --base_path /path/to/base --output_file code_dump.txt --start_marker '# START' --end_marker '# END'
+   python copyContent.py --mode dump --md_file agent_harness.md --base_path /path/to/base --output_file context_dump.txt --start_marker '# START' --end_marker '# END'
 """
 
 def copy_contents(input_file, output_file, start_marker=None, end_marker=None):
@@ -69,7 +69,7 @@ def copy_contents(input_file, output_file, start_marker=None, end_marker=None):
     except Exception as e:
         print(f"Error: {str(e)}")
 
-def dump_checked_files(md_file, start_marker, end_marker, base_path, output_file="code_dump.txt"):
+def dump_checked_files(md_file, start_marker, end_marker, base_path, output_file="context_dump.txt"):
     try:
         structure_lines = []
         with open(md_file, "r") as f:

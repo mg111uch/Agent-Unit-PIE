@@ -1,5 +1,5 @@
 # Session end ask
-- During the implementation or generation of above plans and phases did you feel the need of any other mcp tool or any other tool which would have been useful to implement plan faster and more efficiently using lesser number of tokens. 
+- During the implementation or generation of above plans and phases in this session did you feel the need of any other mcp tool or any other tool which would have been useful to implement plan faster and more efficiently using lesser number of tokens. Compare your recommendations with already existing tools, dont suggest duplicates doing same finctionality with different name, only suggest novel helpful tools.
 
 - Based on files you have read in this session give multiple suggestions and improvements so that code or docs could be optimized and tokens and lines of code could be reduced without changing functionality.
 

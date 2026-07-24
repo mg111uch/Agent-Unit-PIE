@@ -90,7 +90,7 @@ class SignalEngine:
             > self.max_recent_signals
         ):
             self.recent_signals.pop(0)
-        logger.info(
+        logger.debug(
             f"Signal emitted: "
             f"{signal.signal_id}"
         )
@@ -146,10 +146,12 @@ class SignalEngine:
         signal_type: str,
         handler: SignalHandler
     ):
+        if handler in self.signal_handlers.get(signal_type, []):
+            return
         self.signal_handlers[
             signal_type
         ].append(handler)
-        logger.info(
+        logger.debug(
             f"Registered signal handler: "
             f"{signal_type}"
         )
