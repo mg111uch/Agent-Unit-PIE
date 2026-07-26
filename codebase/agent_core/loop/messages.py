@@ -53,7 +53,7 @@ def build_tool_results_msg(results: List[dict]) -> dict:
                 "result": r["result"],
                 "id": r.get("call_id", "") or r.get("id", ""),
                 "_call_id": r.get("call_id", "") or r.get("id", ""),
-                "tool_call_id": r.get("call_id", "") or r.get("id", "") or r["tool"],
+                "tool_call_id": r.get("call_id", "") or r.get("id", ""),
             }
             for r in results
         ],
@@ -72,7 +72,7 @@ def build_single_tool_result_msg(
                 "result": result_str,
                 "id": call_id,
                 "_call_id": call_id,
-                "tool_call_id": call_id or tool,
+                "tool_call_id": call_id,
             }
         ],
     }

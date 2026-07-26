@@ -182,6 +182,11 @@ class GeminiProvider:
         from google import genai
         self.client = genai.Client(api_key=api_key)
         self.default_model = model
+        self._supports_stateful = True
+
+    @property
+    def supports_stateful(self) -> bool:
+        return True
 
     def generate(
         self,
@@ -256,18 +261,11 @@ class GeminiProvider:
         tools: Optional[List[Dict[str, Any]]],
     ) -> Dict[str, Any]:
         """First Interactions turn: store history server-side for later chaining."""
-        sys_inst = None
-        last_user = ""
-        for msg in messages:
-            role = msg.get("role", "user")
-            if role == "system" and msg.get("content"):
-                sys_inst = msg["content"]
-            elif role == "user" and msg.get("content"):
-                last_user = msg["content"]
+        steps, sys_inst = _messages_to_steps(messages)
 
         call_kwargs: dict[str, Any] = {
             "model": model,
-            "input": last_user or "",
+            "input": steps,
         }
         if system_prompt or sys_inst:
             call_kwargs["system_instruction"] = system_prompt or sys_inst
@@ -306,8 +304,10 @@ class GeminiProvider:
                         or ""
                     )
                     name = tr.get("tool", tr.get("name", ""))
-                    # Skip parse/corrective pseudo-tools that were never model function_calls
                     if name == "parse" or not call_id:
+                        text = tr.get("result", "")
+                        if text:
+                            last_user = text
                         continue
                     text = tr.get("result", "")
                     if not isinstance(text, str):

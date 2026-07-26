@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="utf-8"/>
-<title>Agent Workflow — AGENTS.md</title>
+<title>AGENTS.md — Workflow</title>
 <script src="https://d3js.org/d3.v7.min.js"></script>
 <script src="https://dagrejs.github.io/project/dagre-d3/latest/dagre-d3.js"></script>
 <style>
@@ -12,10 +12,80 @@
   .label { font-size:12px; pointer-events:none; fill:#000; }
   .edgePath path { stroke:#ccc; stroke-width:1.5; fill:none; }
   .edgeLabel { font-size:10px; fill:#fff; background:#2a2a2a; }
+
+  #toggle-btn {
+    position:fixed; top:12px; right:12px; z-index:100;
+    background:#555; color:#fff; border:1px solid #888;
+    padding:8px 14px; border-radius:4px; cursor:pointer;
+    font-size:13px; font-family:sans-serif;
+  }
+  #toggle-btn:hover { background:#777; }
+
+  #notes {
+    position:fixed; top:52px; right:12px; z-index:100;
+    width:440px; max-height:85vh; overflow-y:auto;
+    background:rgba(40,40,40,0.95); border:1px solid #666;
+    border-radius:6px; padding:16px; font-size:12px;
+    display:none; line-height:1.5;
+    box-shadow:0 4px 20px rgba(0,0,0,0.6);
+  }
+  #notes h2 { margin:0 0 8px 0; font-size:14px; color:#ffd866; }
+  #notes h3 { margin:12px 0 6px 0; font-size:12px; color:#9cc9ff; }
+  #notes ul { margin:4px 0; padding-left:16px; }
+  #notes li { margin-bottom:3px; }
+  #notes .tag { display:inline-block; font-size:10px; padding:1px 6px; border-radius:3px; margin-right:4px; }
+  .tag-avoid { background:#a33; }
+  .tag-do { background:#2a6; }
+  code { background:#333; padding:1px 4px; border-radius:3px; font-size:11px; }
 </style>
 </head>
 <body>
 <svg id="graph"></svg>
+
+<button id="toggle-btn">☰ Workflow Details</button>
+<div id="notes">
+  <h2>Agent Workflow Details</h2>
+  <p style="font-size:11px;color:#aaa;margin-top:-4px;">
+    Supplementary rules and anti-patterns that accompany the graph above.
+  </p>
+
+  <h3>🛠 Tool Selection by Scenario</h3>
+  <ul>
+    <li><strong>Need full source</strong> — <code>pie_get_symbol(names=["ClassName", "function_name"], file_path=...)</code></li>
+    <li><strong>Unsure of spelling</strong> — <code>pie_search_symbols(query="...")</code></li>
+    <li><strong>See callers/callees</strong> — <code>pie_get_callers_callees(name="symbol")</code></li>
+    <li><strong>Find what breaks on edit</strong> — <code>pie_find_impact(name="symbol")</code></li>
+    <li><strong>Quick metadata (cheap)</strong> — <code>pie_get_symbols_meta(names=[...])</code></li>
+    <li><strong>Compact external-LLM context</strong> — <code>minimal_context_dump(problem_description="...", symbol_names=[...])</code> — chains blast radius + symbol source + peripheral API signatures. Prefer over full-file dumps.</li>
+    <li><strong>Single-file paths for kernel</strong> — <code>glob(pattern="**/kernel/**/*.py", path="&lt;codebase&gt;")</code></li>
+    <li><strong>Orientation (file structure)</strong> — <code>pie_file_api(path=...)</code> — classes, methods, signatures, no bodies. Prefer over <code>Read</code>.</li>
+    <li><strong>Flat file inventory</strong> — <code>pie_symbols_by_file(path=...)</code> — every symbol with type, line range, risk. Prefer over <code>glob</code> + <code>grep</code>.</li>
+    <li><strong>Call path across modules</strong> — <code>pie_call_chain(start_fn="...", end_module="...")</code> — shortest BFS path.</li>
+    <li><strong>API diff between files</strong> — <code>pie_compare_apis(path_a=..., path_b=...)</code> — only_in_a, only_in_b, signature mismatches.</li>
+  </ul>
+
+  <h3>📏 Token-Saving Rules</h3>
+  <ul>
+    <li>Use <code>get_symbols_meta</code> before <code>get_symbol</code> — avoid fetching full source for low-value symbols.</li>
+    <li>Batch <code>get_symbol</code> conservatively (2-3 names max per call unless <code>get_index_info</code> shows small avg token count).</li>
+    <li>Always prefer passing multiple names in one <code>pie_get_symbol</code> call over reading whole files line by line.</li>
+    <li>Prefer <code>pie_batch_file_api</code> when exploring ≥2 files.</li>
+  </ul>
+
+  <h3>⛔ Anti-Patterns to Avoid</h3>
+  <ul>
+    <li><span class="tag tag-avoid">AVOID</span> <code>search_symbols</code> with <code>top_k &gt; 10</code> — large result sets waste tokens on irrelevant hits.</li>
+    <li><span class="tag tag-avoid">AVOID</span> <code>get_symbol</code> without checking <code>get_symbols_meta</code> first — you may fetch 500+ tokens for a symbol you didn't need.</li>
+    <li><span class="tag tag-avoid">AVOID</span> Deep recursive <code>get_callers_callees</code> beyond depth 2 — call graphs rarely yield new info past that.</li>
+    <li><span class="tag tag-avoid">AVOID</span> <code>Read</code> for kernel files without trying atlas tools first — the whole pipeline exists to avoid this.</li>
+  </ul>
+
+  <h3>🔁 Atlas Miss & Sync</h3>
+  <ul>
+    <li><strong>Miss escalation:</strong> <code>pie_search_symbols</code> (fuzzy) → <code>pie_file_api</code> (partial index) → <code>Read</code> (last resort). Do NOT skip directly to <code>Read</code>.</li>
+    <li><strong>Reindex after kernel edits:</strong> <code>cd codebase/agent_tools/atlas_tools && python run_cmds.py /path/to/project_tools.md "Make Codebase_atlas"</code></li>
+  </ul>
+</div>
 <script>
 const data = {"nodes":[
   ["start", "New Task\nfrom AGENTS.md", "ellipse", "#d4f0c0"],
@@ -115,6 +185,12 @@ svg.attr('viewBox', `0 0 ${s} ${s}`).attr('preserveAspectRatio', 'xMidYMid meet'
 inner.attr('transform', `translate(${cx},${cy})`);
 
 svg.call(d3.zoom().on('zoom', (e) => zoomG.attr('transform', e.transform)));
+
+// Toggle notes panel
+document.getElementById('toggle-btn').addEventListener('click', () => {
+  const n = document.getElementById('notes');
+  n.style.display = n.style.display === 'none' ? 'block' : 'none';
+});
 </script>
 </body>
 </html>

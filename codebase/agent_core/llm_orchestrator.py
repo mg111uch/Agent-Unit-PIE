@@ -10,6 +10,7 @@ multiple providers (Gemini, OpenAI, OpenRouter, etc.).
 from __future__ import annotations
 
 import time
+import threading
 import logging
 from datetime import datetime, timezone
 from typing import Dict, Any, Optional, List, Generator
@@ -58,6 +59,7 @@ class LLMOrchestrator:
         metadata: Optional[Dict[str, Any]] = None,
         tools: Optional[List[Dict[str, Any]]] = None,
         messages: Optional[List[Dict[str, Any]]] = None,
+        cancel_flag: Optional[threading.Event] = None,
     ) -> Dict[str, Any]:
         started_at = time.time()
         self.total_requests += 1
@@ -71,15 +73,25 @@ class LLMOrchestrator:
 
         last_error = ""
         for attempt in range(self.max_retries + 1):
+            if cancel_flag and cancel_flag.is_set():
+                self.total_failures += 1
+                return {
+                    "status": "error",
+                    "error": "cancelled",
+                    "provider": provider_name,
+                    "model": model_name,
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                    "retries": attempt,
+                }
             try:
-                provider_client = self.providers.get(provider_name)
-                if provider_client is None:
-                    raise ValueError(f"Provider not found: {provider_name}")
-
                 if attempt > 0:
                     backoff = RETRY_BACKOFF_BASE ** (attempt - 1)
                     logger.info(f"Retry {attempt}/{self.max_retries} after {backoff}s")
                     time.sleep(backoff)
+
+                provider_client = self.providers.get(provider_name)
+                if provider_client is None:
+                    raise ValueError(f"Provider not found: {provider_name}")
 
                 result = provider_client.generate(
                     prompt=prompt,
@@ -116,6 +128,12 @@ class LLMOrchestrator:
             except Exception as e:
                 last_error = str(e)
                 logger.warning(f"LLM attempt {attempt + 1} failed: {e}")
+                err_lower = str(e).lower()
+                # Non-retriable: auth errors, 4xx (except 429), or our own cancellation
+                if any(x in err_lower for x in ["401", "403", "unauthorized", "authentication",
+                                                   "permission denied", "not found", "model not found",
+                                                   "invalid api key"]):
+                    break
                 if attempt == self.max_retries:
                     break
 

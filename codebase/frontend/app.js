@@ -18,11 +18,15 @@ scripts.forEach(src => {
 })
 
 function mountApp() {
-  const app = Vue.createApp({
-    setup() {
-      return { store: AgentStore }
-    }
-  })
-  Object.entries(AgentComponents).forEach(([name, comp]) => app.component(name, comp))
-  app.mount('#app')
+  try {
+    const app = Vue.createApp({
+      setup() {
+        return { store: AgentStore }
+      }
+    })
+    Object.entries(AgentComponents).forEach(([name, comp]) => app.component(name, comp))
+    app.mount('#app')
+  } catch (e) {
+    console.error('[app] mount failed:', e)
+  }
 }

@@ -1,16 +1,16 @@
 # 📂 persistence
-Generated: 2026-07-23 14:15:38
+Generated: 2026-07-26 16:20:18
 Files: 2
 
 ---
 
-F022│__init__.py│0
+F023│__init__.py│0
 ---
 
-F021│db.py│492
-D: ●__future__,json,kernel,pathlib,time,+2
-C: KernelDB│[__init__,conn,_init_db,close,insert_log,query_logs,save_semantic_node,load_semantic_node,load_all_semantic_nodes,load_semantic_nodes_by_topic,+23]
-C: KernelDB│[__init__,conn,_init_db,close,insert_log,query_logs,save_semantic_node,load_semantic_node,load_all_semantic_nodes,load_semantic_nodes_by_topic,+23]
+F022│db.py│598
+D: ●__future__,json,kernel,sqlite3,time,+2
+C: KernelDB│[__init__,conn,_init_db,close,insert_log,query_logs,save_semantic_node,load_semantic_node,load_all_semantic_nodes,load_semantic_nodes_by_topic,+30]
+C: KernelDB│[__init__,conn,_init_db,close,insert_log,query_logs,save_semantic_node,load_semantic_node,load_all_semantic_nodes,load_semantic_nodes_by_topic,+30]
    F: __init__(self,db_path)
    F: conn(self)→sqlite3.Connection
    F: _init_db(self)

@@ -34,6 +34,7 @@ from mcp.types import (
 
 from agent_core.tools import registry
 from agent_core.tools.registry import CAT_FILE, CAT_KERNEL, CAT_SIM, CAT_META, CAT_GIT, CAT_CODE_RAG, CAT_OBSERVER
+from agent_core.loop.executor import _normalize_tool_arg
 from kernel.persistence.db import kernel_db
 
 # Expose kernel, sim, code_rag, and unique file-MCP tools only
@@ -143,9 +144,10 @@ async def call_mcp_tool(name: str, arguments: dict[str, Any] | None) -> CallTool
     result_text = ""
     try:
         fn = tools[reg_name]
-        result = fn(arguments or {})
+        arg = _normalize_tool_arg(reg_name, arguments or {})
+        result = fn(arg)
 
-        from agent_core.tools import ToolResult as TR
+        from agent_core.tools.types import ToolResult as TR
         if isinstance(result, TR):
             if result.ok:
                 text = result.data

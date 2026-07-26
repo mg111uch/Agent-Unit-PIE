@@ -1,5 +1,5 @@
 # 📂 sub-agents
-Generated: 2026-07-23 14:15:38
+Generated: 2026-07-26 16:20:18
 Files: 6
 
 ---
@@ -7,14 +7,14 @@ Files: 6
 F011│debate_agent.py│46
 D: ●kernel
 F: emit_belief_signal(argument_name,stance,confidence,topic)→None
-   ↳Called by: F139:debate_step
-   ↳Impact: 🟢LOW (1 dependents) | Breaks: [F139:debate_step]
+   ↳Called by: F140:debate_step
+   ↳Impact: 🟢LOW (1 dependents) | Breaks: [F140:debate_step]
 F: emit_confidence_signal(argument_name,old_confidence,new_confidence,topic)→None
-   ↳Called by: F139:debate_step
-   ↳Impact: 🟢LOW (1 dependents) | Breaks: [F139:debate_step]
+   ↳Called by: F140:debate_step
+   ↳Impact: 🟢LOW (1 dependents) | Breaks: [F140:debate_step]
 F: emit_contradiction_signal(contradicted_arguments,topic)→None
-   ↳Called by: F139:debate_step
-   ↳Impact: 🟢LOW (1 dependents) | Breaks: [F139:debate_step]
+   ↳Called by: F140:debate_step
+   ↳Impact: 🟢LOW (1 dependents) | Breaks: [F140:debate_step]
 ---
 
 F010│improvement_agent.py│0

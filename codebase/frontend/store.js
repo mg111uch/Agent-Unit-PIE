@@ -2,6 +2,7 @@ const AgentStore = Vue.reactive({
   connected: false,
   messages: [],
   currentToolCall: null,
+  pendingToolCount: 0,
   pendingQuestions: null,
   llmCallActive: false,
   error: null,
@@ -9,7 +10,7 @@ const AgentStore = Vue.reactive({
 })
 
 AgentStore.isBusy = Vue.computed(() =>
-  !!AgentStore.currentToolCall
+  AgentStore.pendingToolCount > 0
   || !!AgentStore.pendingQuestions
   || AgentStore.messages.some(m => m.role === 'assistant' && m.isStreaming)
 )
@@ -26,19 +27,28 @@ AgentStore.handleMessage = (msg) => {
       break
     case 'tool_call':
       AgentStore.currentToolCall = { tool: msg.tool, input: msg.input, step: msg.step }
+      AgentStore.pendingToolCount++
       const tc = lastAssistant()
       if (tc) {
         tc.toolCalls = tc.toolCalls || []
-        const exist = tc.toolCalls.find(t => t.step === msg.step)
-        if (!exist) tc.toolCalls.push({ ...AgentStore.currentToolCall })
+        const callId = msg.call_id || `${msg.step}_${msg.tool}`
+        const exist = tc.toolCalls.find(t => t.callId === callId)
+        if (!exist) {
+          tc.toolCalls.push({ ...AgentStore.currentToolCall, callId, ok: true, result: null })
+        }
       }
       break
     case 'tool_result':
       AgentStore.currentToolCall = null
+      AgentStore.pendingToolCount = Math.max(0, AgentStore.pendingToolCount - 1)
       const tr = lastAssistant()
       if (tr && tr.toolCalls) {
-        const hit = tr.toolCalls.find(t => t.step === msg.step)
-        if (hit) hit.result = msg.result
+        const callId = msg.call_id || `${msg.step}_${msg.tool}`
+        const hit = tr.toolCalls.find(t => t.callId === callId)
+        if (hit) {
+          hit.result = msg.result
+          hit.ok = msg.ok !== false
+        }
       }
       break
     case 'stream_chunk':
@@ -71,6 +81,7 @@ AgentStore.handleMessage = (msg) => {
     case 'reset':
       AgentStore.messages = []
       AgentStore.currentToolCall = null
+      AgentStore.pendingToolCount = 0
       AgentStore.pendingQuestions = null
       AgentStore.error = null
       break

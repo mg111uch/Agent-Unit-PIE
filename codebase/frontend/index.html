@@ -74,7 +74,7 @@
         <div v-if="msg.role === 'user'" class="flex justify-end">
           <div class="bg-sky-600/15 rounded-2xl px-4 py-2.5 max-w-[85%]">
             <p class="text-sm leading-relaxed whitespace-pre-wrap">{{ msg.content }}</p>
-            <copy-button :text="msg.content" :toolCalls="msg.toolCalls"></copy-button>
+            <copy-button :text="msg.content" :tool-calls="msg.toolCalls"></copy-button>
           </div>
         </div>
         <!-- Assistant message -->
@@ -86,19 +86,19 @@
           </div>
           <!-- Tool calls -->
           <div v-if="msg.toolCalls && msg.toolCalls.length">
-            <tool-call-card v-for="tc in msg.toolCalls" :key="tc.step" :toolCall="tc"></tool-call-card>
+            <tool-call-card v-for="tc in msg.toolCalls" :key="tc.callId || tc.step" :tool-call="tc"></tool-call-card>
           </div>
           <!-- Content -->
           <p v-if="msg.content" class="text-sm leading-relaxed whitespace-pre-wrap">{{ msg.content }}<span v-if="msg.isStreaming && !msg.isThinking" class="stream-cursor"></span></p>
           <p v-else-if="msg.isThinking" class="text-sm text-zinc-500 italic">Thinking<span class="thinking-dots"></span></p>
-          <copy-button v-if="msg.content" :text="msg.content" :toolCalls="msg.toolCalls"></copy-button>
+          <copy-button v-if="msg.content" :text="msg.content" :tool-calls="msg.toolCalls"></copy-button>
         </div>
       </div>
 
-      <!-- Current tool running -->
-      <div v-if="store.currentToolCall" class="flex items-center gap-2 py-2 text-xs text-amber-400">
+      <!-- Tools running -->
+      <div v-if="store.pendingToolCount > 0" class="flex items-center gap-2 py-2 text-xs text-amber-400">
         <svg class="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
-        Running {{ store.currentToolCall.tool }}...
+        Running tool{{ store.pendingToolCount > 1 ? 's' : '' }}...
       </div>
 
       <!-- Question panel -->
@@ -110,9 +110,12 @@
 </template>
 
 <template id="tool-call-card-tmpl">
-  <div class="rounded-lg border border-zinc-700/60 bg-zinc-900/50 mb-2 overflow-hidden">
-    <button @click="expanded = !expanded" class="w-full flex items-center justify-between px-3 py-2 text-xs text-zinc-300 hover:bg-zinc-800/50 transition-colors">
+  <div v-if="toolCall" class="rounded-lg border mb-2 overflow-hidden"
+    :class="toolCall.ok === false ? 'border-red-500/40 bg-red-900/20' : 'border-zinc-700/60 bg-zinc-900/50'">
+    <button @click="expanded = !expanded" class="w-full flex items-center justify-between px-3 py-2 text-xs hover:bg-zinc-800/50 transition-colors"
+      :class="toolCall.ok === false ? 'text-red-300' : 'text-zinc-300'">
       <span class="font-mono">{{ toolCall.tool }}</span>
+      <span v-if="toolCall.ok === false" class="text-[10px] text-red-400 mr-1">FAILED</span>
       <svg class="w-3.5 h-3.5 transition-transform" :class="expanded ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
     </button>
     <div v-show="expanded" class="border-t border-zinc-800 px-3 py-2 space-y-2">
@@ -121,8 +124,10 @@
         <pre class="text-xs text-zinc-400 bg-zinc-950 rounded p-2 overflow-x-auto">{{ formatInput(toolCall.input) }}</pre>
       </div>
       <div v-if="toolCall.result">
-        <p class="text-[10px] font-medium uppercase tracking-wider text-zinc-500 mb-1">Result</p>
-        <pre class="text-xs text-zinc-400 bg-zinc-950 rounded p-2 overflow-y-auto max-h-36">{{ toolCall.result }}</pre>
+        <p class="text-[10px] font-medium uppercase tracking-wider mb-1"
+          :class="toolCall.ok === false ? 'text-red-400' : 'text-zinc-500'">Result</p>
+        <pre class="text-xs bg-zinc-950 rounded p-2 overflow-y-auto max-h-36"
+          :class="toolCall.ok === false ? 'text-red-300' : 'text-zinc-400'">{{ formatResult(toolCall.result) }}</pre>
       </div>
     </div>
   </div>
@@ -216,10 +221,6 @@
 <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
 <script src="store.js"></script>
 <script src="websocket.js"></script>
-<script src="components/AgentHeader.js"></script>
-<script src="components/AgentChat.js"></script>
-<script src="components/AgentInput.js"></script>
-<script src="components/QuestionPanel.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

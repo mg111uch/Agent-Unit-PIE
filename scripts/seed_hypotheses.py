@@ -85,17 +85,44 @@ def seed_all(engine=None):
 
 
 def main():
+    quiet = "--quiet" in sys.argv or "-q" in sys.argv
+    output_json = "--json" in sys.argv
+    for flag in ("--quiet", "-q", "--json"):
+        while flag in sys.argv:
+            sys.argv.remove(flag)
+
+    import logging
+    if quiet:
+        logging.getLogger("agent_unit_pie").setLevel(logging.WARNING)
+        logging.getLogger("agent_unit_pie.hypothesis_engine").setLevel(logging.WARNING)
+        logging.getLogger("agent_unit_pie").handlers.clear()
+
     stats = seed_all()
     total = hypothesis_engine.stats()
-    print(f"Seeded {stats['capabilities']} capability claims, {stats['gaps']} known gaps from {len(discover_status_files())} files")
-    print(f"Engine total: {total['total_hypotheses']} hypotheses")
-    for hid in sorted(hypothesis_engine.hypotheses):
-        h = hypothesis_engine.hypotheses[hid]
-        ev = h.metadata.get("evidence_symbol", "")
-        extra = h.metadata.get("evidence_path", "")
-        print(f"  {hid:20s}  [{h.hypothesis_type:17s}]  {h.status:10s}  {h.title[:60]}")
-        if ev:
-            print(f"  {'':20s}  evidence: {extra}:{ev}()")
+    if output_json:
+        import json
+        hyps = [{"id": h.hypothesis_id, "type": h.hypothesis_type,
+                 "status": h.status, "title": h.title,
+                 "evidence_path": h.metadata.get("evidence_path", ""),
+                 "evidence_symbol": h.metadata.get("evidence_symbol", "")}
+                for h in sorted(hypothesis_engine.hypotheses.values(), key=lambda x: x.hypothesis_id)]
+        print(json.dumps({
+            "capabilities_seeded": stats["capabilities"],
+            "gaps_seeded": stats["gaps"],
+            "total_hypotheses": total["total_hypotheses"],
+            "hypotheses": hyps,
+        }, separators=(",", ":")))
+    else:
+        print(f"Seeded {stats['capabilities']} capability claims, {stats['gaps']} known gaps from {len(discover_status_files())} files")
+        print(f"Engine total: {total['total_hypotheses']} hypotheses")
+        if not quiet:
+            for hid in sorted(hypothesis_engine.hypotheses):
+                h = hypothesis_engine.hypotheses[hid]
+                ev = h.metadata.get("evidence_symbol", "")
+                extra = h.metadata.get("evidence_path", "")
+                print(f"  {hid:20s}  [{h.hypothesis_type:17s}]  {h.status:10s}  {h.title[:60]}")
+                if ev:
+                    print(f"  {'':20s}  evidence: {extra}:{ev}()")
 
 
 if __name__ == "__main__":

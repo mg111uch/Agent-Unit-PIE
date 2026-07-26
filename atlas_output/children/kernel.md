@@ -1,15 +1,15 @@
 # 📂 kernel
-Generated: 2026-07-23 14:15:38
-Files: 5
+Generated: 2026-07-26 16:20:18
+Files: 6
 
 ---
 
-F020│__init__.py│141
+F021│__init__.py│141
 S: agent_unit_pie.kernel
-D: ►F016,F017,F018,F019,F069 ●memory,patterns,relations,signals,timeline,+1
+D: ►F017,F018,F019,F020,F070 ●memory,patterns,relations,signals,timeline,+1
 ---
 
-F017│compression_engine.py│302
+F018│compression_engine.py│302
 S: kernel/compression_engine.py
 D: ●__future__,datetime,logging,typing
 C: CompressionEngine│[__init__,run_cycle,compress_observations,compress_events,aggregate_signals,generate_higher_patterns,compress_timelines,archive_old_memory,prune_low_value_memory,compute_memory_value,+4]
@@ -41,11 +41,39 @@ C: CompressionEngine│[__init__,run_cycle,compress_observations,compress_events
       S: Build higher-order abstraction from lower patterns.
    F: health_check(self)→Any
    F: utc_now()→str
-   ↳Called by: F034:update_timestamp,F036:deactivate,F035:deactivate
-   ↳Impact: 🔴HIGH (9 dependents) | Breaks: [F034:update_timestamp],[F036:deactivate],[F035:deactivate]
+   ↳Called by: F035:update_timestamp,F036:deactivate,F033:update_timestamp
+   ↳Impact: 🔴HIGH (9 dependents) | Breaks: [F035:update_timestamp],[F036:deactivate],[F033:update_timestamp]
 ---
 
-F016│observation_pipeline.py│276
+F016│context_builder.py│385
+S: llm/context_builder.py
+D: ●__future__,datetime,json,logging,typing
+C: ContextBuilder│[__init__,build_context,retrieve_relevant_memory,prioritize_context,compress_context,compress_section,trim_to_token_limit,build_prompt_context,health_check,utc_now]
+   S: Dynamic cognition context assembler.
+C: ContextBuilder│[__init__,build_context,retrieve_relevant_memory,prioritize_context,compress_context,compress_section,trim_to_token_limit,build_prompt_context,health_check,utc_now]
+   S: Dynamic cognition context assembler.
+   F: __init__(self,retrieval_engine,memory_engine,compression_engine,token_estimator,config)
+   F: build_context(self,task,unit_id,unit_type,additional_context)→Any
+      S: Main context generation pipeline.
+   F: retrieve_relevant_memory(self,task,unit_id,unit_type)→Any
+      S: Retrieve relevant cognition artifacts.
+   F: prioritize_context(self,retrieval_result,task)→Any
+      S: Rank retrieved artifacts by relevance.
+   F: compress_context(self,prioritized_context)→Any
+      S: Compress context intelligently.
+   F: compress_section(self,section_name,section_data)→Any
+      S: Compress individual context section.
+   F: trim_to_token_limit(self,context)→Any
+      S: Ensure context fits token budget.
+   F: build_prompt_context(self,context)→str
+      S: Convert context into prompt-safe text.
+   F: health_check(self)→Any
+   F: utc_now()→str
+   ↳Called by: F035:update_timestamp,F036:deactivate,F033:update_timestamp
+   ↳Impact: 🔴HIGH (9 dependents) | Breaks: [F035:update_timestamp],[F036:deactivate],[F033:update_timestamp]
+---
+
+F017│observation_pipeline.py│276
 S: kernel/observation_pipeline.py
 D: ●__future__,datetime,logging,typing,uuid
 C: ObservationPipeline│[__init__,process,normalize_observation,generate_events,generate_signals,detect_patterns,update_memory,run_compression_if_needed,utc_now,health_check]
@@ -72,14 +100,14 @@ C: ObservationPipeline│[__init__,process,normalize_observation,generate_events
    F: run_compression_if_needed(self)→None
       S: Optional memory compression step.
    F: utc_now()→str
-   ↳Called by: F034:update_timestamp,F036:deactivate,F035:deactivate
-   ↳Impact: 🔴HIGH (9 dependents) | Breaks: [F034:update_timestamp],[F036:deactivate],[F035:deactivate]
+   ↳Called by: F035:update_timestamp,F036:deactivate,F033:update_timestamp
+   ↳Impact: 🔴HIGH (9 dependents) | Breaks: [F035:update_timestamp],[F036:deactivate],[F033:update_timestamp]
       S: UTC ISO timestamp.
    F: health_check(self)→Any
       S: Pipeline component status.
 ---
 
-F019│ontology_registry.py│388
+F020│ontology_registry.py│388
 S: kernel/ontology_registry.py
 D: ●__future__,kernel,logging,typing
 C: OntologyRegistry│[__init__,is_valid,get_category,get_types_by_category,list_types,list_categories,register_ontology,remove_ontology,search,export_registry,+1]
@@ -108,7 +136,7 @@ C: OntologyRegistry│[__init__,is_valid,get_category,get_types_by_category,list
    F: summary(self)→Any
 ---
 
-F018│unit_registry.py│415
+F019│unit_registry.py│415
 S: kernel/unit_registry.py
 D: ●__future__,datetime,logging,typing
 C: UnitRegistry│[__init__,register_unit,unregister_unit,load_unit,get_unit,unit_exists,get_units_by_type,query_units,add_relation,get_relations,+6]
@@ -117,7 +145,7 @@ C: UnitRegistry│[__init__,register_unit,unregister_unit,load_unit,get_unit,uni
    S: Global runtime unit registry.
    F: __init__(self,unit_storage,ontology_registry,config)
    F: register_unit(self,unit)→bool
-   ↳Calls: F034:add
+   ↳Calls: F035:add
       S: Register active unit.
    F: unregister_unit(self,unit_id)→bool
       S: Remove unit from active registry.
@@ -144,6 +172,6 @@ C: UnitRegistry│[__init__,register_unit,unregister_unit,load_unit,get_unit,uni
       S: Export lightweight registry metadata.
    F: summary(self)→Any
    F: utc_now()→str
-   ↳Called by: F034:update_timestamp,F036:deactivate,F035:deactivate
-   ↳Impact: 🔴HIGH (9 dependents) | Breaks: [F034:update_timestamp],[F036:deactivate],[F035:deactivate]
+   ↳Called by: F035:update_timestamp,F036:deactivate,F033:update_timestamp
+   ↳Impact: 🔴HIGH (9 dependents) | Breaks: [F035:update_timestamp],[F036:deactivate],[F033:update_timestamp]
 ---

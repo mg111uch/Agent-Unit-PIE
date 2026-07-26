@@ -45,7 +45,7 @@ def kernel_retrieve(input_data) -> str:
             "memory_stats": retrieval_engine.memory_summary()
         }
 
-        return json.dumps(output, indent=2)
+        return json.dumps(output, separators=(",", ":"))
 
     except Exception as e:
         return f"Error in kernel_retrieve: {str(e)}"
@@ -90,7 +90,7 @@ def kernel_emit_signal(input_data) -> str:
             "value": signal.value,
         }
 
-        return json.dumps(output, indent=2)
+        return json.dumps(output, separators=(",", ":"))
 
     except Exception as e:
         return f"Error in kernel_emit_signal: {str(e)}"
@@ -135,7 +135,7 @@ def kernel_store_context(input_data) -> str:
             "memory_type": memory_type,
         }
 
-        return json.dumps(output, indent=2)
+        return json.dumps(output, separators=(",", ":"))
 
     except Exception as e:
         return f"Error in kernel_store_context: {str(e)}"
@@ -169,7 +169,7 @@ def kernel_get_memory(input_data) -> str:
             "tags": memory.tags,
         }
 
-        return json.dumps(output, indent=2)
+        return json.dumps(output, separators=(",", ":"))
 
     except Exception as e:
         return f"Error in kernel_get_memory: {str(e)}"
@@ -212,7 +212,7 @@ def kernel_create_event(input_data) -> str:
             "title": event.title,
         }
 
-        return json.dumps(output, indent=2)
+        return json.dumps(output, separators=(",", ":"))
 
     except Exception as e:
         return f"Error in kernel_create_event: {str(e)}"

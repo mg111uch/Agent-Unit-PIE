@@ -152,10 +152,13 @@ class ToolRegistry:
             result = {n: mw(n, fn) for n, fn in result.items()}
         return result
 
-    def get_schemas(self, provider_name: Optional[str] = None) -> List[dict]:
+    def get_schemas(self, provider_name: Optional[str] = None, categories: Optional[List[str]] = None) -> List[dict]:
+        schemas = self.schemas_list
+        if categories is not None:
+            schemas = [s for s in schemas if self._categories.get(s["name"]) in categories]
         if provider_name == "gemini":
-            return [{"function_declarations": self.schemas_list}]
-        return [{"type": "function", "function": s} for s in self.schemas_list]
+            return [{"function_declarations": schemas}]
+        return [{"type": "function", "function": s} for s in schemas]
 
     def to_mcp_tools(self, categories: Optional[List[str]] = None) -> List[dict]:
         names = (

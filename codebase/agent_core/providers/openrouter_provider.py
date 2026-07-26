@@ -9,6 +9,7 @@ Supports native function calling via tools=[] parameter.
 from __future__ import annotations
 
 import json
+import uuid
 from typing import Dict, Any, Optional, List, Generator
 
 
@@ -38,7 +39,7 @@ def _convert_messages_to_openai(
                     oai_messages.append({
                         "role": "tool",
                         "content": tr.get("result", ""),
-                        "tool_call_id": tr.get("tool_call_id", tr.get("tool", "")),
+                        "tool_call_id": tr.get("tool_call_id", "") or f"call_{uuid.uuid4().hex[:12]}",
                     })
             else:
                 oai_messages.append({
@@ -80,6 +81,7 @@ class OpenRouterProvider:
             api_key=api_key,
         )
         self.default_model = model
+        self._supports_stateful = False
 
     def generate(
         self,
@@ -126,6 +128,7 @@ class OpenRouterProvider:
                     except json.JSONDecodeError:
                         args = {"input": raw_args}
                     structured_calls.append({
+                        "id": tc.id,
                         "name": tc.function.name,
                         "arguments": args,
                     })
@@ -148,11 +151,16 @@ class OpenRouterProvider:
             },
         }
 
+    @property
+    def supports_stateful(self) -> bool:
+        return False
+
     def generate_stream(
         self,
         prompt: str = "",
         model: Optional[str] = None,
         system_prompt: Optional[str] = None,
+        conversation_id: Optional[str] = None,
         temperature: float = 0.7,
         max_tokens: int = 2048,
         tools: Optional[List[Dict[str, Any]]] = None,

@@ -1,16 +1,16 @@
 # 📂 extractors
-Generated: 2026-07-23 14:15:38
+Generated: 2026-07-26 16:20:18
 Files: 3
 
 ---
 
-F062│hypothesis_extractor.py│0
+F063│hypothesis_extractor.py│0
 ---
 
-F061│pattern_extractor.py│0
+F062│pattern_extractor.py│0
 ---
 
-F060│signal_extractor.py│185
+F061│signal_extractor.py│185
 D: ●__future__,kernel,re,typing
 C: SignalExtractor│[__init__,register,extract,extract_and_emit]
 F: _extract_belief_shift(data,source_unit_id)→Optional[ExtractedSignal]

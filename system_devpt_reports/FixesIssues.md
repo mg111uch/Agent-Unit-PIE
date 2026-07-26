@@ -20,7 +20,7 @@ Phase 1 + most of Phase 2 completed by multi-agent work. Verified:
 | **F1–F4** Doc slim | Thin statuses; `agent_core` design essay → `project_docs/agent_core_design.md`; slim agent_core/debate roadmaps |
 
 **One-command health:**  
-`python scripts/seed_hypotheses.py && python scripts/validate_capabilities.py`
+`python scripts/seed_hypotheses.py --quiet && python scripts/validate_capabilities.py --quiet`
 
 **Operational tools:** `pie_report_freshness`, `pie_report_inventory`, `pie_report_schema_check`, `pie_list_capabilities`, `pie_resolve_citations`
 
@@ -33,6 +33,7 @@ Phase 1 + most of Phase 2 completed by multi-agent work. Verified:
 | ID | Task | Why open | Verification |
 |----|------|----------|--------------|
 | **B5** | Shrink seed + validate + `citations.py` to ≤250 LOC (now ~336) | Shared lib kept full resolve/parse surface | `wc -l scripts/seed_hypotheses.py scripts/validate_capabilities.py scripts/lib/citations.py` ≤ 250 without dropping flags |
+| **B6** | Investigate prompt/schema caching for LLM providers | OpenRouter Anthropic models pass `cache_control`; Gemini supports `CachedContent`. Check which models are actually routed and enable caching for static tool-schema + system-prompt block to save on repeated calls. | Verify per-model: cache hit rate >0 after 3+ identical-turn calls |
 | **D5** | Audit `codebase/prompt_fragments/` for always-on bloat; load only enabled packs | Never prioritized; ~105 lines across 10 fragments | Measure system prompt size before/after; packs filter verified in `prompts.py` |
 | **F5** | Cap roadmaps | `codebase_atlas/roadmap.md` still ~201 lines; `kernel/roadmap.md` ~65; `populaDyn_simu/roadmap.md` empty | Near-term sections short; long wishlists → `project_docs/` or delete empty |
 | **F6** | Document “do not Read `atlas_output/children/` for routine work” in AGENTS.md | Missed | Rule present under tooling / anti-patterns |
@@ -149,7 +150,7 @@ Ordered so each step reuses existing machinery; stop if earlier stage is not loa
 **End (if code or status changed)**
 
 1. Update touched module status citations  
-2. `python scripts/seed_hypotheses.py && python scripts/validate_capabilities.py`  
+2. `python scripts/seed_hypotheses.py --quiet && python scripts/validate_capabilities.py --quiet`  
 3. Bump `_Last verified`  
 4. Do not implement Wave 3+ unless Waves 0–1 are already green  
 

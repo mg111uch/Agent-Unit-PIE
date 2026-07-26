@@ -65,8 +65,6 @@ from agent_core.tools.code_rag import (
     extract_symbols_to_file_tool,
 )
 from agent_core.tools.question_ops import ask_user_question
-from agent_core.tools.debate_ops import debate_step
-from agent_core.tools.expand_ops import expand_topic
 from agent_core.tools.context_dump import minimal_context_dump
 from agent_core.tools.registry import (
     ToolRegistry, CAT_FILE, CAT_KERNEL, CAT_SIM, CAT_META, CAT_GIT, CAT_OBSERVER, CAT_CODE_RAG,
@@ -83,32 +81,7 @@ PATHS_PARAM = {
 LOG_FILE = "tui_output.txt"
 
 
-class ToolError(Exception):
-    def __init__(self, error_type: str, message: str, suggestion: str = ""):
-        self.error_type = error_type
-        self.message = message
-        self.suggestion = suggestion
-        super().__init__(message)
-
-
-@dataclass
-class ToolResult:
-    ok: bool
-    data: str = ""
-    error_type: str = ""
-    message: str = ""
-    suggestion: str = ""
-
-    def to_string(self) -> str:
-        if self.ok:
-            return self.data
-        parts = [f"Error: {self.message}"]
-        if self.suggestion:
-            parts.append(f"Suggestion: {self.suggestion}")
-        return "\n".join(parts)
-
-    def to_dict(self) -> dict:
-        return asdict(self)
+from agent_core.tools.types import ToolError, ToolResult
 
 
 def tool_call(fn: Callable) -> Callable:
@@ -233,10 +206,11 @@ def _register_file_tools(reg, tc):
     from agent_core.tools.file_ops import batch_read_tool, read_section_tool, batch_edit_tool
 
     reg.register("read_file", tc(read_file),
-        description="Read file (returns line-numbered output; lists nearby files on error)",
+        description="Read file (returns line-numbered output; lists nearby files on error; set line_numbers=false to save tokens)",
         params={"path": str_p("Path to the file, relative to the workspace root", req=True),
                 "offset": int_p("1-based line number to start from (default 1)"),
-                "limit": int_p("Max lines to return (default: entire file)")},
+                "limit": int_p("Max lines to return (default: entire file)"),
+                "line_numbers": bool_p("If true (default), prefix each line with line number. Set false to save tokens when only content is needed.")},
         mcp_expose=False)
     reg.register("list_files", tc(list_files),
         description="List directory contents (recursive, depth-capped, skips noise dirs)",
@@ -257,7 +231,7 @@ def _register_file_tools(reg, tc):
     reg.register("get_workspace_info", tc(get_workspace_info),
         description="Show workspace root and top-level entries for orientation",
         params={})
-    reg.register("execute_command", execute_command_raw,
+    reg.register("execute_command", tc(execute_command_raw),
         description="Run a shell command. Allowed: ls, cat, pwd, echo, python.",
         params={"command": str_p("Shell command string to execute", req=True)},
         mcp_expose=False)
@@ -321,29 +295,35 @@ def _register_meta_tools(reg, tc):
                                   "question": {"type": "string", "description": "The question text"},
                                   "options": {"type": "array", "items": {"type": "string"}, "description": "Up to 3 predefined answer choices"}},
                               "additionalProperties": False}}})
-    reg.register("debate_step", debate_step,
-        description="Present next debate argument for a topic and get user response. Handles argument selection, belief tracking, contradiction detection. When graph is exhausted, pass llm_generated to add a new argument.",
-        params={"topic": str_p("Topic name to explore (e.g. 'theism_atheism')", req=True),
-                "llm_generated": {"t": "object", "desc": "New argument when graph is exhausted",
-                                  "properties": {"name": {"type": "string", "description": "Unique argument name"},
-                                                  "premise": {"type": "string", "description": "The argument premise"},
-                                                  "side": {"type": "string", "description": "One of: pro, con, neutral"}},
-                                  "additionalProperties": False}})
-    reg.register("expand_topic", expand_topic,
-        description="Add new nodes and edges to a topic's argument graph. Validates no duplicate names, persists to graph.json, and re-indexes the vector store.",
-        params={"topic": str_p("Topic name to expand (e.g. 'theism_atheism')", req=True),
-                "new_nodes": {"t": "array", "desc": "New argument nodes to add", "r": True,
-                              "items": {"type": "object", "properties": {
-                                  "name": {"type": "string", "description": "Unique argument name"},
-                                  "premise": {"type": "string", "description": "The argument premise"},
-                                  "side": {"type": "string", "description": "Side: pro, con, or neutral"}},
-                              "additionalProperties": False}},
-                "new_edges": {"t": "array", "desc": "New edges between arguments",
-                              "items": {"type": "object", "properties": {
-                                  "source": {"type": "string", "description": "Source argument name"},
-                                  "target": {"type": "string", "description": "Target argument name"},
-                                  "relation": {"type": "string", "description": "Edge relation (e.g. refutes, supports)"}},
-                              "additionalProperties": False}}})
+    try:
+        from agent_core.tools.debate_ops import debate_step
+        from agent_core.tools.expand_ops import expand_topic
+    except ImportError as e:
+        log_output(f"[tools] debate/expand_ops unavailable, skipping: {e}")
+    else:
+        reg.register("debate_step", debate_step,
+            description="Present next debate argument for a topic and get user response. Handles argument selection, belief tracking, contradiction detection. When graph is exhausted, pass llm_generated to add a new argument.",
+            params={"topic": str_p("Topic name to explore (e.g. 'theism_atheism')", req=True),
+                    "llm_generated": {"t": "object", "desc": "New argument when graph is exhausted",
+                                      "properties": {"name": {"type": "string", "description": "Unique argument name"},
+                                                      "premise": {"type": "string", "description": "The argument premise"},
+                                                      "side": {"type": "string", "description": "One of: pro, con, neutral"}},
+                                      "additionalProperties": False}})
+        reg.register("expand_topic", expand_topic,
+            description="Add new nodes and edges to a topic's argument graph. Validates no duplicate names, persists to graph.json, and re-indexes the vector store.",
+            params={"topic": str_p("Topic name to expand (e.g. 'theism_atheism')", req=True),
+                    "new_nodes": {"t": "array", "desc": "New argument nodes to add", "r": True,
+                                  "items": {"type": "object", "properties": {
+                                      "name": {"type": "string", "description": "Unique argument name"},
+                                      "premise": {"type": "string", "description": "The argument premise"},
+                                      "side": {"type": "string", "description": "Side: pro, con, or neutral"}},
+                                  "additionalProperties": False}},
+                    "new_edges": {"t": "array", "desc": "New edges between arguments",
+                                  "items": {"type": "object", "properties": {
+                                      "source": {"type": "string", "description": "Source argument name"},
+                                      "target": {"type": "string", "description": "Target argument name"},
+                                      "relation": {"type": "string", "description": "Edge relation (e.g. refutes, supports)"}},
+                                  "additionalProperties": False}}})
 
 
 def _register_git_tools(reg, tc):
@@ -461,9 +441,10 @@ def _register_code_rag_tools(reg, tc):
                 "file_path": str_p("Optional file path to narrow all lookups to one file")})
     reg.register("search_symbols", tc(search_symbols_tool),
         description="Metadata-only full-text search over symbol names/docstrings/code. Use when names are unknown or get_symbol returned missing_names (misspelling). Does NOT return full source — pick relevant names then call get_symbol. Do not use as the first step when the user already gave exact symbol names.",
-        params={"query": str_p("Search query (supports FTS5 syntax, e.g. 'auth AND login', 'process_order')", req=True),
+        params={"query": str_p("Single search query (FTS5 syntax, e.g. 'auth AND login')"),
+                "queries": arr_p("string", "Multiple queries to search and merge results (deduplicated) — use instead of calling search_symbols repeatedly"),
                 "type_filter": str_p("Optional filter: 'function', 'class', 'method', or 'file'"),
-                "top_k": int_p("Number of results to return (default 10)")})
+                "top_k": int_p("Number of results per query (default 10)")})
     reg.register("get_callers_callees", tc(get_callers_callees_tool),
         description="Show which functions call a given symbol (callers) and which functions it calls (callees). Uses recursive graph traversal up to the specified depth.",
         params={"name": str_p("Function or class name to analyze", req=True),

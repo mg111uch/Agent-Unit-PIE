@@ -14,6 +14,7 @@ _STRING_ARG_KEYS: Dict[str, tuple[str, ...]] = {
     "list_files": ("path", "input", "directory", "dir"),
     "execute_command": ("command", "cmd", "input"),
     "glob_search": ("pattern", "glob", "input"),
+
 }
 
 
@@ -61,9 +62,13 @@ def execute_tool_calls(
                 merged_args["file_path"] = file_path
             try:
                 result_obj = _tools["get_symbol"](merged_args)
-                result_str = str(result_obj)
-                result_val = result_str[:10000]
-                ok = not result_str.startswith("Error")
+                if isinstance(result_obj, ToolResult):
+                    ok = result_obj.ok
+                    result_val = result_obj.to_string()[:10000]
+                else:
+                    result_str = str(result_obj)
+                    result_val = result_str[:10000]
+                    ok = not result_str.startswith("Error")
             except Exception as e:
                 result_val = f"Error: {e}"
                 ok = False
@@ -81,7 +86,7 @@ def execute_tool_calls(
                     result_obj = _tools[tc.name](arg)
                     if isinstance(result_obj, ToolResult):
                         result_str = result_obj.to_string()
-                        is_ok = result_obj.ok and not result_str.startswith("Error")
+                        is_ok = result_obj.ok
                     else:
                         result_str = str(result_obj)
                         is_ok = not result_str.startswith("Error")
@@ -107,7 +112,7 @@ def execute_tool_calls(
             result_obj = _tools[tc.name](arg)
             if isinstance(result_obj, ToolResult):
                 result_str = result_obj.to_string()
-                is_ok = result_obj.ok and not result_str.startswith("Error")
+                is_ok = result_obj.ok
             else:
                 result_str = str(result_obj)
                 is_ok = not result_str.startswith("Error")

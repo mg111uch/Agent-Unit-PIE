@@ -1,11 +1,11 @@
 # 📂 patterns
-Generated: 2026-07-23 14:15:38
+Generated: 2026-07-26 16:20:18
 Files: 5
 
 ---
 
-F070│anomaly_detector.py│386
-D: ●__future__,kernel,math,statistics,time,+2
+F071│anomaly_detector.py│386
+D: ●__future__,dataclasses,kernel,math,time,+2
 C: AnomalyResult│[to_dict]
 C: AnomalyDetector│[__init__,detect_zscore_anomalies,detect_spikes,detect_dropouts,register_anomaly_patterns,analyze_signals,summarize_anomaly]
 C: AnomalyResult│[to_dict]
@@ -20,26 +20,26 @@ C: AnomalyDetector│[__init__,detect_zscore_anomalies,detect_spikes,detect_drop
    F: summarize_anomaly(self,anomaly)→str
 ---
 
-F074│causal_engine.py│0
+F075│causal_engine.py│0
 ---
 
-F071│contradiction_detector.py│98
+F072│contradiction_detector.py│98
 D: ●__future__,dataclasses,kernel,typing
 C: ContradictionResult│[to_dict]
 F: detect_contradictions(believed_node_ids,relation_types,min_confidence,min_edge_weight)→List[ContradictionResult]
-   ↳Called by: F071:detect_contradictions_for_beliefs
-   ↳Impact: 🟢LOW (1 dependents) | Breaks: [F071:detect_contradictions_for_beliefs]
+   ↳Called by: F072:detect_contradictions_for_beliefs
+   ↳Impact: 🟢LOW (1 dependents) | Breaks: [F072:detect_contradictions_for_beliefs]
 F: _resolve_to_node_id(key,info,id_field)→str
-   ↳Called by: F071:detect_contradictions_for_beliefs
-   ↳Impact: 🟢LOW (1 dependents) | Breaks: [F071:detect_contradictions_for_beliefs]
+   ↳Called by: F072:detect_contradictions_for_beliefs
+   ↳Impact: 🟢LOW (1 dependents) | Breaks: [F072:detect_contradictions_for_beliefs]
 F: detect_contradictions_for_beliefs(beliefs,id_field,stance_field,confidence_field,agree_stances,claim_filter)→List[ContradictionResult]
-   ↳Called by: F139:debate_step | Calls: F071:_resolve_to_node_id,F071:detect_contradictions
-   ↳Impact: 🟢LOW (1 dependents) | Breaks: [F139:debate_step]
+   ↳Called by: F140:debate_step | Calls: F072:detect_contradictions,F072:_resolve_to_node_id
+   ↳Impact: 🟢LOW (1 dependents) | Breaks: [F140:debate_step]
 C: ContradictionResult│[to_dict]
    F: to_dict(self)→Any
 ---
 
-F073│pattern_engine.py│383
+F074│pattern_engine.py│383
 D: ●__future__,collections,kernel,statistics,time,+1
 C: PatternEngine│[__init__,register_pattern,create_pattern,detect_numeric_trend,detect_repeated_events,detect_shared_sources,get_pattern,get_patterns_by_type,get_patterns_by_source,get_recent_patterns,+3]
 C: PatternEngine│[__init__,register_pattern,create_pattern,detect_numeric_trend,detect_repeated_events,detect_shared_sources,get_pattern,get_patterns_by_type,get_patterns_by_source,get_recent_patterns,+3]
@@ -58,8 +58,8 @@ C: PatternEngine│[__init__,register_pattern,create_pattern,detect_numeric_tren
    F: clear(self)
 ---
 
-F072│trend_detector.py│369
-D: ●__future__,kernel,math,statistics,time,+2
+F073│trend_detector.py│369
+D: ●__future__,dataclasses,kernel,math,time,+2
 C: TrendResult│[to_dict]
 C: TrendDetector│[__init__,detect_trend,detect_and_register_pattern,_calculate_slope,_calculate_volatility,_calculate_confidence,_get_direction,_classify_trend,moving_average,detect_anomalies,+2]
 C: TrendResult│[to_dict]

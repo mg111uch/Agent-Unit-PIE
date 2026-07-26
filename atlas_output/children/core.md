@@ -1,15 +1,15 @@
 # 📂 core
-Generated: 2026-07-23 14:15:38
+Generated: 2026-07-26 16:20:18
 Files: 7
 
 ---
 
-F120│agent_factory.py│181
+F121│agent_factory.py│181
 S: core/agent_factory.py
 D: ●numpy,typing,uuid
 F: create_unit_config(agent_type,model,position,seed)→Any
-   ↳Called by: F123:_create_unit
-   ↳Impact: 🟢LOW (1 dependents) | Breaks: [F123:_create_unit]
+   ↳Called by: F124:_create_unit
+   ↳Impact: 🟢LOW (1 dependents) | Breaks: [F124:_create_unit]
    S: Create a unit configuration with unique ID.
    S: Parameters
    S: ----------
@@ -20,15 +20,15 @@ F: get_agent_behaviors(agent_type)→list
 F: get_agent_type_from_behavior(behavior_name)→Optional[str]
    S: Find agent type that uses a given behavior.
 F: list_agent_types()→list
-   ↳Called by: F120:summary
-   ↳Impact: 🟢LOW (1 dependents) | Breaks: [F120:summary]
+   ↳Called by: F121:summary
+   ↳Impact: 🟢LOW (1 dependents) | Breaks: [F121:summary]
    S: List all available agent types.
 F: summary()→Any
-   ↳Calls: F120:list_agent_types
+   ↳Calls: F121:list_agent_types
    S: Get factory summary.
 ---
 
-F121│event_bridge.py│226
+F122│event_bridge.py│226
 S: simulation_engine/event_bridge.py
 D: ●__future__,datetime,logging,typing
 C: EventBridge│[__init__,process_simulation_step,process_simulation_event,convert_event_to_observation,process_observation,process_multiple_simulations,process_simulation_snapshot,health_check,utc_now]
@@ -50,11 +50,11 @@ C: EventBridge│[__init__,process_simulation_step,process_simulation_event,conv
       S: Convert world snapshot into observation.
    F: health_check(self)→Any
    F: utc_now()→str
-   ↳Called by: F034:update_timestamp,F036:deactivate,F035:deactivate
-   ↳Impact: 🔴HIGH (9 dependents) | Breaks: [F034:update_timestamp],[F036:deactivate],[F035:deactivate]
+   ↳Called by: F035:update_timestamp,F036:deactivate,F033:update_timestamp
+   ↳Impact: 🔴HIGH (9 dependents) | Breaks: [F035:update_timestamp],[F036:deactivate],[F033:update_timestamp]
 ---
 
-F118│resource_engine.py│628
+F119│resource_engine.py│628
 S: simulation_engine/resource_engine.py
 D: ●__future__,datetime,logging,typing
 C: ResourceEngine│[__init__,create_resource_pool,get_resource_pool,add_resource,remove_resource,allocate_resource,transfer_resource,consume_resource,detect_scarcity,detect_abundance,+9]
@@ -95,11 +95,11 @@ C: ResourceEngine│[__init__,create_resource_pool,get_resource_pool,add_resourc
       S: Resolve unit from registry.
    F: health_check(self)→Any
    F: utc_now()→str
-   ↳Called by: F034:update_timestamp,F036:deactivate,F035:deactivate
-   ↳Impact: 🔴HIGH (9 dependents) | Breaks: [F034:update_timestamp],[F036:deactivate],[F035:deactivate]
+   ↳Called by: F035:update_timestamp,F036:deactivate,F033:update_timestamp
+   ↳Impact: 🔴HIGH (9 dependents) | Breaks: [F035:update_timestamp],[F036:deactivate],[F033:update_timestamp]
 ---
 
-F123│simulation_model.py│340
+F124│simulation_model.py│340
 S: core/simulation_model.py
 D: ●modules,numpy,pandas,typing
 C: SimulationModel│[__init__,_init_units,_create_unit,add_unit,step,_execute_behaviors,_process_behavior_result,run,get_population_count,get_total_wealth,+4]
@@ -112,7 +112,7 @@ C: SimulationModel│[__init__,_init_units,_create_unit,add_unit,step,_execute_b
    F: _init_units(self)→None
       S: Initialize all units from agent configs.
    F: _create_unit(self,agent_type,position,seed)→UnitAgent
-   ↳Calls: F120:create_unit_config
+   ↳Calls: F121:create_unit_config
       S: Create and register a unit.
    F: add_unit(self,unit_data)→UnitAgent
       S: Add a new unit to the simulation.
@@ -145,7 +145,7 @@ C: DataCollector│[__init__,collect,get_model_vars_dataframe]
       S: Return collected data as dataframe.
 ---
 
-F119│spatial_engine.py│136
+F120│spatial_engine.py│136
 S: core/spatial_engine.py
 D: ●numpy,typing
 C: SpatialEngine│[__init__,place_agent,remove_agent,move_agent,get_cell_list_contents,get_neighborhood,is_cell_empty,get_neighbors,get_units_at,is_valid_position,+3]
@@ -179,7 +179,7 @@ C: SpatialEngine│[__init__,place_agent,remove_agent,move_agent,get_cell_list_c
       S: Get spatial summary.
 ---
 
-F117│unit_agent.py│410
+F118│unit_agent.py│410
 S: simulation_engine/unit_agent.py
 D: ●__future__,copy,datetime,logging,uuid,+1
 C: UnitAgent│[__init__,step,process_behavior_result,add_signal,decay_signals,add_event,add_goal,remove_goal,add_relation,modify_resource,+8]
@@ -213,11 +213,11 @@ C: UnitAgent│[__init__,step,process_behavior_result,add_signal,decay_signals,a
    F: summary(self)→Any
       S: Lightweight runtime summary.
    F: utc_now()→str
-   ↳Called by: F034:update_timestamp,F036:deactivate,F035:deactivate
-   ↳Impact: 🔴HIGH (9 dependents) | Breaks: [F034:update_timestamp],[F036:deactivate],[F035:deactivate]
+   ↳Called by: F035:update_timestamp,F036:deactivate,F033:update_timestamp
+   ↳Impact: 🔴HIGH (9 dependents) | Breaks: [F035:update_timestamp],[F036:deactivate],[F033:update_timestamp]
 ---
 
-F122│world_engine.py│654
+F123│world_engine.py│654
 S: simulation_engine/world_engine.py
 D: ●__future__,datetime,logging,modules,typing
 C: WorldEngine│[__init__,start,stop,tick,process_simulation,process_behaviors,process_resources,process_events,evolve_environment,process_patterns,+7]
@@ -259,6 +259,6 @@ C: WorldEngine│[__init__,start,stop,tick,process_simulation,process_behaviors,
       S: world.start()
       S: for _ in range(100):
    F: utc_now()→str
-   ↳Called by: F034:update_timestamp,F036:deactivate,F035:deactivate
-   ↳Impact: 🔴HIGH (9 dependents) | Breaks: [F034:update_timestamp],[F036:deactivate],[F035:deactivate]
+   ↳Called by: F035:update_timestamp,F036:deactivate,F033:update_timestamp
+   ↳Impact: 🔴HIGH (9 dependents) | Breaks: [F035:update_timestamp],[F036:deactivate],[F033:update_timestamp]
 ---

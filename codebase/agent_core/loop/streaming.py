@@ -2,34 +2,58 @@
 
 from __future__ import annotations
 
-import time
+import threading
 from typing import Any, Generator, List, Optional
-
-_STREAM_CHUNK_CHARS = 28
-_STREAMING_ENABLED = True
 
 
 def stream_final(
-    content: str,
-    step: int,
-    conversation_id: Optional[str],
+    content: str = "",
+    step: int = 0,
+    conversation_id: Optional[str] = None,
     orchestrator: Any = None,
     *,
     provider: Optional[str] = None,
     model: Optional[str] = None,
     system_prompt: Optional[str] = None,
     messages: Optional[List[dict]] = None,
+    cancel_event: Optional[threading.Event] = None,
+    temperature: float = 0.7,
+    max_tokens: int = 2048,
 ) -> Generator[dict[str, Any], None, None]:
-    text = content or ""
+    if content:
+        text = content
+        if text:
+            for i in range(0, len(text), 56):
+                yield {
+                    "type": "stream_chunk",
+                    "content": text[i: i + 56],
+                    "step": step,
+                }
+    elif orchestrator and provider and model and messages is not None:
+        full = []
+        try:
+            for chunk in orchestrator.generate_stream(
+                system_prompt=system_prompt,
+                provider=provider,
+                model=model,
+                messages=messages,
+                temperature=temperature,
+                max_tokens=max_tokens,
+            ):
+                if cancel_event and cancel_event.is_set():
+                    break
+                full.append(chunk)
+                yield {
+                    "type": "stream_chunk",
+                    "content": chunk,
+                    "step": step,
+                }
+        except Exception:
+            pass
+        text = "".join(full)
+    else:
+        text = ""
 
-    if text:
-        for i in range(0, len(text), _STREAM_CHUNK_CHARS):
-            yield {
-                "type": "stream_chunk",
-                "content": text[i: i + _STREAM_CHUNK_CHARS],
-                "step": step,
-            }
-            time.sleep(0.012)
     yield {
         "type": "final",
         "content": "",

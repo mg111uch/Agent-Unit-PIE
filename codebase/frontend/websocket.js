@@ -12,8 +12,9 @@ function connect() {
     if (!reconnectTimer) reconnectTimer = setTimeout(() => { reconnectTimer = null; connect() }, 3000)
   }
   ws.onmessage = (e) => {
-    try { AgentStore.handleMessage(JSON.parse(e.data)) }
-    catch (_) {}
+    try {
+      AgentStore.handleMessage(JSON.parse(e.data))
+    } catch (_) {}
   }
 }
 
@@ -33,6 +34,7 @@ AgentStore.sendCancel = () => { sendJson({ type: 'cancel' }) }
 AgentStore.resetConversation = () => {
   AgentStore.messages = []
   AgentStore.currentToolCall = null
+  AgentStore.pendingToolCount = 0
   AgentStore.pendingQuestions = null
   AgentStore.error = null
   AgentStore.sessionActive = false

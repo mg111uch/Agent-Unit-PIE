@@ -3,13 +3,13 @@
 from __future__ import annotations
 
 import json
+import os
 import threading
 import time
 import traceback
-from concurrent.futures import ThreadPoolExecutor, TimeoutError
 from typing import Any, Generator, List, Optional
 
-from agent_core.config import MAX_AGENT_STEPS
+from agent_core.config import MAX_AGENT_STEPS, CODEBASE_ROOT, DEBUG_DUMP_ENABLED
 from agent_core.context import retrieve_kernel_context
 from agent_core.response_parse import parse_provider_response
 from agent_core.tools import registry, ToolResult, log_output
@@ -19,30 +19,41 @@ from agent_core.loop.messages import (
     build_tool_calls_msg,
     build_tool_results_msg,
     build_single_tool_result_msg,
-    build_corrective_msg,
 )
 from agent_core.loop.streaming import stream_final
 from agent_core.loop.executor import execute_tool_calls
+from agent_core.loop._helpers import (
+    _truncate_result,
+    _compact_corrective_exchange,
+    _run_interactive_tool,
+    _handle_corrective_bookkeeping,
+    _generate_with_cancel,
+    _QUESTION_TOOLS,
+)
+
+_DEBUG_LOG = os.path.join(CODEBASE_ROOT, "tui_output.txt")
 
 
-def _generate_with_cancel(
-    orchestrator: Any,
-    cancel_event: Optional[threading.Event],
-    **kwargs: Any,
-) -> Optional[dict]:
-    """Run orchestrator.generate() in a thread, polling cancel_event every 500ms."""
-    pool = ThreadPoolExecutor(max_workers=1)
-    future = pool.submit(orchestrator.generate, **kwargs)
+def _debug_dump(mode: str, **kwargs):
+    if not DEBUG_DUMP_ENABLED:
+        return
     try:
-        while True:
-            if cancel_event and cancel_event.is_set():
-                return None
-            try:
-                return future.result(timeout=0.5)
-            except TimeoutError:
-                continue
-    finally:
-        pool.shutdown(wait=False)
+        file_mode = "w" if mode == "NEW TURN" else "a"
+        with open(_DEBUG_LOG, file_mode) as f:
+            f.write(f"\n{'='*60}\n")
+            f.write(f"[{mode}]\n")
+            f.write(f"{'='*60}\n")
+            for k, v in kwargs.items():
+                label = k.replace("_", " ").title()
+                if isinstance(v, str):
+                    f.write(f"\n{label}:\n{v}\n")
+                elif isinstance(v, (list, dict)):
+                    f.write(f"\n{label}:\n{json.dumps(v, indent=2, default=str)}\n")
+                else:
+                    f.write(f"\n{label}:\n{str(v)}\n")
+            f.write(f"{'='*60}\n")
+    except Exception:
+        pass
 
 
 def iter_agent_events(
@@ -61,6 +72,7 @@ def iter_agent_events(
     session_id: Optional[str] = None,
     cancel_event: Optional[threading.Event] = None,
     tools_override: Optional[dict] = None,
+    tool_categories: Optional[List[str]] = None,
 ) -> Generator[dict[str, Any], None, None]:
     context_info = ""
     if retrieve_context:
@@ -76,13 +88,28 @@ def iter_agent_events(
 
     if use_messages:
         current_messages = list(msg_store.get_messages(session_id))
-        current_messages.append({
-            "role": "user",
-            "content": user_input + context_info,
-        })
+        full_input = user_input + context_info
+        if not current_messages or not (
+            current_messages[-1].get("role") == "user"
+            and current_messages[-1].get("content") == full_input
+        ):
+            current_messages.append({
+                "role": "user",
+                "content": full_input,
+            })
         current_input = ""
     else:
         current_input = user_input + context_info
+
+    _debug_dump("NEW TURN",
+        provider=provider,
+        model=model,
+        system_prompt=system_prompt or "(none)",
+        user_input=user_input,
+        context_info=context_info or "(none)",
+        messages=current_messages if use_messages else [],
+        plain_prompt=current_input if not use_messages else "",
+    )
 
     for step in range(max_steps):
         if cancel_event and cancel_event.is_set():
@@ -113,7 +140,7 @@ def iter_agent_events(
                     provider=provider,
                     model=model,
                     conversation_id=conv_id,
-                    tools=registry.get_schemas(),
+                    tools=registry.get_schemas(provider_name=provider, categories=tool_categories),
                     messages=current_messages,
                 )
             else:
@@ -125,7 +152,7 @@ def iter_agent_events(
                     conversation_id=conv_id,
                     provider=provider,
                     model=model,
-                    tools=registry.get_schemas(),
+                    tools=registry.get_schemas(provider_name=provider, categories=tool_categories),
                 )
             if result is None:
                 yield {
@@ -138,7 +165,20 @@ def iter_agent_events(
                 return
             yield {"type": "llm_call", "status": "end", "step": step}
 
+            _debug_dump("LLM RESPONSE",
+                step=step,
+                user_message_sent=current_input if not use_messages else "(see messages)",
+                messages_sent=current_messages if use_messages else [],
+                raw_response_text=result.get("response", ""),
+                tool_calls_raw=result.get("tool_calls"),
+                full_result=result,
+            )
+
             if result["status"] == "error":
+                _debug_dump("LLM ERROR",
+                    step=step,
+                    error=result.get("error", "unknown"),
+                )
                 yield {
                     "type": "error",
                     "message": f"LLM call failed: {result.get('error')}",
@@ -168,41 +208,34 @@ def iter_agent_events(
                     "tool": "parse",
                     "input": "",
                     "result": corrective,
+                    "ok": False,
                     "step": step,
                 }
                 corrective_text = tool_followup("parse", "", corrective)
-                if use_messages:
-                    current_messages.append(build_corrective_msg(corrective))
-                    current_messages.append({
-                        "role": "user",
-                        "content": corrective_text,
-                    })
-                    msg_store.add_message(
-                        session_id=session_id, role="tool",
-                        content=None,
-                        tool_results=[{"tool": "parse", "result": corrective}],
-                    )
-                else:
-                    current_input += "\n\n" + corrective_text
+                current_input = _handle_corrective_bookkeeping(
+                    use_messages, current_messages, current_input, msg_store, session_id,
+                    "parse", corrective, corrective_text,
+                )
                 if step_delay > 0:
                     time.sleep(step_delay)
                 continue
 
             # --- final ---
             if parsed.kind == "final":
+                _debug_dump("FINAL",
+                    step=step,
+                    response=parsed.content or "",
+                )
                 if use_messages:
                     msg_store.add_message(
                         session_id=session_id, role="assistant",
                         content=parsed.content or "",
                     )
-                _msgs = locals().get("current_messages") if use_messages else None
                 yield from stream_final(
-                    parsed.content or "", step, conv_id,
-                    orchestrator=orchestrator,
-                    provider=provider,
-                    model=model,
-                    system_prompt=system_prompt,
-                    messages=_msgs,
+                    parsed.content or "",
+                    step=step,
+                    conversation_id=conv_id,
+                    cancel_event=cancel_event,
                 )
                 return
 
@@ -219,24 +252,16 @@ def iter_agent_events(
                     "tool": parsed.tool or "unknown",
                     "input": "",
                     "result": corrective,
+                    "ok": False,
                     "step": step,
                 }
                 followup_text = tool_followup(
                     parsed.tool or "unknown", "", corrective
                 )
-                if use_messages:
-                    current_messages.append(build_corrective_msg(corrective))
-                    current_messages.append({
-                        "role": "user",
-                        "content": followup_text,
-                    })
-                    msg_store.add_message(
-                        session_id=session_id, role="tool",
-                        content=None,
-                        tool_results=[{"tool": parsed.tool or "unknown", "result": corrective}],
-                    )
-                else:
-                    current_input += "\n\n" + followup_text
+                current_input = _handle_corrective_bookkeeping(
+                    use_messages, current_messages, current_input, msg_store, session_id,
+                    parsed.tool or "unknown", corrective, followup_text,
+                )
                 if step_delay > 0:
                     time.sleep(step_delay)
                 continue
@@ -244,6 +269,7 @@ def iter_agent_events(
             # --- multi tool_calls ---
             if parsed.kind == "tool_calls":
                 if use_messages:
+                    _compact_corrective_exchange(current_messages)
                     current_messages.append(build_tool_calls_msg(parsed.tool_calls))
                     msg_store.add_message(
                         session_id=session_id, role="assistant",
@@ -265,12 +291,12 @@ def iter_agent_events(
                         "type": "tool_call",
                         "tool": tc.name,
                         "input": input_str,
+                        "call_id": tc.call_id or "",
                         "step": step,
                     }
 
-                QUESTION_TOOLS = {"ask_user_question", "debate_step"}
-                question_calls = [tc for tc in parsed.tool_calls if tc.name in QUESTION_TOOLS]
-                other_calls = [tc for tc in parsed.tool_calls if tc.name not in QUESTION_TOOLS]
+                question_calls = [tc for tc in parsed.tool_calls if tc.name in _QUESTION_TOOLS]
+                other_calls = [tc for tc in parsed.tool_calls if tc.name not in _QUESTION_TOOLS]
 
                 if question_calls:
                     if other_calls or len(question_calls) > 1:
@@ -284,39 +310,14 @@ def iter_agent_events(
                     else:
                         tc = question_calls[0]
                         arg = tc.arguments if isinstance(tc.arguments, dict) else {}
-                        arg["_session_id"] = session_id
-
-                        if tc.name == "ask_user_question":
-                            questions = arg.get("questions", [])
+                        result_obj, questions = _run_interactive_tool(tc.name, arg, _tools, session_id)
+                        if questions:
                             yield {
                                 "type": "question",
                                 "questions": questions,
                                 "session_id": session_id,
                                 "step": step,
                             }
-                            result_obj = _tools["ask_user_question"](arg)
-
-                        elif tc.name == "debate_step":
-                            arg["prepare_only"] = True
-                            prepare_raw = _tools["debate_step"](arg)
-                            try:
-                                prepare_result = json.loads(prepare_raw) if isinstance(prepare_raw, str) else {}
-                            except Exception:
-                                prepare_result = {}
-
-                            if prepare_result.get("done"):
-                                result_obj = prepare_raw
-                            else:
-                                questions = prepare_result.get("questions", [])
-                                yield {
-                                    "type": "question",
-                                    "questions": questions,
-                                    "session_id": session_id,
-                                    "step": step,
-                                }
-                                arg["prepare_only"] = False
-                                result_obj = _tools["debate_step"](arg)
-
                         if isinstance(result_obj, ToolResult):
                             result_str = result_obj.to_string()
                             is_ok = result_obj.ok
@@ -350,9 +351,17 @@ def iter_agent_events(
                         "type": "tool_result",
                         "tool": result["tool"],
                         "input": input_str,
-                        "result": result.get("result", "")[:2000],
+                        "result": _truncate_result(result.get("result", ""), 2000),
+                        "ok": result.get("ok", True),
+                        "call_id": result.get("call_id", tc.call_id or ""),
                         "step": step,
                     }
+
+                _debug_dump("TOOL RESULTS (multi)",
+                    step=step,
+                    calls=[{"name": tc.name, "args": tc.arguments, "call_id": tc.call_id} for tc in parsed.tool_calls],
+                    results=results,
+                )
 
                 if use_messages:
                     current_messages.append(build_tool_results_msg(results))
@@ -365,7 +374,7 @@ def iter_agent_events(
                                 "result": r["result"],
                                 "id": r.get("call_id", ""),
                                 "_call_id": r.get("call_id", ""),
-                                "tool_call_id": r.get("call_id", "") or r["tool"],
+                                "tool_call_id": r.get("call_id", ""),
                             }
                             for r in results
                         ],
@@ -408,65 +417,59 @@ def iter_agent_events(
                     "step": step,
                 }
 
-                if tool == "ask_user_question":
-                    if isinstance(tool_input, dict):
-                        tool_input["_session_id"] = session_id
-                    questions = tool_input.get("questions", []) if isinstance(tool_input, dict) else []
-                    yield {
-                        "type": "question",
-                        "questions": questions,
-                        "session_id": session_id,
-                        "step": step,
-                    }
-                    result_obj = _tools[tool](tool_input)
-
-                elif tool == "debate_step":
+                if tool in _QUESTION_TOOLS:
+                    tool_arg = tool_input if isinstance(tool_input, dict) else {}
                     if isinstance(tool_input, str):
                         try:
-                            tool_input = json.loads(tool_input)
+                            tool_arg = json.loads(tool_input)
                         except json.JSONDecodeError:
-                            tool_input = {}
-                    if isinstance(tool_input, dict):
-                        tool_input["_session_id"] = session_id
-                        tool_input["prepare_only"] = True
-                    else:
-                        tool_input = {"_session_id": session_id, "prepare_only": True, "topic": str(tool_input)}
-                    prepare_raw = _tools[tool](tool_input)
-                    try:
-                        prepare_result = json.loads(prepare_raw) if isinstance(prepare_raw, str) else {}
-                    except Exception:
-                        prepare_result = {}
-
-                    if prepare_result.get("done"):
-                        result_obj = prepare_raw
-                    else:
-                        questions = prepare_result.get("questions", [])
+                            tool_arg = {"input": tool_input}
+                    if tool == "debate_step" and not isinstance(tool_arg, dict):
+                        tool_arg = {"topic": str(tool_input)}
+                    result_obj, questions = _run_interactive_tool(tool, tool_arg, _tools, session_id)
+                    if questions:
                         yield {
                             "type": "question",
                             "questions": questions,
                             "session_id": session_id,
                             "step": step,
                         }
-                        if isinstance(tool_input, dict):
-                            tool_input["prepare_only"] = False
-                        result_obj = _tools[tool](tool_input)
-
                 else:
                     result_obj = _tools[tool](tool_input)
+                if cancel_event and cancel_event.is_set():
+                    yield {
+                        "type": "final",
+                        "content": "",
+                        "step": step,
+                        "conversation_id": conv_id,
+                        "full_content": "(cancelled)",
+                    }
+                    return
                 if isinstance(result_obj, ToolResult):
                     result_str = result_obj.to_string()
                     is_error = not result_obj.ok
+                    ok = result_obj.ok
                 else:
                     result_str = str(result_obj)
                     is_error = result_str.startswith("Error")
+                    ok = not is_error
 
                 yield {
                     "type": "tool_result",
                     "tool": tool,
                     "input": input_str,
-                    "result": result_str[:2000],
+                    "result": _truncate_result(result_str, 2000),
+                    "ok": ok,
                     "step": step,
                 }
+
+                _debug_dump("TOOL RESULT (single)",
+                    step=step,
+                    tool=tool,
+                    input=parsed.tool_input,
+                    result=result_str,
+                    ok=ok,
+                )
 
                 if use_messages:
                     current_messages.append({
@@ -537,8 +540,9 @@ def iter_agent_events(
             }
             return
 
+    _debug_dump("MAX STEPS REACHED", step=max_steps, message="Max iterations reached")
     yield from stream_final(
-        "Max iterations reached", max_steps - 1, conv_id
+        "Max iterations reached", max_steps - 1, conv_id,
     )
 
 

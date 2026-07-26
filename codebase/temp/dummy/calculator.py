@@ -1,5 +1,5 @@
 # Define functions for basic arithmetic operations
-def add(n1, n2):
+def add(a, b):
     return n1 + n2
 
 def subtract(n1, n2):

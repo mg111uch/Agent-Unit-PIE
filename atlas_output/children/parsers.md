@@ -1,17 +1,17 @@
 # 📂 parsers
-Generated: 2026-07-23 14:15:38
+Generated: 2026-07-26 16:20:18
 Files: 6
 
 ---
 
-F102│__init__.py│20
+F103│__init__.py│20
 S: Parser modules for Codebase Atlas.
-D: ►F100,F101,F103,F104,F105
+D: ►F101,F102,F104,F105,F106
 ---
 
-F104│base_parser.py│72
+F105│base_parser.py│72
 S: Base parser interface for Codebase Atlas.
-D: ►F003,F075 ●abc,typing
+D: ►F003,F076 ●abc,typing
 C: BaseParser←ABC│[__init__,can_parse,parse,read_file_content,count_loc,extract_first_docstring_line]
    S: Abstract base class for file parsers.
 C: BaseParser←ABC│[__init__,can_parse,parse,read_file_content,count_loc,extract_first_docstring_line]
@@ -21,8 +21,8 @@ C: BaseParser←ABC│[__init__,can_parse,parse,read_file_content,count_loc,extr
       S: Args:
       S: config: Atlas configuration
    F: can_parse(self,file_info)→bool
-   ↳Called by: F078:generate_atlas
-   ↳Impact: 🟢LOW (1 dependents) | Breaks: [F078:generate_atlas]
+   ↳Called by: F079:generate_atlas
+   ↳Impact: 🟢LOW (1 dependents) | Breaks: [F079:generate_atlas]
       S: Check if this parser can handle the given file.
       S: Args:
       S: file_info: File to check
@@ -54,16 +54,16 @@ C: BaseParser←ABC│[__init__,can_parse,parse,read_file_content,count_loc,extr
       S: First line, or None
 ---
 
-F101│config_parser.py│95
+F102│config_parser.py│95
 S: Config file parser for Codebase Atlas.
-D: ►F003,F075,F104 ●json,typing,yaml
+D: ►F003,F076,F105 ●json,typing,yaml
 C: ConfigParser←BaseParser│[can_parse,parse,_parse_json,_parse_yaml,_extract_keys]
    S: Parser for JSON and YAML configuration files.
 C: ConfigParser←BaseParser│[can_parse,parse,_parse_json,_parse_yaml,_extract_keys]
    S: Parser for JSON and YAML configuration files.
    F: can_parse(self,file_info)→bool
-   ↳Called by: F078:generate_atlas
-   ↳Impact: 🟢LOW (1 dependents) | Breaks: [F078:generate_atlas]
+   ↳Called by: F079:generate_atlas
+   ↳Impact: 🟢LOW (1 dependents) | Breaks: [F079:generate_atlas]
       S: Check if this is a config file.
    F: parse(self,file_info)→FileInfo
       S: Parse configuration file.
@@ -91,16 +91,16 @@ C: ConfigParser←BaseParser│[can_parse,parse,_parse_json,_parse_yaml,_extract
       S: prefix: Key prefix for nested keys
 ---
 
-F100│html_parser.py│84
+F101│html_parser.py│84
 S: HTML parser for Codebase Atlas.
-D: ►F003,F075,F104 ●re
+D: ►F003,F076,F105 ●re
 C: HTMLParser←BaseParser│[can_parse,parse,_detect_template_engine,_extract_script_imports]
    S: Parser for HTML files and templates.
 C: HTMLParser←BaseParser│[can_parse,parse,_detect_template_engine,_extract_script_imports]
    S: Parser for HTML files and templates.
    F: can_parse(self,file_info)→bool
-   ↳Called by: F078:generate_atlas
-   ↳Impact: 🟢LOW (1 dependents) | Breaks: [F078:generate_atlas]
+   ↳Called by: F079:generate_atlas
+   ↳Impact: 🟢LOW (1 dependents) | Breaks: [F079:generate_atlas]
       S: Check if this is an HTML file.
    F: parse(self,file_info)→FileInfo
       S: Parse HTML file and detect template engine.
@@ -122,16 +122,16 @@ C: HTMLParser←BaseParser│[can_parse,parse,_detect_template_engine,_extract_s
       S: Args:
 ---
 
-F103│javascript_parser.py│337
+F104│javascript_parser.py│337
 S: JavaScript/TypeScript parser for Codebase Atlas.
-D: ►F003,F075,F104 ●re,typing
+D: ►F003,F076,F105 ●re,typing
 C: JavaScriptParser←BaseParser│[can_parse,parse,_remove_comments,_extract_imports,_extract_exports,_extract_functions,_extract_classes,_extract_class_body,_extract_class_methods,_parse_parameters,+4]
    S: Parser for JavaScript/TypeScript files using regex.
 C: JavaScriptParser←BaseParser│[can_parse,parse,_remove_comments,_extract_imports,_extract_exports,_extract_functions,_extract_classes,_extract_class_body,_extract_class_methods,_parse_parameters,+4]
    S: Parser for JavaScript/TypeScript files using regex.
    F: can_parse(self,file_info)→bool
-   ↳Called by: F078:generate_atlas
-   ↳Impact: 🟢LOW (1 dependents) | Breaks: [F078:generate_atlas]
+   ↳Called by: F079:generate_atlas
+   ↳Impact: 🟢LOW (1 dependents) | Breaks: [F079:generate_atlas]
       S: Check if this is a JavaScript/TypeScript file.
    F: parse(self,file_info)→FileInfo
       S: Parse JavaScript/TypeScript file.
@@ -212,16 +212,16 @@ C: JavaScriptParser←BaseParser│[can_parse,parse,_remove_comments,_extract_im
       S: True if has entry point pattern
 ---
 
-F105│python_parser.py│347│⚡
+F106│python_parser.py│347│⚡
 S: Python parser for Codebase Atlas.
-D: ►F003,F075,F104 ●ast,typing
+D: ►F003,F076,F105 ●ast,typing
 C: PythonParser←BaseParser│[can_parse,parse,_extract_imports,_parse_class,_parse_function,_extract_arguments,_extract_calls_and_vars,_extract_component_usage,_get_annotation,_get_name,+5]
    S: Parser for Python files using AST.
 C: PythonParser←BaseParser│[can_parse,parse,_extract_imports,_parse_class,_parse_function,_extract_arguments,_extract_calls_and_vars,_extract_component_usage,_get_annotation,_get_name,+5]
    S: Parser for Python files using AST.
    F: can_parse(self,file_info)→bool
-   ↳Called by: F078:generate_atlas
-   ↳Impact: 🟢LOW (1 dependents) | Breaks: [F078:generate_atlas]
+   ↳Called by: F079:generate_atlas
+   ↳Impact: 🟢LOW (1 dependents) | Breaks: [F079:generate_atlas]
       S: Check if this is a Python file.
    F: parse(self,file_info)→FileInfo
       S: Parse Python file using AST.

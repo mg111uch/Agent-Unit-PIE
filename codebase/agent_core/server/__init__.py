@@ -51,7 +51,10 @@ if _TOOL_PACKS_ENV:
     ACTIVE_TOOL_PACKS = [p.strip() for p in _TOOL_PACKS_ENV.split(",")]
 else:
     _config_tool_packs = load_config().get("tool_packs")
-    ACTIVE_TOOL_PACKS = _config_tool_packs if _config_tool_packs else [CAT_FILE, CAT_KERNEL, CAT_SIM, CAT_META, CAT_GIT]
+    if isinstance(_config_tool_packs, dict):
+        ACTIVE_TOOL_PACKS = [k for k, v in _config_tool_packs.items() if v]
+    else:
+        ACTIVE_TOOL_PACKS = _config_tool_packs if _config_tool_packs else [CAT_FILE, CAT_KERNEL, CAT_SIM, CAT_META, CAT_GIT]
 
 ACTIVE_TOOLS_DICT = registry.get_tools(categories=ACTIVE_TOOL_PACKS)
 
@@ -116,8 +119,14 @@ from agent_core.server.routes import (
 
 from agent_core.server.ws_handler import websocket_agent
 
-# Serve frontend at /
+# Serve frontend at / (no-cache for development)
 _frontend_dir = os.path.normpath(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "..", "frontend"))
 if os.path.isdir(_frontend_dir):
     from fastapi.staticfiles import StaticFiles
-    app.mount("/", StaticFiles(directory=_frontend_dir, html=True), name="frontend")
+    from starlette.responses import Response
+    class NoCacheStaticFiles(StaticFiles):
+        async def get_response(self, path: str, scope):
+            resp = await super().get_response(path, scope)
+            resp.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+            return resp
+    app.mount("/", NoCacheStaticFiles(directory=_frontend_dir, html=True), name="frontend")

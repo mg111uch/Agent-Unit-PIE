@@ -1,11 +1,11 @@
 # 📂 hypothesis
-Generated: 2026-07-23 14:15:38
+Generated: 2026-07-26 16:20:18
 Files: 3
 
 ---
 
-F039│confidence_engine.py│471
-D: ●__future__,kernel,math,statistics,time,+2
+F040│confidence_engine.py│471
+D: ●__future__,dataclasses,kernel,math,time,+2
 C: ConfidenceResult│[to_dict]
 C: ConfidenceEngine│[__init__,evaluate_signal_confidence,evaluate_event_confidence,evaluate_pattern_confidence,evaluate_hypothesis_confidence,_calculate_signal_evidence,_calculate_signal_consistency,_calculate_source_reliability,_calculate_temporal_score,_calculate_quantity_score,+4]
 C: ConfidenceResult│[to_dict]
@@ -27,7 +27,7 @@ C: ConfidenceEngine│[__init__,evaluate_signal_confidence,evaluate_event_confid
    F: summarize(self,result)→str
 ---
 
-F037│hypothesis_engine.py│361
+F038│hypothesis_engine.py│361
 D: ●__future__,collections,kernel,time,typing
 C: HypothesisEngine│[__init__,create_hypothesis,register_hypothesis,generate_from_patterns,add_supporting_evidence,add_contradicting_evidence,validate_hypothesis,get_hypothesis,get_by_type,get_by_category,+4]
 C: HypothesisEngine│[__init__,create_hypothesis,register_hypothesis,generate_from_patterns,add_supporting_evidence,add_contradicting_evidence,validate_hypothesis,get_hypothesis,get_by_type,get_by_category,+4]
@@ -47,5 +47,5 @@ C: HypothesisEngine│[__init__,create_hypothesis,register_hypothesis,generate_f
    F: clear(self)
 ---
 
-F038│validation_engine.py│0
+F039│validation_engine.py│0
 ---

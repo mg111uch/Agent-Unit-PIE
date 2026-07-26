@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import os
 
-from agent_core.tools import ToolResult
+from agent_core.tools.types import ToolResult
 
 _WRITE_TOOLS = frozenset({
     "write_to_file", "edit_file", "execute_command", "todo_write",

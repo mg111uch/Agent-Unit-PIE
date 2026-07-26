@@ -42,6 +42,8 @@ SECRETS_PATTERNS: list[str] = _CONFIG.get("secrets_patterns", [])
 RATE_LIMIT_LLM_CALLS: int = _CONFIG.get("rate_limits", {}).get("llm_calls_per_minute", 10)
 RATE_LIMIT_TOOL_WRITES: int = _CONFIG.get("rate_limits", {}).get("tool_writes_per_minute", 30)
 
+DEBUG_DUMP_ENABLED: bool = _CONFIG.get("debug_dump_enabled", False)
+
 _raw_atlas_dir = _CONFIG.get("codebase_atlas_dir", "")
 CODEBASE_ATLAS_DIR: str = os.path.abspath(os.path.join(CODEBASE_ROOT, _raw_atlas_dir)) if _raw_atlas_dir else ""
 

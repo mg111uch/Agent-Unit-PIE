@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import re
+import uuid
 from dataclasses import dataclass, field
 from typing import Any, Optional, List
 
@@ -29,6 +30,20 @@ class ParsedToolCall:
     arguments: dict
     raw: str = ""
     call_id: str = ""
+
+
+_MCP_PREFIXES = ["pie_"]
+
+
+def _resolve_tool_name(name: str, known_tools: dict) -> str | None:
+    if name in known_tools:
+        return name
+    for prefix in _MCP_PREFIXES:
+        if name.startswith(prefix):
+            stripped = name[len(prefix):]
+            if stripped in known_tools:
+                return stripped
+    return None
 
 
 def parse_provider_response(
@@ -56,6 +71,8 @@ def parse_provider_response(
                 or tc.get("_call_id", "")
                 or ""
             )
+            if not call_id:
+                call_id = f"call_{uuid.uuid4().hex[:12]}"
             if isinstance(raw_args, str):
                 try:
                     args = json.loads(raw_args)
@@ -63,10 +80,11 @@ def parse_provider_response(
                     args = {"input": raw_args}
             else:
                 args = raw_args if isinstance(raw_args, dict) else {"input": raw_args}
-            if name in known_tools:
+            resolved = _resolve_tool_name(name, known_tools)
+            if resolved:
                 valid_calls.append(
                     ParsedToolCall(
-                        name=name,
+                        name=resolved,
                         arguments=args or {},
                         call_id=str(call_id) if call_id else "",
                     )
@@ -111,14 +129,15 @@ def parse_agent_reply(reply: Optional[str], known_tools: dict) -> ParsedReply:
             if "final" in data:
                 return ParsedReply(kind="final", content=data["final"], raw=text)
             tool = data.get("action")
-            if tool and tool in known_tools:
-                return ParsedReply(
-                    kind="tool",
-                    tool=tool,
-                    tool_input=data.get("input", ""),
-                    raw=text,
-                )
             if tool:
+                resolved = _resolve_tool_name(tool, known_tools)
+                if resolved:
+                    return ParsedReply(
+                        kind="tool",
+                        tool=resolved,
+                        tool_input=data.get("input", ""),
+                        raw=text,
+                    )
                 return ParsedReply(kind="invalid_tool", tool=tool, raw=text)
         except json.JSONDecodeError:
             pass
@@ -147,9 +166,11 @@ def _parse_xml_tool_call(text: str, known_tools: dict) -> Optional[ParsedReply]:
     m = re.search(r"<tool_call>\s*<function=(\w+)>", text)
     if not m:
         return None
-    tool = m.group(1)
-    if tool not in known_tools:
-        return ParsedReply(kind="invalid_tool", tool=tool, raw=text)
+    raw_tool = m.group(1)
+    resolved = _resolve_tool_name(raw_tool, known_tools)
+    if not resolved:
+        return ParsedReply(kind="invalid_tool", tool=raw_tool, raw=text)
+    tool = resolved
     params = {}
     for pm in re.finditer(r"<parameter\s+(\w+)=([^>]+)>([^<]*)</parameter>", text):
         params[pm.group(1)] = pm.group(3).strip()

@@ -279,18 +279,23 @@ async def handle_chat(
                 "step": event.get("step", 0),
             })
         elif etype == "tool_call":
+            print(f"[WS-DIAG] forwarding tool_call: tool={event['tool']} step={event['step']} call_id='{event.get('call_id','')}'", flush=True)
             await websocket.send_json({
                 "type": "tool_call",
                 "tool": event["tool"],
                 "input": event["input"],
+                "call_id": event.get("call_id", ""),
                 "step": event["step"],
             })
         elif etype == "tool_result":
+            print(f"[WS-DIAG] forwarding tool_result: tool={event['tool']} step={event['step']} ok={event.get('ok',True)} call_id='{event.get('call_id','')}' result_len={len(event.get('result',''))}", flush=True)
             await websocket.send_json({
                 "type": "tool_result",
                 "tool": event["tool"],
                 "input": event.get("input", ""),
                 "result": event["result"],
+                "ok": event.get("ok", True),
+                "call_id": event.get("call_id", ""),
                 "step": event["step"],
             })
         elif etype == "stream_chunk":

@@ -6,7 +6,7 @@ import os
 from typing import Any
 
 from agent_core.config import PROVIDER_DEFAULTS, resolve_default_model
-from agent_core.llm.llm_orchestrator import LLMOrchestrator
+from agent_core.llm_orchestrator import LLMOrchestrator
 
 
 def build_orchestrator(
@@ -40,7 +40,7 @@ def build_orchestrator(
             or os.getenv("AGENT_MODEL")
             or PROVIDER_DEFAULTS["gemini"]
         )
-        from agent_core.llm.providers.gemini_provider import GeminiProvider
+        from agent_core.providers.gemini_provider import GeminiProvider
 
         orchestrator.register_provider(
             "gemini",
@@ -56,7 +56,7 @@ def build_orchestrator(
             or os.getenv("OPENROUTER_MODEL")
             or PROVIDER_DEFAULTS["openrouter"]
         )
-        from agent_core.llm.providers.openrouter_provider import OpenRouterProvider
+        from agent_core.providers.openrouter_provider import OpenRouterProvider
 
         orchestrator.register_provider(
             "openrouter",
@@ -66,7 +66,7 @@ def build_orchestrator(
         provider_models["openrouter"] = openrouter_model
 
     if include_mock:
-        from agent_core.llm.providers.mock_provider import MockProvider
+        from agent_core.providers.mock_provider import MockProvider
 
         mock_model = PROVIDER_DEFAULTS["mock"]
         orchestrator.register_provider("mock", MockProvider(model=mock_model))

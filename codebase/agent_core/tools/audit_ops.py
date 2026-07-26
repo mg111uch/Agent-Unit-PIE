@@ -38,7 +38,7 @@ def emit_tool_compliance_signal(read_count: int, pie_count: int, kernel_read_cou
             "value": signal.value,
         }
 
-        return json.dumps(output, indent=2)
+        return json.dumps(output, separators=(",", ":"))
 
     except Exception as e:
         return f"Error in emit_tool_compliance_signal: {str(e)}"

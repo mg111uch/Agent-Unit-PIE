@@ -5,21 +5,22 @@ from agent_core.workspace import resolve, WORKSPACE_ROOT, PathEscapeError, to_re
 from agent_core.tools.undo_ops import save_checkpoint
 from agent_core.config import CODEBASE_ROOT
 from kernel.persistence.db import kernel_db
+from agent_core.tools.types import ToolResult
 
-MAX_FILE_SIZE = 512 * 1024  # 512 KB
+MAX_FILE_SIZE = 50 * 1024  # 50 KB — warn above this; use offset/limit to read portions
 
 
 def _ensure_dir(path: str):
     os.makedirs(os.path.dirname(path), exist_ok=True)
 
 
-def _read_file_content(full: str, offset: int = 0, limit: int | None = None) -> str:
+def _read_file_content(full: str, offset: int = 0, limit: int | None = None, line_numbers: bool = True) -> ToolResult:
     with open(full, "r", encoding="utf-8") as f:
         lines = f.readlines()
 
     size = sum(len(l) for l in lines)
     if size > MAX_FILE_SIZE:
-        return f"Error: file too large ({size // 1024} KB). Max is {MAX_FILE_SIZE // 1024} KB."
+        return ToolResult(ok=False, message=f"file too large ({size // 1024} KB). Max is {MAX_FILE_SIZE // 1024} KB.")
 
     if offset > 0 or limit is not None:
         start = max(0, offset - 1) if offset > 0 else 0
@@ -29,15 +30,18 @@ def _read_file_content(full: str, offset: int = 0, limit: int | None = None) -> 
     else:
         line_offset = 1
 
-    numbered = "\n".join(
-        f"{i + line_offset:>5}\t{line.rstrip()}"
-        for i, line in enumerate(lines)
-    )
+    if line_numbers:
+        numbered = "\n".join(
+            f"{i + line_offset:>5}\t{line.rstrip()}"
+            for i, line in enumerate(lines)
+        )
+    else:
+        numbered = "\n".join(line.rstrip() for line in lines)
     total = size  # approximate
     header = f"--- {to_relative(full)} ---"
     if offset > 0 or limit is not None:
         header += f" (lines {line_offset}-{line_offset + len(lines) - 1} of ~{_count_lines(full)})"
-    return f"{header}\n{numbered}"
+    return ToolResult(ok=True, data=f"{header}\n{numbered}")
 
 
 def _compute_diff(old_str: str, new_str: str) -> list[str]:
@@ -60,12 +64,15 @@ def _count_lines(path: str) -> int:
         return 0
 
 
-def read_file(path: str = "", **kwargs) -> str:
+def read_file(path: str = "", **kwargs) -> ToolResult:
     path = kwargs.get("path") or kwargs.get("input") or kwargs.get("file") or path
     offset = int(kwargs.get("offset", 0))
     limit = kwargs.get("limit")
     if limit is not None:
         limit = int(limit)
+    line_numbers = kwargs.get("line_numbers", True)
+    if isinstance(line_numbers, str):
+        line_numbers = line_numbers.lower() in ("true", "1", "yes")
     try:
         full = resolve(path)
         try: kernel_db.record_file_access(to_relative(full), "read")
@@ -75,26 +82,26 @@ def read_file(path: str = "", **kwargs) -> str:
             nearby = []
             if os.path.isdir(parent):
                 nearby = sorted(os.listdir(parent))[:20]
-            return (
-                f"Error: file not found: {path}\n"
+            return ToolResult(ok=False, message=(
+                f"file not found: {path}\n"
                 f"Resolved to: {to_relative(full)} (workspace-relative)\n"
                 f"Files in that directory: {nearby if nearby else '(directory does not exist)'}"
-            )
-        return _read_file_content(full, offset=offset, limit=limit)
+            ))
+        return _read_file_content(full, offset=offset, limit=limit, line_numbers=line_numbers)
     except PathEscapeError as e:
-        return f"Error: {e}"
+        return ToolResult(ok=False, message=str(e))
     except Exception as e:
-        return f"Error reading {path}: {e}"
+        return ToolResult(ok=False, message=f"reading {path}: {e}")
 
 
-def list_files(path: str = ".", **kwargs) -> str:
+def list_files(path: str = ".", **kwargs) -> ToolResult:
     path = kwargs.get("path") or kwargs.get("directory") or kwargs.get("dir") or kwargs.get("input") or path
     if not path:
         path = "."
     try:
         full = resolve(path)
         if not os.path.isdir(full):
-            return f"Error: not a directory: {path}"
+            return ToolResult(ok=False, message=f"not a directory: {path}")
         lines = []
         for root, dirs, files in os.walk(full):
             dirs[:] = [d for d in sorted(dirs) if d not in (".git", "node_modules", "__pycache__", ".venv")]
@@ -108,14 +115,15 @@ def list_files(path: str = ".", **kwargs) -> str:
                 lines.append(f"{indent}{os.path.basename(root)}/")
             for fname in sorted(files):
                 lines.append(f"{indent}  {fname}")
-        return "\n".join(lines) if lines else "(empty directory)"
+        data = "\n".join(lines) if lines else "(empty directory)"
+        return ToolResult(ok=True, data=data)
     except PathEscapeError as e:
-        return f"Error: {e}"
+        return ToolResult(ok=False, message=str(e))
     except Exception as e:
-        return f"Error listing {path}: {e}"
+        return ToolResult(ok=False, message=f"listing {path}: {e}")
 
 
-def write_to_file(input_data) -> str:
+def write_to_file(input_data) -> ToolResult:
     """Write to file with modes: create, overwrite, append.
 
     input_data = {
@@ -137,7 +145,7 @@ def write_to_file(input_data) -> str:
         dry_run = input_data.get("dry_run", False)
 
         if not path or not mode:
-            return "Error: 'path' and 'mode' are required"
+            return ToolResult(ok=False, message="'path' and 'mode' are required")
 
         full_path = resolve(path)
         try: kernel_db.record_file_access(to_relative(full_path), mode)
@@ -146,12 +154,12 @@ def write_to_file(input_data) -> str:
 
         if mode == "create":
             if exists:
-                return f"Error: File already exists: {to_relative(full_path)}"
+                return ToolResult(ok=False, message=f"File already exists: {to_relative(full_path)}")
             _ensure_dir(full_path)
             if not dry_run:
                 with open(full_path, "w") as f:
                     f.write(content)
-            return f"[CREATE] {to_relative(full_path)} ({len(content)} chars)"
+            return ToolResult(ok=True, data=f"[CREATE] {to_relative(full_path)} ({len(content)} chars)")
 
         elif mode == "overwrite":
             ckpt_saved = save_checkpoint(path) if not dry_run else None
@@ -160,25 +168,25 @@ def write_to_file(input_data) -> str:
                 with open(full_path, "w") as f:
                     f.write(content)
             ckpt = " [checkpoint saved]" if ckpt_saved else ""
-            return f"[OVERWRITE] {to_relative(full_path)} ({len(content)} chars){ckpt}"
+            return ToolResult(ok=True, data=f"[OVERWRITE] {to_relative(full_path)} ({len(content)} chars){ckpt}")
 
         elif mode == "append":
             _ensure_dir(full_path)
             if not dry_run:
                 with open(full_path, "a") as f:
                     f.write(content)
-            return f"[APPEND] {to_relative(full_path)} (+{len(content)} chars)"
+            return ToolResult(ok=True, data=f"[APPEND] {to_relative(full_path)} (+{len(content)} chars)")
 
         else:
-            return f"Error: Unknown mode '{mode}'"
+            return ToolResult(ok=False, message=f"Unknown mode '{mode}'")
 
     except PathEscapeError as e:
-        return f"Error: {e}"
+        return ToolResult(ok=False, message=str(e))
     except Exception as e:
-        return f"Error: {str(e)}"
+        return ToolResult(ok=False, message=str(e))
 
 
-def edit_file(input_data) -> str:
+def edit_file(input_data) -> ToolResult:
     try:
         data = json.loads(input_data) if isinstance(input_data, str) else input_data
         path, old, new = data["path"], data["old_string"], data["new_string"]
@@ -190,24 +198,24 @@ def edit_file(input_data) -> str:
             nearby = []
             if os.path.isdir(parent):
                 nearby = sorted(os.listdir(parent))[:20]
-            return (
-                f"Error: file not found: {path}\n"
+            return ToolResult(ok=False, message=(
+                f"file not found: {path}\n"
                 f"Resolved to: {to_relative(full)} (workspace-relative)\n"
                 f"Files in that directory: {nearby if nearby else '(directory does not exist)'}"
-            )
+            ))
         with open(full, "r", encoding="utf-8") as f:
             content = f.read()
         count = content.count(old)
         if count == 0:
-            return (
-                "Error: old_string not found. Re-read the file with read_file "
+            return ToolResult(ok=False, message=(
+                "old_string not found. Re-read the file with read_file "
                 "(it shows exact line numbers/whitespace) and copy the text exactly."
-            )
+            ))
         if count > 1:
-            return (
-                f"Error: old_string is not unique ({count} matches). "
+            return ToolResult(ok=False, message=(
+                f"old_string is not unique ({count} matches). "
                 "Include more surrounding lines so the match is unambiguous."
-            )
+            ))
         ckpt_saved = save_checkpoint(path)
         updated = content.replace(old, new, 1)
         with open(full, "w", encoding="utf-8") as f:
@@ -222,39 +230,39 @@ def edit_file(input_data) -> str:
         result = f"[EDIT] {to_relative(full)}: replaced 1 occurrence ({len(new)} chars){ckpt}"
         if diff_section:
             result += f"\n--- Diff ---\n{diff_section}"
-        return result
+        return ToolResult(ok=True, data=result)
     except PathEscapeError as e:
-        return f"Error: {e}"
+        return ToolResult(ok=False, message=str(e))
     except Exception as e:
-        return f"Error: {e}"
+        return ToolResult(ok=False, message=str(e))
 
 
-def get_workspace_info(_input=None) -> str:
+def get_workspace_info(_input=None) -> ToolResult:
     entries = sorted(os.listdir(WORKSPACE_ROOT))
-    return (
+    return ToolResult(ok=True, data=(
         f"Workspace root (use paths relative to this): {WORKSPACE_ROOT}\n"
         f"Top-level entries: {entries}\n"
         f"All file paths you pass to read_file / write_to_file / list_files / edit_file "
         f"must be relative to this root (e.g. 'src/main.py', not an absolute OS path)."
-    )
+    ))
 
 
-def glob_search(pattern: str = "", **kwargs) -> str:
+def glob_search(pattern: str = "", **kwargs) -> ToolResult:
     """Find files matching a glob pattern (e.g. '**/*.py', 'src/**/*.ts')."""
     pattern = kwargs.get("pattern") or kwargs.get("glob") or kwargs.get("input") or pattern
     try:
         matches = sorted(Path(WORKSPACE_ROOT).rglob(pattern))
         relative = [str(Path(p).relative_to(WORKSPACE_ROOT)) for p in matches if p.is_file()]
         if not relative:
-            return f"No files match pattern: {pattern}"
+            return ToolResult(ok=True, data=f"No files match pattern: {pattern}")
         lines = [f"Files matching '{pattern}' ({len(relative)}):"]
         lines.extend(f"  {r}" for r in relative)
-        return "\n".join(lines)
+        return ToolResult(ok=True, data="\n".join(lines))
     except Exception as e:
-        return f"Error globbing '{pattern}': {e}"
+        return ToolResult(ok=False, message=f"globbing '{pattern}': {e}")
 
 
-def grep_search(input_data) -> str:
+def grep_search(input_data) -> ToolResult:
     """Search file contents by regex across the workspace.
     
     input_data = {"pattern": "...", "include": "*.py", "max_results": 50}
@@ -267,7 +275,7 @@ def grep_search(input_data) -> str:
         max_results = int(data.get("max_results", 50))
 
         if not pattern:
-            return "Error: 'pattern' is required"
+            return ToolResult(ok=False, message="'pattern' is required")
 
         # Try ripgrep first (much faster)
         try:
@@ -288,16 +296,17 @@ def grep_search(input_data) -> str:
                 out = "\n".join(relative_lines[:max_results])
                 if len(relative_lines) > max_results:
                     out += f"\n... ({len(relative_lines) - max_results} more matches)"
-                return out
+                return ToolResult(ok=True, data=out)
         except (FileNotFoundError, subprocess.TimeoutExpired):
             pass
 
         # Fallback: Python regex walk
         matches = []
+        import fnmatch
         for root, dirs, files in os.walk(WORKSPACE_ROOT):
             dirs[:] = [d for d in sorted(dirs) if d not in (".git", "node_modules", "__pycache__", ".venv")]
             for fname in sorted(files):
-                if include and not fname.endswith(tuple(include.split(","))):
+                if include and not any(fnmatch.fnmatch(fname, pat.strip()) for pat in include.split(",")):
                     continue
                 fpath = os.path.join(root, fname)
                 try:
@@ -314,33 +323,33 @@ def grep_search(input_data) -> str:
                     break
 
         if not matches:
-            return f"No matches for pattern: {pattern}"
+            return ToolResult(ok=True, data=f"No matches for pattern: {pattern}")
         out = "\n".join(matches[:max_results])
         if len(matches) > max_results:
             out += f"\n... ({len(matches) - max_results} more matches)"
-        return out
+        return ToolResult(ok=True, data=out)
     except Exception as e:
-        return f"Error grepping '{pattern}': {e}"
+        return ToolResult(ok=False, message=f"grep_search error: {e}")
 
 
-def read_section_tool(params: dict) -> str:
+def read_section_tool(params: dict) -> ToolResult:
     if isinstance(params, str):
         try:
             params = json.loads(params)
         except json.JSONDecodeError:
-            return "Error: invalid JSON input."
+            return ToolResult(ok=False, message="invalid JSON input.")
     path = params.get("path", "")
     if not path:
-        return "Error: 'path' parameter is required."
+        return ToolResult(ok=False, message="'path' parameter is required.")
     pattern = params.get("pattern", "")
     if not pattern:
-        return "Error: 'pattern' (regex) parameter is required."
+        return ToolResult(ok=False, message="'pattern' (regex) parameter is required.")
     context_lines = params.get("context_lines", 10)
     ignore_case = params.get("ignore_case", False)
     try:
         full = resolve(path)
         if not os.path.isfile(full):
-            return f"Error: file not found: {path}"
+            return ToolResult(ok=False, message=f"file not found: {path}")
         flags = re.IGNORECASE if ignore_case else 0
         compiled = re.compile(pattern, flags)
         with open(full, "r", encoding="utf-8", errors="replace") as f:
@@ -360,37 +369,37 @@ def read_section_tool(params: dict) -> str:
                     "context": f"Lines {start+1}-{end} (match at {i+1}):\n{block}",
                 })
         if not matches:
-            return json.dumps({
+            return ToolResult(ok=True, data=json.dumps({
                 "path": path,
                 "pattern": pattern,
                 "matches": [],
                 "total_lines": len(lines),
-            }, indent=2)
-        return json.dumps({
+            }, separators=(",", ":")))
+        return ToolResult(ok=True, data=json.dumps({
             "path": path,
             "pattern": pattern,
             "match_count": len(matches),
             "total_lines": len(lines),
             "matches": matches,
-        }, indent=2)
+        }, separators=(",", ":")))
     except re.error as e:
-        return f"Error: invalid regex pattern '{pattern}': {e}"
+        return ToolResult(ok=False, message=f"invalid regex pattern '{pattern}': {e}")
     except Exception as e:
-        return f"Error reading '{path}': {e}"
+        return ToolResult(ok=False, message=f"reading '{path}': {e}")
 
 
-def batch_edit_tool(params: dict) -> str:
+def batch_edit_tool(params: dict) -> ToolResult:
     if isinstance(params, str):
         try:
             params = json.loads(params)
         except json.JSONDecodeError:
-            return "Error: invalid JSON input."
+            return ToolResult(ok=False, message="invalid JSON input.")
     path = params.get("path", "")
     edits = params.get("edits", [])
     if not path:
-        return "Error: 'path' parameter is required."
+        return ToolResult(ok=False, message="'path' parameter is required.")
     if not edits or not isinstance(edits, list):
-        return "Error: 'edits' (list) parameter is required."
+        return ToolResult(ok=False, message="'edits' (list) parameter is required.")
     results = []
     for i, edit in enumerate(edits):
         old_str = edit.get("old_string", "")
@@ -420,18 +429,18 @@ def batch_edit_tool(params: dict) -> str:
         except Exception as e:
             results.append({"edit": i, "status": "error", "message": str(e)})
     ok_count = sum(1 for r in results if r["status"] == "ok")
-    return json.dumps({"file": path, "edits": results, "summary": f"{ok_count}/{len(edits)} edits applied"}, indent=2)
+    return ToolResult(ok=True, data=json.dumps({"file": path, "edits": results, "summary": f"{ok_count}/{len(edits)} edits applied"}, separators=(",", ":")))
 
 
-def batch_read_tool(params: dict) -> str:
+def batch_read_tool(params: dict) -> ToolResult:
     if isinstance(params, str):
         try:
             params = json.loads(params)
         except json.JSONDecodeError:
-            return "Error: invalid JSON input."
+            return ToolResult(ok=False, message="invalid JSON input.")
     paths = params.get("paths", []) if isinstance(params, dict) else []
     if not paths or not isinstance(paths, list):
-        return "Error: 'paths' (list) parameter is required."
+        return ToolResult(ok=False, message="'paths' (list) parameter is required.")
     codebase = Path(CODEBASE_ROOT)
     results = {}
     for p in paths:
@@ -455,4 +464,4 @@ def batch_read_tool(params: dict) -> str:
             entry["warning"] = "Prefer file_api or symbols_by_file for kernel files — this is a raw file read."
         results[p] = entry
     counts = {"ok": sum(1 for v in results.values() if "content" in v), "errors": sum(1 for v in results.values() if "error" in v)}
-    return json.dumps({"files": results, "summary": counts}, indent=2)
+    return ToolResult(ok=True, data=json.dumps({"files": results, "summary": counts}, separators=(",", ":")))

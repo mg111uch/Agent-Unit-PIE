@@ -10,26 +10,13 @@ DEFAULT_TOKEN_BUDGET = 20000
 DEFAULT_OUTPUT = os.path.join(os.path.dirname(CODEBASE_ROOT), "context_dump.txt")
 
 
-def _rough_token_count(text: str) -> int:
-    return len(text) // 4
-
-
-def _collect_blast_radius(rag, names: List[str], output: Dict[str, Any]) -> None:
-    seen: set = set()
-    for name in names:
-        if name in seen:
-            continue
-        cc = rag.get_callers_callees(name)
-        if "error" in cc:
-            output.setdefault("warnings", []).append(cc["error"])
-            continue
-        for group in ("callers", "callees"):
-            for sym in cc.get(group, []):
-                sn = sym["symbol_name"]
-                if sn not in seen and sn != name:
-                    seen.add(sn)
-        seen.add(name)
-    return list(seen)
+def _add_section(header: str, body: str, sections: list, max_tokens: int, used_tokens: int) -> int:
+    block = f"{header}\n{body}\n"
+    tok = len(block) // 4
+    if used_tokens + tok > max_tokens:
+        return -1
+    sections.append(block)
+    return used_tokens + tok
 
 
 def minimal_context_dump(params: dict) -> str:
@@ -50,29 +37,19 @@ def minimal_context_dump(params: dict) -> str:
     total_symbols = 0
     peripheral_files = 0
     warnings: List[str] = []
-    graph = {}  # symbol -> {callers, callees}
-
-    def _add_section(header: str, body: str) -> bool:
-        nonlocal used_tokens
-        block = f"{header}\n{body}\n"
-        tok = _rough_token_count(block)
-        if used_tokens + tok > max_tokens:
-            return False
-        sections.append(block)
-        used_tokens += tok
-        return True
+    graph = {}
 
     if problem:
-        _add_section("=" * 60, "")
-        _add_section("PROBLEM DESCRIPTION", "")
-        _add_section("", problem)
-        _add_section("", "")
+        used_tokens = _add_section("=" * 60, "", sections, max_tokens, used_tokens)
+        used_tokens = _add_section("PROBLEM DESCRIPTION", "", sections, max_tokens, used_tokens)
+        used_tokens = _add_section("", problem, sections, max_tokens, used_tokens)
+        used_tokens = _add_section("", "", sections, max_tokens, used_tokens)
 
     if symbol_names:
         if isinstance(symbol_names, str):
             symbol_names = [symbol_names]
-        _add_section("=" * 60, "")
-        _add_section("BLAST RADIUS ANALYSIS", "")
+        used_tokens = _add_section("=" * 60, "", sections, max_tokens, used_tokens)
+        used_tokens = _add_section("BLAST RADIUS ANALYSIS", "", sections, max_tokens, used_tokens)
         blast = set()
         for name in symbol_names:
             cc = rag.get_callers_callees(name)
@@ -85,12 +62,12 @@ def minimal_context_dump(params: dict) -> str:
             blast.add(name)
             blast.update(callers)
             blast.update(callees)
-        _add_section("", f"Starting symbols: {', '.join(symbol_names)}")
-        _add_section("", f"Blast radius: {len(blast)} symbols across call graph")
+        used_tokens = _add_section("", f"Starting symbols: {', '.join(symbol_names)}", sections, max_tokens, used_tokens)
+        used_tokens = _add_section("", f"Blast radius: {len(blast)} symbols across call graph", sections, max_tokens, used_tokens)
         for name, edges in graph.items():
             c_str = ", ".join(edges["callers"]) or "(none)"
             e_str = ", ".join(edges["callees"]) or "(none)"
-            _add_section("", f"  {name}: called by [{c_str}], calls [{e_str}]")
+            used_tokens = _add_section("", f"  {name}: called by [{c_str}], calls [{e_str}]", sections, max_tokens, used_tokens)
 
         symbols_data = rag.get_symbols(list(blast))
         for sym in symbols_data:
@@ -103,12 +80,14 @@ def minimal_context_dump(params: dict) -> str:
             if sig and sig not in code:
                 header_line += f"\n```\n{sig}\n```"
             if code:
-                if not _add_section(header_line, f"```\n{code}\n```"):
+                result = _add_section(header_line, f"```\n{code}\n```", sections, max_tokens, used_tokens)
+                if result < 0:
                     warnings.append(f"Token budget reached, skipped {sn}")
                     break
+                used_tokens = result
                 total_symbols += 1
             else:
-                _add_section(header_line, "(source not indexed)")
+                used_tokens = _add_section(header_line, "(source not indexed)", sections, max_tokens, used_tokens)
 
     if file_paths:
         if isinstance(file_paths, str):
@@ -129,8 +108,11 @@ def minimal_context_dump(params: dict) -> str:
                     api_lines.append(f"    def {m['symbol_name']}{m.get('signature', '()')}")
                     if m.get("docstring_first_line"):
                         api_lines.append(f"      {m['docstring_first_line']}")
-            if _add_section("", "\n".join(api_lines)):
-                peripheral_files += 1
+            result = _add_section("", "\n".join(api_lines), sections, max_tokens, used_tokens)
+            if result < 0:
+                continue
+            used_tokens = result
+            peripheral_files += 1
 
     summary = {
         "sections": len(sections),
@@ -142,8 +124,8 @@ def minimal_context_dump(params: dict) -> str:
     }
     if warnings:
         summary["warnings"] = warnings
-    _add_section("=" * 60, "")
-    _add_section("SUMMARY", json.dumps(summary, indent=2))
+    used_tokens = _add_section("=" * 60, "", sections, max_tokens, used_tokens)
+    _add_section("SUMMARY", json.dumps(summary, indent=2), sections, max_tokens, used_tokens)
 
     try:
         os.makedirs(os.path.dirname(output_path) or ".", exist_ok=True)

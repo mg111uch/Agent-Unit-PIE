@@ -1,7 +1,7 @@
 # Agent Tool Test Prompts
 
 These prompts exercise the new capabilities implemented in the agent harness.
-Target file: `codebase/rag_pipeline/dummy/fabo/fibonacci.py`
+Target file: `codebase/temp/dummy/fabo/fabonacci.py`
 
 ---
 

@@ -1,15 +1,15 @@
 # 📂 backend
-Generated: 2026-07-23 14:15:38
+Generated: 2026-07-26 16:20:18
 Files: 5
 
 ---
 
-F093│__init__.py│0
+F094│__init__.py│0
 ---
 
-F092│graph_builder.py│284
+F093│graph_builder.py│284
 S: graph_builder.py
-D: ►F075,F091 ●__future__,typing
+D: ►F076,F092 ●__future__,typing
 C: GraphBuilder│[__init__,build_dependency_graph,build_call_graph,build_unified_graph,_add_file_nodes,_add_dependency_edges,_add_file_nodes_unified,_add_function_nodes_unified,_add_function_clusters,_add_function_nodes,+8]
    S: Builds GraphData from AtlasData.
 C: GraphBuilder│[__init__,build_dependency_graph,build_call_graph,build_unified_graph,_add_file_nodes,_add_dependency_edges,_add_file_nodes_unified,_add_function_nodes_unified,_add_function_clusters,_add_function_nodes,+8]
@@ -38,7 +38,7 @@ C: GraphBuilder│[__init__,build_dependency_graph,build_call_graph,build_unifie
    F: _find_function(file_info,func_name)
 ---
 
-F091│graph_models.py│155
+F092│graph_models.py│155
 S: graph_models.py
 D: ●__future__,dataclasses,enum,typing
 C: NodeType←str,Enum│[]
@@ -80,9 +80,9 @@ C: GraphData│[add_node,get_node,has_node,add_edge,get_edge,add_cluster,get_clu
    F: cluster_count(self)→int
 ---
 
-F095│graph_serializer.py│389
+F096│graph_serializer.py│389
 S: graph_serializer.py
-D: ►F091 ●__future__,dataclasses,json,pathlib,typing
+D: ►F092 ●__future__,dataclasses,json,pathlib,typing
 C: GraphSerializer│[to_dict,to_nested_dict,to_json,save_json,from_dict,from_json,load_json,_node_to_dict,_node_from_dict,_edge_to_dict,+3]
 C: GraphSerializer│[to_dict,to_nested_dict,to_json,save_json,from_dict,from_json,load_json,_node_to_dict,_node_from_dict,_edge_to_dict,+3]
    F: to_dict(cls,graph)→Any
@@ -100,23 +100,23 @@ C: GraphSerializer│[to_dict,to_nested_dict,to_json,save_json,from_dict,from_js
    F: _cluster_from_dict(data)→GraphCluster
 ---
 
-F094│serve.py│236│⚡
-D: ►F091,F095 ●__future__,flask,json,pathlib
+F095│serve.py│236│⚡
+D: ►F092,F096 ●__future__,flask,json,pathlib
 F: _load_positions_with_meta(output_dir,graph_type)→Any
-   ↳Called by: F094:_write_positions,F094:_build_app,F094:_merge_positions
-   ↳Impact: 🔴HIGH (3 dependents) | Breaks: [F094:_write_positions],[F094:_build_app],[F094:_merge_positions]
+   ↳Called by: F095:_write_positions,F095:_build_app,F095:_merge_positions
+   ↳Impact: 🔴HIGH (3 dependents) | Breaks: [F095:_write_positions],[F095:_build_app],[F095:_merge_positions]
 F: _merge_positions(graph,output_dir,graph_type)→None
-   ↳Called by: F094:create_app | Calls: F094:_load_positions_with_meta
-   ↳Impact: 🟢LOW (1 dependents) | Breaks: [F094:create_app]
+   ↳Called by: F095:create_app | Calls: F095:_load_positions_with_meta
+   ↳Impact: 🟢LOW (1 dependents) | Breaks: [F095:create_app]
    S: Overwrite node.x / node.y from saved positions file if it exists.
 F: _write_positions(output_dir,graph_type,positions,project_id,child_offsets)→None
-   ↳Called by: F094:_build_app | Calls: F094:_load_positions_with_meta
-   ↳Impact: 🟢LOW (1 dependents) | Breaks: [F094:_build_app]
+   ↳Called by: F095:_build_app | Calls: F095:_load_positions_with_meta
+   ↳Impact: 🟢LOW (1 dependents) | Breaks: [F095:_build_app]
 F: create_app(unified_graph,output_dir,project_id)→Flask
-   ↳Called by: F078:main | Calls: F094:_build_app,F094:_merge_positions
-   ↳Impact: 🟢LOW (1 dependents) | Breaks: [F078:main]
+   ↳Called by: F079:main | Calls: F095:_build_app,F095:_merge_positions
+   ↳Impact: 🟢LOW (1 dependents) | Breaks: [F079:main]
    S: Create app from a unified GraphData object.
 F: _build_app(graph_json,output_dir,project_id)→Flask
-   ↳Called by: F094:create_app | Calls: F094:_load_positions_with_meta,F094:_write_positions
-   ↳Impact: 🟢LOW (1 dependents) | Breaks: [F094:create_app]
+   ↳Called by: F095:create_app | Calls: F095:_write_positions,F095:_load_positions_with_meta
+   ↳Impact: 🟢LOW (1 dependents) | Breaks: [F095:create_app]
 ---

@@ -54,7 +54,15 @@
     "AKIA[0-9A-Z]{16}",
     "-----BEGIN (RSA |EC |OPENSSH )PRIVATE KEY-----"
   ],
-  "tool_packs": ["file", "kernel", "sim", "meta", "git"],
+  "debug_dump_enabled": true,
+  "tool_packs": {
+    "file": true,
+    "kernel": false,
+    "sim": false,
+    "meta": false,
+    "git": false,
+    "code_rag": false
+},
   "rate_limits": {
     "llm_calls_per_minute": 10,
     "tool_writes_per_minute": 30

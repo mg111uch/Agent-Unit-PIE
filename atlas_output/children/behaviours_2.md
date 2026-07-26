@@ -1,12 +1,12 @@
 # 📂 behaviours_2
-Generated: 2026-07-23 14:15:38
+Generated: 2026-07-26 16:20:18
 Files: 3
 
 ---
 
-F135│heal.py│56
+F136│heal.py│56
 S: behaviours/heal.py
-D: ►F132 ●numpy
+D: ►F133 ●numpy
 C: HealBehavior←BaseBehavior│[execute]
    S: Attempt to heal nearby farmers.
 C: HealBehavior←BaseBehavior│[execute]
@@ -14,9 +14,9 @@ C: HealBehavior←BaseBehavior│[execute]
    F: execute(self,unit,world_state)
 ---
 
-F136│move.py│42
+F137│move.py│42
 S: behaviours/move.py
-D: ►F132 ●numpy
+D: ►F133 ●numpy
 C: MoveBehavior←BaseBehavior│[execute]
    S: Move to adjacent cell based on vision radius.
 C: MoveBehavior←BaseBehavior│[execute]
@@ -24,9 +24,9 @@ C: MoveBehavior←BaseBehavior│[execute]
    F: execute(self,unit,world_state)
 ---
 
-F134│reproduce.py│67
+F135│reproduce.py│67
 S: behaviours/reproduce.py
-D: ►F132 ●numpy
+D: ►F133 ●numpy
 C: ReproduceBehavior←BaseBehavior│[execute]
    S: Attempt to mate with a nearby fertile partner.
 C: ReproduceBehavior←BaseBehavior│[execute]

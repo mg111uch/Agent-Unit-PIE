@@ -1,75 +1,14 @@
 # AI Agent Development Guidelines 
 
-## TASK
+## Task — Resolved
 
-During git commit one citations using `Agentic_Unit_PIE/scripts/verify_citations.py` failed with error: FAIL  [grep ] system_devpt_reports/codebase_atlas/status.md:12  modules/codebase_atlas/graph/backend/serve.py:save_positions()
+The model was outputting text-JSON (`{"action": "...", "input": "..."}`) instead of using native function calling, and `code_rag` tools (`search_symbols`, `get_symbol`, etc.) were not in `ACTIVE_TOOL_PACKS`. Fixes applied:
 
-System development reports are given in `Agentic_Unit_PIE/system_devpt_reports`. 
-
-Do not give code or make any changes. Just give a plan or an answer. 
-
-## Kernel Probing Rules (Mandatory)
-
-**Never `Read` a file under `kernel/` — use `pie_file_api` first, always.**
-
-### Preferred tools by scenario
-
-| Scenario | Tool |
-|---|---|
-| Need full source of a known function/class | `pie_get_symbol(names=["ClassName", "function_name"], file_path=...)` |
-| Searching by name when unsure of exact spelling | `pie_search_symbols(query="...")` |
-| See what calls / is called by a symbol | `pie_get_callers_callees(name="symbol")` |
-| Find what breaks when editing a symbol | `pie_find_impact(name="symbol")` |
-| Quick metadata (signature, risk, LOC) for many symbols | `pie_get_symbols_meta(names=[...])` |
-| Compact context for an external LLM | `minimal_context_dump(problem_description="...", symbol_names=[...])` — chains blast radius + symbol source + peripheral API signatures into one capped file. **Default choice** over full-file dumps (copyContent.py, code_dump.txt). |
-| Single-file paths for kernel files | `glob(pattern="**/kernel/**/*.py", path="<codebase>")` |
-| **Orientation — what's in a file?** | `pie_file_api(path=...)` — hierarchical API surface (classes → methods, signatures, docstring first lines). Prefer over `Read` for understanding file structure. |
-| **Flat inventory — all symbols in a file** | `pie_symbols_by_file(path=...)` — every symbol with type, line range, risk level. No query needed. Prefer over `glob` + `grep` discovery. |
-| **Call path across modules** | `pie_call_chain(start_fn="...", end_module="...")` — shortest BFS path. Prefer over reading 3+ files to trace data flow. |
-| **API diff between two files** | `pie_compare_apis(path_a=..., path_b=...)` — shows only_in_a, only_in_b, signature mismatches. Prefer over reading both files to find overlap. |
-
-### Token-saving workflow for code exploration
-
-```
-1. CALIBRATE: get_index_info → get real avg function token count, risk distribution
-2. ORIENT:     file_api / symbols_by_file for file structure (no bodies)
-3. META:       get_symbols_meta(names=[...]) → signatures + token_count, cheap
-4. FETCH:      get_symbol(names=[worth_it_1, worth_it_2]) → full source, batched
-5. TRACE:      get_callers_callees / find_impact only if coupling matters
-```
-
-Use `get_symbols_meta` before `get_symbol` — avoid fetching full source for low-value symbols. Batch `get_symbol` conservatively (2-3 names max per call unless you calibrated otherwise via `get_index_info`).
-
-### Anti-patterns to avoid
-- ❌ `search_symbols` with `top_k > 10` — large result sets waste tokens on irrelevant hits
-- ❌ `get_symbol` without checking `get_symbols_meta` first — you may fetch 500+ tokens for a symbol you didn't need
-- ❌ Deep recursive `get_callers_callees` beyond depth 2 — call graphs rarely yield new info past that
-- ❌ `Read` for kernel files without trying atlas tools first — the whole pipeline exists to avoid this
-
-Batch lookups with `pie_get_symbol` — prefer passing multiple names in one call over reading whole files line by line.
-
-**Avoid `Read` for kernel files** — use `pie_file_api` / `pie_symbols_by_file` for orientation, then `pie_get_symbol` for specific functions. Raw `Read` is only for stub files, argu_god modules, and files under `system_devpt_reports/`.
-
-### Handling atlas misses
-
-When `pie_symbols_by_file` or `pie_file_api` return empty results (atlas miss), the correct escalation is:
-
-1. Try `pie_search_symbols(query="<likely_name>")` with a fuzzy/partial query
-2. If that also fails, try `pie_file_api(path=...)` (may have partial indexing even if symbols table missed)
-3. **Only then** fall back to `Read` — and note the miss as a bug to fix via reindexing
-
-Do NOT skip directly to `Read` just because the atlas returned empty.
-
-### Keeping the atlas in sync after edits
-
-After editing/creating/deleting any kernel files, the `code_rag.db` atlas becomes stale. Regenerate it:
-
-```bash
-# From codebase root:
-conda run -n myenv python -m codebase_atlas.main \
-  --project-dir /home/manigupt/Hello/Agentic_Unit_PIE/codebase \
-  --output-dir /home/manigupt/Hello/Agentic_Unit_PIE/atlas_output
-```
+1. **`codebase/config.json`** — Added `"code_rag"` to `tool_packs` so atlas/MCP tools are available.
+2. **`prompt_fragments/60_response_contract.md`** — Replaced text-JSON instruction with native FC guidance + step budget rules.
+3. **`agent_core/loop/engine.py`** — Pass `provider_name` to `get_schemas()` so Gemini gets proper `function_declarations` format.
+4. **`agent_core/tools/code_rag/engine.py`** — `search_symbols()` now accepts `queries: ["q1", "q2"]` (batched search, deduplicated results).
+5. **`agent_core/tools/__init__.py`** — `search_symbols` registration updated with `queries` (array) param; `query` made optional.
 
 ## Project Paths
 
@@ -81,6 +20,15 @@ conda run -n myenv python -m codebase_atlas.main \
 ## Code Execution & Validation Environment
 
 - **Command to run project:** `cd /home/manigupt/Hello/Agentic_Unit_PIE/codebase && conda run -n myenv python server.py`
+
+## Kernel Probing Rules (Mandatory)
+
+**Never `Read` a file under `kernel/` — use `pie_file_api` first, always.** See `Agent_graph.html` notes panel for the full tool-selection table, token-saving workflow, anti-patterns, and atlas-miss escalation.
+
+After editing/creating/deleting any kernel files, regenerate the code_rag.db atlas:
+```bash
+cd /home/manigupt/Hello/Agentic_Unit_PIE/codebase/agent_tools/atlas_tools && python run_cmds.py /home/manigupt/Hello/Agentic_Unit_PIE/project_tools.md "Make Codebase_atlas"
+```
 
 ## Core principles
 
@@ -159,4 +107,4 @@ Status reports are subject to the same verify-before-trusting rule as code — s
 ### Single writer for automated claims
 - Prefer regenerate-from-hypotheses over hand-editing long tables once generator exists. Until then, hand-edit only the thin template.
 
-One-command validation: `python scripts/seed_hypotheses.py && python scripts/validate_capabilities.py`
+One-command validation: `python scripts/seed_hypotheses.py --quiet && python scripts/validate_capabilities.py --quiet`

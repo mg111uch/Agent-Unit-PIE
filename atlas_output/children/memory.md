@@ -1,10 +1,10 @@
 # 📂 memory
-Generated: 2026-07-23 14:15:38
+Generated: 2026-07-26 16:20:18
 Files: 5
 
 ---
 
-F050│episodic_memory.py│297
+F051│episodic_memory.py│297
 D: ●__future__,collections,dataclasses,kernel,time,+1
 C: Episode│[to_dict]
 C: EpisodicMemory│[__init__,add_episode,create_episode,get_episode,get_recent_episodes,search_by_tag,search_by_entity,search_by_event,search_by_importance,get_timeline,+4]
@@ -27,7 +27,7 @@ C: EpisodicMemory│[__init__,add_episode,create_episode,get_episode,get_recent_
    F: clear(self)
 ---
 
-F049│memory_engine.py│197
+F050│memory_engine.py│197
 D: ●__future__,kernel,typing
 C: MemoryEngine│[__init__,db,_persist_structured,save_object,load_object,delete_object,list_objects,search_by_prefix,object_exists,save_unit,+9]
 C: MemoryEngine│[__init__,db,_persist_structured,save_object,load_object,delete_object,list_objects,search_by_prefix,object_exists,save_unit,+9]
@@ -52,10 +52,10 @@ C: MemoryEngine│[__init__,db,_persist_structured,save_object,load_object,delet
    F: load_relation(self,relation_id,memory_type)→Any
 ---
 
-F052│pattern_memory.py│0
+F053│pattern_memory.py│0
 ---
 
-F051│semantic_memory.py│423
+F052│semantic_memory.py│423
 D: ●__future__,collections,dataclasses,kernel,time,+1
 C: SemanticNode│[to_dict]
 C: SemanticEdge│[to_dict]
@@ -67,10 +67,10 @@ C: SemanticEdge│[to_dict]
 C: SemanticMemory│[__init__,add_node,create_node,add_edge,create_edge,get_node,get_edge,search_by_tag,search_by_topic,search_by_concept,+9]
    F: __init__(self)
    F: add_node(self,node,persist)
-   ↳Calls: F034:add
+   ↳Calls: F035:add
    F: create_node(self,node_id,node_type,title,content,concepts,tags,metadata,confidence,importance,source_refs,topic_id,persist)→SemanticNode
    F: add_edge(self,edge,persist)
-   ↳Calls: F034:add
+   ↳Calls: F035:add
    F: create_edge(self,edge_id,source_node_id,target_node_id,relation_type,weight,confidence,metadata,topic_id,persist)→SemanticEdge
    F: get_node(self,node_id)→Optional[SemanticNode]
    F: get_edge(self,edge_id)→Optional[SemanticEdge]
@@ -88,7 +88,7 @@ C: SemanticMemory│[__init__,add_node,create_node,add_edge,create_edge,get_node
    F: clear(self)
 ---
 
-F048│working_memory.py│233
+F049│working_memory.py│233
 D: ●__future__,collections,dataclasses,kernel,time,+1
 C: WorkingMemoryItem│[touch,is_expired,to_dict]
 C: WorkingMemory│[__init__,add_memory,get_memory,update_memory,remove_memory,search_by_tag,search_by_type,search_by_importance,cleanup_expired,get_top_memories,+3]

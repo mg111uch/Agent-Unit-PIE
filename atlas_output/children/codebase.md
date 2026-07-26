@@ -1,20 +1,15 @@
 # 📂 codebase
-Generated: 2026-07-23 14:15:38
+Generated: 2026-07-26 16:20:18
 Files: 3
 
 ---
 
-F002│__init__.py│1
+F002│__init__.py│0
 ---
 
-F001│server.py│47│⚡
+F001│server.py│22│⚡
 S: server.py - FastAPI WebSocket server for browser-based agent control.
-D: ●__future__,base64,cryptography,getpass,json,+4
-F: _derive_key(password,salt)→bytes
-   ↳Called by: F001:_try_unlock_env
-   ↳Impact: 🟢LOW (1 dependents) | Breaks: [F001:_try_unlock_env]
-F: _try_unlock_env()→None
-   ↳Calls: F001:_derive_key
+D: ●__future__,getpass,json,os,uvicorn,+4
 ---
 
 F004│tool_client.py│169│⚡

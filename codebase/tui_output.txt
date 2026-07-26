@@ -1,4 +1,222 @@
 
-[STDERR]: cat: temp_summary.txt: No such file or directory
+============================================================
+[TEST]
+============================================================
 
-[Exit code: 1]
+Message:
+hello world
+
+Items:
+[
+  1,
+  2,
+  3
+]
+============================================================
+
+============================================================
+[TEST_SKIP]
+============================================================
+
+Message:
+should not appear
+============================================================
+
+============================================================
+[NEW TURN]
+============================================================
+
+Provider:
+gemini
+
+Model:
+gemini-3.5-flash-lite
+
+System Prompt:
+# System Prompt
+
+You are Agent_Unit_PIE, an autonomous coding agent operating on a real project workspace.
+
+
+
+## WORKSPACE
+
+- The workspace root is a fixed directory. ALL file paths you use in tools are relative to this root — never use OS-absolute paths like `/home/...` or `C:\...`.
+- If you are ever unsure what exists, call `get_workspace_info` and/or `list_files` — do not guess a path more than once. Guessing repeatedly wastes your step budget.
+- Paths like `./src/app.py`, `src/app.py`, and `/src/app.py` are all treated identically (workspace-relative). There is no meaningful distinction — don't waste a turn trying variations of leading slashes/dots.
+
+## TOOL USAGE GUIDE
+
+| Tool | When to use |
+|------|-------------|
+| `batch_edit` | Apply multiple string replacements to a file in one call. Each edit is applied sequentially. |
+| `batch_read` | Read multiple non-kernel files at once. Saves token overhead vs sequential Read calls. Warns on kernel files. |
+| `edit_file` | Replace exact old_string with new_string in an existing file. old_string must match exactly once. |
+| `execute_command` | Run a shell command. Allowed: ls, cat, pwd, echo, python. |
+| `get_workspace_info` | Show workspace root and top-level entries for orientation |
+| `glob_search` | Find files matching a glob pattern (e.g. '**/*.py', 'src/**/*.ts') |
+| `grep_search` | Search file contents by regex across the workspace |
+| `list_files` | List directory contents (recursive, depth-capped, skips noise dirs) |
+| `read_file` | Read file (returns line-numbered output; lists nearby files on error; set line_numbers=false to save tokens) |
+| `read_section` | Read a file section around a regex pattern match. Returns match line + context lines. Use instead of read_file when searching by content pattern. |
+| `write_to_file` | Create or overwrite a file (use edit_file for targeted edits) |
+
+## WORKING STYLE
+
+1. For any task touching more than one file, or requiring more than ~3 tool calls, first call `todo_write` with a short numbered plan. Update it as you go.
+2. Before editing a file you haven't read in this conversation, call `read_file` on it. Never guess file contents or exact whitespace.
+3. **Prefer `edit_file` over `write_to_file`** for modifying existing files. `write_to_file` has no `patch` mode — targeted edits go through `edit_file`.
+4. When `read_file` fails because the file was not found: the error message lists the actual files in that directory. Use the **exact filename** from that list — do not guess, rename, or modify the spelling.
+5. When `edit_file` fails because `old_string` wasn't found or wasn't unique: re-read the file first, copy the exact text (including whitespace) from the `read_file` output, and include enough surrounding lines to make the match unique. Do not repeat an identical failed call — that never succeeds.
+6. After an edit, verify it when it matters (re-read the changed section, or run tests/build if a `run_tests`/`execute_command` tool is appropriate) before declaring the task done.
+7. If the same tool call fails twice in a row for the same reason, STOP repeating it. Step back, re-read state (`list_files`/`read_file`), and change your approach.
+8. Be concise in any prose you produce. Let tool calls and their results carry the work.
+9. When exploring an unfamiliar codebase, start with `get_workspace_info`, then `glob_search` / `list_files` to orient — never guess paths.
+10. `grep_search` lets you search file contents by regex across the workspace. Prefer it over reading many files individually when you need to find references, imports, or usages.
+
+## TOOL INPUT FORMATS
+
+Each tool expects a specific `"input"` value:
+
+| Tool | `"input"` format |
+|------|------------------|
+| `batch_edit` | `{"path": ..., "edits": ...}` |
+| `batch_read` | `{"paths": ...}` |
+| `edit_file` | `{"path": ..., "old_string": ..., "new_string": ...}` |
+| `execute_command` | `{"command": ...}` |
+| `get_workspace_info` | omit or `{}` |
+| `glob_search` | `{"pattern": ...}` |
+| `grep_search` | `{"pattern": ..., "include": ..., "max_results": ...}` |
+| `list_files` | `{"path": ...}` |
+| `read_file` | `{"path": ..., "offset": ..., "limit": ..., "line_numbers": ...}` |
+| `read_section` | `{"path": ..., "pattern": ..., "context_lines": ..., "ignore_case": ...}` |
+| `write_to_file` | `{"path": ..., "mode": ..., "content": ..., "dry_run": ...}` |
+
+**write_to_file modes:**
+- `create` — fails if file exists
+- `overwrite` — replaces entire file
+- `append` — adds content to end
+
+**edit_file rules:**
+- `old_string` must match exactly (whitespace-sensitive) and appear exactly once in the file
+- Include surrounding lines for uniqueness if needed
+- Re-read the file with `read_file` first to copy exact text
+
+**read_file_range:**
+- Use `read_file_range` with `offset` and `limit` when you only need a portion of a large file (e.g., the first 50 lines, or lines 100-150)
+- `offset` is 1-based; omit to start from line 1
+- `limit` is the max lines to return; omit for the rest of the file
+- For small files, prefer `read_file` (simpler)
+
+## RESPONSE FORMAT
+
+Use native function calling when available. When the LLM provider supports tool declarations, respond with one or more function calls in a single turn. Batch independent tool calls together — do not sequence them one-at-a-time.
+
+EFFICIENCY RULES:
+1. **Batch symbol lookups:** If the user names symbols, call `get_symbol` with all names in one call (e.g. `{"names": ["func1", "func2"]}`). Use `search_symbols` only if lookup returns `missing_names` or names are unknown.
+2. **Step budget:** Answer in at most 3-4 tool calls total. If you are searching or grepping more than twice, you are wasting calls — stop and re-plan.
+3. **No redundant reads:** If `get_symbol` returns full `code`, do not also `read_file` that symbol.
+4. **Multiple queries in one call:** Use `search_symbols` with `queries: [q1, q2, ...]` instead of calling it separately for each query.
+
+User Input:
+give a list of tools which are avliable to you
+
+Context Info:
+(none)
+
+Messages:
+[
+  {
+    "role": "user",
+    "content": "give a list of tools which are avliable to you",
+    "created_at": "2026-07-26T11:07:59.854075+00:00"
+  },
+  {
+    "role": "user",
+    "content": "give a list of tools which are avliable to you"
+  }
+]
+
+Plain Prompt:
+
+============================================================
+
+============================================================
+[LLM RESPONSE]
+============================================================
+
+Step:
+0
+
+User Message Sent:
+(see messages)
+
+Messages Sent:
+[
+  {
+    "role": "user",
+    "content": "give a list of tools which are avliable to you",
+    "created_at": "2026-07-26T11:07:59.854075+00:00"
+  },
+  {
+    "role": "user",
+    "content": "give a list of tools which are avliable to you"
+  }
+]
+
+Raw Response Text:
+{"final": "Here is the list of tools available to me based on my system definitions and instructions:\n\n1. **`batch_edit`**: Apply multiple string replacements to a file in one call sequentially.\n2. **`batch_read`**: Read multiple non-kernel files at once.\n3. **`edit_file`**: Replace exact `old_string` with `new_string` in an existing file.\n4. **`execute_command`**: Run allowed shell commands (`ls`, `cat`, `pwd`, `echo`, `python`).\n5. **`get_workspace_info`**: Show workspace root and top-level entries for orientation.\n6. **`glob_search`**: Find files matching a glob pattern (e.g., `'**/*.py'`).\n7. **`grep_search`**: Search file contents by regex across the workspace.\n8. **`list_files`**: List directory contents recursively, depth-capped, skipping noise dirs.\n9. **`read_file`**: Read file content with optional line numbers, offset, and limit.\n10. **`read_section`**: Read a file section around a regex pattern match with context lines.\n11. **`write_to_file`**: Create or overwrite a file (`create`, `overwrite`, `append` modes)."}
+
+Tool Calls Raw:
+None
+
+Full Result:
+{
+  "status": "success",
+  "provider": "gemini",
+  "model": "gemini-3.5-flash-lite",
+  "response": "{\"final\": \"Here is the list of tools available to me based on my system definitions and instructions:\\n\\n1. **`batch_edit`**: Apply multiple string replacements to a file in one call sequentially.\\n2. **`batch_read`**: Read multiple non-kernel files at once.\\n3. **`edit_file`**: Replace exact `old_string` with `new_string` in an existing file.\\n4. **`execute_command`**: Run allowed shell commands (`ls`, `cat`, `pwd`, `echo`, `python`).\\n5. **`get_workspace_info`**: Show workspace root and top-level entries for orientation.\\n6. **`glob_search`**: Find files matching a glob pattern (e.g., `'**/*.py'`).\\n7. **`grep_search`**: Search file contents by regex across the workspace.\\n8. **`list_files`**: List directory contents recursively, depth-capped, skipping noise dirs.\\n9. **`read_file`**: Read file content with optional line numbers, offset, and limit.\\n10. **`read_section`**: Read a file section around a regex pattern match with context lines.\\n11. **`write_to_file`**: Create or overwrite a file (`create`, `overwrite`, `append` modes).\"}",
+  "conversation_id": "v1_ChdrdXBsYXJfVU9vQ05qdU1QNWI3X2dBcxIXa3VwbGFyX1VPb0NOanVNUDViN19nQXM",
+  "tool_calls": null,
+  "raw_response": {
+    "status": "success",
+    "response": "{\"final\": \"Here is the list of tools available to me based on my system definitions and instructions:\\n\\n1. **`batch_edit`**: Apply multiple string replacements to a file in one call sequentially.\\n2. **`batch_read`**: Read multiple non-kernel files at once.\\n3. **`edit_file`**: Replace exact `old_string` with `new_string` in an existing file.\\n4. **`execute_command`**: Run allowed shell commands (`ls`, `cat`, `pwd`, `echo`, `python`).\\n5. **`get_workspace_info`**: Show workspace root and top-level entries for orientation.\\n6. **`glob_search`**: Find files matching a glob pattern (e.g., `'**/*.py'`).\\n7. **`grep_search`**: Search file contents by regex across the workspace.\\n8. **`list_files`**: List directory contents recursively, depth-capped, skipping noise dirs.\\n9. **`read_file`**: Read file content with optional line numbers, offset, and limit.\\n10. **`read_section`**: Read a file section around a regex pattern match with context lines.\\n11. **`write_to_file`**: Create or overwrite a file (`create`, `overwrite`, `append` modes).\"}",
+    "tool_calls": null,
+    "conversation_id": "v1_ChdrdXBsYXJfVU9vQ05qdU1QNWI3X2dBcxIXa3VwbGFyX1VPb0NOanVNUDViN19nQXM",
+    "usage": {
+      "total_tokens": 8052,
+      "estimated_cost": 0.0
+    }
+  },
+  "usage": {
+    "total_tokens": 8052,
+    "estimated_cost": 0.0
+  },
+  "latency_seconds": 6.496,
+  "timestamp": "2026-07-26T11:08:06.363668+00:00",
+  "retries": 0
+}
+============================================================
+
+============================================================
+[FINAL]
+============================================================
+
+Step:
+0
+
+Response:
+Here is the list of tools available to me based on my system definitions and instructions:
+
+1. **`batch_edit`**: Apply multiple string replacements to a file in one call sequentially.
+2. **`batch_read`**: Read multiple non-kernel files at once.
+3. **`edit_file`**: Replace exact `old_string` with `new_string` in an existing file.
+4. **`execute_command`**: Run allowed shell commands (`ls`, `cat`, `pwd`, `echo`, `python`).
+5. **`get_workspace_info`**: Show workspace root and top-level entries for orientation.
+6. **`glob_search`**: Find files matching a glob pattern (e.g., `'**/*.py'`).
+7. **`grep_search`**: Search file contents by regex across the workspace.
+8. **`list_files`**: List directory contents recursively, depth-capped, skipping noise dirs.
+9. **`read_file`**: Read file content with optional line numbers, offset, and limit.
+10. **`read_section`**: Read a file section around a regex pattern match with context lines.
+11. **`write_to_file`**: Create or overwrite a file (`create`, `overwrite`, `append` modes).
+============================================================

@@ -13,6 +13,9 @@ _user_context = threading.local()
 
 
 def set_user_workspace(user_id: str) -> str:
+    if user_id == "local":
+        _user_context.root = WORKSPACE_ROOT
+        return WORKSPACE_ROOT
     root = os.path.join(WORKSPACE_BASE, str(user_id))
     os.makedirs(root, exist_ok=True)
     _user_context.root = root

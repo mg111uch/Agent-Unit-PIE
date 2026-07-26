@@ -64,12 +64,21 @@ def validate_capabilities(engine=None, module_prefix=None):
 def main():
     module_prefix = None
     output_json = False
+    quiet = False
     args = sys.argv[1:]
     for i, arg in enumerate(args):
         if arg == "--module" and i + 1 < len(args):
             module_prefix = args[i + 1]
         elif arg == "--json":
             output_json = True
+        elif arg == "--quiet" or arg == "-q":
+            quiet = True
+
+    import logging
+    if quiet:
+        logging.getLogger("agent_unit_pie").setLevel(logging.WARNING)
+        logging.getLogger("agent_unit_pie.hypothesis_engine").setLevel(logging.WARNING)
+        logging.getLogger("agent_unit_pie").handlers.clear()
 
     from scripts.seed_hypotheses import seed_all
     seed_all(hypothesis_engine)
@@ -83,14 +92,15 @@ def main():
             "skipped": results["skipped"],
             "details": [{"id": d[0], "status": d[1], "message": d[2]} for d in results["details"]],
             "modules": {k: v for k, v in results["modules"].items()},
-        }, indent=2))
+        }, separators=(",", ":")))
     else:
-        print(f"\nValidation results for {module_prefix or 'all modules'}:")
-        print("-" * 60)
-        for hid, tag, msg in results["details"]:
-            h = hypothesis_engine.get_hypothesis(hid)
-            status = h.status if h else "?"
-            print(f"  {tag:4s}  {hid:20s}  [{status:10s}]  {msg}")
+        if not quiet:
+            print(f"\nValidation results for {module_prefix or 'all modules'}:")
+            print("-" * 60)
+            for hid, tag, msg in results["details"]:
+                h = hypothesis_engine.get_hypothesis(hid)
+                status = h.status if h else "?"
+                print(f"  {tag:4s}  {hid:20s}  [{status:10s}]  {msg}")
 
         print("\n" + "=" * 60)
         total = results["passed"] + results["failed"] + results["skipped"]

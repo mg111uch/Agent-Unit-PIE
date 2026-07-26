@@ -87,8 +87,26 @@ class CodeRAG:
             )
         return [dict(r) for r in cur.fetchall()]
 
-    def search_symbols(self, query: str, type_filter: Optional[str] = None,
-                       top_k: int = 10) -> List[Dict[str, Any]]:
+    def search_symbols(self, query: str = "", type_filter: Optional[str] = None,
+                       top_k: int = 10, queries: Optional[List[str]] = None) -> List[Dict[str, Any]]:
+        if queries:
+            seen = set()
+            all_results = []
+            for q in queries:
+                if not q:
+                    continue
+                results = self._search_fts(q, type_filter, top_k)
+                for r in results:
+                    if r["id"] not in seen:
+                        seen.add(r["id"])
+                        all_results.append(r)
+            return all_results
+        return self._search_fts(query, type_filter, top_k)
+
+    def _search_fts(self, query: str, type_filter: Optional[str] = None,
+                    top_k: int = 10) -> List[Dict[str, Any]]:
+        if not query:
+            return []
         conn = self._get_conn()
         sql = """
             SELECT s.*, rank FROM symbols_fts f

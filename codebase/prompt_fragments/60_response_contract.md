@@ -1,19 +1,9 @@
 ## RESPONSE FORMAT
 
-When using text-JSON fallback, you MUST respond with valid JSON only. No other text is allowed before or after the JSON.
+Use native function calling when available. When the LLM provider supports tool declarations, respond with one or more function calls in a single turn. Batch independent tool calls together — do not sequence them one-at-a-time.
 
-Your response must be a single JSON object with these fields:
-- `"thought"`: (optional) your internal reasoning
-- `"action"`: the tool name to call (required unless `"final"` is set)
-- `"input"`: value per the input format table above (required when `"action"` is given)
-- `"final"`: set this to the final answer when the task is complete, then stop (mutually exclusive with `"action"`)
-
-To call a tool:
-`{"action": "tool_name", "input": <value per tool input format>}`
-
-When the task is complete:
-`{"final": "summary of what was done"}`
-
-EFFICIENCY RULE: If the user names symbols, call `get_symbol` with those names first (batch). Use `search_symbols` only if lookup fails (`missing_names`) or names are unknown. If `get_symbol` returns full `code`, do not also `read_file` that symbol.
-
-IMPORTANT: Only output the JSON object. No markdown code blocks, no backticks, no explanations, no additional text. Every turn is either a tool call (action+input) or a final answer (final), never both.
+EFFICIENCY RULES:
+1. **Batch symbol lookups:** If the user names symbols, call `get_symbol` with all names in one call (e.g. `{"names": ["func1", "func2"]}`). Use `search_symbols` only if lookup returns `missing_names` or names are unknown.
+2. **Step budget:** Answer in at most 3-4 tool calls total. If you are searching or grepping more than twice, you are wasting calls — stop and re-plan.
+3. **No redundant reads:** If `get_symbol` returns full `code`, do not also `read_file` that symbol.
+4. **Multiple queries in one call:** Use `search_symbols` with `queries: [q1, q2, ...]` instead of calling it separately for each query.

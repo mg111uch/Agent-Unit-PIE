@@ -1,33 +1,33 @@
 # 📂 codebase_atlas
-Generated: 2026-07-23 14:15:38
+Generated: 2026-07-26 16:20:18
 Files: 5
 
 ---
 
-F079│__init__.py│51
+F080│__init__.py│51
 S: Codebase Atlas - AI-powered codebase mapping for intelligent agent navigation.
-D: ►F003,F075
+D: ►F003,F076
 ---
 
-F077│config.py│234│⚡
+F078│config.py│234│⚡
 S: Configuration management for Codebase Atlas.
 D: ●dataclasses,pathlib,typing
 C: AtlasConfig│[]
    S: Main configuration class for Codebase Atlas.
 F: get_default_config()→AtlasConfig
-   ↳Called by: F078:main,F078:generate_atlas,F077:load_config
-   ↳Impact: 🔴HIGH (3 dependents) | Breaks: [F078:main],[F078:generate_atlas],[F077:load_config]
+   ↳Called by: F079:main,F079:generate_atlas,F078:load_config
+   ↳Impact: 🔴HIGH (3 dependents) | Breaks: [F079:main],[F079:generate_atlas],[F078:load_config]
    S: Get default configuration.
 F: load_config(config_path)→AtlasConfig
-   ↳Calls: F077:get_default_config
+   ↳Calls: F078:get_default_config
    S: Load configuration from file or return default.
    S: Args:
    S: config_path: Path to config file (future: YAML support)
    S: Returns:
    S: AtlasConfig instance
 F: get_file_category(file_path)→str
-   ↳Called by: F076:_create_file_info
-   ↳Impact: 🟢LOW (1 dependents) | Breaks: [F076:_create_file_info]
+   ↳Called by: F077:_create_file_info
+   ↳Impact: 🟢LOW (1 dependents) | Breaks: [F077:_create_file_info]
    S: Categorize a file based on its path.
    S: Args:
    S: file_path: Path to the file
@@ -40,16 +40,16 @@ F: get_priority_level(risk_level,is_entry)→str
    S: is_entry: Whether this is an entry point
    S: Returns:
 F: estimate_tokens(text)→int
-   ↳Called by: F081:generate
-   ↳Impact: 🟢LOW (1 dependents) | Breaks: [F081:generate]
+   ↳Called by: F082:generate
+   ↳Impact: 🟢LOW (1 dependents) | Breaks: [F082:generate]
    S: Rough token estimation (1 token ≈ 4 characters).
    S: Args:
    S: text: Text to estimate
    S: Returns:
    S: Approximate token count
 F: validate_config(config)→bool
-   ↳Called by: F078:generate_atlas
-   ↳Impact: 🟢LOW (1 dependents) | Breaks: [F078:generate_atlas]
+   ↳Called by: F079:generate_atlas
+   ↳Impact: 🟢LOW (1 dependents) | Breaks: [F079:generate_atlas]
    S: Validate configuration settings.
    S: Args:
    S: config: Configuration to validate
@@ -59,26 +59,26 @@ C: AtlasConfig│[]
    S: Main configuration class for Codebase Atlas.
 ---
 
-F078│main.py│333│⚡
+F079│main.py│333│⚡
 S: Main entry point for Codebase Atlas.
-D: ►F003,F075,F076,F148 ●analyzers,argparse,pathlib,traceback,utils,+6
+D: ►F003,F076,F077,F149 ●analyzers,generators,rag,sqlite3,traceback,+6
 F: generate_atlas(project_dir,output_dir,config)→Any
-   ↳Called by: F078:main | Calls: F085:clean_directory,F077:validate_config,F098:insert_file_symbols
-   ↳Impact: 🟢LOW (1 dependents) | Breaks: [F078:main]
+   ↳Called by: F079:main | Calls: F086:clean_directory,F101:can_parse,F102:can_parse
+   ↳Impact: 🟢LOW (1 dependents) | Breaks: [F079:main]
    S: Generate complete codebase atlas.
    S: Args:
    S: project_dir: Path to project directory to analyze
    S: output_dir: Path to output directory for atlas files
    S: config: Atlas configuration (uses default if None)
 F: _run_app(app,args)
-   ↳Called by: F078:main
-   ↳Impact: 🟢LOW (1 dependents) | Breaks: [F078:main]
+   ↳Called by: F079:main
+   ↳Impact: 🟢LOW (1 dependents) | Breaks: [F079:main]
 F: main()
-   ↳Calls: F094:create_app,F077:get_default_config,F078:generate_atlas
+   ↳Calls: F078:get_default_config,F079:generate_atlas,F079:_run_app
    S: CLI entry point.
 ---
 
-F075│models.py│261
+F076│models.py│261
 S: Data models for Codebase Atlas.
 D: ●dataclasses,enum,pathlib,typing
 C: RiskLevel←Enum│[]
@@ -128,7 +128,7 @@ C: DependencyEdge│[]
 C: DependencyGraph│[add_edge,get_dependents,get_dependencies,is_circular]
    S: Complete dependency graph for the project.
    F: add_edge(self,source,target,import_type)
-   ↳Calls: F034:add
+   ↳Calls: F035:add
       S: Add a dependency edge.
    F: get_dependents(self,ref_id)→Set[str]
       S: Get all files that depend on this file.
@@ -158,9 +158,9 @@ C: AtlasData│[add_file,get_file_by_ref,get_files_by_category,get_high_risk_fil
       S: Get all functions with HIGH risk or entry points.
 ---
 
-F076│scanner.py│168
+F077│scanner.py│168
 S: File scanner for Codebase Atlas.
-D: ►F003,F075 ●os,pathlib,typing
+D: ►F003,F076 ●os,pathlib,typing
 C: FileScanner│[__init__,scan,_create_file_info,get_files_by_extension,get_python_files,get_javascript_files,get_html_files,get_config_files,get_files_by_category,get_statistics,+1]
    S: Scans project directory and discovers relevant files.
 F: scan_project(config)→List[FileInfo]
@@ -180,7 +180,7 @@ C: FileScanner│[__init__,scan,_create_file_info,get_files_by_extension,get_pyt
       S: Returns:
       S: List of FileInfo objects
    F: _create_file_info(self,file_path,ext)→FileInfo
-   ↳Calls: F077:get_file_category
+   ↳Calls: F078:get_file_category
       S: Create FileInfo object for a file.
       S: Args:
       S: file_path: Absolute path to file

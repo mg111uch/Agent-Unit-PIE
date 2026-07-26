@@ -71,7 +71,7 @@ def simulation_run(input_data) -> str:
             "signals": signals,
         }
 
-        return json.dumps(output, indent=2)
+        return json.dumps(output, separators=(",", ":"))
 
     except Exception as e:
         return f"Error in simulation_run: {str(e)}"
@@ -123,7 +123,7 @@ def simulation_get_signals(input_data) -> str:
             return "Error: 'run_id' is required"
 
         signals = simulation_connector.get_signals(run_id)
-        return json.dumps({"run_id": run_id, "signals": signals}, indent=2)
+        return json.dumps({"run_id": run_id, "signals": signals}, separators=(",", ":"))
 
     except Exception as e:
         return f"Error in simulation_get_signals: {str(e)}"

@@ -1,17 +1,17 @@
 # 📂 analyzers
-Generated: 2026-07-23 14:15:38
+Generated: 2026-07-26 16:20:18
 Files: 4
 
 ---
 
-F087│__init__.py│15
+F088│__init__.py│15
 S: Analyzer modules for Codebase Atlas.
-D: ►F086,F088,F089
+D: ►F087,F089,F090
 ---
 
-F088│dependency_analyzer.py│216
+F089│dependency_analyzer.py│216
 S: Dependency analyzer for Codebase Atlas.
-D: ►F003,F075 ●collections,pathlib,typing
+D: ►F003,F076 ●collections,pathlib,typing
 C: DependencyAnalyzer│[__init__,analyze,_build_lookup_maps,_resolve_file_dependencies,_resolve_import,_resolve_relative_import,_detect_circular_dependencies,_build_reverse_dependencies]
    S: Analyzes and builds dependency relationships between files.
 C: DependencyAnalyzer│[__init__,analyze,_build_lookup_maps,_resolve_file_dependencies,_resolve_import,_resolve_relative_import,_detect_circular_dependencies,_build_reverse_dependencies]
@@ -31,7 +31,7 @@ C: DependencyAnalyzer│[__init__,analyze,_build_lookup_maps,_resolve_file_depen
       S: Args:
       S: files: List of files
    F: _resolve_file_dependencies(self,file_info)
-   ↳Calls: F034:add
+   ↳Calls: F035:add
       S: Resolve imports to actual file dependencies.
       S: Args:
       S: file_info: File to resolve dependencies for
@@ -48,7 +48,7 @@ C: DependencyAnalyzer│[__init__,analyze,_build_lookup_maps,_resolve_file_depen
       S: rel_import: Relative import string
       S: Returns:
    F: _detect_circular_dependencies(self)
-   ↳Calls: F034:add
+   ↳Calls: F035:add
       S: Detect circular dependencies using Tarjan's algorithm.
       S: Populates graph.circular_groups with sets of mutually dependent files.
    F: _build_reverse_dependencies(self,files)
@@ -57,9 +57,9 @@ C: DependencyAnalyzer│[__init__,analyze,_build_lookup_maps,_resolve_file_depen
       S: files: List of all files
 ---
 
-F086│entry_point_detector.py│168
+F087│entry_point_detector.py│168
 S: Entry point detector for Codebase Atlas.
-D: ►F003,F075 ●collections,typing
+D: ►F003,F076 ●collections,typing
 C: EntryPointDetector│[__init__,detect,_add_entry_point,_categorize_entry_point,get_critical_entry_points,get_entry_points_by_category,get_entry_points_for_file,format_entry_point]
    S: Detects and categorizes entry points across the codebase.
 C: EntryPointDetector│[__init__,detect,_add_entry_point,_categorize_entry_point,get_critical_entry_points,get_entry_points_by_category,get_entry_points_for_file,format_entry_point]
@@ -110,9 +110,9 @@ C: EntryPointDetector│[__init__,detect,_add_entry_point,_categorize_entry_poin
       S: category: Category
 ---
 
-F089│impact_analyzer.py│245
+F090│impact_analyzer.py│245
 S: Impact analyzer for Codebase Atlas.
-D: ►F003,F075 ●collections,typing
+D: ►F003,F076 ●collections,typing
 C: ImpactAnalyzer│[__init__,analyze,_build_function_maps,_build_variable_maps,_build_impact_nodes,_resolve_call_relationships,_track_variable_dependencies,_calculate_risk_levels,_update_file_risk_levels,_get_function,+2]
    S: Analyzes impact of code changes across the codebase.
 C: ImpactAnalyzer│[__init__,analyze,_build_function_maps,_build_variable_maps,_build_impact_nodes,_resolve_call_relationships,_track_variable_dependencies,_calculate_risk_levels,_update_file_risk_levels,_get_function,+2]
@@ -132,7 +132,7 @@ C: ImpactAnalyzer│[__init__,analyze,_build_function_maps,_build_variable_maps,
       S: Args:
       S: files: List of files
    F: _build_variable_maps(self,files)
-   ↳Calls: F034:add
+   ↳Calls: F035:add
       S: Build variable read/write tracking maps.
       S: Args:
       S: files: List of files

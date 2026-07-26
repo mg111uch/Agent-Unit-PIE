@@ -1,16 +1,16 @@
 # 📂 events
-Generated: 2026-07-23 14:15:38
+Generated: 2026-07-26 16:20:18
 Files: 3
 
 ---
 
-F069│event_engine.py│318
+F070│event_engine.py│318
 D: ●__future__,collections,kernel,traceback,typing
 C: EventEngine│[__init__,emit_event,create_event,create_event_from_signal,register_handler,unregister_handler,_trigger_handlers,get_recent_events,search_events_by_source,search_events_by_tag,+3]
 C: EventEngine│[__init__,emit_event,create_event,create_event_from_signal,register_handler,unregister_handler,_trigger_handlers,get_recent_events,search_events_by_source,search_events_by_tag,+3]
    F: __init__(self)
    F: emit_event(self,event,persist,trigger_handlers,add_to_working_memory,create_episode)→EventSchema
-   ↳Calls: F032:generate_id,F033:generate_id,F028:generate_id
+   ↳Calls: F036:generate_id,F033:generate_id,F035:generate_id
    F: create_event(self,event_type,title,description,source_unit_id,category,subtype,confidence,importance,urgency,tags,metadata,signal_references,persist,trigger_handlers)→EventSchema
    F: create_event_from_signal(self,signal,event_type,title,description,importance_multiplier)→EventSchema
    F: register_handler(self,event_type,handler)
@@ -24,11 +24,11 @@ C: EventEngine│[__init__,emit_event,create_event,create_event_from_signal,regi
    F: clear_recent_events(self)
 ---
 
-F067│event_extractor.py│0
+F068│event_extractor.py│0
 ---
 
-F068│timeline_engine.py│283
-D: ●__future__,collections,dataclasses,kernel,time,+2
+F069│timeline_engine.py│283
+D: ●__future__,bisect,collections,dataclasses,kernel,+2
 C: TimelineEntry│[to_dict]
 C: TimelineEngine│[__init__,add_entry,add_event,add_signal,create_entry,get_entry,get_recent_entries,get_entries_between,search_by_type,search_by_tag,+5]
 C: TimelineEntry│[to_dict]

@@ -1,5 +1,5 @@
 # Agent Core Status
-_Last verified: 2026-07-23_
+_Last verified: 2026-07-26_
 
 > Capability claims are hypotheses. Re-validate: `python scripts/validate_capabilities.py`
 
@@ -15,8 +15,19 @@ _Last verified: 2026-07-23_
 
 ## Known Gaps
 - Embed-mode packaging not finalized — med
-- Circular import around debate question_ops — blocker
 - Test coverage for agent loop edge cases — low
 
 ## Recent Changes (newest first, max 10)
-- (No recent changes tracked in this format yet)
+- LOW: deleted dead `_collect_blast_radius`; hoisted `_add_section` out of closure; collapsed raw/invalid_tool bookkeeping; added `LLMProvider` Protocol with `supports_stateful` — `agent_core/tools/context_dump.py`, `agent_core/loop/engine.py`, `agent_core/providers/__init__.py`
+- Retry filtering in `LLMOrchestrator.generate()`; `_STRING_ARG_KEYS` completeness; `_run_interactive_tool` extracted; `execute_command` wrapped in `tc()` — `agent_core/llm_orchestrator.py`, `agent_core/loop/executor.py`, `agent_core/loop/engine.py`, `agent_core/tools/__init__.py`
+- `stream_final` accepts `temperature`/`max_tokens`; double-call eliminated — `agent_core/loop/streaming.py`
+- Cancellation: daemon thread + `stop_flag`; `cancel_flag` between retries — `agent_core/loop/_helpers.py:_generate_with_cancel()`, `agent_core/llm_orchestrator.py:LLMOrchestrator.generate()`
+- Streaming: real `generate_stream` in `stream_final`; dropped fake chunks — `agent_core/loop/streaming.py:stream_final()`
+- Executor: removed redundant `is_ok` double-check in all 3 branches — `agent_core/loop/executor.py:execute_tool_calls()`
+- OpenRouter `tool_call_id`: capture `tc.id`; uuid fallbacks; removed name fallbacks — `agent_core/providers/openrouter_provider.py`, `agent_core/response_parse.py`, `agent_core/loop/messages.py`
+- Fixed 3 BLOCKER issues: Gemini history/corrective-swallowing/circular import — `agent_core/providers/gemini_provider.py`, `agent_core/tools/__init__.py`
+- Full audit: 18 issues found, categorized by severity (3 blockers, 4 high, 11 med/low) — `agent_core/loop/engine.py:iter_agent_events()`, `agent_core/providers/gemini_provider.py`, `agent_core/tools/__init__.py:tool_call()`
+- Token reduction: category-filtered schemas, compact JSON, JSON-aware truncation, corrective compaction, optional line_numbers — `agent_core/tools/registry.py:get_schemas()`, `agent_core/loop/engine.py:iter_agent_events()`, `agent_core/tools/code_rag/tools.py`, `agent_core/tools/file_ops.py:read_file()`
+- `--quiet` flag for seed_hypotheses/validate_capabilities suppresses per-item output — `scripts/seed_hypotheses.py`, `scripts/validate_capabilities.py`
+- Fixed pre-existing `followup(` bug in `_handle_corrective_bookkeeping` that broke function boundary — `agent_core/loop/_helpers.py:_handle_corrective_bookkeeping()`
+- Updated citations: `_generate_with_cancel`/`_handle_corrective_bookkeeping` moved to `_helpers.py`; `llm/` dir flattened to `providers/` and `llm_orchestrator.py` — `system_devpt_reports/agent_core/status.md`
