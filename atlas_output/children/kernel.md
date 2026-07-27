@@ -1,12 +1,12 @@
 # 📂 kernel
-Generated: 2026-07-26 16:20:18
+Generated: 2026-07-27 19:23:22
 Files: 6
 
 ---
 
 F021│__init__.py│141
 S: agent_unit_pie.kernel
-D: ►F017,F018,F019,F020,F070 ●memory,patterns,relations,signals,timeline,+1
+D: ►F017,F018,F019,F020,F070 ●memory,patterns,relations,retrieval,signals,+1
 ---
 
 F018│compression_engine.py│302
@@ -41,8 +41,8 @@ C: CompressionEngine│[__init__,run_cycle,compress_observations,compress_events
       S: Build higher-order abstraction from lower patterns.
    F: health_check(self)→Any
    F: utc_now()→str
-   ↳Called by: F035:update_timestamp,F036:deactivate,F033:update_timestamp
-   ↳Impact: 🔴HIGH (9 dependents) | Breaks: [F035:update_timestamp],[F036:deactivate],[F033:update_timestamp]
+   ↳Called by: F036:deactivate,F036:update_confidence,F033:update_timestamp
+   ↳Impact: 🔴HIGH (9 dependents) | Breaks: [F036:deactivate],[F036:update_confidence],[F033:update_timestamp]
 ---
 
 F016│context_builder.py│385
@@ -69,8 +69,8 @@ C: ContextBuilder│[__init__,build_context,retrieve_relevant_memory,prioritize_
       S: Convert context into prompt-safe text.
    F: health_check(self)→Any
    F: utc_now()→str
-   ↳Called by: F035:update_timestamp,F036:deactivate,F033:update_timestamp
-   ↳Impact: 🔴HIGH (9 dependents) | Breaks: [F035:update_timestamp],[F036:deactivate],[F033:update_timestamp]
+   ↳Called by: F036:deactivate,F036:update_confidence,F033:update_timestamp
+   ↳Impact: 🔴HIGH (9 dependents) | Breaks: [F036:deactivate],[F036:update_confidence],[F033:update_timestamp]
 ---
 
 F017│observation_pipeline.py│276
@@ -100,8 +100,8 @@ C: ObservationPipeline│[__init__,process,normalize_observation,generate_events
    F: run_compression_if_needed(self)→None
       S: Optional memory compression step.
    F: utc_now()→str
-   ↳Called by: F035:update_timestamp,F036:deactivate,F033:update_timestamp
-   ↳Impact: 🔴HIGH (9 dependents) | Breaks: [F035:update_timestamp],[F036:deactivate],[F033:update_timestamp]
+   ↳Called by: F036:deactivate,F036:update_confidence,F033:update_timestamp
+   ↳Impact: 🔴HIGH (9 dependents) | Breaks: [F036:deactivate],[F036:update_confidence],[F033:update_timestamp]
       S: UTC ISO timestamp.
    F: health_check(self)→Any
       S: Pipeline component status.
@@ -172,6 +172,6 @@ C: UnitRegistry│[__init__,register_unit,unregister_unit,load_unit,get_unit,uni
       S: Export lightweight registry metadata.
    F: summary(self)→Any
    F: utc_now()→str
-   ↳Called by: F035:update_timestamp,F036:deactivate,F033:update_timestamp
-   ↳Impact: 🔴HIGH (9 dependents) | Breaks: [F035:update_timestamp],[F036:deactivate],[F033:update_timestamp]
+   ↳Called by: F036:deactivate,F036:update_confidence,F033:update_timestamp
+   ↳Impact: 🔴HIGH (9 dependents) | Breaks: [F036:deactivate],[F036:update_confidence],[F033:update_timestamp]
 ---

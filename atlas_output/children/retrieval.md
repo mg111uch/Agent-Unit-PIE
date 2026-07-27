@@ -1,5 +1,5 @@
 # 📂 retrieval
-Generated: 2026-07-26 16:20:18
+Generated: 2026-07-27 19:23:22
 Files: 7
 
 ---
@@ -119,8 +119,8 @@ C: EmbeddingBackend│[search_similar,index_text]
 C: ChromaBackend←EmbeddingBackend│[__init__,_get_collection,_get_model,_embed,search_similar,index_text]
    F: __init__(self,collection_name,persist_dir)
    F: _get_collection(self)
-   ↳Called by: F146:_store_user_knowledge,F147:search_similar,F147:index_graph
-   ↳Impact: 🔴HIGH (3 dependents) | Breaks: [F146:_store_user_knowledge],[F147:search_similar],[F147:index_graph]
+   ↳Called by: F147:index_graph,F147:search_similar,F146:_store_user_knowledge
+   ↳Impact: 🔴HIGH (3 dependents) | Breaks: [F147:index_graph],[F147:search_similar],[F146:_store_user_knowledge]
    F: _get_model(self)
    ↳Called by: F147:embed
    ↳Impact: 🟢LOW (1 dependents) | Breaks: [F147:embed]

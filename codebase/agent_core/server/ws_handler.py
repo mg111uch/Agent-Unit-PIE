@@ -13,6 +13,7 @@ from agent_core.server.auth import verify_token, SKIP_AUTH
 from agent_core.server.audit import make_audit_wrapper
 from agent_core.server import app
 import agent_core.server as _srv
+from agent_core.loop.session_state import SessionState
 
 
 @app.websocket("/ws/agent")
@@ -38,6 +39,7 @@ async def websocket_agent(websocket: WebSocket, token: str = Query(default=None)
         }
     )
     conv_id = _srv.conversations.get(user_key)
+    session_state = SessionState()
     cancel_event = threading.Event()
 
     async def heartbeat():
@@ -72,11 +74,12 @@ async def websocket_agent(websocket: WebSocket, token: str = Query(default=None)
                     continue
                 cancel_event.clear()
                 content = data.get("content", "")
-                conv_id = await handle_chat(websocket, content, conv_id, user_key=user_key, cancel_event=cancel_event)
+                conv_id = await handle_chat(websocket, content, conv_id, user_key=user_key, cancel_event=cancel_event, session_state=session_state)
                 _srv.conversations[user_key] = conv_id
             elif msg_type == "reset":
                 cancel_event.set()
                 conv_id = None
+                session_state = SessionState()
                 _srv.conversations[user_key] = None
                 await websocket.send_json({"type": "reset", "status": "ok"})
             elif msg_type == "slash":
@@ -89,7 +92,7 @@ async def websocket_agent(websocket: WebSocket, token: str = Query(default=None)
                 cancel_event.clear()
                 command = data.get("command", "")
                 args = data.get("args", "")
-                conv_id = await handle_slash(websocket, command, args, conv_id=conv_id, user_key=user_key, cancel_event=cancel_event)
+                conv_id = await handle_slash(websocket, command, args, conv_id=conv_id, user_key=user_key, cancel_event=cancel_event, session_state=session_state)
                 _srv.conversations[user_key] = conv_id
     except WebSocketDisconnect:
         _srv.log_output(f"[WS] User {user.get('username')} disconnected")
@@ -106,6 +109,7 @@ async def handle_slash(
     conv_id: Optional[str] = None,
     user_key: str = "",
     cancel_event: Optional[threading.Event] = None,
+    session_state: Optional[SessionState] = None,
 ) -> Optional[str]:
     if command in ("/new", "/clear", "/reset", "/session"):
         await websocket.send_json(
@@ -140,6 +144,7 @@ async def handle_slash(
         conv_id = await handle_chat(
             websocket, debate_msg, conv_id,
             user_key=user_key, cancel_event=cancel_event,
+            session_state=session_state,
         )
         return conv_id
 
@@ -183,6 +188,7 @@ async def handle_chat(
     conversation_id: Optional[str],
     user_key: str = "",
     cancel_event: Optional[threading.Event] = None,
+    session_state: Optional[SessionState] = None,
 ) -> Optional[str]:
     conv_id = conversation_id
     session_id = conversation_id or f"session_{user_input[:32]}_{int(time.time())}"
@@ -213,6 +219,7 @@ async def handle_chat(
                 session_id=session_id,
                 cancel_event=cancel_event,
                 tools_override=_AUDIT_TOOLS,
+                session_state=session_state,
             ):
                 asyncio.run_coroutine_threadsafe(queue.put(event), loop).result()
         except Exception as e:

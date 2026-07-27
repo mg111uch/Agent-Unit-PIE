@@ -1,5 +1,5 @@
 # 📂 core
-Generated: 2026-07-26 16:20:18
+Generated: 2026-07-27 19:23:22
 Files: 7
 
 ---
@@ -50,8 +50,8 @@ C: EventBridge│[__init__,process_simulation_step,process_simulation_event,conv
       S: Convert world snapshot into observation.
    F: health_check(self)→Any
    F: utc_now()→str
-   ↳Called by: F035:update_timestamp,F036:deactivate,F033:update_timestamp
-   ↳Impact: 🔴HIGH (9 dependents) | Breaks: [F035:update_timestamp],[F036:deactivate],[F033:update_timestamp]
+   ↳Called by: F036:deactivate,F036:update_confidence,F033:update_timestamp
+   ↳Impact: 🔴HIGH (9 dependents) | Breaks: [F036:deactivate],[F036:update_confidence],[F033:update_timestamp]
 ---
 
 F119│resource_engine.py│628
@@ -95,8 +95,8 @@ C: ResourceEngine│[__init__,create_resource_pool,get_resource_pool,add_resourc
       S: Resolve unit from registry.
    F: health_check(self)→Any
    F: utc_now()→str
-   ↳Called by: F035:update_timestamp,F036:deactivate,F033:update_timestamp
-   ↳Impact: 🔴HIGH (9 dependents) | Breaks: [F035:update_timestamp],[F036:deactivate],[F033:update_timestamp]
+   ↳Called by: F036:deactivate,F036:update_confidence,F033:update_timestamp
+   ↳Impact: 🔴HIGH (9 dependents) | Breaks: [F036:deactivate],[F036:update_confidence],[F033:update_timestamp]
 ---
 
 F124│simulation_model.py│340
@@ -213,8 +213,8 @@ C: UnitAgent│[__init__,step,process_behavior_result,add_signal,decay_signals,a
    F: summary(self)→Any
       S: Lightweight runtime summary.
    F: utc_now()→str
-   ↳Called by: F035:update_timestamp,F036:deactivate,F033:update_timestamp
-   ↳Impact: 🔴HIGH (9 dependents) | Breaks: [F035:update_timestamp],[F036:deactivate],[F033:update_timestamp]
+   ↳Called by: F036:deactivate,F036:update_confidence,F033:update_timestamp
+   ↳Impact: 🔴HIGH (9 dependents) | Breaks: [F036:deactivate],[F036:update_confidence],[F033:update_timestamp]
 ---
 
 F123│world_engine.py│654
@@ -259,6 +259,6 @@ C: WorldEngine│[__init__,start,stop,tick,process_simulation,process_behaviors,
       S: world.start()
       S: for _ in range(100):
    F: utc_now()→str
-   ↳Called by: F035:update_timestamp,F036:deactivate,F033:update_timestamp
-   ↳Impact: 🔴HIGH (9 dependents) | Breaks: [F035:update_timestamp],[F036:deactivate],[F033:update_timestamp]
+   ↳Called by: F036:deactivate,F036:update_confidence,F033:update_timestamp
+   ↳Impact: 🔴HIGH (9 dependents) | Breaks: [F036:deactivate],[F036:update_confidence],[F033:update_timestamp]
 ---

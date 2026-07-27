@@ -116,11 +116,8 @@ class TestPromptMode:
 
     def test_full_prompt_has_file_tools(self):
         from agent_core.prompts import load_system_prompt
-        from agent_core.tools import registry
         from agent_core.tools.registry import CAT_FILE, CAT_KERNEL, CAT_SIM, CAT_META, CAT_GIT
-        tools = registry.get_tools()
         prompt = load_system_prompt(
-            tools_dict=tools,
             active_packs=[CAT_FILE, CAT_KERNEL, CAT_SIM, CAT_META, CAT_GIT],
         )
         assert "read_file" in prompt
@@ -132,11 +129,8 @@ class TestPromptMode:
 
     def test_embed_prompt_no_file_tools(self):
         from agent_core.prompts import load_system_prompt
-        from agent_core.tools import registry
         from agent_core.tools.registry import CAT_KERNEL, CAT_SIM
-        tools = registry.get_tools(categories=[CAT_KERNEL, CAT_SIM])
         prompt = load_system_prompt(
-            tools_dict=tools,
             active_packs=[CAT_KERNEL, CAT_SIM],
         )
         assert "read_file" not in prompt
@@ -149,32 +143,14 @@ class TestPromptMode:
 
     def test_kernel_only_prompt_no_sim(self):
         from agent_core.prompts import load_system_prompt
-        from agent_core.tools import registry
         from agent_core.tools.registry import CAT_KERNEL
-        tools = registry.get_tools(categories=[CAT_KERNEL])
         prompt = load_system_prompt(
-            tools_dict=tools,
             active_packs=[CAT_KERNEL],
         )
         assert "SIMULATION" not in prompt
         assert "simulation_run" not in prompt
         assert "KERNEL MEMORY" in prompt
         assert "HOST INTEGRATION" in prompt
-
-    def test_prompt_includes_only_active_tools_in_table(self):
-        from agent_core.prompts import load_system_prompt
-        from agent_core.tools import registry
-        from agent_core.tools.registry import CAT_KERNEL, CAT_SIM
-        tools = registry.get_tools(categories=[CAT_KERNEL, CAT_SIM])
-        prompt = load_system_prompt(
-            tools_dict=tools,
-            active_packs=[CAT_KERNEL, CAT_SIM],
-        )
-        # The tool table should only list kernel+sim tools
-        assert "| `kernel_retrieve`" in prompt
-        assert "| `simulation_run`" in prompt
-        assert "| `read_file`" not in prompt
-        assert "| `git_status`" not in prompt
 
 
 class TestBackwardCompat:

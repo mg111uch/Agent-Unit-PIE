@@ -1,5 +1,5 @@
 # 📂 signals
-Generated: 2026-07-26 16:20:18
+Generated: 2026-07-27 19:23:22
 Files: 4
 
 ---
@@ -13,8 +13,8 @@ F: handle_contradiction_signal(signal)
 F: handle_confidence_change_signal(signal)
    S: Handler for confidence_change signals.
 F: register_handlers()
-   ↳Called by: F185:_register_kernel_tools
-   ↳Impact: 🟢LOW (1 dependents) | Breaks: [F185:_register_kernel_tools]
+   ↳Called by: F186:_register_kernel_tools
+   ↳Impact: 🟢LOW (1 dependents) | Breaks: [F186:_register_kernel_tools]
    S: Register all belief signal handlers.
 F: unregister_handlers()
    S: Unregister all belief signal handlers.
@@ -56,7 +56,7 @@ C: SignalValidator│[validate,_validate_basic_fields,_validate_signal_type,_val
    F: validate(self,signal)→SignalValidationResult
    F: _validate_basic_fields(self,signal,result)
    F: _validate_signal_type(self,signal,result)
-   ↳Calls: F046:get_signal_type,F046:signal_type_exists
+   ↳Calls: F046:signal_type_exists,F046:get_signal_type
    F: _validate_metrics(self,signal,result)
    F: _validate_value(self,signal,result)
    F: _validate_metadata(self,signal,result)

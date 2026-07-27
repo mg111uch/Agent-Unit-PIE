@@ -1,5 +1,5 @@
 # 📂 codebase_atlas
-Generated: 2026-07-26 16:20:18
+Generated: 2026-07-27 19:23:22
 Files: 5
 
 ---
@@ -15,8 +15,8 @@ D: ●dataclasses,pathlib,typing
 C: AtlasConfig│[]
    S: Main configuration class for Codebase Atlas.
 F: get_default_config()→AtlasConfig
-   ↳Called by: F079:main,F079:generate_atlas,F078:load_config
-   ↳Impact: 🔴HIGH (3 dependents) | Breaks: [F079:main],[F079:generate_atlas],[F078:load_config]
+   ↳Called by: F079:generate_atlas,F079:main,F078:load_config
+   ↳Impact: 🔴HIGH (3 dependents) | Breaks: [F079:generate_atlas],[F079:main],[F078:load_config]
    S: Get default configuration.
 F: load_config(config_path)→AtlasConfig
    ↳Calls: F078:get_default_config
@@ -61,9 +61,9 @@ C: AtlasConfig│[]
 
 F079│main.py│333│⚡
 S: Main entry point for Codebase Atlas.
-D: ►F003,F076,F077,F149 ●analyzers,generators,rag,sqlite3,traceback,+6
+D: ►F003,F076,F077,F149 ●argparse,pathlib,rag,sqlite3,traceback,+6
 F: generate_atlas(project_dir,output_dir,config)→Any
-   ↳Called by: F079:main | Calls: F086:clean_directory,F101:can_parse,F102:can_parse
+   ↳Called by: F079:main | Calls: F104:can_parse,F099:update_from_graph,F105:can_parse
    ↳Impact: 🟢LOW (1 dependents) | Breaks: [F079:main]
    S: Generate complete codebase atlas.
    S: Args:
@@ -74,7 +74,7 @@ F: _run_app(app,args)
    ↳Called by: F079:main
    ↳Impact: 🟢LOW (1 dependents) | Breaks: [F079:main]
 F: main()
-   ↳Calls: F078:get_default_config,F079:generate_atlas,F079:_run_app
+   ↳Calls: F079:generate_atlas,F078:get_default_config,F079:_run_app
    S: CLI entry point.
 ---
 

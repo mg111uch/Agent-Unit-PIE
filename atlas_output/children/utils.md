@@ -1,5 +1,5 @@
 # 📂 utils
-Generated: 2026-07-26 16:20:18
+Generated: 2026-07-27 19:23:22
 Files: 7
 
 ---
@@ -39,8 +39,8 @@ F: truncate_text(text,max_length,suffix)→str
 F029│ids.py│122
 D: ●__future__,hashlib,typing,uuid
 F: generate_id(prefix,length)→str
-   ↳Called by: F029:generate_relation_id,F070:emit_event,F029:generate_session_id
-   ↳Impact: 🔴HIGH (20 dependents) | Breaks: [F029:generate_relation_id],[F070:emit_event],[F029:generate_session_id]
+   ↳Called by: F029:generate_relation_id,F034:add_evidence,F034:create
+   ↳Impact: 🔴HIGH (20 dependents) | Breaks: [F029:generate_relation_id],[F034:add_evidence],[F034:create]
    S: Generate short random ID.
    S: Example:
    S: unit_a1b2c3d4e5f6
@@ -50,22 +50,22 @@ F: generate_hash_id(content,prefix,length)→str
 F: generate_time_id(timestamp,prefix,length)→str
    S: Generate ID using timestamp hash.
 F: generate_unit_id(unit_type,length)→str
-   ↳Calls: F036:generate_id,F033:generate_id,F035:generate_id
+   ↳Calls: F029:generate_id,F036:generate_id,F035:generate_id
 F: generate_signal_id(signal_type,length)→str
-   ↳Calls: F036:generate_id,F033:generate_id,F035:generate_id
+   ↳Calls: F029:generate_id,F036:generate_id,F035:generate_id
 F: generate_event_id(event_type,length)→str
-   ↳Calls: F036:generate_id,F033:generate_id,F035:generate_id
+   ↳Calls: F029:generate_id,F036:generate_id,F035:generate_id
 F: generate_pattern_id(pattern_type,length)→str
-   ↳Calls: F036:generate_id,F033:generate_id,F035:generate_id
+   ↳Calls: F029:generate_id,F036:generate_id,F035:generate_id
 F: generate_relation_id(relation_type,length)→str
-   ↳Calls: F036:generate_id,F033:generate_id,F035:generate_id
+   ↳Calls: F029:generate_id,F036:generate_id,F035:generate_id
 F: generate_hypothesis_id(hypothesis_type,length)→str
-   ↳Calls: F036:generate_id,F033:generate_id,F035:generate_id
+   ↳Calls: F029:generate_id,F036:generate_id,F035:generate_id
 F: generate_session_id(agent_name)→str
-   ↳Calls: F036:generate_id,F033:generate_id,F035:generate_id
+   ↳Calls: F029:generate_id,F036:generate_id,F035:generate_id
 F: is_valid_id(value)→bool
-   ↳Called by: F029:extract_suffix,F029:extract_prefix
-   ↳Impact: 🟡MEDIUM (2 dependents) | Breaks: [F029:extract_suffix],[F029:extract_prefix]
+   ↳Called by: F029:extract_prefix,F029:extract_suffix
+   ↳Impact: 🟡MEDIUM (2 dependents) | Breaks: [F029:extract_prefix],[F029:extract_suffix]
    S: Minimal validation check.
 F: extract_prefix(entity_id)→Optional[str]
    ↳Calls: F029:is_valid_id
@@ -75,18 +75,18 @@ F: extract_suffix(entity_id)→Optional[str]
 
 F086│io_helpers.py│139
 S: I/O helper utilities for Codebase Atlas.
-D: ●datetime,os,pathlib,shutil,typing,+1
+D: ●datetime,os,pathlib,pickle,shutil,+1
 F: ensure_directory(dir_path)→Path
-   ↳Called by: F079:generate_atlas,F081:generate,F086:append_to_file
-   ↳Impact: 🔴HIGH (4 dependents) | Breaks: [F079:generate_atlas],[F081:generate],[F086:append_to_file]
+   ↳Called by: F079:generate_atlas,F081:generate,F086:write_file
+   ↳Impact: 🔴HIGH (4 dependents) | Breaks: [F079:generate_atlas],[F081:generate],[F086:write_file]
    S: Ensure a directory exists, create if it doesn't.
    S: Args:
    S: dir_path: Path to directory
    S: Returns:
    S: Path object for the directory
 F: write_file(file_path,content,encoding)→bool
-   ↳Called by: F082:generate,F081:_generate_child_file | Calls: F086:ensure_directory
-   ↳Impact: 🟡MEDIUM (2 dependents) | Breaks: [F082:generate],[F081:_generate_child_file]
+   ↳Called by: F081:_generate_child_file,F082:generate | Calls: F086:ensure_directory
+   ↳Impact: 🟡MEDIUM (2 dependents) | Breaks: [F081:_generate_child_file],[F082:generate]
    S: Write content to file with error handling.
    S: Args:
    S: file_path: Path to file
@@ -187,24 +187,24 @@ F: get_env(key,default)→Optional[str]
 F027│timestamps.py│165
 D: ●__future__,datetime,typing
 F: utc_now()→str
-   ↳Called by: F035:update_timestamp,F036:deactivate,F033:update_timestamp
-   ↳Impact: 🔴HIGH (9 dependents) | Breaks: [F035:update_timestamp],[F036:deactivate],[F033:update_timestamp]
+   ↳Called by: F036:deactivate,F036:update_confidence,F033:update_timestamp
+   ↳Impact: 🔴HIGH (9 dependents) | Breaks: [F036:deactivate],[F036:update_confidence],[F033:update_timestamp]
    S: Returns ISO UTC timestamp.
 F: local_now()→str
    S: Returns local timezone timestamp.
 F: unix_timestamp()→int
    S: Returns unix timestamp in seconds.
 F: parse_timestamp(timestamp)→datetime
-   ↳Called by: F027:is_after,F027:is_before,F027:human_readable_delta
-   ↳Impact: 🔴HIGH (7 dependents) | Breaks: [F027:is_after],[F027:is_before],[F027:human_readable_delta]
+   ↳Called by: F027:is_between,F027:add_seconds,F027:is_after
+   ↳Impact: 🔴HIGH (7 dependents) | Breaks: [F027:is_between],[F027:add_seconds],[F027:is_after]
    S: Parse ISO timestamp string.
 F: format_timestamp(dt)→str
-   ↳Called by: F027:add_days,F027:add_seconds
-   ↳Impact: 🟡MEDIUM (2 dependents) | Breaks: [F027:add_days],[F027:add_seconds]
+   ↳Called by: F027:add_seconds,F027:add_days
+   ↳Impact: 🟡MEDIUM (2 dependents) | Breaks: [F027:add_seconds],[F027:add_days]
    S: Convert datetime to ISO string.
 F: seconds_between(start,end)→float
-   ↳Called by: F027:minutes_between,F027:days_between,F027:hours_between | Calls: F027:parse_timestamp
-   ↳Impact: 🔴HIGH (3 dependents) | Breaks: [F027:minutes_between],[F027:days_between],[F027:hours_between]
+   ↳Called by: F027:minutes_between,F027:hours_between,F027:days_between | Calls: F027:parse_timestamp
+   ↳Impact: 🔴HIGH (3 dependents) | Breaks: [F027:minutes_between],[F027:hours_between],[F027:days_between]
    S: Difference in seconds.
 F: minutes_between(start,end)→float
    ↳Calls: F027:seconds_between
@@ -213,8 +213,8 @@ F: hours_between(start,end)→float
 F: days_between(start,end)→float
    ↳Calls: F027:seconds_between
 F: add_seconds(timestamp,seconds)→str
-   ↳Called by: F027:add_hours,F027:add_minutes | Calls: F027:format_timestamp,F027:parse_timestamp
-   ↳Impact: 🟡MEDIUM (2 dependents) | Breaks: [F027:add_hours],[F027:add_minutes]
+   ↳Called by: F027:add_minutes,F027:add_hours | Calls: F027:format_timestamp,F027:parse_timestamp
+   ↳Impact: 🟡MEDIUM (2 dependents) | Breaks: [F027:add_minutes],[F027:add_hours]
 F: add_minutes(timestamp,minutes)→str
    ↳Calls: F027:add_seconds
 F: add_hours(timestamp,hours)→str

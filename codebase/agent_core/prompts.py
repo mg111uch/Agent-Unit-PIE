@@ -3,11 +3,11 @@
 from __future__ import annotations
 
 import os
-from typing import Dict, List, Optional
+from typing import List, Optional
 
 from agent_core.config import CODEBASE_ROOT, AGENTS_MD_ENABLED
 from agent_core.workspace import WORKSPACE_ROOT
-from agent_core.tools import log_output, registry
+from agent_core.tools import log_output
 from agent_core.tools.registry import CAT_FILE, CAT_KERNEL, CAT_SIM, CAT_META, CAT_CODE_RAG
 
 DEFAULT_SYSTEM_PROMPT = "You are a helpful assistant."
@@ -20,7 +20,6 @@ FRAGMENT_ORDER: List[tuple[str, Optional[List[str]], Optional[List[str]]]] = [
     ("25_code_rag.md",          [CAT_CODE_RAG], None),
     ("30_kernel_playbook.md",    [CAT_KERNEL], None),
     ("40_sim_playbook.md",       [CAT_SIM],    None),
-    ("50_tool_input_formats.md", None,         None),
     ("51_file_io_details.md",    [CAT_FILE],   None),
     ("60_response_contract.md",  None,         None),
     ("70_embed_mode.md",         None,         [CAT_FILE]),
@@ -43,24 +42,6 @@ def load_agents_md() -> str:
     return ""
 
 
-def build_tool_usage_table(tools_dict: Dict[str, str]) -> str:
-    lines = ["| Tool | When to use |", "|------|-------------|"]
-    for name in sorted(tools_dict.keys()):
-        meta = registry.meta_dict.get(name, {})
-        desc = meta.get("description", "")
-        lines.append(f"| `{name}` | {desc} |")
-    return "\n".join(lines)
-
-
-def build_input_format_table(tools_dict: Dict[str, str]) -> str:
-    lines = ["| Tool | `\"input\"` format |", "|------|------------------|"]
-    for name in sorted(tools_dict.keys()):
-        meta = registry.meta_dict.get(name, {})
-        fmt = meta.get("input_format", "")
-        lines.append(f"| `{name}` | {fmt} |")
-    return "\n".join(lines)
-
-
 def _include_fragment(
     requires: Optional[List[str]],
     blocks: Optional[List[str]],
@@ -76,7 +57,6 @@ def _include_fragment(
 
 
 def load_system_prompt(
-    tools_dict: Optional[Dict[str, str]] = None,
     path: Optional[str] = None,
     active_packs: Optional[List[str]] = None,
 ) -> str:
@@ -102,17 +82,6 @@ def load_system_prompt(
             log_output(f"ERROR reading {filename}: {e}")
 
     template = "\n\n".join(parts)
-
-    if tools_dict is not None:
-        template = template.replace(
-            "{TOOL_LIST}", build_tool_usage_table(tools_dict)
-        )
-        template = template.replace(
-            "{TOOL_INPUT_FORMATS}", build_input_format_table(tools_dict)
-        )
-    else:
-        template = template.replace("{TOOL_LIST}", "")
-        template = template.replace("{TOOL_INPUT_FORMATS}", "")
 
     agents_md = load_agents_md()
     template = template.replace("{AGENTS_MD}", agents_md)

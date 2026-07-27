@@ -1,5 +1,5 @@
 # Agent Core Status
-_Last verified: 2026-07-26_
+_Last verified: 2026-07-27_
 
 > Capability claims are hypotheses. Re-validate: `python scripts/validate_capabilities.py`
 
@@ -12,12 +12,20 @@ _Last verified: 2026-07-26_
 - Code RAG tools for atlas queries — `agent_core/tools/context_dump.py:minimal_context_dump()`
 - Kernel ops tools (retrieve, emit, store, create_event) — `agent_core/tools/kernel_ops.py:kernel_retrieve()`
 - Capability-aware prompt fragments assembled by pack config — `agent_core/prompts.py:load_system_prompt()`
+- Cross-turn SessionState with file cache, workspace cache, and context digest — `agent_core/loop/session_state.py:SessionState`
+- Message compaction at 48K char threshold with rule-based summarization — `agent_core/loop/session_state.py:compact_messages()`
+- Diff-based edit results with inline verification signal (avoids re-read) — `agent_core/tools/file_ops.py:edit_file()`
+- Context digest injected at turn start for cached workspace/file state — `agent_core/loop/engine.py:iter_agent_events()`
+- Prompts trimmed: removed redundant input-format table, trimmed tool list to behavioral rules — `agent_core/prompts.py:FRAGMENT_ORDER`
+- Few-shot batching example in response contract — `prompt_fragments/60_response_contract.md`
 
 ## Known Gaps
 - Embed-mode packaging not finalized — med
 - Test coverage for agent loop edge cases — low
 
 ## Recent Changes (newest first, max 10)
+- Efficiency P1-2: trimmed prompts (removed 50_tool_input_formats, trimmed 10_tool_list to behavior rules), added few-shot batching example, updated rule 6 for diff-as-verification — `agent_core/prompts.py`, `prompt_fragments/10_tool_list.md`, `prompt_fragments/20_file_ops_workflow.md`, `prompt_fragments/60_response_contract.md`
+- Efficiency P0-1/P0-2/P1-1: SessionState, compaction, diff-based edit verification — `agent_core/loop/session_state.py`, `agent_core/loop/engine.py`, `agent_core/tools/file_ops.py`, `agent_core/config.py`
 - LOW: deleted dead `_collect_blast_radius`; hoisted `_add_section` out of closure; collapsed raw/invalid_tool bookkeeping; added `LLMProvider` Protocol with `supports_stateful` — `agent_core/tools/context_dump.py`, `agent_core/loop/engine.py`, `agent_core/providers/__init__.py`
 - Retry filtering in `LLMOrchestrator.generate()`; `_STRING_ARG_KEYS` completeness; `_run_interactive_tool` extracted; `execute_command` wrapped in `tc()` — `agent_core/llm_orchestrator.py`, `agent_core/loop/executor.py`, `agent_core/loop/engine.py`, `agent_core/tools/__init__.py`
 - `stream_final` accepts `temperature`/`max_tokens`; double-call eliminated — `agent_core/loop/streaming.py`

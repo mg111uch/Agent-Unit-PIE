@@ -1,22 +1,40 @@
 # 📂 agent_core_2
-Generated: 2026-07-26 16:20:18
-Files: 5
+Generated: 2026-07-27 19:23:22
+Files: 6
 
 ---
 
-F165│__init__.py│25
+F166│__init__.py│25
 S: agent_core - Shared agent runtime: LLM orchestration, loop, config, commands.
 D: ●agent_core,logging
 ---
 
-F169│commands.py│17
+F170│commands.py│17
 S: CLI slash-command parsing.
 D: ●__future__,typing
 F: parse_command(user_input)→Any
 ---
 
-F168│message_store.py│146
-D: ●datetime,json,os,sqlite3,threading,+4
+F165│llm_orchestrator.py│189
+S: agent_core/llm/llm_orchestrator.py
+D: ●__future__,datetime,logging,threading,time,+1
+C: LLMOrchestrator│[__init__,generate,register_provider,remove_provider,generate_stream]
+   S: Universal LLM orchestration system.
+C: LLMOrchestrator│[__init__,generate,register_provider,remove_provider,generate_stream]
+   S: Universal LLM orchestration system.
+   F: __init__(self,providers,default_provider,default_model,config)
+   F: generate(self,prompt,system_prompt,provider,model,conversation_id,temperature,max_tokens,structured_output,metadata,tools,messages,cancel_flag)→Any
+   F: register_provider(self,provider_name,provider_client)→None
+   F: remove_provider(self,provider_name)→bool
+   F: generate_stream(self,prompt,system_prompt,provider,model,temperature,max_tokens,tools,messages)→Any
+      S: Stream tokens from the LLM provider.
+      S: Yields incremental text chunks as they arrive from the provider.
+      S: Falls back to the non-streaming generate() if the provider lacks
+      S: generate_stream().
+---
+
+F169│message_store.py│146
+D: ●agent_core,json,pathlib,sqlite3,threading,+4
 C: MessageStore│[__init__,_init_db,create_session,session_exists,add_message,get_messages,delete_session,count_messages,delete_old_messages,get_all_sessions,+1]
 C: MessageStore│[__init__,_init_db,create_session,session_exists,add_message,get_messages,delete_session,count_messages,delete_old_messages,get_all_sessions,+1]
    F: __init__(self,db_path)
@@ -25,7 +43,7 @@ C: MessageStore│[__init__,_init_db,create_session,session_exists,add_message,g
    F: session_exists(self,session_id)→bool
    F: add_message(self,session_id,role,content,tool_calls,tool_results)→int
    F: get_messages(self,session_id,limit)→List[dict]
-   ↳Calls: F167:redact
+   ↳Calls: F168:redact
    F: delete_session(self,session_id)
    F: count_messages(self,session_id)→int
    F: delete_old_messages(self,session_id,keep_last)
@@ -33,7 +51,7 @@ C: MessageStore│[__init__,_init_db,create_session,session_exists,add_message,g
    F: close(self)
 ---
 
-F166│rate_limiter.py│35
+F167│rate_limiter.py│35
 D: ●__future__,collections,threading,time
 C: TokenBucket│[__init__,acquire]
 C: RateLimiter│[__init__,_get_bucket,check_llm,check_write]
@@ -47,9 +65,9 @@ C: RateLimiter│[__init__,_get_bucket,check_llm,check_write]
    F: check_write(self,user_id,rate)→bool
 ---
 
-F167│secrets_redactor.py│15
+F168│secrets_redactor.py│15
 D: ●__future__,agent_core,re
 F: redact(text,patterns)→str
-   ↳Called by: F168:get_messages,F174:make_audit_wrapper
-   ↳Impact: 🟡MEDIUM (2 dependents) | Breaks: [F168:get_messages],[F174:make_audit_wrapper]
+   ↳Called by: F175:make_audit_wrapper,F169:get_messages
+   ↳Impact: 🟡MEDIUM (2 dependents) | Breaks: [F175:make_audit_wrapper],[F169:get_messages]
 ---

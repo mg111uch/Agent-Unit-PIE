@@ -10,5 +10,65 @@
     "checkpoint": "temp__dummy__calculator.py__1e694fdfedaa.ckpt",
     "hash": "1e694fdfedaa6a37d7974a7ed59cb21d",
     "timestamp": 1785049034.8644583
+  },
+  {
+    "file": "temp/dummy/fibo/fibonacci.py",
+    "checkpoint": "temp__dummy__fibo__fibonacci.py__5510cbea051e.ckpt",
+    "hash": "5510cbea051ef683848e37f4ace8e922",
+    "timestamp": 1785140868.6172848
+  },
+  {
+    "file": "temp/dummy/fibo/fibonacci.py",
+    "checkpoint": "temp__dummy__fibo__fibonacci.py__69c4a382a4a4.ckpt",
+    "hash": "69c4a382a4a4903c57ab61df0ca757f7",
+    "timestamp": 1785140984.3333063
+  },
+  {
+    "file": "temp/dummy/fibo/fibonacci.py",
+    "checkpoint": "temp__dummy__fibo__fibonacci.py__02e9e9f084fe.ckpt",
+    "hash": "02e9e9f084feb61752b30b01e25b1425",
+    "timestamp": 1785141220.0675433
+  },
+  {
+    "file": "temp/dummy/fibo/fibonacci.py",
+    "checkpoint": "temp__dummy__fibo__fibonacci.py__383a697c0973.ckpt",
+    "hash": "383a697c0973ffdc3e2b619d6c2eaa41",
+    "timestamp": 1785157197.5257638
+  },
+  {
+    "file": "temp/dummy/fibo/fibonacci.py",
+    "checkpoint": "temp__dummy__fibo__fibonacci.py__139a6a463c44.ckpt",
+    "hash": "139a6a463c44f6eaf514470351f16741",
+    "timestamp": 1785157206.742405
+  },
+  {
+    "file": "temp/dummy/fibo/fibonacci.py",
+    "checkpoint": "temp__dummy__fibo__fibonacci.py__6a12ab844c99.ckpt",
+    "hash": "6a12ab844c99badae76bdf8687c6c8b3",
+    "timestamp": 1785157274.216317
+  },
+  {
+    "file": "temp/dummy/fibo/test_fibonacci.py",
+    "checkpoint": "temp__dummy__fibo__test_fibonacci.py__10033b2f56cd.ckpt",
+    "hash": "10033b2f56cde93c81e89817200d7c11",
+    "timestamp": 1785157378.7848008
+  },
+  {
+    "file": "temp/dummy/fibo/test_fibonacci.py",
+    "checkpoint": "temp__dummy__fibo__test_fibonacci.py__2e1443de897a.ckpt",
+    "hash": "2e1443de897a3e5c05b5765def946a75",
+    "timestamp": 1785157395.9641366
+  },
+  {
+    "file": "temp/dummy/fibo/test_fibonacci.py",
+    "checkpoint": "temp__dummy__fibo__test_fibonacci.py__85f2ceb02a80.ckpt",
+    "hash": "85f2ceb02a8071cb9670e0f77ce67a2a",
+    "timestamp": 1785157412.3475628
+  },
+  {
+    "file": "temp/dummy/fibo/fibonacci.py",
+    "checkpoint": "temp__dummy__fibo__fibonacci.py__182f415840b6.ckpt",
+    "hash": "182f415840b6223ecc62464d5d470962",
+    "timestamp": 1785161203.783136
   }
 ]

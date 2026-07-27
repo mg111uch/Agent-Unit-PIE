@@ -75,7 +75,8 @@ def read_file(path: str = "", **kwargs) -> ToolResult:
         line_numbers = line_numbers.lower() in ("true", "1", "yes")
     try:
         full = resolve(path)
-        try: kernel_db.record_file_access(to_relative(full), "read")
+        rel = to_relative(full)
+        try: kernel_db.record_file_access(rel, "read")
         except: pass
         if not os.path.exists(full):
             parent = os.path.dirname(full) or WORKSPACE_ROOT
@@ -84,10 +85,24 @@ def read_file(path: str = "", **kwargs) -> ToolResult:
                 nearby = sorted(os.listdir(parent))[:20]
             return ToolResult(ok=False, message=(
                 f"file not found: {path}\n"
-                f"Resolved to: {to_relative(full)} (workspace-relative)\n"
+                f"Resolved to: {rel} (workspace-relative)\n"
                 f"Files in that directory: {nearby if nearby else '(directory does not exist)'}"
             ))
-        return _read_file_content(full, offset=offset, limit=limit, line_numbers=line_numbers)
+        # Session cache: full-file reads only (no offset/limit)
+        if not offset and limit is None:
+            from agent_core.loop.session_state import get_session_state
+            st = get_session_state()
+            if st is not None:
+                cached = st.get_cached_file(rel)
+                if cached is not None:
+                    return ToolResult(ok=True, data=f"[cached, unchanged]\n{cached}")
+        result = _read_file_content(full, offset=offset, limit=limit, line_numbers=line_numbers)
+        if result.ok and not offset and limit is None:
+            from agent_core.loop.session_state import get_session_state
+            st = get_session_state()
+            if st is not None:
+                st.put_file(rel, result.data)
+        return result
     except PathEscapeError as e:
         return ToolResult(ok=False, message=str(e))
     except Exception as e:
@@ -102,6 +117,12 @@ def list_files(path: str = ".", **kwargs) -> ToolResult:
         full = resolve(path)
         if not os.path.isdir(full):
             return ToolResult(ok=False, message=f"not a directory: {path}")
+        rel = to_relative(full)
+        from agent_core.loop.session_state import get_session_state
+        st = get_session_state()
+        if st is not None and rel in st.dir_cache:
+            st.cache_hits += 1
+            return ToolResult(ok=True, data=f"[cached listing]\n{st.dir_cache[rel]}")
         lines = []
         for root, dirs, files in os.walk(full):
             dirs[:] = [d for d in sorted(dirs) if d not in (".git", "node_modules", "__pycache__", ".venv")]
@@ -116,6 +137,9 @@ def list_files(path: str = ".", **kwargs) -> ToolResult:
             for fname in sorted(files):
                 lines.append(f"{indent}  {fname}")
         data = "\n".join(lines) if lines else "(empty directory)"
+        if st is not None:
+            st.dir_cache[rel] = data
+            st.cache_misses += 1
         return ToolResult(ok=True, data=data)
     except PathEscapeError as e:
         return ToolResult(ok=False, message=str(e))
@@ -152,14 +176,21 @@ def write_to_file(input_data) -> ToolResult:
         except: pass
         exists = os.path.exists(full_path)
 
+        rel = to_relative(full_path)
+        from agent_core.loop.session_state import get_session_state
+        st = get_session_state()
+
         if mode == "create":
             if exists:
-                return ToolResult(ok=False, message=f"File already exists: {to_relative(full_path)}")
+                return ToolResult(ok=False, message=f"File already exists: {rel}")
             _ensure_dir(full_path)
             if not dry_run:
                 with open(full_path, "w") as f:
                     f.write(content)
-            return ToolResult(ok=True, data=f"[CREATE] {to_relative(full_path)} ({len(content)} chars)")
+            if st is not None and not dry_run:
+                st.put_file(rel, content)
+                st.record_edit(rel, f"create {len(content)} chars")
+            return ToolResult(ok=True, data=f"[CREATE] {rel} ({len(content)} chars)")
 
         elif mode == "overwrite":
             ckpt_saved = save_checkpoint(path) if not dry_run else None
@@ -167,15 +198,21 @@ def write_to_file(input_data) -> ToolResult:
             if not dry_run:
                 with open(full_path, "w") as f:
                     f.write(content)
+            if st is not None and not dry_run:
+                st.put_file(rel, content)
+                st.record_edit(rel, f"overwrite {len(content)} chars")
             ckpt = " [checkpoint saved]" if ckpt_saved else ""
-            return ToolResult(ok=True, data=f"[OVERWRITE] {to_relative(full_path)} ({len(content)} chars){ckpt}")
+            return ToolResult(ok=True, data=f"[OVERWRITE] {rel} ({len(content)} chars){ckpt}")
 
         elif mode == "append":
             _ensure_dir(full_path)
             if not dry_run:
                 with open(full_path, "a") as f:
                     f.write(content)
-            return ToolResult(ok=True, data=f"[APPEND] {to_relative(full_path)} (+{len(content)} chars)")
+            if st is not None and not dry_run:
+                st.mark_stale(rel)
+                st.record_edit(rel, f"append +{len(content)} chars")
+            return ToolResult(ok=True, data=f"[APPEND] {rel} (+{len(content)} chars)")
 
         else:
             return ToolResult(ok=False, message=f"Unknown mode '{mode}'")
@@ -191,7 +228,8 @@ def edit_file(input_data) -> ToolResult:
         data = json.loads(input_data) if isinstance(input_data, str) else input_data
         path, old, new = data["path"], data["old_string"], data["new_string"]
         full = resolve(path)
-        try: kernel_db.record_file_access(to_relative(full), "edit")
+        rel = to_relative(full)
+        try: kernel_db.record_file_access(rel, "edit")
         except: pass
         if not os.path.exists(full):
             parent = os.path.dirname(full) or WORKSPACE_ROOT
@@ -200,7 +238,7 @@ def edit_file(input_data) -> ToolResult:
                 nearby = sorted(os.listdir(parent))[:20]
             return ToolResult(ok=False, message=(
                 f"file not found: {path}\n"
-                f"Resolved to: {to_relative(full)} (workspace-relative)\n"
+                f"Resolved to: {rel} (workspace-relative)\n"
                 f"Files in that directory: {nearby if nearby else '(directory does not exist)'}"
             ))
         with open(full, "r", encoding="utf-8") as f:
@@ -221,13 +259,33 @@ def edit_file(input_data) -> ToolResult:
         with open(full, "w", encoding="utf-8") as f:
             f.write(updated)
 
-        diff_lines = _compute_diff(old, new)
-        diff_section = "\n".join(diff_lines[:20]) if diff_lines else ""
-        if len(diff_lines) > 20:
-            diff_section += f"\n... ({len(diff_lines) - 20} more lines changed)"
+        # Prefer full-file unified diff (context around the change)
+        try:
+            import difflib
+            diff_lines = list(difflib.unified_diff(
+                content.splitlines(), updated.splitlines(),
+                fromfile=f"a/{rel}", tofile=f"b/{rel}", lineterm="", n=8,
+            ))
+            diff_section = "\n".join(diff_lines[:60])
+            if len(diff_lines) > 60:
+                diff_section += f"\n... ({len(diff_lines) - 60} more diff lines)"
+        except Exception:
+            diff_lines = _compute_diff(old, new)
+            diff_section = "\n".join(diff_lines[:40]) if diff_lines else ""
+
+        from agent_core.loop.session_state import get_session_state
+        st = get_session_state()
+        if st is not None:
+            # Cache post-edit content so verify re-reads are free
+            numbered = "\n".join(f"{i+1:>5}\t{line}" for i, line in enumerate(updated.splitlines()))
+            st.put_file(rel, f"--- {rel} ---\n{numbered}")
+            st.record_edit(rel, f"edit {len(old)}→{len(new)} chars")
 
         ckpt = " [checkpoint saved]" if ckpt_saved else ""
-        result = f"[EDIT] {to_relative(full)}: replaced 1 occurrence ({len(new)} chars){ckpt}"
+        result = (
+            f"[EDIT] {rel}: replaced 1 occurrence ({len(new)} chars){ckpt}\n"
+            f"Diff below IS verification — do not re-read solely to confirm this edit."
+        )
         if diff_section:
             result += f"\n--- Diff ---\n{diff_section}"
         return ToolResult(ok=True, data=result)
@@ -238,7 +296,22 @@ def edit_file(input_data) -> ToolResult:
 
 
 def get_workspace_info(_input=None) -> ToolResult:
+    from agent_core.loop.session_state import get_session_state
+    st = get_session_state()
+    if st is not None and st.workspace_root and st.top_level_entries is not None:
+        st.cache_hits += 1
+        entries = st.top_level_entries
+        return ToolResult(ok=True, data=(
+            f"[cached workspace info]\n"
+            f"Workspace root (use paths relative to this): {st.workspace_root}\n"
+            f"Top-level entries: {entries}\n"
+            f"All file paths you pass to read_file / write_to_file / list_files / edit_file "
+            f"must be relative to this root (e.g. 'src/main.py', not an absolute OS path)."
+        ))
     entries = sorted(os.listdir(WORKSPACE_ROOT))
+    if st is not None:
+        st.set_workspace(WORKSPACE_ROOT, entries)
+        st.cache_misses += 1
     return ToolResult(ok=True, data=(
         f"Workspace root (use paths relative to this): {WORKSPACE_ROOT}\n"
         f"Top-level entries: {entries}\n"

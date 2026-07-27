@@ -1,5 +1,5 @@
 # 📂 popula_dyn
-Generated: 2026-07-26 16:20:18
+Generated: 2026-07-27 19:23:22
 Files: 4
 
 ---
@@ -39,7 +39,7 @@ D: ►F108 ●simulation
 ---
 
 F109│simulation_game.py│173│⚡
-D: ►F108 ●asyncio,json,model,pydantic,threading,+3
+D: ►F108 ●asyncio,fastapi,json,threading,uvicorn,+3
 F: game_page()
    S: Serve the game page.
 F: start_simulation()
@@ -67,10 +67,10 @@ F: step_simulation()
    ↳Impact: 🟡MEDIUM (2 dependents) | Breaks: [F109:simulation_websocket],[F109:broadcast_simulation_updates]
    S: Advance simulation by one step.
 F: simulation_websocket(websocket)
-   ↳Calls: F109:update_params,F109:reset_simulation,F109:step_simulation
+   ↳Calls: F109:reset_simulation,F109:start_simulation,F109:step_simulation
    S: WebSocket endpoint for real-time simulation updates.
 F: broadcast_simulation_updates()
-   ↳Called by: F109:startup_event | Calls: F109:get_simulation_state,F109:step_simulation
+   ↳Called by: F109:startup_event | Calls: F109:step_simulation,F109:get_simulation_state
    ↳Impact: 🟢LOW (1 dependents) | Breaks: [F109:startup_event]
    S: Broadcast simulation state to all connected clients.
 F: startup_event()

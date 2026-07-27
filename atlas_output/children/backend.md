@@ -1,5 +1,5 @@
 # 📂 backend
-Generated: 2026-07-26 16:20:18
+Generated: 2026-07-27 19:23:22
 Files: 5
 
 ---
@@ -117,6 +117,6 @@ F: create_app(unified_graph,output_dir,project_id)→Flask
    ↳Impact: 🟢LOW (1 dependents) | Breaks: [F079:main]
    S: Create app from a unified GraphData object.
 F: _build_app(graph_json,output_dir,project_id)→Flask
-   ↳Called by: F095:create_app | Calls: F095:_write_positions,F095:_load_positions_with_meta
+   ↳Called by: F095:create_app | Calls: F095:_load_positions_with_meta,F095:_write_positions
    ↳Impact: 🟢LOW (1 dependents) | Breaks: [F095:create_app]
 ---

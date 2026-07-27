@@ -102,7 +102,12 @@ def parse_provider_response(
                 raw=str(tool_calls_raw),
             )
 
-    return parse_agent_reply(response_text, known_tools)
+    # No tool_calls + text that isn't JSON action/final = final answer
+    # (native FC providers return plain prose when done, not JSON envelopes)
+    parsed = parse_agent_reply(response_text, known_tools)
+    if parsed.kind == "raw" and response_text and response_text.strip():
+        return ParsedReply(kind="final", content=response_text.strip(), raw=response_text)
+    return parsed
 
 
 def parse_agent_reply(reply: Optional[str], known_tools: dict) -> ParsedReply:

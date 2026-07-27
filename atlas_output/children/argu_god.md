@@ -1,5 +1,5 @@
 # 📂 argu_god
-Generated: 2026-07-26 16:20:18
+Generated: 2026-07-27 19:23:22
 Files: 2
 
 ---
@@ -13,10 +13,10 @@ F: _parse_json_from_response(response)→Any
    ↳Called by: F139:generate_llm_question,F139:compile_topic_llm
    ↳Impact: 🟡MEDIUM (2 dependents) | Breaks: [F139:generate_llm_question],[F139:compile_topic_llm]
 F: compile_topic_llm(topic)→dict
-   ↳Called by: F138:compile_topic | Calls: F139:_get_orchestrator,F139:_parse_json_from_response
+   ↳Called by: F138:compile_topic | Calls: F139:_parse_json_from_response,F139:_get_orchestrator
    ↳Impact: 🟢LOW (1 dependents) | Breaks: [F138:compile_topic]
 F: generate_llm_question(topic,knowledge_context)→Any
-   ↳Called by: F146:_generate_next_question | Calls: F139:_get_orchestrator,F139:_parse_json_from_response
+   ↳Called by: F146:_generate_next_question | Calls: F139:_parse_json_from_response,F139:_get_orchestrator
    ↳Impact: 🟢LOW (1 dependents) | Breaks: [F146:_generate_next_question]
 ---
 

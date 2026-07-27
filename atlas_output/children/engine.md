@@ -1,11 +1,11 @@
 # 📂 engine
-Generated: 2026-07-26 16:20:18
+Generated: 2026-07-27 19:23:22
 Files: 9
 
 ---
 
 F140│debate.py│306
-D: ►F011,F141,F145,F146,F147,F148 ●datetime,json,kernel,os,threading,+4
+D: ►F011,F141,F145,F146,F147,F148 ●agent_core,json,kernel,threading,time,+4
 F: _populate_semantic_memory(graph,topic)
    ↳Called by: F140:debate_step
    ↳Impact: 🟢LOW (1 dependents) | Breaks: [F140:debate_step]
@@ -15,7 +15,7 @@ F: _build_debate_question(argument,counter)→dict
    ↳Called by: F140:debate_step
    ↳Impact: 🟢LOW (1 dependents) | Breaks: [F140:debate_step]
 F: debate_step(raw_input)→str
-   ↳Calls: F146:_store_user_knowledge,F146:_generate_next_question,F140:_build_debate_question
+   ↳Calls: F011:emit_confidence_signal,F146:_generate_next_question,F011:emit_belief_signal
 F: debate_expand(topic,llm_output)→dict
    ↳Calls: F148:is_similar_to_any,F147:index_graph
    S: Generate new arguments via LLM and write directly to semantic_memory SQLite tables.
@@ -42,7 +42,7 @@ F: _get_untouched_knowledge(topic,state,beliefs)→Optional[dict]
    ↳Called by: F146:_generate_next_question
    ↳Impact: 🟢LOW (1 dependents) | Breaks: [F146:_generate_next_question]
 F: _generate_next_question(topic,state,beliefs,graph,llm_input)→Any
-   ↳Called by: F140:debate_step | Calls: F146:_build_knowledge_context,F146:_get_untouched_knowledge,F141:get_next_argument
+   ↳Called by: F140:debate_step | Calls: F146:_get_untouched_knowledge,F148:is_similar_to_any,F142:get_best_counter
    ↳Impact: 🟢LOW (1 dependents) | Breaks: [F140:debate_step]
 ---
 
@@ -52,14 +52,14 @@ F: cosine_similarity(a,b)
    ↳Called by: F148:is_similar_to_any
    ↳Impact: 🟢LOW (1 dependents) | Breaks: [F148:is_similar_to_any]
 F: is_similar_to_any(candidate_text,existing_texts,threshold)
-   ↳Called by: F146:_generate_next_question,F146:_check_novelty,F140:debate_expand | Calls: F147:embed,F148:cosine_similarity
-   ↳Impact: 🔴HIGH (3 dependents) | Breaks: [F146:_generate_next_question],[F146:_check_novelty],[F140:debate_expand]
+   ↳Called by: F146:_check_novelty,F146:_generate_next_question,F140:debate_expand | Calls: F147:embed,F148:cosine_similarity
+   ↳Impact: 🔴HIGH (3 dependents) | Breaks: [F146:_check_novelty],[F146:_generate_next_question],[F140:debate_expand]
 ---
 
 F143│expand.py│28
 D: ►F141,F147 ●json,os
 F: expand_topic(topic,new_nodes,new_edges)→dict
-   ↳Calls: F141:load_graph,F147:index_graph
+   ↳Calls: F147:index_graph,F141:load_graph
 ---
 
 F141│loop.py│28
@@ -107,14 +107,14 @@ F: _get_client()
    ↳Called by: F147:_get_collection
    ↳Impact: 🟢LOW (1 dependents) | Breaks: [F147:_get_collection]
 F: _get_collection()
-   ↳Called by: F146:_store_user_knowledge,F147:search_similar,F147:index_graph | Calls: F147:_get_client
-   ↳Impact: 🔴HIGH (3 dependents) | Breaks: [F146:_store_user_knowledge],[F147:search_similar],[F147:index_graph]
+   ↳Called by: F147:index_graph,F147:search_similar,F146:_store_user_knowledge | Calls: F147:_get_client
+   ↳Impact: 🔴HIGH (3 dependents) | Breaks: [F147:index_graph],[F147:search_similar],[F146:_store_user_knowledge]
 F: _get_model()
    ↳Called by: F147:embed
    ↳Impact: 🟢LOW (1 dependents) | Breaks: [F147:embed]
 F: embed(text)
-   ↳Called by: F146:_store_user_knowledge,F148:is_similar_to_any,F147:search_similar | Calls: F147:_get_model,F055:_get_model
-   ↳Impact: 🔴HIGH (4 dependents) | Breaks: [F146:_store_user_knowledge],[F148:is_similar_to_any],[F147:search_similar]
+   ↳Called by: F148:is_similar_to_any,F147:index_graph,F147:search_similar | Calls: F147:_get_model,F055:_get_model
+   ↳Impact: 🔴HIGH (4 dependents) | Breaks: [F148:is_similar_to_any],[F147:index_graph],[F147:search_similar]
 F: index_graph(graph)
    ↳Called by: F143:expand_topic,F140:debate_expand | Calls: F147:embed,F147:_get_collection,F055:_get_collection
    ↳Impact: 🟡MEDIUM (2 dependents) | Breaks: [F143:expand_topic],[F140:debate_expand]

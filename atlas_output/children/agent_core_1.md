@@ -1,5 +1,5 @@
 # 📂 agent_core_1
-Generated: 2026-07-26 16:20:18
+Generated: 2026-07-27 19:23:22
 Files: 10
 
 ---
@@ -10,7 +10,7 @@ D: ●agent_core
 ---
 
 F163│audit_log.py│69
-D: ●datetime,hashlib,json,os,sqlite3,+4
+D: ●__future__,json,pathlib,sqlite3,threading,+4
 C: AuditLog│[__init__,_init_db,log,query,close]
 C: AuditLog│[__init__,_init_db,log,query,close]
    F: __init__(self,db_path)
@@ -24,10 +24,10 @@ F160│auto_research.py│75
 S: Autonomous research mode using the shared agent loop.
 D: ●__future__,agent_core,kernel,typing
 F: run_auto_research(goal,orchestrator)→str
-   ↳Calls: F199:run_agent_turn,F185:log_output
+   ↳Calls: F201:run_agent_turn,F186:log_output
 ---
 
-F162│config.py│48
+F162│config.py│53
 S: Shared configuration and defaults for agent CLI and server.
 D: ●__future__,json,os
 F: load_config()→dict
@@ -42,16 +42,16 @@ F156│context.py│38
 S: Kernel context retrieval for agent turns.
 D: ●__future__,agent_core
 F: retrieve_kernel_context(query)→str
-   ↳Called by: F199:iter_agent_events | Calls: F185:log_output
-   ↳Impact: 🟢LOW (1 dependents) | Breaks: [F199:iter_agent_events]
+   ↳Called by: F201:iter_agent_events | Calls: F186:log_output
+   ↳Impact: 🟢LOW (1 dependents) | Breaks: [F201:iter_agent_events]
    S: Return a markdown context block, or empty string if unavailable/disabled.
 ---
 
 F159│mcp_server.py│180│⚡
 S: MCP server exposing PIE kernel + simulation tools via stdio transport.
-D: ●asyncio,importlib,json,mcp,os,+8
+D: ●asyncio,json,kernel,logging,pathlib,+8
 F: _do_reload()
-   ↳Called by: F159:call_mcp_tool,F159:_reload_if_changed | Calls: F185:_register_all
+   ↳Called by: F159:call_mcp_tool,F159:_reload_if_changed | Calls: F186:_register_all
    ↳Impact: 🟡MEDIUM (2 dependents) | Breaks: [F159:call_mcp_tool],[F159:_reload_if_changed]
 F: _reload_if_changed()
    ↳Called by: F159:call_mcp_tool,F159:list_mcp_tools | Calls: F159:_do_reload
@@ -67,27 +67,21 @@ F: _build_tool_list()→list[Tool]
 F: list_mcp_tools()→list[Tool]
    ↳Calls: F159:_reload_if_changed,F159:_build_tool_list
 F: call_mcp_tool(name,arguments)→CallToolResult
-   ↳Calls: F159:_check_kernel_read,F159:_reload_if_changed,F159:_do_reload
+   ↳Calls: F197:_normalize_tool_arg,F159:_do_reload,F159:_check_kernel_read
 F: main()
 ---
 
-F161│prompts.py│99
+F161│prompts.py│73
 S: System prompt assembly from capability-aware fragments.
 D: ●__future__,agent_core,os,typing
 F: load_agents_md()→str
    ↳Called by: F161:load_system_prompt
    ↳Impact: 🟢LOW (1 dependents) | Breaks: [F161:load_system_prompt]
-F: build_tool_usage_table(tools_dict)→str
-   ↳Called by: F161:load_system_prompt
-   ↳Impact: 🟢LOW (1 dependents) | Breaks: [F161:load_system_prompt]
-F: build_input_format_table(tools_dict)→str
-   ↳Called by: F161:load_system_prompt
-   ↳Impact: 🟢LOW (1 dependents) | Breaks: [F161:load_system_prompt]
 F: _include_fragment(requires,blocks,active_packs)→bool
    ↳Called by: F161:load_system_prompt
    ↳Impact: 🟢LOW (1 dependents) | Breaks: [F161:load_system_prompt]
-F: load_system_prompt(tools_dict,path,active_packs)→str
-   ↳Calls: F161:build_input_format_table,F161:build_tool_usage_table,F185:log_output
+F: load_system_prompt(path,active_packs)→str
+   ↳Calls: F186:log_output,F161:_include_fragment,F161:load_agents_md
 ---
 
 F158│providers_setup.py│74
@@ -105,24 +99,24 @@ F: switch_active(orchestrator,provider,model)→Any
    S: Update orchestrator defaults. Caller must update its own active_* state.
 ---
 
-F157│response_parse.py│162
+F157│response_parse.py│167
 S: Parse LLM replies into final answer or tool action.
 D: ●__future__,dataclasses,json,re,uuid,+1
 C: ParsedReply│[]
 C: ParsedToolCall│[]
 F: _resolve_tool_name(name,known_tools)→Any
-   ↳Called by: F157:parse_provider_response,F157:_parse_xml_tool_call,F157:parse_agent_reply
-   ↳Impact: 🔴HIGH (3 dependents) | Breaks: [F157:parse_provider_response],[F157:_parse_xml_tool_call],[F157:parse_agent_reply]
+   ↳Called by: F157:parse_agent_reply,F157:_parse_xml_tool_call,F157:parse_provider_response
+   ↳Impact: 🔴HIGH (3 dependents) | Breaks: [F157:parse_agent_reply],[F157:_parse_xml_tool_call],[F157:parse_provider_response]
 F: parse_provider_response(response_text,tool_calls_raw,known_tools)→ParsedReply
-   ↳Called by: F199:iter_agent_events | Calls: F157:_resolve_tool_name,F157:parse_agent_reply
-   ↳Impact: 🟢LOW (1 dependents) | Breaks: [F199:iter_agent_events]
+   ↳Called by: F201:_iter_agent_events_body | Calls: F157:parse_agent_reply,F157:_resolve_tool_name
+   ↳Impact: 🟢LOW (1 dependents) | Breaks: [F201:_iter_agent_events_body]
    S: Parse a provider response that may contain either text or structured tool_calls.
    S: Priority:
    S: 1. Structured tool_calls (native function calling) → multi-tool
    S: 2. Text-JSON {"action": ..., "input": ...} → single tool
    S: 3. Text-JSON {"final": ...} → final
 F: parse_agent_reply(reply,known_tools)→ParsedReply
-   ↳Called by: F157:parse_provider_response | Calls: F157:_extract_json,F157:_parse_xml_tool_call,F157:_resolve_tool_name
+   ↳Called by: F157:parse_provider_response | Calls: F157:_parse_xml_tool_call,F157:_strip_code_fences,F157:_resolve_tool_name
    ↳Impact: 🟢LOW (1 dependents) | Breaks: [F157:parse_provider_response]
    S: Classify a model text reply:
    S: - final: {"final": "..."}
@@ -147,14 +141,14 @@ D: ●__future__,agent_core,os,threading
 C: PathEscapeError←ValueError│[]
 F: set_user_workspace(user_id)→str
 F: get_user_workspace_root()→Any
-   ↳Called by: F155:to_relative,F185:_run_sandboxed,F155:resolve
-   ↳Impact: 🔴HIGH (3 dependents) | Breaks: [F155:to_relative],[F185:_run_sandboxed],[F155:resolve]
+   ↳Called by: F186:_run_sandboxed,F155:to_relative,F155:resolve
+   ↳Impact: 🔴HIGH (3 dependents) | Breaks: [F186:_run_sandboxed],[F155:to_relative],[F155:resolve]
 F: clear_user_context()
 F: resolve(path)→str
-   ↳Called by: F187:batch_edit_tool,F187:read_file,F187:list_files | Calls: F155:get_user_workspace_root
-   ↳Impact: 🔴HIGH (10 dependents) | Breaks: [F187:batch_edit_tool],[F187:read_file],[F187:list_files]
+   ↳Called by: F184:save_checkpoint,F182:run_tests,F188:edit_file | Calls: F155:get_user_workspace_root
+   ↳Impact: 🔴HIGH (10 dependents) | Breaks: [F184:save_checkpoint],[F182:run_tests],[F188:edit_file]
 F: to_relative(full_path)→str
-   ↳Called by: F187:read_file,F187:list_files,F187:write_to_file | Calls: F155:get_user_workspace_root
-   ↳Impact: 🔴HIGH (7 dependents) | Breaks: [F187:read_file],[F187:list_files],[F187:write_to_file]
+   ↳Called by: F184:save_checkpoint,F188:edit_file,F188:read_file | Calls: F155:get_user_workspace_root
+   ↳Impact: 🔴HIGH (7 dependents) | Breaks: [F184:save_checkpoint],[F188:edit_file],[F188:read_file]
 C: PathEscapeError←ValueError│[]
 ---

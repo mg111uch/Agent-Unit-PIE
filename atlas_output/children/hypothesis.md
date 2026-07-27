@@ -1,11 +1,11 @@
 # 📂 hypothesis
-Generated: 2026-07-26 16:20:18
+Generated: 2026-07-27 19:23:22
 Files: 3
 
 ---
 
 F040│confidence_engine.py│471
-D: ●__future__,dataclasses,kernel,math,time,+2
+D: ●__future__,dataclasses,kernel,math,statistics,+2
 C: ConfidenceResult│[to_dict]
 C: ConfidenceEngine│[__init__,evaluate_signal_confidence,evaluate_event_confidence,evaluate_pattern_confidence,evaluate_hypothesis_confidence,_calculate_signal_evidence,_calculate_signal_consistency,_calculate_source_reliability,_calculate_temporal_score,_calculate_quantity_score,+4]
 C: ConfidenceResult│[to_dict]

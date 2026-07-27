@@ -1,5 +1,5 @@
 # 📂 digital_twins
-Generated: 2026-07-26 16:20:18
+Generated: 2026-07-27 19:23:22
 Files: 4
 
 ---
@@ -44,8 +44,8 @@ C: CityTwin│[__init__,update_profile,add_gis_layer,ingest_newspaper_patterns,u
       S: Export full city twin.
    F: summary(self)→Any
    F: utc_now()→str
-   ↳Called by: F035:update_timestamp,F036:deactivate,F033:update_timestamp
-   ↳Impact: 🔴HIGH (9 dependents) | Breaks: [F035:update_timestamp],[F036:deactivate],[F033:update_timestamp]
+   ↳Called by: F036:deactivate,F036:update_confidence,F033:update_timestamp
+   ↳Impact: 🔴HIGH (9 dependents) | Breaks: [F036:deactivate],[F036:update_confidence],[F033:update_timestamp]
 ---
 
 F154│company_twin.py│752
@@ -88,8 +88,8 @@ C: CompanyTwin│[__init__,update_profile,ingest_financial_report,add_financial_
       S: Export full twin state.
    F: summary(self)→Any
    F: utc_now()→str
-   ↳Called by: F035:update_timestamp,F036:deactivate,F033:update_timestamp
-   ↳Impact: 🔴HIGH (9 dependents) | Breaks: [F035:update_timestamp],[F036:deactivate],[F033:update_timestamp]
+   ↳Called by: F036:deactivate,F036:update_confidence,F033:update_timestamp
+   ↳Impact: 🔴HIGH (9 dependents) | Breaks: [F036:deactivate],[F036:update_confidence],[F033:update_timestamp]
 ---
 
 F152│digital_twin_manager.py│620
@@ -131,8 +131,8 @@ C: DigitalTwinManager│[__init__,create_twin,get_twin,remove_twin,sync_twin,cre
    F: health_check(self)→Any
    F: resolve_unit(self,unit_id)→Any
    F: utc_now()→str
-   ↳Called by: F035:update_timestamp,F036:deactivate,F033:update_timestamp
-   ↳Impact: 🔴HIGH (9 dependents) | Breaks: [F035:update_timestamp],[F036:deactivate],[F033:update_timestamp]
+   ↳Called by: F036:deactivate,F036:update_confidence,F033:update_timestamp
+   ↳Impact: 🔴HIGH (9 dependents) | Breaks: [F036:deactivate],[F036:update_confidence],[F033:update_timestamp]
 ---
 
 F153│human_twin.py│608
@@ -174,6 +174,6 @@ C: HumanTwin│[__init__,update_profile,record_interaction,update_behavior_map,u
       S: Export full twin state.
    F: summary(self)→Any
    F: utc_now()→str
-   ↳Called by: F035:update_timestamp,F036:deactivate,F033:update_timestamp
-   ↳Impact: 🔴HIGH (9 dependents) | Breaks: [F035:update_timestamp],[F036:deactivate],[F033:update_timestamp]
+   ↳Called by: F036:deactivate,F036:update_confidence,F033:update_timestamp
+   ↳Impact: 🔴HIGH (9 dependents) | Breaks: [F036:deactivate],[F036:update_confidence],[F033:update_timestamp]
 ---

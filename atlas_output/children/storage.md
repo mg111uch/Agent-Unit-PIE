@@ -1,5 +1,5 @@
 # 📂 storage
-Generated: 2026-07-26 16:20:18
+Generated: 2026-07-27 19:23:22
 Files: 5
 
 ---
@@ -9,7 +9,7 @@ F009│hypothesis_storage.py│0
 
 F008│pattern_storage.py│365
 S: storage/pattern_storage.py
-D: ●__future__,datetime,json,logging,typing,+1
+D: ●__future__,datetime,json,logging,pathlib,+1
 C: PatternStorage│[__init__,save_pattern,load_pattern,list_patterns,search_patterns,update_indexes,save_pattern_summary,delete_pattern,pattern_exists,write_json,+3]
    S: Global persistent pattern storage manager.
 C: PatternStorage│[__init__,save_pattern,load_pattern,list_patterns,search_patterns,update_indexes,save_pattern_summary,delete_pattern,pattern_exists,write_json,+3]
@@ -33,8 +33,8 @@ C: PatternStorage│[__init__,save_pattern,load_pattern,list_patterns,search_pat
    F: write_json(self,path,data)→None
    F: read_json(self,path)→Any
    F: utc_now()→str
-   ↳Called by: F035:update_timestamp,F036:deactivate,F033:update_timestamp
-   ↳Impact: 🔴HIGH (9 dependents) | Breaks: [F035:update_timestamp],[F036:deactivate],[F033:update_timestamp]
+   ↳Called by: F036:deactivate,F036:update_confidence,F033:update_timestamp
+   ↳Impact: 🔴HIGH (9 dependents) | Breaks: [F036:deactivate],[F036:update_confidence],[F033:update_timestamp]
    F: generate_pattern_id()→str
 ---
 
@@ -46,7 +46,7 @@ F007│timeline_storage.py│0
 
 F006│unit_storage.py│413
 S: storage/unit_storage.py
-D: ●__future__,datetime,json,logging,shutil,+2
+D: ●__future__,json,logging,pathlib,shutil,+2
 C: UnitStorage│[__init__,create_unit,load_unit,save_observation,save_event,save_signal,save_pattern,save_relation,save_summary,save_working_memory,+6]
    S: Universal persistent unit storage manager.
 F: write_json(path,data)→None

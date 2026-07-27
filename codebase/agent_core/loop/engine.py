@@ -9,7 +9,14 @@ import time
 import traceback
 from typing import Any, Generator, List, Optional
 
-from agent_core.config import MAX_AGENT_STEPS, CODEBASE_ROOT, DEBUG_DUMP_ENABLED
+from agent_core.config import (
+    MAX_AGENT_STEPS,
+    CODEBASE_ROOT,
+    DEBUG_DUMP_ENABLED,
+    DEBUG_DUMP_APPEND_MODE,
+    COMPACTION_TRIGGER_CHARS,
+    CONTEXT_DIGEST_ENABLED,
+)
 from agent_core.context import retrieve_kernel_context
 from agent_core.response_parse import parse_provider_response
 from agent_core.tools import registry, ToolResult, log_output
@@ -22,6 +29,13 @@ from agent_core.loop.messages import (
 )
 from agent_core.loop.streaming import stream_final
 from agent_core.loop.executor import execute_tool_calls
+from agent_core.loop.session_state import (
+    SessionState,
+    set_session_state,
+    reset_session_state,
+    compact_messages,
+    observe_tool_result,
+)
 from agent_core.loop._helpers import (
     _truncate_result,
     _compact_corrective_exchange,
@@ -38,7 +52,7 @@ def _debug_dump(mode: str, **kwargs):
     if not DEBUG_DUMP_ENABLED:
         return
     try:
-        file_mode = "w" if mode == "NEW TURN" else "a"
+        file_mode = "a" if DEBUG_DUMP_APPEND_MODE else ("w" if mode == "NEW TURN" else "a")
         with open(_DEBUG_LOG, file_mode) as f:
             f.write(f"\n{'='*60}\n")
             f.write(f"[{mode}]\n")
@@ -73,10 +87,22 @@ def iter_agent_events(
     cancel_event: Optional[threading.Event] = None,
     tools_override: Optional[dict] = None,
     tool_categories: Optional[List[str]] = None,
+    session_state: Optional[SessionState] = None,
 ) -> Generator[dict[str, Any], None, None]:
     context_info = ""
     if retrieve_context:
         context_info = retrieve_kernel_context(user_input, log=log_context)
+
+    state = session_state if session_state is not None else SessionState()
+    state.begin_turn()
+    _state_token = set_session_state(state)
+
+    digest = ""
+    if CONTEXT_DIGEST_ENABLED and state.turn_count > 0:
+        digest = state.build_digest()
+        # Only inject non-empty useful digest (skip pure header on first empty turn)
+        if state.workspace_root or state.file_cache or state.todo_plan or state.edits_log:
+            context_info = (context_info or "") + "\n\n" + digest
 
     conv_id = conversation_id
     _last_tool: str | None = None
@@ -86,8 +112,65 @@ def iter_agent_events(
     _tools = tools_override if tools_override is not None else registry.tools_dict
     use_messages = msg_store is not None and session_id is not None
 
+    try:
+        yield from _iter_agent_events_body(
+            user_input=user_input,
+            orchestrator=orchestrator,
+            conversation_id=conversation_id,
+            provider=provider,
+            model=model,
+            system_prompt=system_prompt,
+            max_steps=max_steps,
+            step_delay=step_delay,
+            context_info=context_info,
+            msg_store=msg_store,
+            session_id=session_id,
+            cancel_event=cancel_event,
+            tools_override=tools_override,
+            tool_categories=tool_categories,
+            state=state,
+            use_messages=use_messages,
+            _tools=_tools,
+            conv_id=conv_id,
+            _last_tool=_last_tool,
+            _last_result=_last_result,
+            _consecutive_failures=_consecutive_failures,
+            _consecutive_raw_failures=0,
+        )
+    finally:
+        reset_session_state(_state_token)
+
+
+def _iter_agent_events_body(
+    *,
+    user_input: str,
+    orchestrator: Any,
+    conversation_id: Optional[str],
+    provider: Optional[str],
+    model: Optional[str],
+    system_prompt: Optional[str],
+    max_steps: int,
+    step_delay: float,
+    context_info: str,
+    msg_store: Any,
+    session_id: Optional[str],
+    cancel_event: Optional[threading.Event],
+    tools_override: Optional[dict],
+    tool_categories: Optional[List[str]],
+    state: SessionState,
+    use_messages: bool,
+    _tools: dict,
+    conv_id: Optional[str],
+    _last_tool: str | None,
+    _last_result: str | None,
+    _consecutive_failures: int,
+    _consecutive_raw_failures: int = 0,
+) -> Generator[dict[str, Any], None, None]:
     if use_messages:
         current_messages = list(msg_store.get_messages(session_id))
+        current_messages = compact_messages(
+            current_messages, state, trigger_chars=COMPACTION_TRIGGER_CHARS
+        )
         full_input = user_input + context_info
         if not current_messages or not (
             current_messages[-1].get("role") == "user"
@@ -100,6 +183,7 @@ def iter_agent_events(
         current_input = ""
     else:
         current_input = user_input + context_info
+        current_messages = []
 
     _debug_dump("NEW TURN",
         provider=provider,
@@ -107,6 +191,9 @@ def iter_agent_events(
         system_prompt=system_prompt or "(none)",
         user_input=user_input,
         context_info=context_info or "(none)",
+        session_digest=state.build_digest(),
+        cache_hits=state.cache_hits,
+        cache_misses=state.cache_misses,
         messages=current_messages if use_messages else [],
         plain_prompt=current_input if not use_messages else "",
     )
@@ -198,6 +285,12 @@ def iter_agent_events(
 
             # --- raw (parse failure) ---
             if parsed.kind == "raw":
+                _consecutive_raw_failures += 1
+                if _consecutive_raw_failures >= 2:
+                    yield from stream_final(
+                        parsed.content or "(done)", step, conv_id,
+                    )
+                    return
                 corrective = (
                     f"Your response must be valid JSON only with "
                     f"'action'/'input' or 'final'. No free text or markdown. "

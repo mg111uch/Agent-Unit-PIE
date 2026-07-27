@@ -1,11 +1,11 @@
 # 📂 patterns
-Generated: 2026-07-26 16:20:18
+Generated: 2026-07-27 19:23:22
 Files: 5
 
 ---
 
 F071│anomaly_detector.py│386
-D: ●__future__,dataclasses,kernel,math,time,+2
+D: ●__future__,dataclasses,kernel,math,statistics,+2
 C: AnomalyResult│[to_dict]
 C: AnomalyDetector│[__init__,detect_zscore_anomalies,detect_spikes,detect_dropouts,register_anomaly_patterns,analyze_signals,summarize_anomaly]
 C: AnomalyResult│[to_dict]
@@ -59,7 +59,7 @@ C: PatternEngine│[__init__,register_pattern,create_pattern,detect_numeric_tren
 ---
 
 F073│trend_detector.py│369
-D: ●__future__,dataclasses,kernel,math,time,+2
+D: ●__future__,dataclasses,kernel,math,statistics,+2
 C: TrendResult│[to_dict]
 C: TrendDetector│[__init__,detect_trend,detect_and_register_pattern,_calculate_slope,_calculate_volatility,_calculate_confidence,_get_direction,_classify_trend,moving_average,detect_anomalies,+2]
 C: TrendResult│[to_dict]

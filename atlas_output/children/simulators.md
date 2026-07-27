@@ -1,12 +1,12 @@
 # 📂 simulators
-Generated: 2026-07-26 16:20:18
+Generated: 2026-07-27 19:23:22
 Files: 1
 
 ---
 
 F107│simulation_connector.py│301
 S: simulation_connector.py
-D: ●datetime,json,kernel,os,yaml,+3
+D: ●datetime,json,kernel,pathlib,yaml,+3
 C: SimulationConnector│[__init__,run_and_extract,_emit_signals_to_kernel,_extract_signals,_store_run,_generate_summary,get_signals,get_params,compare_runs,inject_policy,+1]
    S: Bridge between popula_dyn and kernel cognition.
 F: _codebase_root()

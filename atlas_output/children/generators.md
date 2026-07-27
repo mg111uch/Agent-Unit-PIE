@@ -1,5 +1,5 @@
 # 📂 generators
-Generated: 2026-07-26 16:20:18
+Generated: 2026-07-27 19:23:22
 Files: 3
 
 ---
@@ -48,7 +48,7 @@ C: DetailGenerator│[__init__,generate,_group_files,_get_produced_json_paths,_g
    F: _group_files(self)→Any
    F: _get_produced_json_paths(self)→Set[str]
    F: _generate_child_file(self,children_dir,group_name,files)→str
-   ↳Calls: F086:get_timestamp,F086:write_file
+   ↳Calls: F086:write_file,F086:get_timestamp
    F: _format_file_detail(self,file_info)→List[str]
    ↳Calls: F085:format_file
 ---

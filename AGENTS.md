@@ -1,14 +1,10 @@
 # AI Agent Development Guidelines 
 
-## Task — Resolved
+## Task 
 
-The model was outputting text-JSON (`{"action": "...", "input": "..."}`) instead of using native function calling, and `code_rag` tools (`search_symbols`, `get_symbol`, etc.) were not in `ACTIVE_TOOL_PACKS`. Fixes applied:
+In `Agentic_Unit_PIE/system_devpt_reports/FeatureIdeas.md` are given terminal logs of calls made to llm by agent loop.In `Agentic_Unit_PIE/system_devpt_reports/agent_efficiency_plan.md` is given the plan to make the agent more efficient. We need to implement this. Code snippets given are only suggestions, dont implement them varbatim, only take hints to make code better.
 
-1. **`codebase/config.json`** — Added `"code_rag"` to `tool_packs` so atlas/MCP tools are available.
-2. **`prompt_fragments/60_response_contract.md`** — Replaced text-JSON instruction with native FC guidance + step budget rules.
-3. **`agent_core/loop/engine.py`** — Pass `provider_name` to `get_schemas()` so Gemini gets proper `function_declarations` format.
-4. **`agent_core/tools/code_rag/engine.py`** — `search_symbols()` now accepts `queries: ["q1", "q2"]` (batched search, deduplicated results).
-5. **`agent_core/tools/__init__.py`** — `search_symbols` registration updated with `queries` (array) param; `query` made optional.
+Do not give code or make any changes. Just short give a plan or an answer. 
 
 ## Project Paths
 

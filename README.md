@@ -1,10 +1,12 @@
-# 🧠 Agent_Unit_PIE
+## 🧠 Agent Unit_PIE 
 
-## Universal Unit Pattern Intelligence Engine (PIE) 
+- resembles __init__.py
 
-### Human-in-Loop Argument Intelligence System 
-### A filesystem-backed LLM-powered Pattern Intelligence System.
-### A Self-Evolving Intelligence Operating System
+### Universal Unit Pattern Intelligence Engine (PIE) 
+
+- **Human-in-Loop Argument Intelligence System**
+- **A filesystem-backed LLM-powered Pattern Intelligence System**
+- **A Self-Evolving Intelligence Operating System**
 
 ---
 

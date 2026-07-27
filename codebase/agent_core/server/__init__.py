@@ -92,7 +92,7 @@ log_output(
     f"registered={sorted(_registered_names)}"
 )
 
-SYSTEM_PROMPT = load_system_prompt(tools_dict=ACTIVE_TOOLS_DICT, active_packs=ACTIVE_TOOL_PACKS)
+SYSTEM_PROMPT = load_system_prompt(active_packs=ACTIVE_TOOL_PACKS)
 workspace_root = WORKSPACE_ROOT
 conversations: dict[str, Optional[str]] = {}
 msg_store = MessageStore()
