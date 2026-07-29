@@ -3,17 +3,22 @@
 from __future__ import annotations
 
 import asyncio
+import os
 import threading
 import time
 from typing import Optional
 
 from fastapi import WebSocket, WebSocketDisconnect, Query
 
+from agent_core.config import CODEBASE_ROOT, DEBUG_DUMP_ENABLED, resolve_active_tool_packs
 from agent_core.server.auth import verify_token, SKIP_AUTH
 from agent_core.server.audit import make_audit_wrapper
 from agent_core.server import app
 import agent_core.server as _srv
 from agent_core.loop.session_state import SessionState
+
+
+_DEBUG_LOG = os.path.join(CODEBASE_ROOT, "tui_output.txt")
 
 
 @app.websocket("/ws/agent")
@@ -81,6 +86,8 @@ async def websocket_agent(websocket: WebSocket, token: str = Query(default=None)
                 conv_id = None
                 session_state = SessionState()
                 _srv.conversations[user_key] = None
+                if DEBUG_DUMP_ENABLED:
+                    open(_DEBUG_LOG, "w").close()
                 await websocket.send_json({"type": "reset", "status": "ok"})
             elif msg_type == "slash":
                 if not _srv.rate_limiter.check_llm(user_key, _srv.RATE_LIMIT_LLM_CALLS):
@@ -112,6 +119,8 @@ async def handle_slash(
     session_state: Optional[SessionState] = None,
 ) -> Optional[str]:
     if command in ("/new", "/clear", "/reset", "/session"):
+        if DEBUG_DUMP_ENABLED:
+            open(_DEBUG_LOG, "w").close()
         await websocket.send_json(
             {
                 "type": "reset",
@@ -219,6 +228,7 @@ async def handle_chat(
                 session_id=session_id,
                 cancel_event=cancel_event,
                 tools_override=_AUDIT_TOOLS,
+                tool_categories=resolve_active_tool_packs(),
                 session_state=session_state,
             ):
                 asyncio.run_coroutine_threadsafe(queue.put(event), loop).result()
@@ -255,6 +265,9 @@ async def handle_chat(
                 "type": "llm_call",
                 "status": event.get("status", ""),
                 "step": event.get("step", 0),
+                "usage": event.get("usage", {}),
+                "latency_seconds": event.get("latency_seconds"),
+                "retries": event.get("retries", 0),
             })
             continue
 
@@ -304,6 +317,14 @@ async def handle_chat(
                 "ok": event.get("ok", True),
                 "call_id": event.get("call_id", ""),
                 "step": event["step"],
+            })
+        elif etype == "summary":
+            await websocket.send_json({
+                "type": "summary",
+                "total_steps": event.get("total_steps", 0),
+                "cache_hits": event.get("cache_hits", 0),
+                "cache_misses": event.get("cache_misses", 0),
+                "step": event.get("step", 0),
             })
         elif etype == "stream_chunk":
             await websocket.send_json({

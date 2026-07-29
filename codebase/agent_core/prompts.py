@@ -8,21 +8,22 @@ from typing import List, Optional
 from agent_core.config import CODEBASE_ROOT, AGENTS_MD_ENABLED
 from agent_core.workspace import WORKSPACE_ROOT
 from agent_core.tools import log_output
-from agent_core.tools.registry import CAT_FILE, CAT_KERNEL, CAT_SIM, CAT_META, CAT_CODE_RAG
+from agent_core.tools.registry import CAT_FILE, CAT_KERNEL, CAT_SIM, CAT_META, CAT_CODE_RAG, CAT_DEBATE, CAT_GIT, CAT_OBSERVER
 
 DEFAULT_SYSTEM_PROMPT = "You are a helpful assistant."
 PROMPT_FRAGMENTS_DIR = os.path.join(CODEBASE_ROOT, "prompt_fragments")
 
 FRAGMENT_ORDER: List[tuple[str, Optional[List[str]], Optional[List[str]]]] = [
-    ("00_base_persona.md",       None,         None),
-    ("10_tool_list.md",          None,         None),
-    ("20_file_ops_workflow.md",  [CAT_FILE],   None),
-    ("25_code_rag.md",          [CAT_CODE_RAG], None),
-    ("30_kernel_playbook.md",    [CAT_KERNEL], None),
-    ("40_sim_playbook.md",       [CAT_SIM],    None),
-    ("51_file_io_details.md",    [CAT_FILE],   None),
-    ("60_response_contract.md",  None,         None),
-    ("70_embed_mode.md",         None,         [CAT_FILE]),
+    ("base_persona.md",       None,         None),
+    ("file_ops_workflow.md",  [CAT_FILE],   None),
+    ("meta_playbook.md",      [CAT_META],   None),
+    ("code_rag.md",           [CAT_CODE_RAG], None),
+    ("kernel_playbook.md",    [CAT_KERNEL], None),
+    ("debate_playbook.md",    [CAT_DEBATE], None),
+    ("sim_playbook.md",       [CAT_SIM],    None),
+    ("git_playbook.md",       [CAT_GIT],    None),
+    ("observer_playbook.md",  [CAT_OBSERVER], None),
+    ("response_contract.md",  None,         None),
 ]
 
 
@@ -61,8 +62,8 @@ def load_system_prompt(
     active_packs: Optional[List[str]] = None,
 ) -> str:
     if active_packs is None:
-        from agent_core.tools.registry import CAT_FILE, CAT_KERNEL, CAT_SIM, CAT_META, CAT_GIT
-        active_packs = [CAT_FILE, CAT_KERNEL, CAT_SIM, CAT_META, CAT_GIT]
+        from agent_core.tools.registry import CAT_FILE, CAT_KERNEL, CAT_SIM, CAT_META, CAT_GIT, CAT_DEBATE, CAT_OBSERVER
+        active_packs = [CAT_FILE, CAT_KERNEL, CAT_SIM, CAT_META, CAT_GIT, CAT_DEBATE, CAT_OBSERVER]
 
     fragments_dir = path if path else PROMPT_FRAGMENTS_DIR
     parts: List[str] = []

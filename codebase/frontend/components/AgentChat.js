@@ -11,6 +11,16 @@ AgentComponents.CopyButton = {
       try { return JSON.stringify(JSON.parse(val), null, 2) }
       catch (_) { return String(val) }
     }
+    function _copyFallback(txt) {
+      const ta = document.createElement('textarea')
+      ta.value = txt
+      ta.style.position = 'fixed'
+      ta.style.opacity = '0'
+      document.body.appendChild(ta)
+      ta.select()
+      try { document.execCommand('copy') } catch (_) {}
+      document.body.removeChild(ta)
+    }
     function copy() {
       let txt = props.text || ''
       if (props.toolCalls && props.toolCalls.length) {
@@ -18,7 +28,11 @@ AgentComponents.CopyButton = {
           `[${t.tool}]\nInput: ${pretty(t.input)}\nResult: ${pretty(t.result)}`
         ).join('\n')
       }
-      navigator.clipboard.writeText(txt)
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(txt).catch(function() { _copyFallback(txt) })
+      } else {
+        _copyFallback(txt)
+      }
       copied.value = true
       setTimeout(() => { copied.value = false }, 1500)
     }
@@ -28,7 +42,7 @@ AgentComponents.CopyButton = {
 
 AgentComponents.ToolCallCard = {
   template: '#tool-call-card-tmpl',
-  props: ['toolCall'],
+  props: ['toolCall', 'parallel'],
   setup(props) {
     const expanded = Vue.ref(false)
     Vue.watch(() => props.toolCall?.result, (val) => {
@@ -69,6 +83,22 @@ AgentComponents.AgentChat = {
 
     function onQuestionSubmit(answers) { store.submitQuestionAnswer(answers) }
 
-    return { store, scrollRef, anchorRef, suggestions, send, onQuestionSubmit }
+    function groupedToolCalls(calls) {
+      const groups = {}
+      for (const tc of calls) {
+        if (!groups[tc.step]) groups[tc.step] = { step: tc.step, calls: [], count: 0, parallel: false }
+        groups[tc.step].calls.push(tc)
+        groups[tc.step].count++
+      }
+      for (const g of Object.values(groups)) { g.parallel = g.count > 1 }
+      return Object.values(groups)
+    }
+
+    function formatCost(cost) {
+      if (cost == null) return ''
+      return '$' + Number(cost).toFixed(6)
+    }
+
+    return { store, scrollRef, anchorRef, suggestions, send, onQuestionSubmit, groupedToolCalls, formatCost }
   }
 }

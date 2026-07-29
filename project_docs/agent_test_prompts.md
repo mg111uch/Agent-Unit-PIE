@@ -12,7 +12,7 @@ Check if file temp/dummy/fibo/fibonacci.py exists.
 
 ## 2. Basic edit_file with unique old_string
 ```
-In fibonacci.py, rename the function fibonacci_iterative to fib.
+In fibonacci.py, rename the function fibonacci_iterative to fib
 ```
 
 ## 3. Edit with surrounding context (uniqueness)

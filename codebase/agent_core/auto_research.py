@@ -54,8 +54,7 @@ def run_auto_research(
         research_prompt = (
             f"Research goal: {goal}\n"
             f"Findings so far: {all_findings if all_findings else '(none yet)'}\n"
-            f"Remaining steps: {remaining_steps}\n"
-            f"What subtask next?"
+            f"Work until you have a complete answer, then produce your final summary."
         )
 
         final_text, conv_id = run_agent_turn(
@@ -68,12 +67,12 @@ def run_auto_research(
             max_steps=remaining_steps,
         )
 
-        if final_text and final_text != "Max iterations reached":
+        if final_text:
             all_findings.append(final_text)
             break
 
         if conv_id:
-            remaining_steps -= 1
+            pass
 
     findings_summary = "\n\n".join(all_findings) if all_findings else "No findings produced"
 

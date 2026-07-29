@@ -13,8 +13,8 @@ def tool_followup(tool: str, tool_input: Any, tool_result: Any) -> str:
         f"Tool used: {tool}\n"
         f"Input: {tool_input}\n"
         f"Result: {tool_result}\n"
-        f"If the user's question is answered, respond with a final answer. "
-        f"Otherwise, use another tool."
+        f"Answer the user's question now with a final answer. "
+        f"Do not make another tool call unless you have no data to answer with yet."
     )
 
 

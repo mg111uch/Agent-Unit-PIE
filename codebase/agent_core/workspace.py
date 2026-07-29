@@ -69,3 +69,16 @@ def resolve(path: str) -> str:
 def to_relative(full_path: str) -> str:
     root = get_user_workspace_root() or WORKSPACE_ROOT
     return os.path.relpath(full_path, root)
+
+
+def root_basename_hint(path: str) -> str:
+    """If path starts with workspace root basename, suggest corrected version."""
+    root = get_user_workspace_root() or WORKSPACE_ROOT
+    basename = os.path.basename(root)
+    cleaned = path.strip().lstrip("/\\")
+    if cleaned == basename or cleaned.startswith(basename + "/"):
+        alt = cleaned[len(basename):].lstrip("/\\")
+        if not alt:
+            alt = "."
+        return f"\n(Hint: paths are relative to the workspace root. Try '{alt}' instead of '{cleaned}'.)"
+    return ""

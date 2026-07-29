@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import threading
-from typing import Any, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional
 
 from agent_core.response_parse import ParsedToolCall
 from agent_core.tools import registry, ToolResult
@@ -14,6 +14,7 @@ _STRING_ARG_KEYS: Dict[str, tuple[str, ...]] = {
     "list_files": ("path", "input", "directory", "dir"),
     "execute_command": ("command", "cmd", "input"),
     "glob_search": ("pattern", "glob", "input"),
+    "check_path_exists": ("path", "input"),
 
 }
 
@@ -24,6 +25,9 @@ def _normalize_tool_arg(name: str, arguments: Any) -> Any:
     keys = _STRING_ARG_KEYS.get(name)
     if not keys:
         return arguments
+    extra = set(arguments) - set(keys)
+    if extra:
+        return arguments
     for k in keys:
         if arguments.get(k) is not None and arguments.get(k) != "":
             return arguments[k]
@@ -32,6 +36,12 @@ def _normalize_tool_arg(name: str, arguments: Any) -> Any:
     if name == "list_files" and not arguments:
         return "."
     return arguments
+
+
+def _call_tool(name: str, fn: Callable, arguments: Any) -> Any:
+    if isinstance(arguments, dict) and name in _STRING_ARG_KEYS:
+        return fn(**arguments)
+    return fn(arguments)
 
 
 def execute_tool_calls(
@@ -83,7 +93,7 @@ def execute_tool_calls(
             for tc in get_symbol_calls:
                 try:
                     arg = _normalize_tool_arg(tc.name, tc.arguments)
-                    result_obj = _tools[tc.name](arg)
+                    result_obj = _call_tool(tc.name, _tools[tc.name], arg)
                     if isinstance(result_obj, ToolResult):
                         result_str = result_obj.to_string()
                         is_ok = result_obj.ok
@@ -109,7 +119,7 @@ def execute_tool_calls(
             break
         try:
             arg = _normalize_tool_arg(tc.name, tc.arguments)
-            result_obj = _tools[tc.name](arg)
+            result_obj = _call_tool(tc.name, _tools[tc.name], arg)
             if isinstance(result_obj, ToolResult):
                 result_str = result_obj.to_string()
                 is_ok = result_obj.ok

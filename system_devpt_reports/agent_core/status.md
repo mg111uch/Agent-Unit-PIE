@@ -1,9 +1,12 @@
 # Agent Core Status
-_Last verified: 2026-07-27_
+_Last verified: 2026-07-29_
 
 > Capability claims are hypotheses. Re-validate: `python scripts/validate_capabilities.py`
 
 ## Current Capability
+- Local model routing: FunctionGemma/Ollama handles simple file+meta tool calls, falls back to cloud — `agent_core/planning/local_planner.py:LocalPlanner.should_route_local()`, `agent_core/loop/engine.py:_iter_agent_events_body()`
+- Ollama provider compatible with LLMProvider protocol for local inference — `agent_core/providers/ollama_provider.py:OllamaProvider.generate()`
+- Config-driven local model on/off via `local_model.enabled` in config.json — `agent_core/server/__init__.py`
 - Agent loop with multi-tool turns, streaming, cancel support — `agent_core/loop/engine.py:iter_agent_events()`
 - Tool registry with category filtering, middleware, MCP export — `agent_core/tools/__init__.py:_register_all()`
 - MCP stdio server exposing kernel/sim tools — `agent_core/mcp_server.py:main()`
@@ -24,6 +27,7 @@ _Last verified: 2026-07-27_
 - Test coverage for agent loop edge cases — low
 
 ## Recent Changes (newest first, max 10)
+- Local model routing: LocalPlanner + OllamaProvider for per-step delegation of file/meta tools to FunctionGemma, with config.json on/off toggle — `agent_core/planning/local_planner.py`, `agent_core/providers/ollama_provider.py`, `agent_core/loop/engine.py`, `agent_core/server/__init__.py`, `config.json`
 - Efficiency P1-2: trimmed prompts (removed 50_tool_input_formats, trimmed 10_tool_list to behavior rules), added few-shot batching example, updated rule 6 for diff-as-verification — `agent_core/prompts.py`, `prompt_fragments/10_tool_list.md`, `prompt_fragments/20_file_ops_workflow.md`, `prompt_fragments/60_response_contract.md`
 - Efficiency P0-1/P0-2/P1-1: SessionState, compaction, diff-based edit verification — `agent_core/loop/session_state.py`, `agent_core/loop/engine.py`, `agent_core/tools/file_ops.py`, `agent_core/config.py`
 - LOW: deleted dead `_collect_blast_radius`; hoisted `_add_section` out of closure; collapsed raw/invalid_tool bookkeeping; added `LLMProvider` Protocol with `supports_stateful` — `agent_core/tools/context_dump.py`, `agent_core/loop/engine.py`, `agent_core/providers/__init__.py`

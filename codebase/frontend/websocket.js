@@ -23,6 +23,7 @@ function sendJson(obj) {
 }
 
 AgentStore.sendMessage = (content) => {
+  AgentStore.saveToChatHistory(content)
   AgentStore.messages.push({ id: 'user-' + Date.now(), role: 'user', content, timestamp: Date.now() })
   AgentStore.messages.push({ id: 'assistant-' + Date.now(), role: 'assistant', content: '', isStreaming: true, isThinking: true, toolCalls: [] })
   AgentStore.sessionActive = true
@@ -47,6 +48,7 @@ AgentStore.submitQuestionAnswer = (answers) => {
 }
 
 AgentStore.sendSlash = (command, args) => {
+  AgentStore.saveToChatHistory('/' + command + ' ' + args)
   AgentStore.messages.push({ id: 'user-' + Date.now(), role: 'user', content: '/' + command + ' ' + args, timestamp: Date.now() })
   AgentStore.messages.push({ id: 'assistant-' + Date.now(), role: 'assistant', content: '', isStreaming: true, isThinking: true, toolCalls: [] })
   AgentStore.sessionActive = true

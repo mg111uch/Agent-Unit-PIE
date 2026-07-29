@@ -1,5 +1,5 @@
 # Session end ask
-- During the implementation or generation of above plans and phases in this session did you feel the need of any other mcp tool or any other tool which would have been useful to implement plan faster and more efficiently using lesser number of tokens. In which step the most tokens are spend and how can it be saved by making a tool or some other trick.Compare your recommendations with already existing tools, dont suggest duplicates doing same finctionality with different name, only suggest novel helpful tools.
+- During the implementation or generation of above plans and phases in this session did you feel the need of any other tool which would have been useful to implement plan faster and more efficiently using lesser number of tokens. In which step the most tokens are spend and how can it be saved by making a tool or some other trick.Compare your recommendations with already existing tools, dont suggest duplicates doing same finctionality with different name, only suggest novel helpful tools.
 
 - Based on files you have read in this session give multiple suggestions and improvements so that code or docs could be optimized and tokens and lines of code could be reduced without changing functionality.
 - Append your answer in `Agentic_Unit_PIE/system_devpt_reports/FixesIssues.md` below the already generated plan.
@@ -16,10 +16,17 @@ Also give suggestions for this workflow optimization, patterns which could be av
 
 - Run `python scripts/seed_hypotheses.py --quiet && python scripts/validate_capabilities.py --quiet` after each fix.Bump _Last verified in status.md when done.
 
+- I have a small model functionGemma which are optimized to implement tool calls but it needs finetuning. How could i use it to make my agent tool calls better. Could some of the tools calls be processed locally using that model instead of routing every tool call to bigger cloud llm.
+
+- See `Agent_graph.html` notes panel for the full tool-selection table, token-saving workflow, anti-patterns, and atlas-miss escalation.
+
 # Questions
 grok --resume 019f9d9d-733b-7a53-b581-f8dbfae3a8b4
 
 - Front end user_question tool not working.
+- grep search rules or tools for tui_output search - When analyzing a conversation log file (e.g. `tui_output.txt`), grep for structural markers like `[FINAL]`, `[NEW TURN]`, `total_tokens`, `"ok": false`, `latency_seconds`, or `"kind": "final"` rather than generic keywords like `Error` or `fail` which may match irrelevant instructions in the file's header.
+
+- 
 
 # Tips
 - Close mcp server connection before git add commit push

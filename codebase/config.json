@@ -5,10 +5,11 @@
     "gemini": {
       "default_model": "gemini-3.5-flash-lite",
       "models": [
-        "gemini-3.5-flash",
-        "gemini-3.1-pro-preview",
         "gemini-3.5-flash-lite",
-        "gemini-3.1-flash-lite-image",
+        "gemini-3.1-flash-lite",
+        "gemini-3.6-flash",
+        "gemini-3.5-flash",
+        "gemini-3.1-pro-preview",        
         "gemma-4-31b-it",
         "gemma-4-26b-a4b-it"
       ]
@@ -38,11 +39,11 @@
   },
   "allowed_commands": [
     "ls", "cat", "mkdir", "cd", "pwd", "python", "pytest"
-  ],
-  "git_tools_enabled": true,
+  ],  
   "enable_checkpoints": true,
   "max_checkpoints": 50,
   "agents_md_enabled": true,
+  "exclude_dirs": [".git", ".agent_checkpoints", ".pytest_cache", ".adk", "node_modules", "__pycache__", ".venv", "children"],
   "sandbox_enabled": false,
   "codebase_atlas_dir": "../atlas_output",
   "secrets_patterns": [
@@ -54,14 +55,26 @@
   ],
   "debug_dump_append_mode": true,
   "debug_dump_enabled": true,
+  "git_tools_enabled": false,
   "tool_packs": {
     "file": true,
-    "meta": true,
+    "meta": false,
     "kernel": false,
+    "debate": false,
     "sim": false,
     "git": false,
     "code_rag": false
 },
+  "local_model": {
+    "enabled": false,
+    "provider": "ollama",
+    "model": "gemma-2-2b-it",
+    "endpoint": "http://localhost:11434",
+    "local_categories": ["file", "meta"],
+    "fallback_to_cloud": true,
+    "max_local_steps": 3,
+    "timeout_seconds": 30
+  },
   "rate_limits": {
     "llm_calls_per_minute": 10,
     "tool_writes_per_minute": 30

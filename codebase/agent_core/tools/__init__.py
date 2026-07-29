@@ -7,16 +7,17 @@ from agent_core.tools.file_ops import (
     list_files,
     write_to_file,
     edit_file,
-    get_workspace_info,
     glob_search,
     grep_search,
-    batch_read_tool,
-    read_section_tool,
-    batch_edit_tool,
-)
-from agent_core.tools.plan_ops import (
     todo_write,
     todo_read,
+)
+from agent_core.tools.meta_ops import (
+    get_workspace_info,
+    batch_read_tool,
+    batch_edit_tool,
+    read_section_tool,
+    check_path_exists,
 )
 from agent_core.tools.test_ops import (
     run_tests,
@@ -67,7 +68,7 @@ from agent_core.tools.code_rag import (
 from agent_core.tools.question_ops import ask_user_question
 from agent_core.tools.context_dump import minimal_context_dump
 from agent_core.tools.registry import (
-    ToolRegistry, CAT_FILE, CAT_KERNEL, CAT_SIM, CAT_META, CAT_GIT, CAT_OBSERVER, CAT_CODE_RAG,
+    ToolRegistry, CAT_FILE, CAT_KERNEL, CAT_SIM, CAT_META, CAT_GIT, CAT_OBSERVER, CAT_CODE_RAG, CAT_DEBATE,
     str_p, int_p, float_p, bool_p, arr_p, obj_p,
 )
 from agent_core.tools.observer_ops import tool_stats, file_stats, user_reading_budget
@@ -77,8 +78,6 @@ PATHS_PARAM = {
     "paths": {"type": "array", "items": {"type": "string"}, "required": True,
               "description": "List of file paths relative to workspace root"},
 }
-
-LOG_FILE = "tui_output.txt"
 
 
 from agent_core.tools.types import ToolError, ToolResult
@@ -180,13 +179,6 @@ def execute_command_raw(cmd: str) -> str:
         if result.returncode != 0:
             output += f"\n[Exit code: {result.returncode}]"
 
-        if result.returncode != 0 or result.stderr:
-            try:
-                with open(LOG_FILE, "w") as f:
-                    f.write(output)
-            except Exception:
-                pass
-
         return output if output else "(No output)"
     except subprocess.TimeoutExpired:
         error_msg = f"Command timed out after 30 seconds: {cmd}"
@@ -203,18 +195,18 @@ registry = ToolRegistry(mcp_prefix="")
 
 def _register_file_tools(reg, tc):
     reg.set_default_category(CAT_FILE)
-    from agent_core.tools.file_ops import batch_read_tool, read_section_tool, batch_edit_tool
 
     reg.register("read_file", tc(read_file),
         description="Read file (returns line-numbered output; lists nearby files on error; set line_numbers=false to save tokens)",
         params={"path": str_p("Path to the file, relative to the workspace root", req=True),
                 "offset": int_p("1-based line number to start from (default 1)"),
-                "limit": int_p("Max lines to return (default: entire file)"),
+                "limit": int_p("Max lines to return (default: 1000; pass 0 for no limit)"),
                 "line_numbers": bool_p("If true (default), prefix each line with line number. Set false to save tokens when only content is needed.")},
         mcp_expose=False)
     reg.register("list_files", tc(list_files),
-        description="List directory contents (recursive, depth-capped, skips noise dirs)",
-        params={"path": str_p("Directory path relative to workspace root; use '.' for root")})
+        description="List directory contents (shallow by default; set recursive=true for deep listing up to 3 levels; skips excluded dirs). For quick workspace orientation use get_workspace_info instead.",
+        params={"path": str_p("Directory path relative to workspace root; use '.' for root"),
+                "recursive": bool_p("If true, list recursively up to 3 levels deep (default false — flat listing only)")})
     reg.register("write_to_file", tc(write_to_file),
         description="Create or overwrite a file (use edit_file for targeted edits)",
         params={"path": str_p("File path relative to workspace root", req=True),
@@ -228,9 +220,6 @@ def _register_file_tools(reg, tc):
                 "old_string": str_p("Exact existing text to replace (whitespace-sensitive)", req=True),
                 "new_string": str_p("Replacement text", req=True)},
         mcp_expose=False)
-    reg.register("get_workspace_info", tc(get_workspace_info),
-        description="Show workspace root and top-level entries for orientation",
-        params={})
     reg.register("execute_command", tc(execute_command_raw),
         description="Run a shell command. Allowed: ls, cat, pwd, echo, python.",
         params={"command": str_p("Shell command string to execute", req=True)},
@@ -245,6 +234,33 @@ def _register_file_tools(reg, tc):
                 "include": str_p("Optional file glob filter (e.g. '*.py' or '*.{py,ts}')"),
                 "max_results": int_p("Max results to return (default 50)")},
         mcp_expose=False)
+    reg.register("todo_write", tc(todo_write),
+        description="Create/update a task plan. Actions: create (new plan), update (append), mark_done, clear",
+        params={"action": str_p("One of: create, update, mark_done, clear", req=True),
+                "items": arr_p("string", "List of task descriptions (for create/update)"),
+                "ids": arr_p("integer", "Task IDs to mark done (for mark_done)")})
+    reg.register("todo_read", tc(todo_read),
+        description="Read the current task plan",
+        params={})
+    reg.register("ask_user_question", tc(ask_user_question),
+        description="Ask the user for input, clarification, or a decision. Provide up to 3 options per question (a 4th 'custom answer' text input is always available). Can ask multiple questions at once — user answers them one by one.",
+        params={"questions": {"t": "array", "desc": "Questions to ask. User answers them sequentially. Max 3 options each.", "r": True,
+                              "items": {"type": "object", "properties": {
+                                  "question": {"type": "string", "description": "The question text"},
+                                  "options": {"type": "array", "items": {"type": "string"}, "description": "Up to 3 predefined answer choices"}},
+                              "additionalProperties": False}}})
+
+
+def _register_meta_tools(reg, tc):
+    reg.set_default_category(CAT_META)
+    from agent_core.tools.meta_ops import batch_read_tool, read_section_tool, batch_edit_tool
+
+    reg.register("check_path_exists", tc(check_path_exists),
+        description="Check if a file or directory exists at the given path (cheap — no file content read). Use this to verify existence before read_file or list_files calls.",
+        params={"path": str_p("Path to check, relative to workspace root", req=True)})
+    reg.register("get_workspace_info", tc(get_workspace_info),
+        description="Show workspace root and top-level entries for orientation",
+        params={})
     reg.register("batch_read", tc(batch_read_tool),
         description="Read multiple non-kernel files at once. Saves token overhead vs sequential Read calls. Warns on kernel files.",
         params=PATHS_PARAM)
@@ -263,19 +279,6 @@ def _register_file_tools(reg, tc):
                               "new_string": {"type": "string", "description": "Replacement text"},
                               "replace_all": {"type": "boolean", "description": "If true, replace all occurrences (default: replace first only)"}},
                           "additionalProperties": False}}})
-
-
-def _register_meta_tools(reg, tc):
-    reg.set_default_category(CAT_META)
-
-    reg.register("todo_write", tc(todo_write),
-        description="Create/update a task plan. Actions: create (new plan), update (append), mark_done, clear",
-        params={"action": str_p("One of: create, update, mark_done, clear", req=True),
-                "items": arr_p("string", "List of task descriptions (for create/update)"),
-                "ids": arr_p("integer", "Task IDs to mark done (for mark_done)")})
-    reg.register("todo_read", tc(todo_read),
-        description="Read the current task plan",
-        params={})
     reg.register("run_tests", tc(run_tests),
         description="Discover and run tests in the workspace using pytest or unittest. Specify path to limit scope, pattern for file filter, or framework to override auto-detection.",
         params={"pattern": str_p("Optional glob pattern to filter test files (e.g. 'test_*.py')"),
@@ -288,42 +291,37 @@ def _register_meta_tools(reg, tc):
     reg.register("checkpoint_info", tc(checkpoint_info),
         description="List available checkpoints for undo operations",
         params={})
-    reg.register("ask_user_question", tc(ask_user_question),
-        description="Ask the user for input, clarification, or a decision. Provide up to 3 options per question (a 4th 'custom answer' text input is always available). Can ask multiple questions at once — user answers them one by one.",
-        params={"questions": {"t": "array", "desc": "Questions to ask. User answers them sequentially. Max 3 options each.", "r": True,
-                              "items": {"type": "object", "properties": {
-                                  "question": {"type": "string", "description": "The question text"},
-                                  "options": {"type": "array", "items": {"type": "string"}, "description": "Up to 3 predefined answer choices"}},
-                              "additionalProperties": False}}})
+def _register_debate_tools(reg, tc):
+    reg.set_default_category(CAT_DEBATE)
     try:
         from agent_core.tools.debate_ops import debate_step
         from agent_core.tools.expand_ops import expand_topic
     except ImportError as e:
         log_output(f"[tools] debate/expand_ops unavailable, skipping: {e}")
-    else:
-        reg.register("debate_step", debate_step,
-            description="Present next debate argument for a topic and get user response. Handles argument selection, belief tracking, contradiction detection. When graph is exhausted, pass llm_generated to add a new argument.",
-            params={"topic": str_p("Topic name to explore (e.g. 'theism_atheism')", req=True),
-                    "llm_generated": {"t": "object", "desc": "New argument when graph is exhausted",
-                                      "properties": {"name": {"type": "string", "description": "Unique argument name"},
-                                                      "premise": {"type": "string", "description": "The argument premise"},
-                                                      "side": {"type": "string", "description": "One of: pro, con, neutral"}},
-                                      "additionalProperties": False}})
-        reg.register("expand_topic", expand_topic,
-            description="Add new nodes and edges to a topic's argument graph. Validates no duplicate names, persists to graph.json, and re-indexes the vector store.",
-            params={"topic": str_p("Topic name to expand (e.g. 'theism_atheism')", req=True),
-                    "new_nodes": {"t": "array", "desc": "New argument nodes to add", "r": True,
-                                  "items": {"type": "object", "properties": {
-                                      "name": {"type": "string", "description": "Unique argument name"},
-                                      "premise": {"type": "string", "description": "The argument premise"},
-                                      "side": {"type": "string", "description": "Side: pro, con, or neutral"}},
-                                  "additionalProperties": False}},
-                    "new_edges": {"t": "array", "desc": "New edges between arguments",
-                                  "items": {"type": "object", "properties": {
-                                      "source": {"type": "string", "description": "Source argument name"},
-                                      "target": {"type": "string", "description": "Target argument name"},
-                                      "relation": {"type": "string", "description": "Edge relation (e.g. refutes, supports)"}},
-                                  "additionalProperties": False}}})
+        return
+    reg.register("debate_step", debate_step,
+        description="Present next debate argument for a topic and get user response. Handles argument selection, belief tracking, contradiction detection. When graph is exhausted, pass llm_generated to add a new argument.",
+        params={"topic": str_p("Topic name to explore (e.g. 'theism_atheism')", req=True),
+                "llm_generated": {"t": "object", "desc": "New argument when graph is exhausted",
+                                  "properties": {"name": {"type": "string", "description": "Unique argument name"},
+                                                  "premise": {"type": "string", "description": "The argument premise"},
+                                                  "side": {"type": "string", "description": "One of: pro, con, neutral"}},
+                                  "additionalProperties": False}})
+    reg.register("expand_topic", expand_topic,
+        description="Add new nodes and edges to a topic's argument graph. Validates no duplicate names, persists to graph.json, and re-indexes the vector store.",
+        params={"topic": str_p("Topic name to expand (e.g. 'theism_atheism')", req=True),
+                "new_nodes": {"t": "array", "desc": "New argument nodes to add", "r": True,
+                              "items": {"type": "object", "properties": {
+                                  "name": {"type": "string", "description": "Unique argument name"},
+                                  "premise": {"type": "string", "description": "The argument premise"},
+                                  "side": {"type": "string", "description": "Side: pro, con, or neutral"}},
+                              "additionalProperties": False}},
+                "new_edges": {"t": "array", "desc": "New edges between arguments",
+                              "items": {"type": "object", "properties": {
+                                  "source": {"type": "string", "description": "Source argument name"},
+                                  "target": {"type": "string", "description": "Target argument name"},
+                                  "relation": {"type": "string", "description": "Edge relation (e.g. refutes, supports)"}},
+                              "additionalProperties": False}}})
 
 
 def _register_git_tools(reg, tc):
@@ -532,6 +530,7 @@ def _register_all():
     _reg = registry
     _register_file_tools(_reg, _tc)
     _register_meta_tools(_reg, _tc)
+    _register_debate_tools(_reg, _tc)
     _register_git_tools(_reg, _tc)
     _register_kernel_tools(_reg, _tc)
     _register_sim_tools(_reg, _tc)

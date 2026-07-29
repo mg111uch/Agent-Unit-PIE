@@ -1,22 +1,41 @@
 # Agent Orchestrator Reference
 
+## Architecture
+
+```
+server.py
+    │
+    ▼
+agent_core/
+  ├── agent_loop       ──► tools + schemas + multi-tool calls + failure breaker
+  │                    ──► builds explicit message arrays from msg_store (when available)
+  ├── message_store    ──► SQLite session/message persistence + compaction
+  ├── workspace        ──► single path resolver (used by all file tools + server APIs)
+  ├── providers_setup  ──► agent_core.llm.*
+  ├── planning/        ──► local_planner.py (LocalPlanner — routing + local model orchestration)
+  ├── context, prompts, commands, auto_research
+  ├── tools/           ──► registry.py + file_ops, kernel_ops, sim_ops, schemas, plan_ops, code_rag, ...
+  ├── llm_orchestrator ──► timeouts/retries
+  └── providers/
+       ├── gemini_provider.py
+       ├── openrouter_provider.py
+       ├── ollama_provider.py
+       └── mock_provider.py
+```
+
 ## Features Overview
 
 | Capability | Description |
 |------------|-------------|
+| Pluggable Tools | File Ops, Meta, Code RAG, Kernel, Debate, Simulation, Git, Observer|
 | Auto-Research | Goal-autonomous research using shared agent loop (`/auto`) |
 | Debate Mode | Structured topic exploration with belief tracking (`/argu`) |
-| Kernel Memory | Persistent memory — retrieve, store, emit signals, create events |
-| Simulation | Run, compare, and analyze agent-based simulations |
-| File Operations | Read, write, edit, search, glob, execute commands, run tests |
-| Git Tools | Status, diff, commit, log |
-| Planning | Task todo lists, checkpoints, undo |
 | Provider Switching | Swap LLM provider/model at runtime via API |
+| Local Model Routing | Route simple file/meta tool calls to a local FunctionGemma model via Ollama; fall back to cloud for complex reasoning — configurable via `local_model` in config.json |
 | Tool Pack Filtering | Enable/disable tool categories via env or config.json |
 | MCP Integration | Expose kernel + simulation + code_rag tools to any MCP host (Claude Code, Cursor, opencode) |
 | Code RAG | SQLite-based symbol search + call graph from codebase atlas output |
 | Hot-Reload | Auto-detect file changes to tool modules and reload without restart |
-| Simulation Timeout | Cap simulation run time via `timeout` parameter |
 | Tool Call Stats | Per-tool call count, avg duration, error rate, token estimate — tracked in `kernel.db` |
 | File Access Stats | Per-file read/write/edit count — tracks churn and most-accessed files |
 | User Reading Budget | Daily budget for LLM output lines shown to user; auto-alerts when &lt;20% remaining |
@@ -31,35 +50,27 @@ All tools support **native function calling** (JSON Schema via `tools/schemas.py
 | Tool | Purpose |
 |------|---------|
 | `read_file` | Read file (returns line-numbered output; lists nearby files on error) |
-| `batch_read` | Read multiple non-kernel files in one call (warns on kernel files) — faster than sequential `read_file` calls |
-| `read_section` | Read file content around a regex pattern match |
-| `minimal_context_dump` | Chains blast radius → symbol source → peripheral API sigs into one capped file |
-| `extract_symbols_to_file` | Fetch bodies of named symbols from atlas, write to destination with headers |
 | `list_files` | List directory (recursive, depth-capped, skips noise dirs) |
 | `write_to_file` | Write file (create/overwrite/append modes — no patch mode) |
 | `edit_file` | Targeted replacement (unique old_string → new_string; rejects 0/>1 matches; shows diff) |
-| `get_workspace_info` | Ground-truth: root path + top-level entries |
-| `execute_command` | Run shell (configurable allowlist via config.json: ls, cat, pwd, echo, python, python3, pytest, pip, pip3, node, npm, npx, git) |
+| `execute_command` | Run shell (configurable allowlist via config.json) |
 | `glob_search` | Find files by glob pattern (`**/*.py`, `src/**/*.ts`) |
 | `grep_search` | Search file contents by regex (uses ripgrep if available) |
-| `run_tests` | Discover and run tests using pytest or unittest |
-
-### Git Tools (behind `git_tools_enabled` config flag)
-| Tool | Purpose |
-|------|---------|
-| `git_status` | Show current git status |
-| `git_diff` | Show git diff (optional path/staged filter) |
-| `git_commit` | Commit staged changes with a message |
-| `git_log` | Show recent commit history |
-
-### Planning & Meta Tools
-| Tool | Purpose |
-|------|---------|
 | `todo_write` | Create/update a task plan (actions: create, update, mark_done, clear) |
 | `todo_read` | Read the current task plan |
+| `ask_user_question` | Ask the user for input/clarification with up to 3 options per question (a custom text option is always added). Multiple questions can be asked at once — the user sees them one by one with a progress bar. Tool blocks until all answers are submitted. |
+
+### Meta Tools
+| Tool | Purpose |
+|------|---------|
+| `check_path_exists` | Path to check, relative to workspace root |
+| `get_workspace_info` | Ground-truth: root path + top-level entries |
+| `batch_read` | Read multiple non-kernel files in one call (warns on kernel files) — faster than sequential `read_file` calls |
+| `batch_edit` | Apply multiple string replacements to a file in one call. Each edit is applied sequentially. |
+| `read_section` | Read file content around a regex pattern match |
 | `undo_last_edit` | Restore the most recent checkpoint for a file |
 | `checkpoint_info` | List available checkpoints |
-| `ask_user_question` | Ask the user for input/clarification with up to 3 options per question (a custom text option is always added). Multiple questions can be asked at once — the user sees them one by one with a progress bar. Tool blocks until all answers are submitted. |
+| `run_tests` | Discover and run tests using pytest or unittest |
 
 ### Code RAG Tools (from codebase atlas, separate `code_rag` category)
 | Tool | Purpose |
@@ -78,6 +89,8 @@ All tools support **native function calling** (JSON Schema via `tools/schemas.py
 | `project_root` | Return absolute project root and codebase root paths |
 | `batch_file_api` | Query atlas for API surfaces of multiple kernel files in one call — avoids sequential `file_api` round trips |
 | `report_freshness` | Scan all `system_devpt_reports/*.md` for stale `_Last verified` stamps and broken citations |
+| `extract_symbols_to_file` | Fetch bodies of named symbols from atlas, write to destination with headers |
+| `minimal_context_dump` | Chains blast radius → symbol source → peripheral API sigs into one capped file |
 
 ### Kernel Tools
 | Tool | Purpose |
@@ -89,6 +102,12 @@ All tools support **native function calling** (JSON Schema via `tools/schemas.py
 | `kernel_create_event` | Create event |
 | `kernel_reload` | Reload tool modules from disk without restart |
 
+### Debate Tools
+| Tool | Purpose |
+|------|---------|
+| `debate_step` | Present next debate argument for a topic and get user response. |
+| `expand_topic` | Add new nodes and edges to a topic's argument graph. Validates no duplicate names, persists to graph.json, and re-indexes the vector store. |
+
 ### Simulation Tools
 | Tool | Purpose |
 |------|---------|
@@ -96,6 +115,14 @@ All tools support **native function calling** (JSON Schema via `tools/schemas.py
 | `simulation_compare` | Compare runs |
 | `simulation_list` | List runs |
 | `simulation_get_signals` | Get signals |
+
+### Git Tools (behind `git_tools_enabled` config flag)
+| Tool | Purpose |
+|------|---------|
+| `git_status` | Show current git status |
+| `git_diff` | Show git diff (optional path/staged filter) |
+| `git_commit` | Commit staged changes with a message |
+| `git_log` | Show recent commit history |
 
 ### Observer Tools (telemetry & observability)
 | Tool | Purpose |
@@ -106,40 +133,6 @@ All tools support **native function calling** (JSON Schema via `tools/schemas.py
 | `hot_reload` | Built-in (handled by `mcp_server.py`). Re-registers all tools + sends `notifications/tools/list_changed` to MCP client |
 
 ---
-
-## ToolRegistry (Pluggable Tools)
-
-### ToolRegistry Class
-Central registry for tool functions, schemas, and metadata, defined in `agent_core/tools/registry.py`.
-
-```python
-from agent_core.tools import registry
-from agent_core.tools.registry import CAT_FILE, CAT_KERNEL, CAT_SIM, CAT_META, CAT_GIT, CAT_CODE_RAG, CAT_OBSERVER
-
-# Get tools filtered by category (no file_ops for embedders)
-kernel_sim = registry.get_tools(categories=[CAT_KERNEL, CAT_SIM])
-
-# Get schemas for specific provider
-schemas = registry.get_schemas(provider_name="gemini")  # function_declarations format
-schemas = registry.get_schemas()                         # OpenAI "type: function" format
-
-# Export as MCP tools
-mcp_tools = registry.to_mcp_tools(categories=[CAT_KERNEL, CAT_SIM, CAT_CODE_RAG])
-
-# Add middleware (wraps every tool)
-registry.add_middleware(lambda name, fn: audit_wrap(name, fn, ...))
-```
-
-### Tool Registration Categories
-| Category | Tools | Config key |
-|----------|-------|------------|
-| `file` | read_file, list_files, write_to_file, edit_file, execute_command, glob_search, grep_search, get_workspace_info | `file` |
-| `kernel` | kernel_retrieve, kernel_emit_signal, kernel_store_context, kernel_get_memory, kernel_create_event, kernel_reload | `kernel` |
-| `sim` | simulation_run, simulation_compare, simulation_list, simulation_get_signals | `sim` |
-| `meta` | todo_write, todo_read, run_tests, undo_last_edit, checkpoint_info, ask_user_question, debate_step | `meta` |
-| `code_rag` | get_symbol, get_symbols_meta, search_symbols, get_callers_callees, find_impact, get_index_info, file_api, call_chain, compare_apis, symbols_by_file | `code_rag` |
-| `git` | git_status, git_diff, git_commit, git_log | `git` |
-| `observer` | tool_stats, file_stats, user_reading_budget | `observer` |
 
 ### Config-Based Tool Pack Filtering
 Set `AGENT_TOOL_PACKS=file,kernel,sim` env var or `"tool_packs": ["kernel","sim"]` in `config.json` to control which tools are active. Default: all five packs.
@@ -154,10 +147,6 @@ The MCP server (`agent_core/mcp_server.py`) auto-reloads tool modules when their
 - Available as explicit tool: `kernel_reload` (`pie_kernel_reload` via MCP)
 - **`hot_reload` built-in tool**: re-registers all tools AND sends `notifications/tools/list_changed` MCP notification so the client re-fetches the tool list. New tools appear without restarting the MCP connection.
 
----
-
-## LLM Orchestration
-
 ### Provider Switching
 `POST /api/switch-provider` (auth-protected) changes the active provider and model at runtime:
 ```json
@@ -168,34 +157,43 @@ The MCP server (`agent_core/mcp_server.py`) auto-reloads tool modules when their
 ```
 The frontend uses this for the provider switcher UI. The change is global until the next switch or server restart. `GET /api/providers` (auth-protected) lists available providers with their models.
 
-### Architecture
-
-```
-server.py
-    │
-    ▼
-agent_core/
-  ├── agent_loop       ──► tools + schemas + multi-tool calls + failure breaker
-  │                    ──► builds explicit message arrays from msg_store (when available)
-  ├── message_store    ──► SQLite session/message persistence + compaction
-  ├── workspace        ──► single path resolver (used by all file tools + server APIs)
-  ├── providers_setup  ──► agent_core.llm.*
-  ├── context, prompts, commands, auto_research
-  ├── tools/           ──► registry.py + file_ops, kernel_ops, sim_ops, schemas, plan_ops, code_rag, ...
-  └── llm/             ──► orchestrator (timeouts/retries) + providers
-       ├── gemini_provider.py
-       ├── openrouter_provider.py
-       └── mock_provider.py
-```
-
 ### System Prompt
-The system prompt (`system_instruction.md`) is loaded dynamically at server startup, replacing `{TOOL_LIST}`, `{TOOL_INPUT_FORMATS}`, and `{AGENTS_MD}` placeholders. Kernel and simulation tools are automatically included. The prompt contract enforces JSON-only responses (action+input or final, mutually exclusive).
+The system prompt is assembled at server startup from fragments in `prompt_fragments/` by `agent_core/prompts.py`. Fragments are conditionally included based on active tool packs (`CAT_FILE`, `CAT_KERNEL`, `CAT_SIM`, `CAT_CODE_RAG`). The assembly order is: `00_base_persona.md`, `10_tool_list.md`, `20_file_ops_workflow.md` (file pack), `25_code_rag.md` (code_rag pack), `30_kernel_playbook.md` (kernel pack), `40_sim_playbook.md` (sim pack), `51_file_io_details.md` (file pack), `60_response_contract.md`, and `70_embed_mode.md` (excluded when file pack is active). The `{AGENTS_MD}` placeholder is replaced with AGENTS.md content when enabled. The `60_response_contract.md` fragment enforces native function calling with a 3–4 tool call budget and forced termination.
 
 ### Native Function Calling
 All providers support optional `tools=[]` parameter with JSON Schema definitions. Gemini uses `function_declarations` format, OpenRouter/OpenAI uses `type: "function"` format. Text-JSON and XML tool call formats serve as fallback.
 
 ### Streaming
 All providers support `generate_stream()` for real-time token streaming. The agent loop uses streaming for the final answer path, falling back to fake chunking. Stop/cancel is supported via `threading.Event` checked between agent loop steps.
+
+## Local Model Routing (Experimental)
+
+When `local_model.enabled` is `true` in `config.json`, a small local model (e.g. FunctionGemma via Ollama) handles simple file/meta tool calls before falling back to the cloud LLM.
+
+**How it works per step:**
+1. `LocalPlanner.should_route_local()` checks: is the query simple (short, keywords like `check`/`list`/`find`)? Are recent tool calls all in file/meta categories? Fewer than `max_local_steps` consecutive local steps?
+2. If yes → `OllamaProvider` is called with only `file`+`meta` tool schemas (18 tools instead of all 40+)
+3. If FunctionGemma returns valid tool calls → execute locally, inject results, continue
+4. If it produces a final answer → done
+5. If it fails (parse error, invalid tool, connection error) → `record_fallback()`, next step routes to cloud LLM
+
+**Config** (`config.json`):
+```json
+"local_model": {
+    "enabled": false,
+    "provider": "ollama",
+    "model": "gemma-2-2b-it",
+    "endpoint": "http://localhost:11434",
+    "local_categories": ["file", "meta"],
+    "fallback_to_cloud": true,
+    "max_local_steps": 3,
+    "timeout_seconds": 30
+}
+```
+
+**Files:** `agent_core/planning/local_planner.py`, `agent_core/providers/ollama_provider.py`
+
+**When disabled** (`enabled: false`), zero code path change — behaves exactly as before with no added latency.
 
 ### Timeouts & Retries
 `LLMOrchestrator.generate()` retries up to 3 times with exponential backoff (2^attempt seconds). Timeout per provider call is 60s. Retry count exposed in `/api/status` and response metadata.
@@ -208,43 +206,34 @@ Sessions and messages persist to SQLite (`agent_sessions.db`, WAL mode, thread-s
 
 ---
 
-## Checkpoints / Undo
+### Checkpoints / Undo
 - Before `edit_file` or `write_to_file` (overwrite mode), a checkpoint is saved to `.agent_checkpoints/` directory
 - `save_checkpoint()` copies the file before modification (when `enable_checkpoints: true` in config.json)
 - `undo_last_edit` restores the most recent checkpoint for a given file
 - `checkpoint_info` lists available checkpoints
 - Configurable max checkpoints via `max_checkpoints` in config.json
 
-## Path Resolution (workspace.py)
-
+### Path Resolution (workspace.py)
 All file tools resolve paths through `agent_core.workspace.resolve()`. The root defaults to process CWD, overridable via `AGENT_WORKSPACE_ROOT`. Leading slashes in model-supplied paths are treated as workspace-relative. A `PathEscapeError` is raised if `..` traversal or symlinks attempt to escape the workspace.
 
----
-
-## Auth & CORS
-
+### Auth & CORS
 - JWT-based auth on WebSocket (`/ws/agent?token=...`) and all REST endpoints except `/api/status`
 - `JWT_SECRET` env var (auto-generated random hex if not set)
 - CORS restricted to `CORS_ORIGINS` env var (default: `http://localhost:3000,http://localhost:8001`)
 
-## Per-User Workspace
-
+### Per-User Workspace
 Each authenticated user gets an isolated workspace rooted at `{WORKSPACE_BASE}/{user_id}/`. `WORKSPACE_BASE` defaults to `{project_root}/workspaces/`, overridable via `AGENT_WORKSPACE_BASE` env var.
 
-## Sandbox Shell
-
+### Sandbox Shell
 Optional Docker sandboxing for `execute_command`: when `sandbox_enabled: true`, commands run in a read-only Docker container with no network access. Falls back with a clear error if Docker is unavailable.
 
-## Secrets Redaction
-
+### Secrets Redaction
 Regex patterns in `config.json` `secrets_patterns` redact API keys and tokens from tool results and stored messages to prevent credential leakage.
 
-## Rate Limiting
-
+### Rate Limiting
 Token-bucket per user: `llm_calls_per_minute` (default: 10) and `tool_writes_per_minute` (default: 30), configurable via `config.json` `rate_limits`.
 
-## Audit Log
-
+### Audit Log
 Every tool invocation is logged to SQLite (`agent_audit.db`) with user_id, tool name, input hash, and timestamp. Queryable via `/api/audit` endpoint.
 
 ### Code RAG: 

@@ -24,7 +24,6 @@ PROVIDER_DEFAULTS: dict[str, str] = {
     for name, data in _CONFIG.get("providers", {}).items()
 }
 
-MAX_AGENT_STEPS = 30
 CLI_STEP_DELAY = 5.0
 SERVER_STEP_DELAY = 2.0
 
@@ -37,6 +36,7 @@ GIT_TOOLS_ENABLED: bool = _CONFIG.get("git_tools_enabled", False)
 ENABLE_CHECKPOINTS: bool = _CONFIG.get("enable_checkpoints", False)
 MAX_CHECKPOINTS: int = _CONFIG.get("max_checkpoints", 50)
 AGENTS_MD_ENABLED: bool = _CONFIG.get("agents_md_enabled", False)
+EXCLUDE_DIRS: list[str] = _CONFIG.get("exclude_dirs", [])
 SANDBOX_ENABLED: bool = _CONFIG.get("sandbox_enabled", False)
 SECRETS_PATTERNS: list[str] = _CONFIG.get("secrets_patterns", [])
 RATE_LIMIT_LLM_CALLS: int = _CONFIG.get("rate_limits", {}).get("llm_calls_per_minute", 10)
@@ -68,6 +68,18 @@ def resolve_default_model(provider: str, explicit_model: str | None = None) -> s
     if env_model:
         return env_model
     return PROVIDER_DEFAULTS.get(provider, PROVIDER_DEFAULTS.get("gemini", "gemini-3.1-flash-lite"))
+
+
+def resolve_active_tool_packs() -> list[str]:
+    env_packs = os.getenv("AGENT_TOOL_PACKS")
+    if env_packs:
+        return [p.strip() for p in env_packs.split(",")]
+    config_packs = _CONFIG.get("tool_packs")
+    if isinstance(config_packs, dict):
+        return [k for k, v in config_packs.items() if v]
+    if isinstance(config_packs, list):
+        return config_packs
+    return ["file", "kernel", "sim", "meta", "git", "debate"]
 
 
 def resolve_active_provider() -> str:

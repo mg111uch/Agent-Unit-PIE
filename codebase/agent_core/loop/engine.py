@@ -10,7 +10,6 @@ import traceback
 from typing import Any, Generator, List, Optional
 
 from agent_core.config import (
-    MAX_AGENT_STEPS,
     CODEBASE_ROOT,
     DEBUG_DUMP_ENABLED,
     DEBUG_DUMP_APPEND_MODE,
@@ -46,6 +45,7 @@ from agent_core.loop._helpers import (
 )
 
 _DEBUG_LOG = os.path.join(CODEBASE_ROOT, "tui_output.txt")
+_schema_dumped = False
 
 
 def _debug_dump(mode: str, **kwargs):
@@ -78,7 +78,7 @@ def iter_agent_events(
     provider: Optional[str] = None,
     model: Optional[str] = None,
     system_prompt: Optional[str] = None,
-    max_steps: int = MAX_AGENT_STEPS,
+    max_steps: int = 100,
     step_delay: float = 0.0,
     retrieve_context: bool = True,
     log_context: bool = False,
@@ -88,6 +88,7 @@ def iter_agent_events(
     tools_override: Optional[dict] = None,
     tool_categories: Optional[List[str]] = None,
     session_state: Optional[SessionState] = None,
+    local_planner: Any = None,
 ) -> Generator[dict[str, Any], None, None]:
     context_info = ""
     if retrieve_context:
@@ -105,9 +106,11 @@ def iter_agent_events(
             context_info = (context_info or "") + "\n\n" + digest
 
     conv_id = conversation_id
+    _interaction_id = conversation_id
     _last_tool: str | None = None
     _last_result: str | None = None
     _consecutive_failures = 0
+    _tool_call_history: list[dict] = []
 
     _tools = tools_override if tools_override is not None else registry.tools_dict
     use_messages = msg_store is not None and session_id is not None
@@ -128,6 +131,7 @@ def iter_agent_events(
             cancel_event=cancel_event,
             tools_override=tools_override,
             tool_categories=tool_categories,
+            local_planner=local_planner,
             state=state,
             use_messages=use_messages,
             _tools=_tools,
@@ -136,6 +140,8 @@ def iter_agent_events(
             _last_result=_last_result,
             _consecutive_failures=_consecutive_failures,
             _consecutive_raw_failures=0,
+            _tool_call_history=_tool_call_history,
+            _interaction_id=_interaction_id,
         )
     finally:
         reset_session_state(_state_token)
@@ -157,6 +163,7 @@ def _iter_agent_events_body(
     cancel_event: Optional[threading.Event],
     tools_override: Optional[dict],
     tool_categories: Optional[List[str]],
+    local_planner: Any,
     state: SessionState,
     use_messages: bool,
     _tools: dict,
@@ -165,6 +172,8 @@ def _iter_agent_events_body(
     _last_result: str | None,
     _consecutive_failures: int,
     _consecutive_raw_failures: int = 0,
+    _tool_call_history: list[dict],
+    _interaction_id: Optional[str],
 ) -> Generator[dict[str, Any], None, None]:
     if use_messages:
         current_messages = list(msg_store.get_messages(session_id))
@@ -198,7 +207,8 @@ def _iter_agent_events_body(
         plain_prompt=current_input if not use_messages else "",
     )
 
-    for step in range(max_steps):
+    step = 0
+    while True:
         if cancel_event and cancel_event.is_set():
             yield {
                 "type": "final",
@@ -209,6 +219,8 @@ def _iter_agent_events_body(
             }
             return
 
+        step += 1
+
         try:
             yield {
                 "type": "status",
@@ -218,29 +230,50 @@ def _iter_agent_events_body(
             }
 
             yield {"type": "llm_call", "status": "start", "step": step}
-            if use_messages:
-                result = _generate_with_cancel(
-                    orchestrator,
-                    cancel_event,
-                    prompt="",
+            _local_step = False
+            if local_planner and local_planner.should_route_local(
+                step, _tool_call_history,
+                current_input if not use_messages else "",
+            ):
+                _local_result = local_planner.generate_local(
+                    messages=current_messages if use_messages else None,
                     system_prompt=system_prompt,
-                    provider=provider,
-                    model=model,
-                    conversation_id=conv_id,
-                    tools=registry.get_schemas(provider_name=provider, categories=tool_categories),
-                    messages=current_messages,
+                    cancel_event=cancel_event,
                 )
-            else:
-                result = _generate_with_cancel(
-                    orchestrator,
-                    cancel_event,
-                    prompt=current_input,
-                    system_prompt=system_prompt,
-                    conversation_id=conv_id,
-                    provider=provider,
-                    model=model,
-                    tools=registry.get_schemas(provider_name=provider, categories=tool_categories),
-                )
+                if _local_result and not _local_result.get("error"):
+                    result = _local_result
+                    _local_step = True
+                else:
+                    result = None
+            if not _local_step:
+                _schemas = registry.get_schemas(provider_name=provider, categories=tool_categories)
+                global _schema_dumped
+                if not _schema_dumped:
+                    _schema_dumped = True
+                    _debug_dump("TOOL SCHEMAS", schemas=_schemas)
+                if use_messages:
+                    result = _generate_with_cancel(
+                        orchestrator,
+                        cancel_event,
+                        prompt="",
+                        system_prompt=system_prompt,
+                        provider=provider,
+                        model=model,
+                        conversation_id=_interaction_id,
+                        tools=_schemas,
+                        messages=current_messages,
+                    )
+                else:
+                    result = _generate_with_cancel(
+                        orchestrator,
+                        cancel_event,
+                        prompt=current_input,
+                        system_prompt=system_prompt,
+                        conversation_id=_interaction_id,
+                        provider=provider,
+                        model=model,
+                        tools=_schemas,
+                    )
             if result is None:
                 yield {
                     "type": "final",
@@ -250,7 +283,7 @@ def _iter_agent_events_body(
                     "full_content": "(cancelled)",
                 }
                 return
-            yield {"type": "llm_call", "status": "end", "step": step}
+            yield {"type": "llm_call", "status": "end", "step": step, "usage": result.get("usage", {}), "latency_seconds": result.get("latency_seconds"), "retries": result.get("retries", 0)}
 
             _debug_dump("LLM RESPONSE",
                 step=step,
@@ -273,7 +306,7 @@ def _iter_agent_events_body(
                 }
                 return
 
-            conv_id = result.get("conversation_id")
+            _interaction_id = result.get("conversation_id") or _interaction_id
             reply = result.get("response") or ""
             tool_calls_raw = result.get("tool_calls")
             if tool_calls_raw is None:
@@ -309,6 +342,8 @@ def _iter_agent_events_body(
                     use_messages, current_messages, current_input, msg_store, session_id,
                     "parse", corrective, corrective_text,
                 )
+                if _local_step and local_planner:
+                    local_planner.record_fallback()
                 if step_delay > 0:
                     time.sleep(step_delay)
                 continue
@@ -324,6 +359,13 @@ def _iter_agent_events_body(
                         session_id=session_id, role="assistant",
                         content=parsed.content or "",
                     )
+                yield {
+                    "type": "summary",
+                    "step": step,
+                    "total_steps": step,
+                    "cache_hits": state.cache_hits,
+                    "cache_misses": state.cache_misses,
+                }
                 yield from stream_final(
                     parsed.content or "",
                     step=step,
@@ -355,6 +397,8 @@ def _iter_agent_events_body(
                     use_messages, current_messages, current_input, msg_store, session_id,
                     parsed.tool or "unknown", corrective, followup_text,
                 )
+                if _local_step and local_planner:
+                    local_planner.record_fallback()
                 if step_delay > 0:
                     time.sleep(step_delay)
                 continue
@@ -456,6 +500,14 @@ def _iter_agent_events_body(
                     results=results,
                 )
 
+                for tc in parsed.tool_calls:
+                    _tool_call_history.append({
+                        "name": tc.name,
+                        "_category": registry.get_category(tc.name),
+                    })
+                if _local_step and local_planner:
+                    local_planner.record_success()
+
                 if use_messages:
                     current_messages.append(build_tool_results_msg(results))
                     msg_store.add_message(
@@ -487,6 +539,25 @@ def _iter_agent_events_body(
                             })
                         else:
                             current_input += corrective
+
+                deadline = ""
+                if step >= 4:
+                    all_editing = all(
+                        r.get("tool") in ("edit_file", "write_to_file", "batch_edit_tool")
+                        for r in results
+                    )
+                    if not all_editing:
+                        deadline = (
+                            f"\n\n[CORRECTIVE] You have made {step + 1} tool calls without producing a final answer. "
+                            f"Stop and answer the user's question now."
+                        )
+                        if use_messages:
+                            current_messages.append({
+                                "role": "user",
+                                "content": deadline,
+                            })
+                        else:
+                            current_input += deadline
 
                 if step_delay > 0:
                     time.sleep(step_delay)
@@ -564,6 +635,13 @@ def _iter_agent_events_body(
                     ok=ok,
                 )
 
+                _tool_call_history.append({
+                    "name": tool,
+                    "_category": registry.get_category(tool),
+                })
+                if _local_step and local_planner:
+                    local_planner.record_success()
+
                 if use_messages:
                     current_messages.append({
                         "role": "assistant",
@@ -613,6 +691,11 @@ def _iter_agent_events_body(
                     _last_result = None
 
                 followup_text = tool_followup(tool, tool_input, result_str)
+                if step >= 4 and tool not in ("edit_file", "write_to_file", "batch_edit_tool"):
+                    followup_text += (
+                        f"\n\n[CORRECTIVE] You have made {step + 1} tool calls without producing a final answer. "
+                        f"Stop and answer the user's question now."
+                    )
                 if use_messages:
                     current_messages.append({
                         "role": "user",
@@ -633,12 +716,6 @@ def _iter_agent_events_body(
             }
             return
 
-    _debug_dump("MAX STEPS REACHED", step=max_steps, message="Max iterations reached")
-    yield from stream_final(
-        "Max iterations reached", max_steps - 1, conv_id,
-    )
-
-
 def run_agent_turn(
     user_input: str,
     orchestrator: Any,
@@ -647,13 +724,13 @@ def run_agent_turn(
     provider: Optional[str] = None,
     model: Optional[str] = None,
     system_prompt: Optional[str] = None,
-    max_steps: int = MAX_AGENT_STEPS,
+    max_steps: int = 100,
     step_delay: float = 0.0,
     retrieve_context: bool = True,
     log_context: bool = False,
     on_event: Optional[Any] = None,
 ) -> tuple[str, Optional[str]]:
-    final_text = "Max iterations reached"
+    final_text = ""
     conv_id = conversation_id
 
     for event in iter_agent_events(

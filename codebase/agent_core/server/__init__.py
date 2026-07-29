@@ -16,14 +16,16 @@ from fastapi.middleware.cors import CORSMiddleware
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from agent_core.tools import registry, log_output, KERNEL_AVAILABLE
-from agent_core.tools.registry import CAT_FILE, CAT_KERNEL, CAT_SIM, CAT_META, CAT_GIT
 from agent_core.config import (
     AGENT_PORT,
+    CODEBASE_ROOT,
     JWT_SECRET,
     CORS_ORIGINS,
+    DEBUG_DUMP_ENABLED,
     SERVER_STEP_DELAY,
     get_provider_catalog,
     resolve_active_provider,
+    resolve_active_tool_packs,
     resolve_default_model,
     RATE_LIMIT_LLM_CALLS,
     RATE_LIMIT_TOOL_WRITES,
@@ -40,23 +42,19 @@ from agent_core.workspace import (
     set_user_workspace,
     clear_user_context,
 )
+from functools import partial
+
 from agent_core.prompts import load_system_prompt
 from agent_core.providers_setup import build_orchestrator, switch_active
-from agent_core.loop import iter_agent_events
+from agent_core.loop import iter_agent_events as _iter_agent_events_base
 from agent_core.auto_research import run_auto_research
 from agent_core.message_store import MessageStore
+from agent_core.planning.local_planner import LocalPlanner
 
-_TOOL_PACKS_ENV = os.getenv("AGENT_TOOL_PACKS")
-if _TOOL_PACKS_ENV:
-    ACTIVE_TOOL_PACKS = [p.strip() for p in _TOOL_PACKS_ENV.split(",")]
-else:
-    _config_tool_packs = load_config().get("tool_packs")
-    if isinstance(_config_tool_packs, dict):
-        ACTIVE_TOOL_PACKS = [k for k, v in _config_tool_packs.items() if v]
-    else:
-        ACTIVE_TOOL_PACKS = _config_tool_packs if _config_tool_packs else [CAT_FILE, CAT_KERNEL, CAT_SIM, CAT_META, CAT_GIT]
+if DEBUG_DUMP_ENABLED:
+    open(os.path.join(CODEBASE_ROOT, "tui_output.txt"), "w").close()
 
-ACTIVE_TOOLS_DICT = registry.get_tools(categories=ACTIVE_TOOL_PACKS)
+ACTIVE_TOOLS_DICT = registry.get_tools(categories=resolve_active_tool_packs())
 
 active_provider = resolve_active_provider()
 active_model = resolve_default_model(active_provider)
@@ -92,12 +90,28 @@ log_output(
     f"registered={sorted(_registered_names)}"
 )
 
-SYSTEM_PROMPT = load_system_prompt(active_packs=ACTIVE_TOOL_PACKS)
+SYSTEM_PROMPT = load_system_prompt(active_packs=resolve_active_tool_packs())
 workspace_root = WORKSPACE_ROOT
 conversations: dict[str, Optional[str]] = {}
 msg_store = MessageStore()
 rate_limiter = RateLimiter()
 audit_log = AuditLog()
+
+local_planner = None
+_local_cfg = load_config().get("local_model", {})
+if _local_cfg.get("enabled"):
+    from agent_core.providers.ollama_provider import OllamaProvider
+    _ollama = OllamaProvider(
+        model=_local_cfg.get("model", "gemma-2-2b-it"),
+        endpoint=_local_cfg.get("endpoint", "http://localhost:11434"),
+        timeout=_local_cfg.get("timeout_seconds", 30),
+    )
+    local_planner = LocalPlanner(_ollama, _local_cfg)
+    log_output(f"[Server] Local model enabled: {_local_cfg.get('model')} @ {_local_cfg.get('endpoint')}")
+
+def iter_agent_events(*args, **kwargs):
+    kwargs.setdefault("local_planner", local_planner)
+    return _iter_agent_events_base(*args, **kwargs)
 
 app = FastAPI(title="Agentic Unit PIE Server")
 app.add_middleware(

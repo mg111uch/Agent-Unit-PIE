@@ -1,4 +1,4 @@
-def fibonacci_iterative(n):
+def fib(n):
     """Generates the first n Fibonacci numbers."""
     if n <= 0:
         return []
@@ -13,4 +13,4 @@ def fibonacci_iterative(n):
     return sequence
 
 n_terms = 10
-print(f"Fibonacci sequence for the first {n_terms} terms: {fibonacci_iterative(n_terms)}")
+print(f"Fibonacci sequence for the first {n_terms} terms: {fib(n_terms)}")

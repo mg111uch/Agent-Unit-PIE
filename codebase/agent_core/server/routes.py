@@ -9,6 +9,7 @@ from fastapi import Depends, HTTPException
 from agent_core.server import app
 from agent_core.server.auth import require_auth
 from agent_core.server.audit import build_tree
+from agent_core.config import EXCLUDE_DIRS, resolve_active_tool_packs
 import agent_core.server as _srv
 
 
@@ -20,7 +21,7 @@ async def get_status():
         "model": _srv.active_model,
         "kernel": _srv.KERNEL_AVAILABLE,
         "tools": list(_srv.ACTIVE_TOOLS_DICT.keys()),
-        "tool_packs": _srv.ACTIVE_TOOL_PACKS,
+        "tool_packs": resolve_active_tool_packs(),
         "workspace": _srv.get_user_workspace_root() or _srv.workspace_root,
         "total_requests": _srv.orchestrator.total_requests,
         "total_failures": _srv.orchestrator.total_failures,
@@ -79,6 +80,22 @@ async def get_file_tree(user: dict = Depends(require_auth)):
     root = _srv.set_user_workspace(str(user.get("id")))
     tree = build_tree(root)
     return {"root": root, "tree": tree}
+
+
+@app.get("/api/files/workspace")
+async def get_workspace_files():
+    root = _srv.workspace_root
+    exclude_set = set(EXCLUDE_DIRS)
+    paths = []
+    for dirpath, dirnames, filenames in os.walk(root):
+        rel_dir = os.path.relpath(dirpath, root).replace("\\", "/")
+        parts = rel_dir.split("/") if rel_dir != "." else []
+        if any(p in exclude_set for p in parts):
+            continue
+        for fn in filenames:
+            rel = os.path.join(rel_dir, fn) if rel_dir != "." else fn
+            paths.append(rel)
+    return {"root": root, "files": sorted(paths)}
 
 
 @app.get("/api/files/read")

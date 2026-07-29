@@ -1,3 +1,5 @@
+const CHAT_HISTORY_MAX = 50
+
 const AgentStore = Vue.reactive({
   connected: false,
   messages: [],
@@ -7,7 +9,22 @@ const AgentStore = Vue.reactive({
   llmCallActive: false,
   error: null,
   sessionActive: false,
+  chatHistory: [],
+  historyIndex: -1,
+  savedDraft: '',
 })
+
+AgentStore.saveToChatHistory = (text) => {
+  if (!text || !text.trim()) return
+  AgentStore.chatHistory.unshift(text.trim())
+  if (AgentStore.chatHistory.length > CHAT_HISTORY_MAX) AgentStore.chatHistory.length = CHAT_HISTORY_MAX
+  AgentStore.historyIndex = -1
+  AgentStore.savedDraft = ''
+  localStorage.setItem('agent_chat_history', JSON.stringify(AgentStore.chatHistory))
+}
+
+const saved = localStorage.getItem('agent_chat_history')
+if (saved) AgentStore.chatHistory = JSON.parse(saved).slice(0, CHAT_HISTORY_MAX)
 
 AgentStore.isBusy = Vue.computed(() =>
   AgentStore.pendingToolCount > 0
@@ -34,7 +51,13 @@ AgentStore.handleMessage = (msg) => {
         const callId = msg.call_id || `${msg.step}_${msg.tool}`
         const exist = tc.toolCalls.find(t => t.callId === callId)
         if (!exist) {
-          tc.toolCalls.push({ ...AgentStore.currentToolCall, callId, ok: true, result: null })
+          const entry = { ...AgentStore.currentToolCall, callId, ok: true, result: null }
+          const sameStep = tc.toolCalls.filter(t => t.step === msg.step)
+          if (sameStep.length > 0) {
+            entry.parallel = true
+            sameStep.forEach(t => t.parallel = true)
+          }
+          tc.toolCalls.push(entry)
         }
       }
       break
@@ -74,9 +97,25 @@ AgentStore.handleMessage = (msg) => {
       break
     case 'llm_call':
       AgentStore.llmCallActive = msg.status === 'start'
+      if (msg.status === 'end') {
+        const last = lastAssistant()
+        if (last) {
+          if (msg.usage) last.usage = msg.usage
+          if (msg.latency_seconds != null) last.latency = msg.latency_seconds
+          if (msg.retries) last.retries = msg.retries
+        }
+      }
       break
     case 'question':
       AgentStore.pendingQuestions = msg.questions
+      break
+    case 'summary':
+      const sm = lastAssistant()
+      if (sm) {
+        sm.totalSteps = msg.total_steps
+        sm.cacheHits = msg.cache_hits
+        sm.cacheMisses = msg.cache_misses
+      }
       break
     case 'reset':
       AgentStore.messages = []
