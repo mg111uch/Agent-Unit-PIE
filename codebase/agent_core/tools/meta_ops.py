@@ -1,11 +1,9 @@
 from __future__ import annotations
 
 import json, os, re
-from pathlib import Path
-from typing import Any
 
 from agent_core.workspace import resolve, WORKSPACE_ROOT, PathEscapeError, to_relative, root_basename_hint
-from agent_core.config import CODEBASE_ROOT, EXCLUDE_DIRS
+from agent_core.config import EXCLUDE_DIRS
 from agent_core.tools.types import ToolResult
 
 _exclude_set = set(EXCLUDE_DIRS)
@@ -80,41 +78,6 @@ def check_path_exists(path: str = "", **kwargs) -> ToolResult:
         return ToolResult(ok=False, message=f"checking path: {e}")
 
 
-def batch_read_tool(params: dict) -> ToolResult:
-    if isinstance(params, str):
-        try:
-            params = json.loads(params)
-        except json.JSONDecodeError:
-            return ToolResult(ok=False, message="invalid JSON input.")
-    paths = params.get("paths", []) if isinstance(params, dict) else []
-    if not paths or not isinstance(paths, list):
-        return ToolResult(ok=False, message="'paths' (list) parameter is required.")
-    codebase = Path(CODEBASE_ROOT)
-    results = {}
-    for p in paths:
-        resolved = (codebase / p) if not Path(p).is_absolute() else Path(p)
-        kernel_dir = codebase / "kernel"
-        is_kernel = False
-        try:
-            is_kernel = kernel_dir in resolved.parents
-        except ValueError:
-            pass
-        if not resolved.exists():
-            results[p] = {"error": "File not found."}
-            continue
-        if resolved.is_dir():
-            results[p] = {"error": "Path is a directory. Use glob_search or list_files instead."}
-            continue
-        content = resolved.read_text(encoding="utf-8", errors="replace")
-        lines = content.split("\n")
-        entry = {"lines": len(lines), "content": content}
-        if is_kernel:
-            entry["warning"] = "Prefer file_api or symbols_by_file for kernel files — this is a raw file read."
-        results[p] = entry
-    counts = {"ok": sum(1 for v in results.values() if "content" in v), "errors": sum(1 for v in results.values() if "error" in v)}
-    return ToolResult(ok=True, data=json.dumps({"files": results, "summary": counts}, separators=(",", ":")))
-
-
 def read_section_tool(params: dict) -> ToolResult:
     if isinstance(params, str):
         try:
@@ -169,47 +132,3 @@ def read_section_tool(params: dict) -> ToolResult:
         return ToolResult(ok=False, message=f"invalid regex pattern '{pattern}': {e}")
     except Exception as e:
         return ToolResult(ok=False, message=f"reading '{path}': {e}")
-
-
-def batch_edit_tool(params: dict) -> ToolResult:
-    if isinstance(params, str):
-        try:
-            params = json.loads(params)
-        except json.JSONDecodeError:
-            return ToolResult(ok=False, message="invalid JSON input.")
-    path = params.get("path", "")
-    edits = params.get("edits", [])
-    if not path:
-        return ToolResult(ok=False, message="'path' parameter is required.")
-    if not edits or not isinstance(edits, list):
-        return ToolResult(ok=False, message="'edits' (list) parameter is required.")
-    results = []
-    for i, edit in enumerate(edits):
-        old_str = edit.get("old_string", "")
-        new_str = edit.get("new_string", "")
-        if not old_str:
-            results.append({"edit": i, "status": "error", "message": "old_string is required"})
-            continue
-        try:
-            full = resolve(path)
-            if not os.path.exists(full):
-                results.append({"edit": i, "status": "error", "message": "file not found"})
-                continue
-            with open(full, "r", encoding="utf-8") as f:
-                content = f.read()
-            count = content.count(old_str)
-            if count == 0:
-                results.append({"edit": i, "status": "error", "message": "old_string not found"})
-                continue
-            if count > 1 and not edit.get("replace_all"):
-                results.append({"edit": i, "status": "error", "message": f"old_string has {count} matches — set replace_all=true or refine"})
-                continue
-            replacement_count = count if edit.get("replace_all") else 1
-            updated = content.replace(old_str, new_str, replacement_count)
-            with open(full, "w", encoding="utf-8") as f:
-                f.write(updated)
-            results.append({"edit": i, "status": "ok", "replaced": replacement_count})
-        except Exception as e:
-            results.append({"edit": i, "status": "error", "message": str(e)})
-    ok_count = sum(1 for r in results if r["status"] == "ok")
-    return ToolResult(ok=True, data=json.dumps({"file": path, "edits": results, "summary": f"{ok_count}/{len(edits)} edits applied"}, separators=(",", ":")))

@@ -1,7 +1,11 @@
 import json, time
-from kernel.persistence.db import kernel_db
+
+def _db():
+    from kernel.persistence.db import kernel_db
+    return kernel_db
 
 def tool_stats(params: dict) -> str:
+    kernel_db = _db()
     rows = kernel_db.get_tool_stats()
     if not rows:
         return "No tool calls recorded yet."
@@ -24,6 +28,7 @@ def tool_stats(params: dict) -> str:
 
 
 def file_stats(params: dict) -> str:
+    kernel_db = _db()
     limit = 20
     if isinstance(params, dict):
         limit = int(params.get("limit", 20))
@@ -52,6 +57,7 @@ def file_stats(params: dict) -> str:
 
 
 def user_reading_budget(params: dict) -> str:
+    kernel_db = _db()
     if isinstance(params, dict):
         record = params.get("record_lines")
         if record is not None:

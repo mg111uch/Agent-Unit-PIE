@@ -3,13 +3,14 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import re
 from contextvars import ContextVar
 from dataclasses import dataclass, field
 from typing import Any, Optional
 
-# Soft budget for in-memory message payload size (chars ≈ tokens*4)
-COMPACTION_TRIGGER_CHARS = 48_000
+from agent_core.config import COMPACTION_TRIGGER_CHARS
+
 KEEP_RAW_TAIL = 6  # keep last N messages verbatim after compaction
 
 _current: ContextVar[Optional["SessionState"]] = ContextVar("session_state", default=None)
@@ -33,6 +34,7 @@ class FileCacheEntry:
     sha256: str
     turn: int
     stale: bool = False
+    mtime: float = 0.0
 
 
 @dataclass
@@ -93,10 +95,10 @@ class SessionState:
         self.cache_misses += 1
         return None
 
-    def put_file(self, path: str, content: str) -> None:
+    def put_file(self, path: str, content: str, mtime: float = 0.0) -> None:
         digest = hashlib.sha256(content.encode("utf-8", errors="replace")).hexdigest()[:16]
         self.file_cache[path] = FileCacheEntry(
-            content=content, sha256=digest, turn=self.turn_count, stale=False
+            content=content, sha256=digest, turn=self.turn_count, stale=False, mtime=mtime
         )
         if path not in self.files_touched:
             self.files_touched.append(path)
@@ -231,10 +233,9 @@ def observe_tool_result(state: SessionState, tool: str, arguments: Any, result: 
         root, entries = _parse_workspace_info(result)
         if root:
             state.set_workspace(root, entries or [])
-    elif tool == "read_file" and ok and path:
-        # Don't cache partial reads as full-file truth if offset/limit present
-        if not _is_partial_read(arguments):
-            state.put_file(path, result)
+    elif tool == "read_file":
+        # read_file tool handles its own caching (with mtime) — skip observer double-cache
+        pass
     elif tool == "list_files" and ok and path:
         state.dir_cache[path or "."] = result
     elif tool in ("edit_file", "write_to_file") and path:
@@ -244,14 +245,23 @@ def observe_tool_result(state: SessionState, tool: str, arguments: Any, result: 
             # If edit returned full content somehow we don't have it; leave stale
         else:
             state.mark_stale(path)
-    elif tool == "todo_write" and ok:
-        plan = _parse_todo(arguments)
-        if plan is not None:
-            state.todo_plan = plan
-    elif tool == "todo_read" and ok and result and not result.startswith("(No plan"):
-        lines = [ln.strip() for ln in result.splitlines() if ln.strip().startswith("[")]
-        if lines:
-            state.todo_plan = lines
+    elif tool == "todo" and ok:
+        action = ""
+        if isinstance(arguments, dict):
+            action = str(arguments.get("action", ""))
+        elif isinstance(arguments, str):
+            try:
+                action = str(json.loads(arguments).get("action", ""))
+            except Exception:
+                action = ""
+        if action == "read" and result and not result.startswith("(No plan"):
+            lines = [ln.strip() for ln in result.splitlines() if ln.strip().startswith("[")]
+            if lines:
+                state.todo_plan = lines
+        else:
+            plan = _parse_todo(arguments)
+            if plan is not None:
+                state.todo_plan = plan
 
 
 def _extract_path(arguments: Any) -> Optional[str]:

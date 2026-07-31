@@ -1,6 +1,16 @@
 """Shared tool types — extracted from __init__.py to break circular imports."""
 
+import json
 from dataclasses import dataclass, asdict
+
+
+def _parse_arg(input_data, default=None):
+    if isinstance(input_data, str):
+        try:
+            return json.loads(input_data)
+        except json.JSONDecodeError:
+            return default
+    return input_data if input_data is not None else default
 
 
 class ToolError(Exception):

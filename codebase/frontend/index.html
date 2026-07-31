@@ -87,7 +87,7 @@
             </div>
           </div>
           <!-- Content -->
-          <p v-if="msg.content" class="text-sm leading-relaxed whitespace-pre-wrap">{{ msg.content }}<span v-if="msg.isStreaming && !msg.isThinking" class="stream-cursor"></span></p>
+          <div v-if="msg.content" class="text-sm leading-relaxed" v-html="renderMarkdown(msg.content)"></div><span v-if="msg.isStreaming && !msg.isThinking" class="stream-cursor"></span>
           <p v-else-if="msg.isThinking" class="text-sm text-zinc-500 italic">Thinking<span class="thinking-dots"></span></p>
           <div class="flex items-center justify-between mt-1">
             <div v-if="!msg.isStreaming && (msg.usage || msg.latency != null || msg.totalSteps)" class="flex flex-wrap gap-x-4 gap-y-0.5 text-[11px] text-zinc-600">
@@ -133,9 +133,9 @@
       </div>
       <div v-if="toolCall.result">
         <p class="text-[10px] font-medium uppercase tracking-wider mb-1"
-          :class="toolCall.ok === false ? 'text-red-400' : 'text-zinc-500'">Result</p>
-        <pre class="text-xs bg-zinc-950 rounded p-2 overflow-y-auto max-h-36"
-          :class="toolCall.ok === false ? 'text-red-300' : 'text-zinc-400'">{{ formatResult(toolCall.result) }}</pre>
+          :class="toolCall.ok === false ? 'text-red-400' : 'text-zinc-500">Result</p>
+        <div class="text-xs markdown-body bg-zinc-950 rounded p-2 overflow-y-auto max-h-48"
+          :class="toolCall.ok === false ? 'text-red-300' : ''" v-html="renderResult(toolCall.result)"></div>
       </div>
     </div>
   </div>
@@ -227,6 +227,8 @@
 
 <!-- Scripts -->
 <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js"></script>
 <script src="store.js"></script>
 <script src="websocket.js"></script>
 <script src="app.js"></script>

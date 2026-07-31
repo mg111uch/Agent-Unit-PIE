@@ -1,7 +1,8 @@
 # Session end ask
-- During the implementation or generation of above plans and phases in this session did you feel the need of any other tool which would have been useful to implement plan faster and more efficiently using lesser number of tokens. In which step the most tokens are spend and how can it be saved by making a tool or some other trick.Compare your recommendations with already existing tools, dont suggest duplicates doing same finctionality with different name, only suggest novel helpful tools.
+- In this session did you feel the need of any other `tool` or any post or pre chat task `hook` which would have been useful to implement plan or fixes faster and more efficiently using lesser number of tokens. Also suggest methods or tools so that if an agent next time tries to access the same files, it could do it much faster or with accuracy and precision, so they not keep repeating same patterns.In which step the most tokens are spend and how can it be saved by making a tool or some other trick. Also which are the tool call patterns which gets repeated and we hardcode in the harness itself  to chain those tools ao that llms have to work lesser and smaller llms could work efiiciently with lesser drift. Compare your recommendations with already existing tools, dont suggest duplicates doing same functionality with different name, only suggest novel helpful tools.
 
-- Based on files you have read in this session give multiple suggestions and improvements so that code or docs could be optimized and tokens and lines of code could be reduced without changing functionality.
+- Give multiple suggestions based on the files you accessed in this session so that project lines of code could be reduced without changing functionality, making def of repeated code blocks which are bigger than 20 loc and repeated 2 or more times. Also how execution time , token consumption could be improved and optimized for future agents. 
+
 - Append your answer in `Agentic_Unit_PIE/system_devpt_reports/FixesIssues.md` below the already generated plan.
 
 - There are some issue and feature which i want to implement given in `Agentic_Unit_PIE/system_devpt_reports/FeatureIdeas.md`. How could it be implemented. Also suggest improvements and new features.
@@ -20,16 +21,21 @@ Also give suggestions for this workflow optimization, patterns which could be av
 
 - See `Agent_graph.html` notes panel for the full tool-selection table, token-saving workflow, anti-patterns, and atlas-miss escalation.
 
+- But most of the fixes you suggested are project specific. I want project agnostic fixes so that model does not dirft. Look for the instructions you followed in your system prompt to implement this same task earlier. Suggest those
+
 # Questions
 grok --resume 019f9d9d-733b-7a53-b581-f8dbfae3a8b4
 
 - Front end user_question tool not working.
 - grep search rules or tools for tui_output search - When analyzing a conversation log file (e.g. `tui_output.txt`), grep for structural markers like `[FINAL]`, `[NEW TURN]`, `total_tokens`, `"ok": false`, `latency_seconds`, or `"kind": "final"` rather than generic keywords like `Error` or `fail` which may match irrelevant instructions in the file's header.
 
-- 
+- Add Todo dismiss
+- Register file_diff under CAT_META and move batch_read and batch_edit from meta to CAT_file
+
+- Implement each turn steps limit to 6 in config so add rule to plan first.
 
 # Tips
 - Close mcp server connection before git add commit push
-- We are closing the session.Give suggestions related to files you accessed in this session so that project length, execution time, token consumption could be improved and optimized. 
+
 
 - **Session compaction:** Objective, Important Details, Work State (Completed, Active, Blocked), Next Move, Relevant Files

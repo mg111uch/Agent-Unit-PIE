@@ -82,3 +82,18 @@ def root_basename_hint(path: str) -> str:
             alt = "."
         return f"\n(Hint: paths are relative to the workspace root. Try '{alt}' instead of '{cleaned}'.)"
     return ""
+
+
+def not_found_message(path: str, full: str, rel: str) -> str:
+    """Standard 'file not found' error block shared by read/edit tools."""
+    parent = os.path.dirname(full) or WORKSPACE_ROOT
+    nearby = []
+    if os.path.isdir(parent):
+        nearby = sorted(os.listdir(parent))[:20]
+    hint = root_basename_hint(path)
+    return (
+        f"file not found: {path}\n"
+        f"Resolved to: {rel} (workspace-relative)\n"
+        f"Files in that directory: {nearby if nearby else '(directory does not exist)'}"
+        f"{hint}"
+    )

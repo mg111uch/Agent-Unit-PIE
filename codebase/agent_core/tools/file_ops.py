@@ -1,83 +1,23 @@
 from __future__ import annotations
 
-import json, os, re, subprocess
-from pathlib import Path
-from typing import Any
+import os
 
-from agent_core.workspace import resolve, WORKSPACE_ROOT, PathEscapeError, to_relative, root_basename_hint
+from agent_core.workspace import resolve, PathEscapeError, to_relative, not_found_message
 from agent_core.tools.undo_ops import save_checkpoint
-from agent_core.config import CODEBASE_ROOT, EXCLUDE_DIRS
-from kernel.persistence.db import kernel_db
-from agent_core.tools.types import ToolResult
+from agent_core.config import EXCLUDE_DIRS
+from agent_core.tools.types import ToolResult, _parse_arg
+from agent_core.tools.diff_ops import _render_unified_diff, _compute_diff
+
+
+def _record_file_access(rel, mode):
+    try:
+        from kernel.persistence.db import kernel_db
+        kernel_db.record_file_access(rel, mode)
+    except Exception:
+        pass
 
 _exclude_set = set(EXCLUDE_DIRS)
 
-_PLAN: list[dict] = []
-_PLAN_FILE = "agent_plan.json"
-
-
-def _load_plan() -> list[dict]:
-    global _PLAN
-    try:
-        with open(_PLAN_FILE, "r") as f:
-            _PLAN = json.load(f)
-    except (FileNotFoundError, json.JSONDecodeError):
-        _PLAN = []
-    return _PLAN
-
-
-def _save_plan():
-    with open(_PLAN_FILE, "w") as f:
-        json.dump(_PLAN, f, indent=2)
-
-
-def todo_write(input_data: Any) -> str:
-    global _PLAN
-    _load_plan()
-    data = json.loads(input_data) if isinstance(input_data, str) else input_data
-    action = data.get("action", "create")
-
-    if action == "create":
-        items = data.get("items", [])
-        _PLAN = [{"id": i + 1, "text": item, "done": False} for i, item in enumerate(items)]
-        _save_plan()
-        return f"[PLAN] Created {len(items)} tasks"
-
-    elif action == "update":
-        items = data.get("items", [])
-        existing_ids = {t["id"] for t in _PLAN}
-        next_id = max(existing_ids) + 1 if existing_ids else 1
-        for item in items:
-            _PLAN.append({"id": next_id, "text": item, "done": False})
-            next_id += 1
-        _save_plan()
-        return f"[PLAN] Added {len(items)} tasks"
-
-    elif action == "mark_done":
-        ids = data.get("ids", [])
-        for t in _PLAN:
-            if t["id"] in ids:
-                t["done"] = True
-        _save_plan()
-        return f"[PLAN] Marked {len(ids)} tasks done"
-
-    elif action == "clear":
-        _PLAN = []
-        _save_plan()
-        return "[PLAN] Cleared"
-
-    return f"Error: Unknown action '{action}'"
-
-
-def todo_read(_input: Any = None) -> str:
-    _load_plan()
-    if not _PLAN:
-        return "(No plan set)"
-    lines = ["Current plan:"]
-    for t in _PLAN:
-        status = "✓" if t["done"] else " "
-        lines.append(f"  [{status}] {t['id']}. {t['text']}")
-    return "\n".join(lines)
 
 def _ensure_dir(path: str):
     os.makedirs(os.path.dirname(path), exist_ok=True)
@@ -104,18 +44,6 @@ def _read_file_content(full: str, offset: int = 0, limit: int = 1000, line_numbe
     return ToolResult(ok=True, data=f"{header}\n{numbered}")
 
 
-def _compute_diff(old_str: str, new_str: str) -> list[str]:
-    """Compute a simple unified diff between old and new strings."""
-    try:
-        import difflib
-        old_lines = old_str.splitlines(keepends=True)
-        new_lines = new_str.splitlines(keepends=True)
-        diff = list(difflib.unified_diff(old_lines, new_lines, n=3))
-        return [l.rstrip() for l in diff[2:]] if len(diff) > 2 else []
-    except Exception:
-        return []
-
-
 def _count_lines(path: str) -> int:
     try:
         with open(path, "r", encoding="utf-8") as f:
@@ -124,53 +52,84 @@ def _count_lines(path: str) -> int:
         return 0
 
 
-def read_file(path: str = "", **kwargs) -> ToolResult:
-    path = kwargs.get("path") or kwargs.get("input") or kwargs.get("file") or path
-    offset = int(kwargs.get("offset", 0))
-    limit = kwargs.get("limit")
-    if limit is not None:
-        limit = int(limit)
-    else:
-        limit = 1000  # default: read up to 1000 lines per call
-    line_numbers = kwargs.get("line_numbers", True)
-    if isinstance(line_numbers, str):
-        line_numbers = line_numbers.lower() in ("true", "1", "yes")
+def _read_single(path, offset=0, limit=None, line_numbers=True) -> ToolResult:
+    """Read one file. offset/limit follow single-path semantics: limit=None
+    means 'not specified' (default 1000 lines, session-cache eligible)."""
     try:
+        offset = int(offset or 0)
+        if isinstance(line_numbers, str):
+            line_numbers = line_numbers.lower() in ("true", "1", "yes")
         full = resolve(path)
         rel = to_relative(full)
-        try: kernel_db.record_file_access(rel, "read")
-        except: pass
+        _record_file_access(rel, "read")
         if not os.path.exists(full):
-            parent = os.path.dirname(full) or WORKSPACE_ROOT
-            nearby = []
-            if os.path.isdir(parent):
-                nearby = sorted(os.listdir(parent))[:20]
-            hint = root_basename_hint(path)
-            return ToolResult(ok=False, message=(
-                f"file not found: {path}\n"
-                f"Resolved to: {rel} (workspace-relative)\n"
-                f"Files in that directory: {nearby if nearby else '(directory does not exist)'}"
-                f"{hint}"
-            ))
+            return ToolResult(ok=False, message=not_found_message(path, full, rel))
         # Session cache: default reads only (no explicit offset/limit params)
-        if not offset and kwargs.get("limit") is None:
+        cache_eligible = (offset == 0 and limit is None)
+        if cache_eligible:
             from agent_core.loop.session_state import get_session_state
             st = get_session_state()
             if st is not None:
                 cached = st.get_cached_file(rel)
                 if cached is not None:
-                    return ToolResult(ok=True, data=f"[cached, unchanged]\n{cached}")
-        result = _read_file_content(full, offset=offset, limit=limit, line_numbers=line_numbers)
-        if result.ok and not offset and kwargs.get("limit") is None:
+                    # mtime staleness check (cheap stat, no content read)
+                    disk_mtime = os.path.getmtime(full)
+                    ent = st.file_cache.get(rel)
+                    if ent and disk_mtime == ent.mtime:
+                        line_count = cached.count("\n")
+                        return ToolResult(ok=True, data=f"(cached: {line_count} lines, unchanged)")
+                    # Disk changed — invalidate cache and fall through
+                    st.mark_stale(rel)
+        actual_limit = int(limit) if limit is not None else 1000
+        result = _read_file_content(full, offset=offset, limit=actual_limit, line_numbers=line_numbers)
+        if result.ok and cache_eligible:
             from agent_core.loop.session_state import get_session_state
             st = get_session_state()
             if st is not None:
-                st.put_file(rel, result.data)
+                st.put_file(rel, result.data, mtime=os.path.getmtime(full))
         return result
     except PathEscapeError as e:
         return ToolResult(ok=False, message=str(e))
     except Exception as e:
         return ToolResult(ok=False, message=f"reading {path}: {e}")
+
+
+def _read_many(paths, offset=0, limit=None, line_numbers=True) -> ToolResult:
+    """Batch read. Each entry is a path string or {path, offset?, limit?, line_numbers?}.
+    Top-level offset/limit/line_numbers act as defaults for entries that omit them."""
+    if not paths or not isinstance(paths, list):
+        return ToolResult(ok=False, message="'paths' (list) parameter is required.")
+    blocks = []
+    stats = {"ok": 0, "errors": 0}
+    for entry in paths:
+        if isinstance(entry, dict):
+            p = entry.get("path", "")
+            off, lim, ln = entry.get("offset", offset), entry.get("limit", limit), entry.get("line_numbers", line_numbers)
+        else:
+            p, off, lim, ln = entry, offset, limit, line_numbers
+        if not p:
+            stats["errors"] += 1
+            blocks.append("--- (missing path) ---\nERROR: 'path' is required for each entry")
+            continue
+        res = _read_single(p, offset=off, limit=lim, line_numbers=ln)
+        if res.ok:
+            stats["ok"] += 1
+            blocks.append(res.data)
+        else:
+            stats["errors"] += 1
+            blocks.append(f"--- {p} ---\nERROR: {res.message}")
+    return ToolResult(ok=stats["ok"] > 0, data="\n\n".join(blocks))
+
+
+def read_file(path: str = "", **kwargs) -> ToolResult:
+    path = kwargs.get("path") or kwargs.get("input") or kwargs.get("file") or path
+    paths = kwargs.get("paths")
+    offset = kwargs.get("offset", 0)
+    limit = kwargs.get("limit")
+    line_numbers = kwargs.get("line_numbers", True)
+    if paths:
+        return _read_many(paths, offset=offset, limit=limit, line_numbers=line_numbers)
+    return _read_single(path, offset=offset, limit=limit, line_numbers=line_numbers)
 
 
 def list_files(path: str = ".", **kwargs) -> ToolResult:
@@ -237,8 +196,7 @@ def write_to_file(input_data) -> ToolResult:
     For targeted edits on existing files, use edit_file instead.
     """
     try:
-        if isinstance(input_data, str):
-            input_data = json.loads(input_data)
+        input_data = _parse_arg(input_data, {})
 
         path = input_data.get("path")
         mode = input_data.get("mode")
@@ -249,8 +207,7 @@ def write_to_file(input_data) -> ToolResult:
             return ToolResult(ok=False, message="'path' and 'mode' are required")
 
         full_path = resolve(path)
-        try: kernel_db.record_file_access(to_relative(full_path), mode)
-        except: pass
+        _record_file_access(to_relative(full_path), mode)
         exists = os.path.exists(full_path)
 
         rel = to_relative(full_path)
@@ -265,7 +222,7 @@ def write_to_file(input_data) -> ToolResult:
                 with open(full_path, "w") as f:
                     f.write(content)
             if st is not None and not dry_run:
-                st.put_file(rel, content)
+                st.put_file(rel, content, mtime=os.path.getmtime(full_path))
                 st.record_edit(rel, f"create {len(content)} chars")
             return ToolResult(ok=True, data=f"[CREATE] {rel} ({len(content)} chars)")
 
@@ -276,7 +233,7 @@ def write_to_file(input_data) -> ToolResult:
                 with open(full_path, "w") as f:
                     f.write(content)
             if st is not None and not dry_run:
-                st.put_file(rel, content)
+                st.put_file(rel, content, mtime=os.path.getmtime(full_path))
                 st.record_edit(rel, f"overwrite {len(content)} chars")
             ckpt = " [checkpoint saved]" if ckpt_saved else ""
             return ToolResult(ok=True, data=f"[OVERWRITE] {rel} ({len(content)} chars){ckpt}")
@@ -300,69 +257,51 @@ def write_to_file(input_data) -> ToolResult:
         return ToolResult(ok=False, message=str(e))
 
 
-def edit_file(input_data) -> ToolResult:
+def _apply_single_edit(path, old, new, replace_all=False) -> ToolResult:
     try:
-        data = json.loads(input_data) if isinstance(input_data, str) else input_data
-        path, old, new = data["path"], data["old_string"], data["new_string"]
         full = resolve(path)
         rel = to_relative(full)
-        try: kernel_db.record_file_access(rel, "edit")
-        except: pass
+        _record_file_access(rel, "edit")
         if not os.path.exists(full):
-            parent = os.path.dirname(full) or WORKSPACE_ROOT
-            nearby = []
-            if os.path.isdir(parent):
-                nearby = sorted(os.listdir(parent))[:20]
-            hint = root_basename_hint(path)
-            return ToolResult(ok=False, message=(
-                f"file not found: {path}\n"
-                f"Resolved to: {rel} (workspace-relative)\n"
-                f"Files in that directory: {nearby if nearby else '(directory does not exist)'}"
-                f"{hint}"
-            ))
+            return ToolResult(ok=False, message=not_found_message(path, full, rel))
         with open(full, "r", encoding="utf-8") as f:
             content = f.read()
+        if not old:
+            return ToolResult(ok=False, message="old_string is required.")
         count = content.count(old)
         if count == 0:
             return ToolResult(ok=False, message=(
                 "old_string not found. Re-read the file with read_file "
                 "(it shows exact line numbers/whitespace) and copy the text exactly."
             ))
-        if count > 1:
+        if count > 1 and not replace_all:
             return ToolResult(ok=False, message=(
                 f"old_string is not unique ({count} matches). "
-                "Include more surrounding lines so the match is unambiguous."
+                "Include more surrounding lines so the match is unambiguous, or set replace_all=true."
             ))
         ckpt_saved = save_checkpoint(path)
-        updated = content.replace(old, new, 1)
+        replacement_count = count if replace_all else 1
+        updated = content.replace(old, new, replacement_count)
         with open(full, "w", encoding="utf-8") as f:
             f.write(updated)
 
         # Prefer full-file unified diff (context around the change)
-        try:
-            import difflib
-            diff_lines = list(difflib.unified_diff(
-                content.splitlines(), updated.splitlines(),
-                fromfile=f"a/{rel}", tofile=f"b/{rel}", lineterm="", n=8,
-            ))
-            diff_section = "\n".join(diff_lines[:60])
-            if len(diff_lines) > 60:
-                diff_section += f"\n... ({len(diff_lines) - 60} more diff lines)"
-        except Exception:
-            diff_lines = _compute_diff(old, new)
-            diff_section = "\n".join(diff_lines[:40]) if diff_lines else ""
+        diff_section = _render_unified_diff(content, updated, rel=rel, n=8, max_lines=60)
+        if not diff_section:
+            fallback = _compute_diff(old, new)
+            diff_section = "\n".join(fallback[:40]) if fallback else ""
 
         from agent_core.loop.session_state import get_session_state
         st = get_session_state()
         if st is not None:
             # Cache post-edit content so verify re-reads are free
             numbered = "\n".join(f"{i+1:>5}\t{line}" for i, line in enumerate(updated.splitlines()))
-            st.put_file(rel, f"--- {rel} ---\n{numbered}")
+            st.put_file(rel, f"--- {rel} ---\n{numbered}", mtime=os.path.getmtime(full))
             st.record_edit(rel, f"edit {len(old)}→{len(new)} chars")
 
         ckpt = " [checkpoint saved]" if ckpt_saved else ""
         result = (
-            f"[EDIT] {rel}: replaced 1 occurrence ({len(new)} chars){ckpt}\n"
+            f"[EDIT] {rel}: replaced {replacement_count} occurrence(s) ({len(new)} chars){ckpt}\n"
             f"Diff below IS verification — do not re-read solely to confirm this edit."
         )
         if diff_section:
@@ -374,91 +313,42 @@ def edit_file(input_data) -> ToolResult:
         return ToolResult(ok=False, message=str(e))
 
 
+def _apply_edits(path, edits) -> ToolResult:
+    """Apply multiple edits to one file sequentially, each with checkpoint + cache parity."""
+    if not path:
+        return ToolResult(ok=False, message="'path' parameter is required.")
+    if not edits or not isinstance(edits, list):
+        return ToolResult(ok=False, message="'edits' (list) parameter is required.")
+    results = []
+    for edit in edits:
+        if not isinstance(edit, dict):
+            results.append(ToolResult(ok=False, message="expected an object with old_string/new_string"))
+            continue
+        old_str = edit.get("old_string", "")
+        new_str = edit.get("new_string", "")
+        replace_all = edit.get("replace_all", False)
+        results.append(_apply_single_edit(path, old_str, new_str, replace_all=replace_all))
+    ok_count = sum(1 for r in results if r.ok)
+    lines = [
+        f"[edit {i}] {r.data if r.ok else f'ERROR: {r.message}'}"
+        for i, r in enumerate(results)
+    ]
+    lines.append(f"Summary: {ok_count}/{len(results)} edits applied")
+    return ToolResult(ok=ok_count > 0, data="\n\n".join(lines))
 
 
-
-def glob_search(pattern: str = "", **kwargs) -> ToolResult:
-    """Find files matching a glob pattern (e.g. '**/*.py', 'src/**/*.ts')."""
-    pattern = kwargs.get("pattern") or kwargs.get("glob") or kwargs.get("input") or pattern
+def edit_file(input_data) -> ToolResult:
     try:
-        matches = sorted(Path(WORKSPACE_ROOT).rglob(pattern))
-        relative = [str(Path(p).relative_to(WORKSPACE_ROOT)) for p in matches if p.is_file()]
-        if not relative:
-            return ToolResult(ok=True, data=f"No files match pattern: {pattern}")
-        lines = [f"Files matching '{pattern}' ({len(relative)}):"]
-        lines.extend(f"  {r}" for r in relative)
-        return ToolResult(ok=True, data="\n".join(lines))
+        data = _parse_arg(input_data)
+        path = data.get("path", "")
+        edits = data.get("edits")
+        if edits is not None:
+            return _apply_edits(path, edits)
+        old = data.get("old_string", "")
+        new = data.get("new_string", "")
+        replace_all = data.get("replace_all", False)
+        return _apply_single_edit(path, old, new, replace_all=replace_all)
+    except PathEscapeError as e:
+        return ToolResult(ok=False, message=str(e))
     except Exception as e:
-        return ToolResult(ok=False, message=f"globbing '{pattern}': {e}")
-
-
-def grep_search(input_data) -> ToolResult:
-    """Search file contents by regex across the workspace.
-    
-    input_data = {"pattern": "...", "include": "*.py", "max_results": 50}
-    Uses ripgrep (rg) if available, falls back to Python regex walk.
-    """
-    try:
-        data = json.loads(input_data) if isinstance(input_data, str) else input_data
-        pattern = data.get("pattern", "")
-        include = data.get("include", "")
-        max_results = int(data.get("max_results", 50))
-
-        if not pattern:
-            return ToolResult(ok=False, message="'pattern' is required")
-
-        # Try ripgrep first (much faster)
-        try:
-            cmd = ["rg", "--no-heading", "--line-number", "-n"]
-            if include:
-                cmd.extend(["--glob", include])
-            cmd.extend(["-m", str(max_results), pattern, WORKSPACE_ROOT])
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
-            if result.returncode == 0 and result.stdout.strip():
-                lines = result.stdout.strip().splitlines()
-                relative_lines = []
-                for line in lines:
-                    abs_path = line.split(":", 1)[0] if ":" in line else ""
-                    if abs_path and abs_path.startswith(WORKSPACE_ROOT):
-                        rel = os.path.relpath(abs_path, WORKSPACE_ROOT)
-                        line = rel + line[len(abs_path):]
-                    relative_lines.append(line)
-                out = "\n".join(relative_lines[:max_results])
-                if len(relative_lines) > max_results:
-                    out += f"\n... ({len(relative_lines) - max_results} more matches)"
-                return ToolResult(ok=True, data=out)
-        except (FileNotFoundError, subprocess.TimeoutExpired):
-            pass
-
-        # Fallback: Python regex walk
-        matches = []
-        import fnmatch
-        for root, dirs, files in os.walk(WORKSPACE_ROOT):
-            dirs[:] = [d for d in sorted(dirs) if d not in _exclude_set]
-            for fname in sorted(files):
-                if include and not any(fnmatch.fnmatch(fname, pat.strip()) for pat in include.split(",")):
-                    continue
-                fpath = os.path.join(root, fname)
-                try:
-                    with open(fpath, "r", encoding="utf-8", errors="replace") as f:
-                        for i, line in enumerate(f, 1):
-                            if re.search(pattern, line):
-                                rel = os.path.relpath(fpath, WORKSPACE_ROOT)
-                                matches.append(f"{rel}:{i}:{line.rstrip()[:200]}")
-                                if len(matches) >= max_results:
-                                    break
-                except Exception:
-                    continue
-                if len(matches) >= max_results:
-                    break
-
-        if not matches:
-            return ToolResult(ok=True, data=f"No matches for pattern: {pattern}")
-        out = "\n".join(matches[:max_results])
-        if len(matches) > max_results:
-            out += f"\n... ({len(matches) - max_results} more matches)"
-        return ToolResult(ok=True, data=out)
-    except Exception as e:
-        return ToolResult(ok=False, message=f"grep_search error: {e}")
-
-
+        return ToolResult(ok=False, message=str(e))

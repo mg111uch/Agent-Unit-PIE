@@ -3,11 +3,37 @@
 from __future__ import annotations
 
 import json
+import os
 import threading
 from typing import Any, List, Optional
 
+from agent_core.config import CODEBASE_ROOT, DEBUG_DUMP_ENABLED, DEBUG_DUMP_APPEND_MODE
 from agent_core.tools.types import ToolResult
 from agent_core.loop.messages import build_corrective_msg
+
+_DEBUG_LOG = os.path.join(CODEBASE_ROOT, "tui_output.txt")
+
+
+def _debug_dump(mode: str, **kwargs):
+    if not DEBUG_DUMP_ENABLED:
+        return
+    try:
+        file_mode = "a" if DEBUG_DUMP_APPEND_MODE else ("w" if mode == "NEW TURN" else "a")
+        with open(_DEBUG_LOG, file_mode) as f:
+            f.write(f"\n{'='*60}\n")
+            f.write(f"[{mode}]\n")
+            f.write(f"{'='*60}\n")
+            for k, v in kwargs.items():
+                label = k.replace("_", " ").title()
+                if isinstance(v, str):
+                    f.write(f"\n{label}:\n{v}\n")
+                elif isinstance(v, (list, dict)):
+                    f.write(f"\n{label}:\n{json.dumps(v, indent=2, default=str)}\n")
+                else:
+                    f.write(f"\n{label}:\n{str(v)}\n")
+            f.write(f"{'='*60}\n")
+    except Exception:
+        pass
 
 
 _QUESTION_TOOLS = {"ask_user_question", "debate_step"}
@@ -54,8 +80,11 @@ def _run_interactive_tool(
     if tool_name == "ask_user_question":
         return tools["ask_user_question"](tool_args), tool_args.get("questions", [])
     if tool_name == "debate_step":
+        debate_fn = tools.get("debate_step")
+        if debate_fn is None:
+            return None, []
         tool_args["prepare_only"] = True
-        prepare_raw = tools["debate_step"](tool_args)
+        prepare_raw = debate_fn(tool_args)
         try:
             prepare = json.loads(prepare_raw) if isinstance(prepare_raw, str) else {}
         except Exception:
@@ -63,7 +92,7 @@ def _run_interactive_tool(
         if prepare.get("done"):
             return prepare_raw, []
         tool_args["prepare_only"] = False
-        return tools["debate_step"](tool_args), prepare.get("questions", [])
+        return debate_fn(tool_args), prepare.get("questions", [])
     return None, []
 
 
@@ -87,6 +116,25 @@ def _handle_corrective_bookkeeping(
         )
         return current_input
     return current_input + "\n\n" + followup
+
+
+def _check_cancelled(cancel_event, step, conv_id):
+    """Yield final event if cancelled. Returns True if loop should exit."""
+    if cancel_event and cancel_event.is_set():
+        return {
+            "type": "final", "content": "", "step": step,
+            "conversation_id": conv_id, "full_content": "(cancelled)",
+            "_exit": True,
+        }
+    return None
+
+
+def _finish_tool_events(step_state, tool_name):
+    """Append tool_call_history entry for a completed tool."""
+    from agent_core.tools import registry
+    step_state.tool_call_history.append({
+        "name": tool_name, "_category": registry.get_category(tool_name),
+    })
 
 
 def _generate_with_cancel(

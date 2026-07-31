@@ -1,21 +1,17 @@
-import os, subprocess, re
-from dataclasses import dataclass, asdict
-from typing import Dict, Any, Callable, Optional
+from typing import Callable
 
+from agent_core.tools.exec_ops import (
+    log_output,
+    execute_command_raw,
+)
 from agent_core.tools.file_ops import (
     read_file,
     list_files,
     write_to_file,
     edit_file,
-    glob_search,
-    grep_search,
-    todo_write,
-    todo_read,
 )
 from agent_core.tools.meta_ops import (
     get_workspace_info,
-    batch_read_tool,
-    batch_edit_tool,
     read_section_tool,
     check_path_exists,
 )
@@ -32,8 +28,6 @@ from agent_core.tools.undo_ops import (
     undo_last_edit,
     checkpoint_info,
 )
-from agent_core.config import ALLOWED_COMMANDS, SANDBOX_ENABLED
-from agent_core.workspace import WORKSPACE_ROOT, get_user_workspace_root
 from agent_core.tools.kernel_ops import (
     KERNEL_AVAILABLE,
     kernel_retrieve,
@@ -41,13 +35,6 @@ from agent_core.tools.kernel_ops import (
     kernel_store_context,
     kernel_get_memory,
     kernel_create_event,
-)
-from agent_core.tools.sim_ops import (
-    SIMULATION_AVAILABLE,
-    simulation_run,
-    simulation_compare,
-    simulation_list,
-    simulation_get_signals,
 )
 from agent_core.tools.code_rag import (
     get_symbol_tool,
@@ -65,13 +52,16 @@ from agent_core.tools.code_rag import (
     report_freshness_tool,
     extract_symbols_to_file_tool,
 )
-from agent_core.tools.question_ops import ask_user_question
+from agent_core.tools.question_ops import ask_user_question, todo
+from agent_core.tools.diff_ops import file_diff
+from agent_core.tools.search_ops import glob_search, grep_search
 from agent_core.tools.context_dump import minimal_context_dump
 from agent_core.tools.registry import (
     ToolRegistry, CAT_FILE, CAT_KERNEL, CAT_SIM, CAT_META, CAT_GIT, CAT_OBSERVER, CAT_CODE_RAG, CAT_DEBATE,
-    str_p, int_p, float_p, bool_p, arr_p, obj_p,
+    str_p, int_p, float_p, bool_p, arr_p, obj_p, derive_schema,
 )
 from agent_core.tools.observer_ops import tool_stats, file_stats, user_reading_budget
+from agent_core.tools.subagent_ops import subagent_task
 
 
 PATHS_PARAM = {
@@ -102,93 +92,6 @@ def tool_call(fn: Callable) -> Callable:
     return wrapper
 
 
-def log_output(message: str, end: str = "\n", flush: bool = False):
-    from datetime import datetime
-    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    log_line = f"[{timestamp}] {message}"
-    print(log_line, end=end, flush=flush)
-
-
-def extract_json(text: str):
-    match = re.search(r'\{.*\}', text, re.DOTALL)
-    if match:
-        return match.group(0)
-    return None
-
-
-def _is_command_allowed(cmd: str) -> bool:
-    first_word = cmd.strip().split()[0] if cmd.strip() else ""
-    return first_word in ALLOWED_COMMANDS
-
-
-def _run_sandboxed(cmd: str, timeout: int = 60) -> str:
-    ws = get_user_workspace_root() or WORKSPACE_ROOT
-    try:
-        result = subprocess.run(
-            ["docker", "run", "--rm", "--network", "none",
-             "-v", f"{ws}:/workspace:ro",
-             "-w", "/workspace",
-             "python:3.11-slim",
-             "sh", "-c", cmd],
-            capture_output=True, text=True, timeout=timeout,
-        )
-        output = result.stdout
-        if result.stderr:
-            output += f"\n[STDERR]: {result.stderr}"
-        if result.returncode != 0:
-            output += f"\n[Exit code: {result.returncode}]"
-        return output or "(No output)"
-    except FileNotFoundError:
-        return "Sandbox error: Docker not found. Set sandbox_enabled=false or install Docker."
-    except subprocess.TimeoutExpired:
-        return f"Sandbox command timed out after {timeout}s: {cmd}"
-    except Exception as e:
-        return f"Sandbox error: {e}"
-
-
-@tool_call
-def execute_command_raw(cmd: str) -> str:
-    # Native function calling often passes {"command": "..."}; text path may pass a plain string.
-    if isinstance(cmd, dict):
-        cmd = (
-            cmd.get("command")
-            or cmd.get("cmd")
-            or cmd.get("input")
-            or next(iter(cmd.values()), "")
-        )
-    cmd = "" if cmd is None else str(cmd)
-
-    if not _is_command_allowed(cmd):
-        allowed = ", ".join(sorted(ALLOWED_COMMANDS))
-        return f"Command not allowed. Allowed commands: {allowed}"
-
-    if SANDBOX_ENABLED:
-        return _run_sandboxed(cmd)
-
-    try:
-        result = subprocess.run(
-            cmd,
-            shell=True,
-            capture_output=True,
-            text=True,
-            timeout=30
-        )
-        output = result.stdout
-        if result.stderr:
-            output += f"\n[STDERR]: {result.stderr}"
-        if result.returncode != 0:
-            output += f"\n[Exit code: {result.returncode}]"
-
-        return output if output else "(No output)"
-    except subprocess.TimeoutExpired:
-        error_msg = f"Command timed out after 30 seconds: {cmd}"
-        log_output(f"[ERROR] {error_msg}")
-        return error_msg
-    except Exception as e:
-        error_msg = f"Error executing command '{cmd}': {str(e)}"
-        log_output(f"[ERROR] {error_msg}")
-        return error_msg
-
 
 registry = ToolRegistry(mcp_prefix="")
 
@@ -197,12 +100,13 @@ def _register_file_tools(reg, tc):
     reg.set_default_category(CAT_FILE)
 
     reg.register("read_file", tc(read_file),
-        description="Read file (returns line-numbered output; lists nearby files on error; set line_numbers=false to save tokens)",
+        description="Read file (returns line-numbered output; lists nearby files on error; set line_numbers=false to save tokens). Pass paths=[...] to batch-read multiple files in one call — the top-level offset/limit/line_numbers then apply to every file.",
         params={"path": str_p("Path to the file, relative to the workspace root", req=True),
+                "paths": arr_p("string", "Batch read: list of file paths to read in one call. offset/limit/line_numbers (top-level) apply to each file."),
                 "offset": int_p("1-based line number to start from (default 1)"),
                 "limit": int_p("Max lines to return (default: 1000; pass 0 for no limit)"),
                 "line_numbers": bool_p("If true (default), prefix each line with line number. Set false to save tokens when only content is needed.")},
-        mcp_expose=False)
+        mcp_expose=True)
     reg.register("list_files", tc(list_files),
         description="List directory contents (shallow by default; set recursive=true for deep listing up to 3 levels; skips excluded dirs). For quick workspace orientation use get_workspace_info instead.",
         params={"path": str_p("Directory path relative to workspace root; use '.' for root"),
@@ -215,18 +119,25 @@ def _register_file_tools(reg, tc):
                 "dry_run": bool_p("If true, validate without writing")},
         mcp_expose=False)
     reg.register("edit_file", tc(edit_file),
-        description="Replace exact old_string with new_string in an existing file. old_string must match exactly once.",
+        description="Replace exact old_string with new_string in an existing file. old_string must match exactly once (or set replace_all=true). Pass edits=[...] to apply multiple replacements to the same file in one call — each edit is applied sequentially with checkpoint + cache parity.",
         params={"path": str_p("File path relative to workspace root", req=True),
                 "old_string": str_p("Exact existing text to replace (whitespace-sensitive)", req=True),
-                "new_string": str_p("Replacement text", req=True)},
-        mcp_expose=False)
+                "new_string": str_p("Replacement text", req=True),
+                "replace_all": bool_p("If true, replace all occurrences of old_string (default false)"),
+                "edits": {"t": "array", "desc": "List of edits to apply sequentially (use instead of single old_string/new_string)", "r": False,
+                          "items": {"type": "object", "properties": {
+                              "old_string": {"type": "string", "description": "Exact text to replace"},
+                              "new_string": {"type": "string", "description": "Replacement text"},
+                              "replace_all": {"type": "boolean", "description": "If true, replace all occurrences (default: replace first only)"}},
+                          "additionalProperties": False}}},
+        mcp_expose=True)
     reg.register("execute_command", tc(execute_command_raw),
         description="Run a shell command. Allowed: ls, cat, pwd, echo, python.",
         params={"command": str_p("Shell command string to execute", req=True)},
         mcp_expose=False)
     reg.register("glob_search", tc(glob_search),
         description="Find files matching a glob pattern (e.g. '**/*.py', 'src/**/*.ts')",
-        params={"pattern": str_p("Glob pattern to match files against, relative to workspace root", req=True)},
+        params=derive_schema(glob_search, {"pattern": "Glob pattern to match files against, relative to workspace root"}),
         mcp_expose=False)
     reg.register("grep_search", tc(grep_search),
         description="Search file contents by regex across the workspace",
@@ -234,14 +145,11 @@ def _register_file_tools(reg, tc):
                 "include": str_p("Optional file glob filter (e.g. '*.py' or '*.{py,ts}')"),
                 "max_results": int_p("Max results to return (default 50)")},
         mcp_expose=False)
-    reg.register("todo_write", tc(todo_write),
-        description="Create/update a task plan. Actions: create (new plan), update (append), mark_done, clear",
-        params={"action": str_p("One of: create, update, mark_done, clear", req=True),
+    reg.register("todo", tc(todo),
+        description="Manage a task plan. Actions: read (show current plan), create (new plan), update (append items), mark_done (complete tasks by id), clear.",
+        params={"action": str_p("One of: read, create, update, mark_done, clear", req=True),
                 "items": arr_p("string", "List of task descriptions (for create/update)"),
                 "ids": arr_p("integer", "Task IDs to mark done (for mark_done)")})
-    reg.register("todo_read", tc(todo_read),
-        description="Read the current task plan",
-        params={})
     reg.register("ask_user_question", tc(ask_user_question),
         description="Ask the user for input, clarification, or a decision. Provide up to 3 options per question (a 4th 'custom answer' text input is always available). Can ask multiple questions at once — user answers them one by one.",
         params={"questions": {"t": "array", "desc": "Questions to ask. User answers them sequentially. Max 3 options each.", "r": True,
@@ -253,32 +161,23 @@ def _register_file_tools(reg, tc):
 
 def _register_meta_tools(reg, tc):
     reg.set_default_category(CAT_META)
-    from agent_core.tools.meta_ops import batch_read_tool, read_section_tool, batch_edit_tool
+    from agent_core.tools.meta_ops import read_section_tool
 
     reg.register("check_path_exists", tc(check_path_exists),
         description="Check if a file or directory exists at the given path (cheap — no file content read). Use this to verify existence before read_file or list_files calls.",
-        params={"path": str_p("Path to check, relative to workspace root", req=True)})
+        params=derive_schema(check_path_exists, {"path": "Path to check, relative to workspace root"}))
     reg.register("get_workspace_info", tc(get_workspace_info),
         description="Show workspace root and top-level entries for orientation",
         params={})
-    reg.register("batch_read", tc(batch_read_tool),
-        description="Read multiple non-kernel files at once. Saves token overhead vs sequential Read calls. Warns on kernel files.",
-        params=PATHS_PARAM)
+    reg.register("file_diff", tc(file_diff),
+        description="Show diff of uncommitted changes for a file vs checkpoint or git HEAD. Returns ~5 lines — use for lightweight edit verification instead of re-reading the full file.",
+        params={"path": str_p("File path relative to workspace root", req=True)})
     reg.register("read_section", tc(read_section_tool),
         description="Read a file section around a regex pattern match. Returns match line + context lines. Use instead of read_file when searching by content pattern.",
         params={"path": str_p("File path relative to workspace root", req=True),
                 "pattern": str_p("Regex pattern to search for within the file", req=True),
                 "context_lines": int_p("Number of context lines before and after each match (default 10)"),
                 "ignore_case": bool_p("If true, case-insensitive matching (default false)")})
-    reg.register("batch_edit", tc(batch_edit_tool),
-        description="Apply multiple string replacements to a file in one call. Each edit is applied sequentially.",
-        params={"path": str_p("File path relative to workspace root", req=True),
-                "edits": {"t": "array", "desc": "List of edits to apply sequentially", "r": True,
-                          "items": {"type": "object", "properties": {
-                              "old_string": {"type": "string", "description": "Exact text to replace"},
-                              "new_string": {"type": "string", "description": "Replacement text"},
-                              "replace_all": {"type": "boolean", "description": "If true, replace all occurrences (default: replace first only)"}},
-                          "additionalProperties": False}}})
     reg.register("run_tests", tc(run_tests),
         description="Discover and run tests in the workspace using pytest or unittest. Specify path to limit scope, pattern for file filter, or framework to override auto-detection.",
         params={"pattern": str_p("Optional glob pattern to filter test files (e.g. 'test_*.py')"),
@@ -291,6 +190,12 @@ def _register_meta_tools(reg, tc):
     reg.register("checkpoint_info", tc(checkpoint_info),
         description="List available checkpoints for undo operations",
         params={})
+    reg.register("subagent_task", tc(subagent_task),
+        description="Delegate an open-ended research or exploration task to a sub-agent. The sub-agent runs its own agent loop with full tool access and returns its final answer. Use this when exploration would consume significant context tokens or requires multiple rounds of search/grep/read.",
+        params={"task": str_p("The task description for the sub-agent to execute", req=True),
+                "provider": str_p("Optional provider override (default: active provider)"),
+                "model": str_p("Optional model override (default: active model)"),
+                "max_steps": int_p("Max steps for sub-agent loop (default 15)")})
 def _register_debate_tools(reg, tc):
     reg.set_default_category(CAT_DEBATE)
     try:
@@ -530,15 +435,21 @@ def _register_all():
     _reg = registry
     _register_file_tools(_reg, _tc)
     _register_meta_tools(_reg, _tc)
-    _register_debate_tools(_reg, _tc)
     _register_git_tools(_reg, _tc)
     _register_kernel_tools(_reg, _tc)
-    _register_sim_tools(_reg, _tc)
     _register_code_rag_tools(_reg, _tc)
     _register_observer_tools(_reg, _tc)
+    _reg.register_lazy(CAT_DEBATE, lambda: _register_debate_tools(_reg, _tc))
+    _reg.register_lazy(CAT_SIM, lambda: _register_sim_tools(_reg, _tc))
 
 
 _register_all()
 
-TOOLS: Dict[str, Callable] = registry.tools_dict
-TOOL_META: Dict[str, Dict[str, str]] = registry.meta_dict
+
+def __getattr__(name: str):
+    """Lazy backward-compat aliases: materialize only when TOOLS/TOOL_META are accessed."""
+    if name == "TOOLS":
+        return registry.tools_dict
+    if name == "TOOL_META":
+        return registry.meta_dict
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

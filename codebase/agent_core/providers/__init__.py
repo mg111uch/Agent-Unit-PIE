@@ -1,13 +1,30 @@
 from __future__ import annotations
 
-from typing import Dict, Any, Optional, List, Generator, Protocol, runtime_checkable
+from typing import Dict, Any, Optional, List, Generator
 
 
-@runtime_checkable
-class LLMProvider(Protocol):
-    """Protocol that all LLM providers must satisfy."""
-
+class BaseLLMProvider:
     default_model: str
+    _supports_stateful: bool = False
+
+    @property
+    def supports_stateful(self) -> bool:
+        return self._supports_stateful
+
+    @staticmethod
+    def _build_usage_dict(total_tokens: int = 0) -> Dict[str, Any]:
+        return {"total_tokens": total_tokens, "estimated_cost": 0.0}
+
+    @staticmethod
+    def _truncate_tool_result(result: str, max_chars: int = 2000) -> str:
+        if len(result) <= max_chars:
+            return result
+        if result.strip().startswith(("{", "[")):
+            truncated = result[:max_chars]
+            last_close = max(truncated.rfind("}"), truncated.rfind("]"))
+            if last_close > max_chars // 2:
+                return truncated[:last_close + 1]
+        return result[:max_chars]
 
     def generate(
         self,
@@ -21,7 +38,7 @@ class LLMProvider(Protocol):
         messages: Optional[List[Dict[str, Any]]] = None,
         **kwargs: Any,
     ) -> Dict[str, Any]:
-        ...
+        raise NotImplementedError
 
     def generate_stream(
         self,
@@ -35,8 +52,4 @@ class LLMProvider(Protocol):
         messages: Optional[List[Dict[str, Any]]] = None,
         **kwargs: Any,
     ) -> Generator[str, None, None]:
-        ...
-
-    @property
-    def supports_stateful(self) -> bool:
-        return False
+        raise NotImplementedError

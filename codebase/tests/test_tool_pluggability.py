@@ -40,6 +40,8 @@ class TestToolRegistryFiltering:
         names = set(tools.keys())
         assert "read_file" in names
         assert "edit_file" in names
+        assert "todo" in names
+        assert "todo_read" not in names
         assert "kernel_retrieve" not in names
         assert len(tools) == 9
 
@@ -57,8 +59,9 @@ class TestToolRegistryFiltering:
         from agent_core.tools.registry import CAT_META
         tools = registry.get_tools(categories=[CAT_META])
         names = set(tools.keys())
-        assert "todo_write" in names
+        assert "file_diff" in names
         assert "run_tests" in names
+        assert "todo" not in names
         assert "read_file" not in names
 
     def test_no_categories_returns_all(self):

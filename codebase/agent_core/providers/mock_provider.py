@@ -5,8 +5,10 @@ import os
 import time
 from typing import Any, Dict, Generator, List, Optional
 
+from agent_core.providers import BaseLLMProvider
 
-class MockProvider:
+
+class MockProvider(BaseLLMProvider):
     SCENARIOS: Dict[str, List[dict]] = {
         "read_file_happy": [
             {"response": "", "tool_calls": [{"name": "read_file", "arguments": {"path": "temp/dummy/calculator.py"}}]},
@@ -53,7 +55,7 @@ class MockProvider:
             {"response": '{"final": "Found definitions."}', "tool_calls": None},
         ],
         "batch_read": [
-            {"response": "", "tool_calls": [{"name": "batch_read", "arguments": {"paths": ["temp/dummy/calculator.py", "temp/dummy/fabo/fabonacci.py"]}}]},
+            {"response": "", "tool_calls": [{"name": "read_file", "arguments": {"paths": ["temp/dummy/calculator.py", "temp/dummy/fabo/fabonacci.py"]}}]},
             {"response": '{"final": "Read both files."}', "tool_calls": None},
         ],
         "read_section": [
@@ -61,7 +63,7 @@ class MockProvider:
             {"response": '{"final": "Section found."}', "tool_calls": None},
         ],
         "batch_edit": [
-            {"response": "", "tool_calls": [{"name": "batch_edit", "arguments": {"path": "temp/dummy/calculator.py", "edits": [{"old_string": "def add(n1, n2):", "new_string": "def add(x, y):"}]}}]},
+            {"response": "", "tool_calls": [{"name": "edit_file", "arguments": {"path": "temp/dummy/calculator.py", "edits": [{"old_string": "def add(n1, n2):", "new_string": "def add(x, y):"}]}}]},
             {"response": '{"final": "Edits applied."}', "tool_calls": None},
         ],
         "parallel_two": [
@@ -109,10 +111,6 @@ class MockProvider:
             self._stanzas = [dict(s) for s in stanzas]
         else:
             self._stanzas = [{"response": '{"final": "Mock response."}', "tool_calls": None}]
-
-    @property
-    def supports_stateful(self) -> bool:
-        return False
 
     @property
     def _is_default_stanzas(self) -> bool:
@@ -230,7 +228,7 @@ class MockProvider:
             "response": stanza.get("response", ""),
             "tool_calls": stanza.get("tool_calls"),
             "conversation_id": conversation_id,
-            "usage": {"total_tokens": 0, "estimated_cost": 0.0},
+            "usage": self._build_usage_dict(0),
         }
 
     def generate_stream(

@@ -13,8 +13,12 @@ from agent_core.tools.registry import CAT_FILE, CAT_KERNEL, CAT_SIM, CAT_META, C
 DEFAULT_SYSTEM_PROMPT = "You are a helpful assistant."
 PROMPT_FRAGMENTS_DIR = os.path.join(CODEBASE_ROOT, "prompt_fragments")
 
+_cache: dict[str, tuple[float, str]] = {}  # cache_key → (mtime_sum, prompt)
+
 FRAGMENT_ORDER: List[tuple[str, Optional[List[str]], Optional[List[str]]]] = [
     ("base_persona.md",       None,         None),
+    ("efficiency_rules.md",   None,         None),
+    ("implementation_guardrails.md", None,  None),
     ("file_ops_workflow.md",  [CAT_FILE],   None),
     ("meta_playbook.md",      [CAT_META],   None),
     ("code_rag.md",           [CAT_CODE_RAG], None),
@@ -57,17 +61,35 @@ def _include_fragment(
     return True
 
 
+def _fragments_mtime(fragments_dir: str, active_packs: List[str]) -> float:
+    total = 0.0
+    for filename, requires, blocks in FRAGMENT_ORDER:
+        if not _include_fragment(requires, blocks, active_packs):
+            continue
+        fpath = os.path.join(fragments_dir, filename)
+        try:
+            total += os.path.getmtime(fpath)
+        except OSError:
+            total += 0
+    return total
+
+
 def load_system_prompt(
     path: Optional[str] = None,
     active_packs: Optional[List[str]] = None,
 ) -> str:
     if active_packs is None:
-        from agent_core.tools.registry import CAT_FILE, CAT_KERNEL, CAT_SIM, CAT_META, CAT_GIT, CAT_DEBATE, CAT_OBSERVER
-        active_packs = [CAT_FILE, CAT_KERNEL, CAT_SIM, CAT_META, CAT_GIT, CAT_DEBATE, CAT_OBSERVER]
+        active_packs = [CAT_FILE, CAT_KERNEL, CAT_SIM, CAT_META, CAT_GIT, CAT_DEBATE, CAT_OBSERVER, CAT_CODE_RAG]
 
     fragments_dir = path if path else PROMPT_FRAGMENTS_DIR
-    parts: List[str] = []
+    cache_key = f"{fragments_dir}:{','.join(sorted(active_packs))}"
+    mtime = _fragments_mtime(fragments_dir, active_packs)
 
+    cached = _cache.get(cache_key)
+    if cached is not None and cached[0] == mtime:
+        return cached[1]
+
+    parts: List[str] = []
     for filename, requires, blocks in FRAGMENT_ORDER:
         if not _include_fragment(requires, blocks, active_packs):
             continue
@@ -83,8 +105,8 @@ def load_system_prompt(
             log_output(f"ERROR reading {filename}: {e}")
 
     template = "\n\n".join(parts)
-
     agents_md = load_agents_md()
     template = template.replace("{AGENTS_MD}", agents_md)
 
+    _cache[cache_key] = (mtime, template)
     return template

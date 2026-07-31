@@ -268,16 +268,23 @@ def extract_symbols_to_file_tool(params: dict) -> str:
 
 # ── Report tools (3) ─────────────────────────────────────────────────
 
-def report_freshness_tool(params: dict) -> str:
+
+def _iter_reports(pattern: str = "*.md"):
+    """Yield (md_path, relative_path, file_text) for matching .md files in system_devpt_reports/."""
     reports_dir = _project_root() / "system_devpt_reports"
     if not reports_dir.is_dir():
-        return "Error: system_devpt_reports/ not found."
+        return
+    for md_file in sorted(reports_dir.rglob(pattern)):
+        rel = md_file.relative_to(_project_root())
+        text = md_file.read_text(encoding="utf-8", errors="replace")
+        yield md_file, rel, text
+
+
+def report_freshness_tool(params: dict) -> str:
     date_re = re.compile(r'_Last verified:\s*(\d{4}-\d{2}-\d{2})_')
     citation_re = re.compile(r'`([\w./-]+\.py:\w+\(\))`')
     stale = []; ok = []; not_found = []
-    for md_file in sorted(reports_dir.rglob("*.md")):
-        rel = md_file.relative_to(_project_root())
-        text = md_file.read_text(encoding="utf-8", errors="replace")
+    for md_file, rel, text in _iter_reports():
         m = date_re.search(text)
         if not m:
             not_found.append({"file": str(rel), "reason": "No _Last verified date stamp."})
@@ -320,15 +327,10 @@ def report_freshness_tool(params: dict) -> str:
 
 
 def report_inventory_tool(params: dict) -> str:
-    reports_dir = _project_root() / "system_devpt_reports"
-    if not reports_dir.is_dir():
-        return json.dumps({"error": "system_devpt_reports/ not found"})
     date_re = re.compile(r'_Last verified:\s*(\d{4}-\d{2}-\d{2})_')
     citation_re = re.compile(r'`([\w./-]+\.py:\w+\(\))`')
     entries = []
-    for md_file in sorted(reports_dir.rglob("*.md")):
-        rel = md_file.relative_to(_project_root())
-        text = md_file.read_text(encoding="utf-8", errors="replace")
+    for md_file, rel, text in _iter_reports():
         lines = text.count("\n") + 1
         parent = md_file.parent.name
         fname = md_file.name
@@ -349,14 +351,11 @@ def report_inventory_tool(params: dict) -> str:
 
 
 def report_schema_check_tool(params: dict) -> str:
-    reports_dir = _project_root() / "system_devpt_reports"
     date_re = re.compile(r'_Last verified:\s*(\d{4}-\d{2}-\d{2})_')
     citation_re = re.compile(r'`([\w./-]+\.py:\w+\(\))`')
     roadmap_lang = re.compile(r'phase|completed|planned|roadmap|not implemented', re.I)
     results = []
-    for md_file in sorted(reports_dir.glob("*/status.md")):
-        rel = md_file.relative_to(_project_root())
-        text = md_file.read_text(encoding="utf-8", errors="replace")
+    for md_file, rel, text in _iter_reports("*/status.md"):
         issues = []
         if not date_re.search(text):
             issues.append("missing _Last verified")

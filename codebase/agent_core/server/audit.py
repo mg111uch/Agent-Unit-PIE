@@ -2,15 +2,28 @@
 
 from __future__ import annotations
 
+import json
 import os
 
 from agent_core.tools.types import ToolResult
 
 _WRITE_TOOLS = frozenset({
-    "write_to_file", "edit_file", "execute_command", "todo_write",
+    "write_to_file", "edit_file", "execute_command", "todo",
     "undo_last_edit", "git_commit", "kernel_store_context",
     "kernel_create_event", "kernel_emit_signal", "run_tests",
 })
+
+
+def _is_write_call(tool_name: str, raw) -> bool:
+    if tool_name not in _WRITE_TOOLS:
+        return False
+    if tool_name == "todo":
+        try:
+            args = json.loads(raw) if isinstance(raw, str) else (raw or {})
+            return str(args.get("action", "")) != "read"
+        except Exception:
+            return True
+    return True
 
 
 def build_tree(dir_path: str, max_depth: int = 4, depth: int = 0):
@@ -51,8 +64,9 @@ def make_audit_wrapper(active_tools_dict, rate_limiter, audit_log, redact, user_
     for name, fn in active_tools_dict.items():
         def _make_wrapped(tool_name: str, original_fn):
             def _wrapped(*args, **kwargs):
-                input_str = str(args[0]) if args else str(kwargs)
-                if tool_name in _WRITE_TOOLS:
+                raw = args[0] if args else kwargs
+                input_str = str(raw)
+                if _is_write_call(tool_name, raw):
                     from agent_core.config import RATE_LIMIT_TOOL_WRITES
                     if not rate_limiter.check_write(user_key, RATE_LIMIT_TOOL_WRITES):
                         return ToolResult(ok=False, error_type="rate_limited",

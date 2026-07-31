@@ -1,4 +1,3 @@
-import json
 import os
 import shutil
 from pathlib import Path
@@ -33,6 +32,8 @@ def test_ws(tmp_path, monkeypatch):
 
     for mod_name in (
         "agent_core.tools.file_ops",
+        "agent_core.tools.search_ops",
+        "agent_core.tools.diff_ops",
         "agent_core.tools.undo_ops",
         "agent_core.tools",
     ):
@@ -57,21 +58,28 @@ def orch_and_mock():
     return LLMOrchestrator, MockProvider
 
 
-def _run_events(orchestrator, mock, user_input):
-    from agent_core.loop import iter_agent_events
-    return list(iter_agent_events(
-        user_input, orchestrator, provider="mock", model="mock",
-    ))
+@pytest.fixture
+def run_scenario(orch_and_mock):
+    """Run the agent loop over a MockProvider scenario; returns the event list."""
+    LLMOrchestrator, MockProvider = orch_and_mock
+
+    def _run(scenario, prompt, tmp=None, stanzas=None, debug=False, mock=None):
+        if mock is None:
+            kwargs = {"stanzas": stanzas} if stanzas is not None else {"scenario": scenario}
+            if debug:
+                kwargs["debug_path"] = str(tmp / "trace.log")
+            mock = MockProvider(**kwargs)
+        orch = LLMOrchestrator(providers={"mock": mock},
+                               default_provider="mock", default_model="mock")
+        from agent_core.loop import iter_agent_events
+        return list(iter_agent_events(prompt, orch, provider="mock", model="mock"))
+
+    return _run
 
 
 class TestReadFile:
-    def test_happy_path(self, test_ws, orch_and_mock):
-        LLMOrchestrator, MockProvider = orch_and_mock
-        mock = MockProvider(scenario="read_file_happy",
-                            debug_path=str(test_ws / "trace_read.log"))
-        orch = LLMOrchestrator(providers={"mock": mock},
-                               default_provider="mock", default_model="mock")
-        events = _run_events(orch, mock, "read calculator.py")
+    def test_happy_path(self, test_ws, run_scenario):
+        events = run_scenario("read_file_happy", "read calculator.py", tmp=test_ws, debug=True)
 
         calls = _find_events(events, "tool_call")
         results = _find_events(events, "tool_result")
@@ -85,26 +93,18 @@ class TestReadFile:
         _assert_tool_result(results[0], "read_file", ok=True)
         assert "def add" in results[0]["result"] or "calculator" in results[0]["result"]
 
-        assert (test_ws / "trace_read.log").exists()
+        assert (test_ws / "trace.log").exists()
 
-    def test_file_not_found(self, test_ws, orch_and_mock):
-        LLMOrchestrator, MockProvider = orch_and_mock
-        mock = MockProvider(scenario="read_file_not_found")
-        orch = LLMOrchestrator(providers={"mock": mock},
-                               default_provider="mock", default_model="mock")
-        events = _run_events(orch, mock, "read nonexistent.py")
+    def test_file_not_found(self, test_ws, run_scenario):
+        events = run_scenario("read_file_not_found", "read nonexistent.py", tmp=test_ws)
 
         results = _find_events(events, "tool_result")
         assert len(results) >= 1
         assert not results[0]["ok"]
         assert "file not found" in results[0]["result"].lower()
 
-    def test_text_json_fallback(self, test_ws, orch_and_mock):
-        LLMOrchestrator, MockProvider = orch_and_mock
-        mock = MockProvider(scenario="read_file_text_json")
-        orch = LLMOrchestrator(providers={"mock": mock},
-                               default_provider="mock", default_model="mock")
-        events = _run_events(orch, mock, "read calculator.py via json")
+    def test_text_json_fallback(self, test_ws, run_scenario):
+        events = run_scenario("read_file_text_json", "read calculator.py via json", tmp=test_ws)
 
         results = _find_events(events, "tool_result")
         finals = _find_events(events, "final")
@@ -115,39 +115,27 @@ class TestReadFile:
 
 
 class TestListFiles:
-    def test_lists_directory(self, test_ws, orch_and_mock):
-        LLMOrchestrator, MockProvider = orch_and_mock
-        mock = MockProvider(scenario="list_files")
-        orch = LLMOrchestrator(providers={"mock": mock},
-                               default_provider="mock", default_model="mock")
-        events = _run_events(orch, mock, "list temp/dummy")
+    def test_lists_directory(self, test_ws, run_scenario):
+        events = run_scenario("list_files", "list temp/dummy", tmp=test_ws)
 
         results = _find_events(events, "tool_result")
         assert len(results) == 1
         _assert_tool_result(results[0], "list_files", ok=True)
         assert "calculator.py" in results[0]["result"]
 
-    def test_invalid_path(self, test_ws, orch_and_mock):
-        LLMOrchestrator, MockProvider = orch_and_mock
-        mock = MockProvider(stanzas=[
+    def test_invalid_path(self, test_ws, run_scenario):
+        events = run_scenario(None, "list a file", tmp=test_ws, stanzas=[
             {"response": "", "tool_calls": [{"name": "list_files", "arguments": {"path": "temp/dummy/calculator.py"}}]},
             {"response": '{"final": "done"}', "tool_calls": None},
         ])
-        orch = LLMOrchestrator(providers={"mock": mock},
-                               default_provider="mock", default_model="mock")
-        events = _run_events(orch, mock, "list a file")
         results = _find_events(events, "tool_result")
         assert len(results) == 1
         assert not results[0]["ok"]
 
 
 class TestWriteFile:
-    def test_create_file(self, test_ws, orch_and_mock):
-        LLMOrchestrator, MockProvider = orch_and_mock
-        mock = MockProvider(scenario="write_file_create")
-        orch = LLMOrchestrator(providers={"mock": mock},
-                               default_provider="mock", default_model="mock")
-        events = _run_events(orch, mock, "create temp/new.txt")
+    def test_create_file(self, test_ws, run_scenario):
+        events = run_scenario("write_file_create", "create temp/new.txt", tmp=test_ws)
 
         results = _find_events(events, "tool_result")
         assert len(results) == 1
@@ -156,12 +144,8 @@ class TestWriteFile:
         assert (test_ws / "temp" / "new.txt").exists()
         assert (test_ws / "temp" / "new.txt").read_text() == "hello world"
 
-    def test_overwrite_file(self, test_ws, orch_and_mock):
-        LLMOrchestrator, MockProvider = orch_and_mock
-        mock = MockProvider(scenario="write_file_overwrite")
-        orch = LLMOrchestrator(providers={"mock": mock},
-                               default_provider="mock", default_model="mock")
-        events = _run_events(orch, mock, "overwrite calculator.py")
+    def test_overwrite_file(self, test_ws, run_scenario):
+        events = run_scenario("write_file_overwrite", "overwrite calculator.py", tmp=test_ws)
 
         results = _find_events(events, "tool_result")
         assert len(results) == 1
@@ -169,13 +153,9 @@ class TestWriteFile:
         assert "[OVERWRITE]" in results[0]["result"]
         assert (test_ws / "temp" / "dummy" / "calculator.py").read_text() == "print('hello')"
 
-    def test_append_file(self, test_ws, orch_and_mock):
-        LLMOrchestrator, MockProvider = orch_and_mock
-        mock = MockProvider(scenario="write_file_append")
-        orch = LLMOrchestrator(providers={"mock": mock},
-                               default_provider="mock", default_model="mock")
+    def test_append_file(self, test_ws, run_scenario):
         original = (test_ws / "temp" / "dummy" / "calculator.py").read_text()
-        events = _run_events(orch, mock, "append to calculator.py")
+        events = run_scenario("write_file_append", "append to calculator.py", tmp=test_ws)
 
         results = _find_events(events, "tool_result")
         assert len(results) == 1
@@ -185,12 +165,8 @@ class TestWriteFile:
 
 
 class TestEditFile:
-    def test_edit_happy(self, test_ws, orch_and_mock):
-        LLMOrchestrator, MockProvider = orch_and_mock
-        mock = MockProvider(scenario="edit_file")
-        orch = LLMOrchestrator(providers={"mock": mock},
-                               default_provider="mock", default_model="mock")
-        events = _run_events(orch, mock, "rename n1 to a")
+    def test_edit_happy(self, test_ws, run_scenario):
+        events = run_scenario("edit_file", "rename n1 to a", tmp=test_ws)
 
         results = _find_events(events, "tool_result")
         assert len(results) == 1
@@ -200,12 +176,8 @@ class TestEditFile:
         assert "def add(a, b):" in content
         assert "def add(n1, n2):" not in content
 
-    def test_edit_not_found(self, test_ws, orch_and_mock):
-        LLMOrchestrator, MockProvider = orch_and_mock
-        mock = MockProvider(scenario="edit_file_not_found")
-        orch = LLMOrchestrator(providers={"mock": mock},
-                               default_provider="mock", default_model="mock")
-        events = _run_events(orch, mock, "replace nonexistent string")
+    def test_edit_not_found(self, test_ws, run_scenario):
+        events = run_scenario("edit_file_not_found", "replace nonexistent string", tmp=test_ws)
 
         results = _find_events(events, "tool_result")
         assert len(results) >= 1
@@ -214,24 +186,16 @@ class TestEditFile:
 
 
 class TestSearchTools:
-    def test_glob_search(self, test_ws, orch_and_mock):
-        LLMOrchestrator, MockProvider = orch_and_mock
-        mock = MockProvider(scenario="glob_search")
-        orch = LLMOrchestrator(providers={"mock": mock},
-                               default_provider="mock", default_model="mock")
-        events = _run_events(orch, mock, "find all python files")
+    def test_glob_search(self, test_ws, run_scenario):
+        events = run_scenario("glob_search", "find all python files", tmp=test_ws)
 
         results = _find_events(events, "tool_result")
         assert len(results) == 1
         assert results[0]["ok"]
         assert "calculator.py" in results[0]["result"] or "fabonacci.py" in results[0]["result"]
 
-    def test_grep_search(self, test_ws, orch_and_mock):
-        LLMOrchestrator, MockProvider = orch_and_mock
-        mock = MockProvider(scenario="grep_search")
-        orch = LLMOrchestrator(providers={"mock": mock},
-                               default_provider="mock", default_model="mock")
-        events = _run_events(orch, mock, "search for def")
+    def test_grep_search(self, test_ws, run_scenario):
+        events = run_scenario("grep_search", "search for def", tmp=test_ws)
 
         results = _find_events(events, "tool_result")
         assert len(results) == 1
@@ -240,34 +204,22 @@ class TestSearchTools:
 
 
 class TestBatchTools:
-    def test_batch_read(self, test_ws, orch_and_mock):
-        LLMOrchestrator, MockProvider = orch_and_mock
-        mock = MockProvider(scenario="batch_read")
-        orch = LLMOrchestrator(providers={"mock": mock},
-                               default_provider="mock", default_model="mock")
-        events = _run_events(orch, mock, "read both files")
+    def test_batch_read(self, test_ws, run_scenario):
+        events = run_scenario("batch_read", "read both files", tmp=test_ws)
 
         results = _find_events(events, "tool_result")
         assert len(results) == 1
         assert results[0]["ok"]
 
-    def test_read_section(self, test_ws, orch_and_mock):
-        LLMOrchestrator, MockProvider = orch_and_mock
-        mock = MockProvider(scenario="read_section")
-        orch = LLMOrchestrator(providers={"mock": mock},
-                               default_provider="mock", default_model="mock")
-        events = _run_events(orch, mock, "find def add in calculator")
+    def test_read_section(self, test_ws, run_scenario):
+        events = run_scenario("read_section", "find def add in calculator", tmp=test_ws)
 
         results = _find_events(events, "tool_result")
         assert len(results) == 1
         assert results[0]["ok"]
 
-    def test_batch_edit(self, test_ws, orch_and_mock):
-        LLMOrchestrator, MockProvider = orch_and_mock
-        mock = MockProvider(scenario="batch_edit")
-        orch = LLMOrchestrator(providers={"mock": mock},
-                               default_provider="mock", default_model="mock")
-        events = _run_events(orch, mock, "rename n1 to x and n2 to y")
+    def test_batch_edit(self, test_ws, run_scenario):
+        events = run_scenario("batch_edit", "rename n1 to x and n2 to y", tmp=test_ws)
 
         results = _find_events(events, "tool_result")
         assert len(results) == 1
@@ -277,12 +229,8 @@ class TestBatchTools:
 
 
 class TestMultiStep:
-    def test_parallel_tools(self, test_ws, orch_and_mock):
-        LLMOrchestrator, MockProvider = orch_and_mock
-        mock = MockProvider(scenario="parallel_two")
-        orch = LLMOrchestrator(providers={"mock": mock},
-                               default_provider="mock", default_model="mock")
-        events = _run_events(orch, mock, "read calculator and list dir")
+    def test_parallel_tools(self, test_ws, run_scenario):
+        events = run_scenario("parallel_two", "read calculator and list dir", tmp=test_ws)
 
         calls = _find_events(events, "tool_call")
         results = _find_events(events, "tool_result")
@@ -300,12 +248,8 @@ class TestMultiStep:
         for r in results:
             assert r["ok"]
 
-    def test_sequential_tools(self, test_ws, orch_and_mock):
-        LLMOrchestrator, MockProvider = orch_and_mock
-        mock = MockProvider(scenario="sequential_list_then_read")
-        orch = LLMOrchestrator(providers={"mock": mock},
-                               default_provider="mock", default_model="mock")
-        events = _run_events(orch, mock, "list then read")
+    def test_sequential_tools(self, test_ws, run_scenario):
+        events = run_scenario("sequential_list_then_read", "list then read", tmp=test_ws)
 
         calls = _find_events(events, "tool_call")
         results = _find_events(events, "tool_result")
@@ -322,12 +266,8 @@ class TestMultiStep:
 
 
 class TestErrorHandling:
-    def test_invalid_tool_name(self, test_ws, orch_and_mock):
-        LLMOrchestrator, MockProvider = orch_and_mock
-        mock = MockProvider(scenario="invalid_tool")
-        orch = LLMOrchestrator(providers={"mock": mock},
-                               default_provider="mock", default_model="mock")
-        events = _run_events(orch, mock, "run unknown tool")
+    def test_invalid_tool_name(self, test_ws, run_scenario):
+        events = run_scenario("invalid_tool", "run unknown tool", tmp=test_ws)
 
         results = _find_events(events, "tool_result")
         assert len(results) >= 1
@@ -336,12 +276,10 @@ class TestErrorHandling:
 
 
 class TestMockProviderInternals:
-    def test_called_with_records(self, test_ws, orch_and_mock):
+    def test_called_with_records(self, test_ws, run_scenario, orch_and_mock):
         LLMOrchestrator, MockProvider = orch_and_mock
         mock = MockProvider(scenario="read_file_happy")
-        orch = LLMOrchestrator(providers={"mock": mock},
-                               default_provider="mock", default_model="mock")
-        _run_events(orch, mock, "test")
+        run_scenario(None, "test", tmp=test_ws, mock=mock)
 
         assert len(mock.called_with) == 2
         for rec in mock.called_with:
@@ -351,27 +289,19 @@ class TestMockProviderInternals:
             assert "returned_response" in rec
             assert "returned_tool_calls" in rec
 
-    def test_custom_stanzas(self, test_ws, orch_and_mock):
-        LLMOrchestrator, MockProvider = orch_and_mock
+    def test_custom_stanzas(self, test_ws, run_scenario):
         custom = [
             {"response": '{"action": "get_workspace_info", "input": ""}', "tool_calls": None},
             {"response": '{"final": "done"}', "tool_calls": None},
         ]
-        mock = MockProvider(stanzas=custom)
-        orch = LLMOrchestrator(providers={"mock": mock},
-                               default_provider="mock", default_model="mock")
-        events = _run_events(orch, mock, "test custom")
+        events = run_scenario(None, "test custom", tmp=test_ws, stanzas=custom)
         results = _find_events(events, "tool_result")
         assert len(results) == 1
         assert results[0]["tool"] == "get_workspace_info"
 
-    def test_debug_trace_written(self, test_ws, orch_and_mock):
-        LLMOrchestrator, MockProvider = orch_and_mock
-        debug_path = str(test_ws / "debug_trace.log")
-        mock = MockProvider(scenario="read_file_happy", debug_path=debug_path)
-        orch = LLMOrchestrator(providers={"mock": mock},
-                               default_provider="mock", default_model="mock")
-        _run_events(orch, mock, "test debug")
+    def test_debug_trace_written(self, test_ws, run_scenario):
+        run_scenario("read_file_happy", "test debug", tmp=test_ws, debug=True)
+        debug_path = str(test_ws / "trace.log")
         assert os.path.exists(debug_path)
         content = open(debug_path).read()
         assert "Generate #0" in content

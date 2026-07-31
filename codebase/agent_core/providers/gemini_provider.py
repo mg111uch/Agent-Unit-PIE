@@ -9,6 +9,8 @@ from __future__ import annotations
 import json
 from typing import Any, Dict, Generator, List, Optional
 
+from agent_core.providers import BaseLLMProvider
+
 
 def _get(obj: Any, attr: str, default: Any = None) -> Any:
     if hasattr(obj, attr):
@@ -109,10 +111,7 @@ def _parse_interaction(res: Any) -> dict[str, Any]:
         "response": output,
         "tool_calls": tool_calls or None,
         "conversation_id": _get(res, "id", None),
-        "usage": {
-            "total_tokens": token_count,
-            "estimated_cost": 0.0,
-        },
+        "usage": self._build_usage_dict(token_count),
     }
 
 
@@ -177,16 +176,12 @@ def _messages_to_steps(
     return steps, sys_inst
 
 
-class GeminiProvider:
+class GeminiProvider(BaseLLMProvider):
     def __init__(self, api_key: str, model: str = "gemini-3.5-flash"):
         from google import genai
         self.client = genai.Client(api_key=api_key)
         self.default_model = model
         self._supports_stateful = True
-
-    @property
-    def supports_stateful(self) -> bool:
-        return True
 
     def generate(
         self,

@@ -12,8 +12,6 @@ from __future__ import annotations
 
 import asyncio
 import importlib
-import json
-import logging
 import os
 import sys
 from pathlib import Path
@@ -35,7 +33,6 @@ from mcp.types import (
 from agent_core.tools import registry
 from agent_core.tools.registry import CAT_FILE, CAT_KERNEL, CAT_SIM, CAT_META, CAT_GIT, CAT_CODE_RAG, CAT_OBSERVER
 from agent_core.loop.executor import _normalize_tool_arg
-from kernel.persistence.db import kernel_db
 
 # Expose kernel, sim, code_rag, and unique file-MCP tools only
 # CAT_FILE (read_file, write_to_file, etc.) kept internal — redundant with opencode built-ins
@@ -76,30 +73,6 @@ def _reload_if_changed():
 server = Server("pie-kernel-sim")
 
 
-def _check_kernel_read(name: str, arguments: dict[str, Any] | None) -> str | None:
-    """Return warning message if this is a Read call on a kernel file, else None."""
-    if name not in ("read_file",):
-        return None
-    if os.environ.get("OVERRIDE_KERNEL_READ") == "1":
-        return None
-    path = (arguments or {}).get("path", "")
-    if not path:
-        return None
-    try:
-        from agent_core.workspace import resolve, WORKSPACE_ROOT
-        resolved = resolve(path)
-        kernel_dir = os.path.join(WORKSPACE_ROOT, "kernel")
-        if not resolved.startswith(kernel_dir):
-            return None
-        logging.warning(f"Read tool called on kernel file: {path} -> {resolved}")
-        return (
-            "WARNING: Use pie_file_api or pie_get_symbol instead of Read "
-            "for indexed kernel files. See AGENTS.md for the Kernel Probing Rules.\n"
-        )
-    except Exception:
-        return None
-
-
 def _build_tool_list() -> list[Tool]:
     mcp_tools = registry.to_mcp_tools(categories=EXPOSED_CATEGORIES)
     return [Tool(**t) for t in mcp_tools]
@@ -114,8 +87,6 @@ async def list_mcp_tools() -> list[Tool]:
 @server.call_tool()
 async def call_mcp_tool(name: str, arguments: dict[str, Any] | None) -> CallToolResult:
     _reload_if_changed()
-
-    kernel_read_warning = _check_kernel_read(name, arguments)
 
     prefix = registry._mcp_prefix
     reg_name = name[len(prefix):] if prefix and name.startswith(prefix) else name
@@ -151,8 +122,6 @@ async def call_mcp_tool(name: str, arguments: dict[str, Any] | None) -> CallTool
         if isinstance(result, TR):
             if result.ok:
                 text = result.data
-                if kernel_read_warning:
-                    text = kernel_read_warning + text
                 result_text = text
                 return CallToolResult(
                     content=[TextContent(type="text", text=text)]
@@ -166,8 +135,6 @@ async def call_mcp_tool(name: str, arguments: dict[str, Any] | None) -> CallTool
                 )
         else:
             text = str(result)
-            if kernel_read_warning:
-                text = kernel_read_warning + text
             result_text = text
             return CallToolResult(
                 content=[TextContent(type="text", text=text)]
@@ -182,6 +149,7 @@ async def call_mcp_tool(name: str, arguments: dict[str, Any] | None) -> CallTool
     finally:
         duration_ms = (time.time() - t0) * 1000
         try:
+            from kernel.persistence.db import kernel_db
             kernel_db.record_tool_call(reg_name, duration_ms, is_error, len(result_text))
             if is_error:
                 kernel_db.save_generic_memory(

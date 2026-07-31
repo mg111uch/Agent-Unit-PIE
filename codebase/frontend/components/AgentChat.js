@@ -1,16 +1,22 @@
+function prettyJSON(val) {
+  if (val == null) return ''
+  if (typeof val === 'object') {
+    try { return JSON.stringify(val, null, 2) } catch (_) { return String(val) }
+  }
+  try { return JSON.stringify(JSON.parse(val), null, 2) }
+  catch (_) { return String(val) }
+}
+
+function sanitizeMarkdown(text) {
+  if (!text) return ''
+  return DOMPurify.sanitize(marked.parse(String(text)))
+}
+
 AgentComponents.CopyButton = {
   template: '#copy-button-tmpl',
   props: ['text', 'toolCalls'],
   setup(props) {
     const copied = Vue.ref(false)
-    function pretty(val) {
-      if (val == null) return ''
-      if (typeof val === 'object') {
-        try { return JSON.stringify(val, null, 2) } catch (_) { return String(val) }
-      }
-      try { return JSON.stringify(JSON.parse(val), null, 2) }
-      catch (_) { return String(val) }
-    }
     function _copyFallback(txt) {
       const ta = document.createElement('textarea')
       ta.value = txt
@@ -25,7 +31,7 @@ AgentComponents.CopyButton = {
       let txt = props.text || ''
       if (props.toolCalls && props.toolCalls.length) {
         txt += '\n\n' + props.toolCalls.map(t =>
-          `[${t.tool}]\nInput: ${pretty(t.input)}\nResult: ${pretty(t.result)}`
+          `[${t.tool}]\nInput: ${prettyJSON(t.input)}\nResult: ${prettyJSON(t.result)}`
         ).join('\n')
       }
       if (navigator.clipboard && navigator.clipboard.writeText) {
@@ -48,17 +54,8 @@ AgentComponents.ToolCallCard = {
     Vue.watch(() => props.toolCall?.result, (val) => {
       if (val) expanded.value = true
     }, { immediate: true })
-    function formatValue(val) {
-      if (val == null) return ''
-      if (typeof val === 'object') {
-        try { return JSON.stringify(val, null, 2) } catch (_) { return String(val) }
-      }
-      try { return JSON.stringify(JSON.parse(val), null, 2) }
-      catch (_) { return String(val) }
-    }
-    function formatInput(input) { return formatValue(input) }
-    function formatResult(result) { return formatValue(result) }
-    return { expanded, formatInput, formatResult }
+    function formatInput(input) { return prettyJSON(input) }
+    return { expanded, formatInput, renderResult: sanitizeMarkdown }
   }
 }
 
@@ -99,6 +96,6 @@ AgentComponents.AgentChat = {
       return '$' + Number(cost).toFixed(6)
     }
 
-    return { store, scrollRef, anchorRef, suggestions, send, onQuestionSubmit, groupedToolCalls, formatCost }
+    return { store, scrollRef, anchorRef, suggestions, send, onQuestionSubmit, groupedToolCalls, formatCost, renderMarkdown: sanitizeMarkdown }
   }
 }

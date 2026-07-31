@@ -134,4 +134,4 @@ def minimal_context_dump(params: dict) -> str:
     except OSError as e:
         return f"Error writing output: {e}"
 
-    return json.dumps(summary, indent=2)
+    return json.dumps(summary, separators=(",", ":"))

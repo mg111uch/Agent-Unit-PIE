@@ -12,6 +12,8 @@ import json
 import uuid
 from typing import Dict, Any, Optional, List, Generator
 
+from agent_core.providers import BaseLLMProvider
+
 
 def _convert_messages_to_openai(
     messages: List[Dict[str, Any]],
@@ -73,7 +75,7 @@ def _convert_messages_to_openai(
     return oai_messages
 
 
-class OpenRouterProvider:
+class OpenRouterProvider(BaseLLMProvider):
     def __init__(self, api_key: str, model: str = "openai/gpt-oss-20b:free"):
         from openai import OpenAI
         self.client = OpenAI(
@@ -81,7 +83,6 @@ class OpenRouterProvider:
             api_key=api_key,
         )
         self.default_model = model
-        self._supports_stateful = False
 
     def generate(
         self,
@@ -145,15 +146,8 @@ class OpenRouterProvider:
             "response": response_text if response_text is not None else "",
             "tool_calls": structured_calls,
             "conversation_id": None,
-            "usage": {
-                "total_tokens": token_count,
-                "estimated_cost": 0.0,
-            },
+            "usage": self._build_usage_dict(token_count),
         }
-
-    @property
-    def supports_stateful(self) -> bool:
-        return False
 
     def generate_stream(
         self,

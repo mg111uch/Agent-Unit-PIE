@@ -4,8 +4,10 @@ import urllib.request
 import urllib.error
 from typing import Any, Dict, Generator, List, Optional
 
+from agent_core.providers import BaseLLMProvider
 
-class OllamaProvider:
+
+class OllamaProvider(BaseLLMProvider):
     def __init__(
         self,
         model: str = "gemma-2-2b-it",
@@ -15,10 +17,6 @@ class OllamaProvider:
         self.default_model = model
         self.endpoint = endpoint.rstrip("/")
         self.timeout = timeout
-
-    @property
-    def supports_stateful(self) -> bool:
-        return False
 
     def _call_ollama(self, payload: dict) -> dict:
         url = f"{self.endpoint}/api/chat"
@@ -96,7 +94,7 @@ class OllamaProvider:
                 "response": "",
                 "tool_calls": None,
                 "conversation_id": conversation_id,
-                "usage": {"total_tokens": 0, "estimated_cost": 0.0},
+                "usage": self._build_usage_dict(0),
                 "error": f"ollama connection failed: {e}",
                 "latency_seconds": round(time.time() - started, 3),
             }
@@ -110,10 +108,7 @@ class OllamaProvider:
             "response": content,
             "tool_calls": tool_calls,
             "conversation_id": conversation_id,
-            "usage": {
-                "total_tokens": sum(usage_raw),
-                "estimated_cost": 0.0,
-            },
+            "usage": self._build_usage_dict(sum(usage_raw)),
             "latency_seconds": round(time.time() - started, 3),
         }
 

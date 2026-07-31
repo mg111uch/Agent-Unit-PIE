@@ -22,7 +22,7 @@ def serialize_tool_input(tool_input: Any) -> str:
     if isinstance(tool_input, str):
         return tool_input
     try:
-        return json.dumps(tool_input, ensure_ascii=False, indent=2)
+        return json.dumps(tool_input, ensure_ascii=False, separators=(",", ":"))
     except (TypeError, ValueError):
         return str(tool_input)
 

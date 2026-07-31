@@ -79,7 +79,7 @@ def resolve_active_tool_packs() -> list[str]:
         return [k for k, v in config_packs.items() if v]
     if isinstance(config_packs, list):
         return config_packs
-    return ["file", "kernel", "sim", "meta", "git", "debate"]
+    return ["file"]
 
 
 def resolve_active_provider() -> str:

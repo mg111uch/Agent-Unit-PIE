@@ -26,6 +26,7 @@ class CodeRAG:
         if self._conn is None:
             self._conn = sqlite3.connect(str(self.db_path))
             self._conn.row_factory = sqlite3.Row
+            self._conn.execute("PRAGMA busy_timeout=5000")
         return self._conn
 
     def ensure_indexed(self) -> bool:
@@ -72,20 +73,24 @@ class CodeRAG:
             "matches": result,
         }
 
-    def get_symbols(self, names: List[str], file_path: Optional[str] = None) -> List[Dict[str, Any]]:
+    def _query_symbols(self, select_cols: str, names: List[str],
+                       file_path: Optional[str] = None) -> List[Dict[str, Any]]:
         conn = self._get_conn()
         placeholders = ",".join("?" * len(names))
         if file_path:
             cur = conn.execute(
-                f"SELECT * FROM symbols WHERE symbol_name IN ({placeholders}) AND file_path = ?",
+                f"SELECT {select_cols} FROM symbols WHERE symbol_name IN ({placeholders}) AND file_path = ?",
                 (*names, file_path)
             )
         else:
             cur = conn.execute(
-                f"SELECT * FROM symbols WHERE symbol_name IN ({placeholders})",
+                f"SELECT {select_cols} FROM symbols WHERE symbol_name IN ({placeholders})",
                 names
             )
         return [dict(r) for r in cur.fetchall()]
+
+    def get_symbols(self, names: List[str], file_path: Optional[str] = None) -> List[Dict[str, Any]]:
+        return self._query_symbols("*", names, file_path)
 
     def search_symbols(self, query: str = "", type_filter: Optional[str] = None,
                        top_k: int = 10, queries: Optional[List[str]] = None) -> List[Dict[str, Any]]:
@@ -122,6 +127,34 @@ class CodeRAG:
         cur = conn.execute(sql, params)
         return [dict(r) for r in cur.fetchall()]
 
+    @staticmethod
+    def _build_call_cte(direction: str, limit: int = 50) -> str:
+        if direction == "callers":
+            return f"""
+                WITH RECURSIVE callers(n) AS (
+                    SELECT source_id FROM call_edges WHERE target_id = ?
+                    UNION
+                    SELECT ce.source_id FROM call_edges ce
+                    JOIN callers c ON ce.target_id = c.n
+                    WHERE c.n != ce.source_id
+                )
+                SELECT DISTINCT s.* FROM symbols s
+                JOIN callers c ON s.id = c.n
+                LIMIT {limit}
+            """
+        return f"""
+            WITH RECURSIVE callees(n) AS (
+                SELECT target_id FROM call_edges WHERE source_id = ?
+                UNION
+                SELECT ce.target_id FROM call_edges ce
+                JOIN callees c ON ce.source_id = c.n
+                WHERE c.n != ce.target_id
+            )
+            SELECT DISTINCT s.* FROM symbols s
+            JOIN callees c ON s.id = c.n
+            LIMIT {limit}
+        """
+
     def get_callers_callees(self, name: str, file_path: Optional[str] = None,
                             depth: int = 1, direction: str = "both") -> Dict[str, Any]:
         symbol = self.get_symbol(name, file_path)
@@ -132,57 +165,19 @@ class CodeRAG:
         result: Dict[str, Any] = {"symbol": symbol, "callers": [], "callees": []}
         conn = self._get_conn()
         if direction in ("callers", "both"):
-            sql = """
-                WITH RECURSIVE callers(n) AS (
-                    SELECT source_id FROM call_edges WHERE target_id = ?
-                    UNION
-                    SELECT ce.source_id FROM call_edges ce
-                    JOIN callers c ON ce.target_id = c.n
-                    WHERE c.n != ce.source_id
-                )
-                SELECT DISTINCT s.* FROM symbols s
-                JOIN callers c ON s.id = c.n
-                LIMIT 50
-            """
-            cur = conn.execute(sql, (symbol["id"],))
+            cur = conn.execute(self._build_call_cte("callers"), (symbol["id"],))
             result["callers"] = [dict(r) for r in cur.fetchall()]
         if direction in ("callees", "both"):
-            sql = """
-                WITH RECURSIVE callees(n) AS (
-                    SELECT target_id FROM call_edges WHERE source_id = ?
-                    UNION
-                    SELECT ce.target_id FROM call_edges ce
-                    JOIN callees c ON ce.source_id = c.n
-                    WHERE c.n != ce.target_id
-                )
-                SELECT DISTINCT s.* FROM symbols s
-                JOIN callees c ON s.id = c.n
-                LIMIT 50
-            """
-            cur = conn.execute(sql, (symbol["id"],))
+            cur = conn.execute(self._build_call_cte("callees"), (symbol["id"],))
             result["callees"] = [dict(r) for r in cur.fetchall()]
         return result
 
+    _META_COLS = ("symbol_name, symbol_type, file_path, parent_name, "
+                  "signature, docstring, token_count, risk_level, entry_point, "
+                  "start_line, end_line")
+
     def get_symbols_meta(self, names: List[str], file_path: Optional[str] = None) -> List[Dict[str, Any]]:
-        conn = self._get_conn()
-        placeholders = ",".join("?" * len(names))
-        if file_path:
-            cur = conn.execute(
-                f"SELECT symbol_name, symbol_type, file_path, parent_name, "
-                f"signature, docstring, token_count, risk_level, entry_point, "
-                f"start_line, end_line FROM symbols "
-                f"WHERE symbol_name IN ({placeholders}) AND file_path = ?",
-                (*names, file_path)
-            )
-        else:
-            cur = conn.execute(
-                f"SELECT symbol_name, symbol_type, file_path, parent_name, "
-                f"signature, docstring, token_count, risk_level, entry_point, "
-                f"start_line, end_line FROM symbols "
-                f"WHERE symbol_name IN ({placeholders})",
-                names
-            )
-        return [dict(r) for r in cur.fetchall()]
+        return self._query_symbols(self._META_COLS, names, file_path)
 
     def find_impact(self, name: str, file_path: Optional[str] = None) -> List[Dict[str, Any]]:
         symbol = self.get_symbol(name, file_path)
@@ -191,19 +186,7 @@ class CodeRAG:
         if "matches" in symbol:
             return []
         conn = self._get_conn()
-        sql = """
-            WITH RECURSIVE callers(n) AS (
-                SELECT source_id FROM call_edges WHERE target_id = ?
-                UNION
-                SELECT ce.source_id FROM call_edges ce
-                JOIN callers c ON ce.target_id = c.n
-                WHERE c.n != ce.source_id
-            )
-            SELECT DISTINCT s.* FROM symbols s
-            JOIN callers c ON s.id = c.n
-            LIMIT 100
-        """
-        cur = conn.execute(sql, (symbol["id"],))
+        cur = conn.execute(self._build_call_cte("callers", limit=100), (symbol["id"],))
         return [dict(r) for r in cur.fetchall()]
 
     def batch_file_api(self, paths: List[str]) -> Dict[str, Any]:

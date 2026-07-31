@@ -46,18 +46,41 @@ agent_core/
 
 All tools support **native function calling** (JSON Schema via `tools/schemas.py`) with text-JSON fallback. Tools return structured `ToolResult` objects internally (ok/error_type/message/suggestion) serialized to strings for the model.
 
+### Approximate size of the tool schemas sent each turn
+
+Measured programmatically (JSON-serialized with 2-space indent):
+
+| Format | Estimated tokens |
+|---|---|
+| **OpenAI-style** (all 58 tools) | **~10,828** |
+| **Gemini-style** (all 58 tools) | **~10,838** |
+
+**Per-tool breakdown (range):** Smallest = `todo_read` (193 chars), Largest = `expand_topic` (1,720 chars). Most tools are 300–900 chars.
+
+**Per-category breakdown (OpenAI format):**
+
+| Category | Tools | Chars | Est. tokens |
+|---|---|---|---|
+| `code_rag` (20 tools) | 20 | 15,132 | ~3,783 |
+| `file` (10 tools) | 10 | 7,745 | ~1,936 |
+| `meta` (8 tools) | 8 | 5,653 | ~1,413 |
+| `kernel` (6 tools) | 6 | 5,664 | ~1,416 |
+| `debate` (2 tools) | 2 | 3,263 | ~815 |
+| `sim` (4 tools) | 4 | 2,127 | ~531 |
+| `git` (4 tools) | 4 | 1,998 | ~499 |
+| `observer` (4 tools) | 4 | 1,747 | ~436 |
+
 ### File Operations
 | Tool | Purpose |
 |------|---------|
-| `read_file` | Read file (returns line-numbered output; lists nearby files on error) |
+| `read_file` | Read file (returns line-numbered output; lists nearby files on error) ; **batch_read mode** via `paths=[...]` — reads multiple files in one call, each with optional own `offset`/`limit`/`line_numbers`; **auto-cache hook** — if file unchanged since last read, return `(cached: 544 lines)` instead of full content|
 | `list_files` | List directory (recursive, depth-capped, skips noise dirs) |
 | `write_to_file` | Write file (create/overwrite/append modes — no patch mode) |
-| `edit_file` | Targeted replacement (unique old_string → new_string; rejects 0/>1 matches; shows diff) |
+| `edit_file` | Targeted replacement (unique old_string → new_string; rejects 0/>1 matches; shows diff) ; **batch_edit mode** via `edits=[...]` - apply sequentially with per-file checkpoint + cache invalidation; `replace_all` for bulk renames|
 | `execute_command` | Run shell (configurable allowlist via config.json) |
 | `glob_search` | Find files by glob pattern (`**/*.py`, `src/**/*.ts`) |
 | `grep_search` | Search file contents by regex (uses ripgrep if available) |
-| `todo_write` | Create/update a task plan (actions: create, update, mark_done, clear) |
-| `todo_read` | Read the current task plan |
+| `todo` | Manage task plan (actions: read, create, update, mark_done, clear) |
 | `ask_user_question` | Ask the user for input/clarification with up to 3 options per question (a custom text option is always added). Multiple questions can be asked at once — the user sees them one by one with a progress bar. Tool blocks until all answers are submitted. |
 
 ### Meta Tools
@@ -65,12 +88,12 @@ All tools support **native function calling** (JSON Schema via `tools/schemas.py
 |------|---------|
 | `check_path_exists` | Path to check, relative to workspace root |
 | `get_workspace_info` | Ground-truth: root path + top-level entries |
-| `batch_read` | Read multiple non-kernel files in one call (warns on kernel files) — faster than sequential `read_file` calls |
-| `batch_edit` | Apply multiple string replacements to a file in one call. Each edit is applied sequentially. |
+| `file_diff` | Verify edits by seeing 5 changed lines instead of re-reading the full file |
 | `read_section` | Read file content around a regex pattern match |
 | `undo_last_edit` | Restore the most recent checkpoint for a file |
 | `checkpoint_info` | List available checkpoints |
 | `run_tests` | Discover and run tests using pytest or unittest |
+| `subagent_task` | Spawns a full agent loop with its own context, Returns the sub-agent's final answer |
 
 ### Code RAG Tools (from codebase atlas, separate `code_rag` category)
 | Tool | Purpose |

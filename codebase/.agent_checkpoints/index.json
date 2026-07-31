@@ -70,5 +70,17 @@
     "checkpoint": "temp__dummy__fibo__fibonacci.py__182f415840b6.ckpt",
     "hash": "182f415840b6223ecc62464d5d470962",
     "timestamp": 1785161203.783136
+  },
+  {
+    "file": "temp_dedup_smoke.py",
+    "checkpoint": "temp_dedup_smoke.py__e09e1f2d9b47.ckpt",
+    "hash": "e09e1f2d9b47e244064ce60840f9248c",
+    "timestamp": 1785478937.4093962
+  },
+  {
+    "file": "temp_dedup_smoke.py",
+    "checkpoint": "temp_dedup_smoke.py__aa6cebbfe820.ckpt",
+    "hash": "aa6cebbfe82052b6b6a1cb651b6084ec",
+    "timestamp": 1785478958.5919764
   }
 ]
