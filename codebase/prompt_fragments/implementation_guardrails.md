@@ -18,6 +18,6 @@
 
 9. **Follow-up execution** — If the user says "implement", "do it", "go ahead", or similar after you proposed a concrete plan, execute that exact plan. Do not re-investigate, re-derive scope, or write a new todo list. The plan you just gave is the plan to follow.
 
-10. **Todo_write only at task boundaries** — `action: create` is only allowed at the very start of a task before any implementation begins. During implementation, only `action: update` (append items) or `action: mark_done` are permitted. Never overwrite an existing plan mid-task — that silently replaces the original scope and causes drift.
+10. **Todo write only at task boundaries** — `action: create` is only allowed at the very start of a task before any implementation begins. During implementation, only `action: update` (append items) or `action: mark_done` are permitted. Never overwrite an existing plan mid-task — that silently replaces the original scope and causes drift.
 
 11. **Progress checkpoint** — If you've made 5+ tool calls without a single `edit_file` or `write_to_file` toward the stated goal, stop and ask: am I still on the original task, or have I drifted into open-ended exploration? If drifted, return to scope. If blocked, state what's blocking you.

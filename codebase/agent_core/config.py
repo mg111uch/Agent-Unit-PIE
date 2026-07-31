@@ -32,12 +32,18 @@ ALLOWED_COMMANDS: list[str] = _CONFIG.get("allowed_commands", [
     "pip", "pip3", "node", "npm", "npx", "git",
 ])
 
+TOOL_MODES: dict[str, set[str]] = {
+    "read_only": {"read_file", "list_files", "glob_search", "grep_search"},
+    "shell_only": {"execute_command"},
+}
+
 GIT_TOOLS_ENABLED: bool = _CONFIG.get("git_tools_enabled", False)
 ENABLE_CHECKPOINTS: bool = _CONFIG.get("enable_checkpoints", False)
 MAX_CHECKPOINTS: int = _CONFIG.get("max_checkpoints", 50)
 AGENTS_MD_ENABLED: bool = _CONFIG.get("agents_md_enabled", False)
 EXCLUDE_DIRS: list[str] = _CONFIG.get("exclude_dirs", [])
 SANDBOX_ENABLED: bool = _CONFIG.get("sandbox_enabled", False)
+POST_EDIT_IMPORT_CHECK: bool = _CONFIG.get("post_edit_import_check", True)
 SECRETS_PATTERNS: list[str] = _CONFIG.get("secrets_patterns", [])
 RATE_LIMIT_LLM_CALLS: int = _CONFIG.get("rate_limits", {}).get("llm_calls_per_minute", 10)
 RATE_LIMIT_TOOL_WRITES: int = _CONFIG.get("rate_limits", {}).get("tool_writes_per_minute", 30)
@@ -80,6 +86,17 @@ def resolve_active_tool_packs() -> list[str]:
     if isinstance(config_packs, list):
         return config_packs
     return ["file"]
+
+
+def resolve_active_tool_mode() -> str:
+    return os.getenv("AGENT_TOOL_MODE", _CONFIG.get("tool_mode", "all"))
+
+
+def resolve_active_tool_names() -> set[str]:
+    mode = resolve_active_tool_mode()
+    if mode == "all":
+        return set()
+    return set(TOOL_MODES.get(mode, set()))
 
 
 def resolve_active_provider() -> str:

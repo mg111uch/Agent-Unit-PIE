@@ -14,6 +14,8 @@ from agent_core.tools.meta_ops import (
     get_workspace_info,
     read_section_tool,
     check_path_exists,
+    cross_file_edit,
+    check_before_edit,
 )
 from agent_core.tools.test_ops import (
     run_tests,
@@ -55,6 +57,7 @@ from agent_core.tools.code_rag import (
 from agent_core.tools.question_ops import ask_user_question, todo
 from agent_core.tools.diff_ops import file_diff
 from agent_core.tools.search_ops import glob_search, grep_search
+from agent_core.tools.ast_ops import file_skeleton, who_imports
 from agent_core.tools.context_dump import minimal_context_dump
 from agent_core.tools.registry import (
     ToolRegistry, CAT_FILE, CAT_KERNEL, CAT_SIM, CAT_META, CAT_GIT, CAT_OBSERVER, CAT_CODE_RAG, CAT_DEBATE,
@@ -140,10 +143,11 @@ def _register_file_tools(reg, tc):
         params=derive_schema(glob_search, {"pattern": "Glob pattern to match files against, relative to workspace root"}),
         mcp_expose=False)
     reg.register("grep_search", tc(grep_search),
-        description="Search file contents by regex across the workspace",
+        description="Search file contents by regex across the workspace. Optionally pass context_lines=N to return N surrounding lines per match (default 0 — match lines only).",
         params={"pattern": str_p("Regex pattern to search for in file contents", req=True),
                 "include": str_p("Optional file glob filter (e.g. '*.py' or '*.{py,ts}')"),
-                "max_results": int_p("Max results to return (default 50)")},
+                "context_lines": int_p("Lines of context before/after each match (default 0)"),
+                "max_results": int_p("Max result lines to return (default 50)")},
         mcp_expose=False)
     reg.register("todo", tc(todo),
         description="Manage a task plan. Actions: read (show current plan), create (new plan), update (append items), mark_done (complete tasks by id), clear.",
@@ -157,6 +161,17 @@ def _register_file_tools(reg, tc):
                                   "question": {"type": "string", "description": "The question text"},
                                   "options": {"type": "array", "items": {"type": "string"}, "description": "Up to 3 predefined answer choices"}},
                               "additionalProperties": False}}})
+
+
+def _register_ast_tools(reg, tc):
+    reg.set_default_category(CAT_META)
+
+    reg.register("file_skeleton", tc(file_skeleton),
+        description="Compact structural map of a file via AST: imports (eager/lazy), globals, classes and functions with signatures + line ranges — ~10% of a full read. Atlas-free and always fresh, unlike file_api (atlas-indexed). Use for orientation before reading full files. Accepts a single path string or a list.",
+        params={"paths": arr_p("string", "Single path string or list of file paths (relative to workspace root) to skeletonize", req=True)})
+    reg.register("who_imports", tc(who_imports),
+        description="Module-level import graph for a file: what it imports (eager vs lazy) and which workspace files import it (resolved including relative imports). Complements symbol-level get_callers_callees. Use to find consumers/blast radius before editing. Accepts a single path string or a list.",
+        params={"paths": arr_p("string", "Single path string or list of file paths (relative to workspace root) to analyze", req=True)})
 
 
 def _register_meta_tools(reg, tc):
@@ -196,6 +211,22 @@ def _register_meta_tools(reg, tc):
                 "provider": str_p("Optional provider override (default: active provider)"),
                 "model": str_p("Optional model override (default: active model)"),
                 "max_steps": int_p("Max steps for sub-agent loop (default 15)")})
+    reg.register("cross_file_edit", tc(cross_file_edit),
+        description="Apply edits across MULTIPLE files in one call — each entry has its own path. Unlike edit_file(edits=[...]) which is single-file only. input_data = {\"edits\": [{\"path\", \"old_string\", \"new_string\", optional replace_all}, ...]}. Returns per-edit status + summary.",
+        params={"edits": {"t": "array", "desc": "Edits to apply across files", "r": True,
+                          "items": {"type": "object", "properties": {
+                              "path": {"type": "string", "description": "File path relative to workspace root"},
+                              "old_string": {"type": "string", "description": "Exact existing text to replace"},
+                              "new_string": {"type": "string", "description": "Replacement text"},
+                              "replace_all": {"type": "boolean", "description": "If true, replace all occurrences (default: replace first only)"}},
+                          "additionalProperties": False}}})
+    reg.register("check_before_edit", tc(check_before_edit),
+        description="Read-only dry-run: verify planned edit targets WOULD match exactly once BEFORE applying. Returns per-edit: OK (match at line N), NO MATCH (+ closest line), or MULTIPLE (match lines). Use before cross_file_edit or edit_file batches to avoid batch-failure recovery cycles. Does not modify files.",
+        params={"edits": {"t": "array", "desc": "Edit targets to validate", "r": True,
+                          "items": {"type": "object", "properties": {
+                              "path": {"type": "string", "description": "File path relative to workspace root"},
+                              "old_string": {"type": "string", "description": "Exact text the edit would look for"}},
+                          "additionalProperties": False}}})
 def _register_debate_tools(reg, tc):
     reg.set_default_category(CAT_DEBATE)
     try:
@@ -434,6 +465,7 @@ def _register_all():
     _tc = tool_call
     _reg = registry
     _register_file_tools(_reg, _tc)
+    _register_ast_tools(_reg, _tc)
     _register_meta_tools(_reg, _tc)
     _register_git_tools(_reg, _tc)
     _register_kernel_tools(_reg, _tc)

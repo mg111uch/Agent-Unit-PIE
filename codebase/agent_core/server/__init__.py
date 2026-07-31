@@ -25,7 +25,9 @@ from agent_core.config import (
     SERVER_STEP_DELAY,
     get_provider_catalog,
     resolve_active_provider,
+    resolve_active_tool_mode,
     resolve_active_tool_packs,
+    resolve_active_tool_names,
     resolve_default_model,
     RATE_LIMIT_LLM_CALLS,
     RATE_LIMIT_TOOL_WRITES,
@@ -54,7 +56,10 @@ from agent_core.planning.local_planner import LocalPlanner
 if DEBUG_DUMP_ENABLED:
     open(os.path.join(CODEBASE_ROOT, "tui_output.txt"), "w").close()
 
-ACTIVE_TOOLS_DICT = registry.get_tools(categories=resolve_active_tool_packs())
+ACTIVE_TOOLS_DICT = registry.get_tools(
+    categories=resolve_active_tool_packs(),
+    names=resolve_active_tool_names() or None,
+)
 
 active_provider = resolve_active_provider()
 active_model = resolve_default_model(active_provider)
@@ -90,7 +95,10 @@ log_output(
     f"registered={sorted(_registered_names)}"
 )
 
-SYSTEM_PROMPT = load_system_prompt(active_packs=resolve_active_tool_packs())
+SYSTEM_PROMPT = load_system_prompt(
+    active_packs=resolve_active_tool_packs(),
+    mode=resolve_active_tool_mode(),
+)
 workspace_root = WORKSPACE_ROOT
 conversations: dict[str, Optional[str]] = {}
 msg_store = MessageStore()

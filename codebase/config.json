@@ -45,6 +45,7 @@
   "agents_md_enabled": true,
   "exclude_dirs": [".git", ".agent_checkpoints", ".pytest_cache", ".adk", "node_modules", "__pycache__", ".venv", "children"],
   "sandbox_enabled": false,
+  "post_edit_import_check": true,
   "codebase_atlas_dir": "../atlas_output",
   "secrets_patterns": [
     "sk-[A-Za-z0-9]{15,}",
@@ -56,6 +57,7 @@
   "debug_dump_append_mode": true,
   "debug_dump_enabled": true,
   "git_tools_enabled": false,
+  "tool_mode": "all",  
   "tool_packs": {
     "file": true,
     "meta": false,

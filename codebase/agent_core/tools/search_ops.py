@@ -36,16 +36,31 @@ def glob_search(pattern: str = "", **kwargs) -> ToolResult:
         return ToolResult(ok=False, message=f"globbing '{pattern}': {e}")
 
 
+def _relativize_line(line: str) -> str:
+    """Rewrite a leading WORKSPACE_ROOT path to relative in an rg line.
+
+    Handles both match lines (`path:12:content`) and context lines
+    (`path:12-content` / `path-12-content`).
+    """
+    m = re.match(r"^(.*?)[:\-]\d+[:\-]", line)
+    if m and m.group(1).startswith(WORKSPACE_ROOT):
+        rel = os.path.relpath(m.group(1), WORKSPACE_ROOT)
+        return rel + line[len(m.group(1)):]
+    return line
+
+
 def grep_search(input_data) -> ToolResult:
     """Search file contents by regex across the workspace.
     
-    input_data = {"pattern": "...", "include": "*.py", "max_results": 50}
+    input_data = {"pattern": "...", "include": "*.py", "context_lines": 2, "max_results": 50}
+    context_lines>0 returns that many surrounding lines per match (opt-in, default 0).
     Uses ripgrep (rg) if available, falls back to Python regex walk.
     """
     try:
         data = _parse_arg(input_data)
         pattern = data.get("pattern", "")
         include = data.get("include", "")
+        context_lines = max(0, int(data.get("context_lines", 0)))
         max_results = int(data.get("max_results", 50))
 
         if not pattern:
@@ -66,20 +81,15 @@ def grep_search(input_data) -> ToolResult:
                     cmd.extend(["--glob", include])
                 for d in EXCLUDE_DIRS:
                     cmd.extend(["--glob", f"!{d}/**", "--glob", f"!{d}"])
+                if context_lines > 0:
+                    cmd.extend(["-C", str(context_lines)])
                 cmd.extend(["-m", str(max_results), pattern, WORKSPACE_ROOT])
                 result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
                 if result.returncode == 0 and result.stdout.strip():
-                    lines = result.stdout.strip().splitlines()
-                    relative_lines = []
-                    for line in lines:
-                        abs_path = line.split(":", 1)[0] if ":" in line else ""
-                        if abs_path and abs_path.startswith(WORKSPACE_ROOT):
-                            rel = os.path.relpath(abs_path, WORKSPACE_ROOT)
-                            line = rel + line[len(abs_path):]
-                        relative_lines.append(line)
+                    relative_lines = [_relativize_line(line) for line in result.stdout.strip().splitlines()]
                     out = "\n".join(relative_lines[:max_results])
                     if len(relative_lines) > max_results:
-                        out += f"\n... ({len(relative_lines) - max_results} more matches)"
+                        out += f"\n... ({len(relative_lines) - max_results} more lines)"
                     return ToolResult(ok=True, data=out)
             except (FileNotFoundError, subprocess.TimeoutExpired):
                 pass
@@ -95,13 +105,26 @@ def grep_search(input_data) -> ToolResult:
                     continue
                 fpath = os.path.join(root, fname)
                 try:
+                    rel = os.path.relpath(fpath, WORKSPACE_ROOT)
                     with open(fpath, "r", encoding="utf-8", errors="replace") as f:
-                        for i, line in enumerate(f, 1):
-                            if pattern_re.search(line):
-                                rel = os.path.relpath(fpath, WORKSPACE_ROOT)
-                                matches.append(f"{rel}:{i}:{line.rstrip()[:200]}")
+                        if context_lines > 0:
+                            lines = f.readlines()
+                            for i, line in enumerate(lines):
+                                if not pattern_re.search(line):
+                                    continue
+                                start = max(0, i - context_lines)
+                                end = min(len(lines), i + context_lines + 1)
+                                for j in range(start, end):
+                                    sep = ":" if j == i else "-"
+                                    matches.append(f"{rel}:{j+1}{sep}{lines[j].rstrip()[:200]}")
                                 if len(matches) >= max_results:
                                     break
+                        else:
+                            for i, line in enumerate(f, 1):
+                                if pattern_re.search(line):
+                                    matches.append(f"{rel}:{i}:{line.rstrip()[:200]}")
+                                    if len(matches) >= max_results:
+                                        break
                 except Exception:
                     continue
                 if len(matches) >= max_results:
@@ -111,7 +134,7 @@ def grep_search(input_data) -> ToolResult:
             return ToolResult(ok=True, data=f"No matches for pattern: {pattern}")
         out = "\n".join(matches[:max_results])
         if len(matches) > max_results:
-            out += f"\n... ({len(matches) - max_results} more matches)"
+            out += f"\n... ({len(matches) - max_results} more lines)"
         return ToolResult(ok=True, data=out)
     except Exception as e:
         return ToolResult(ok=False, message=f"grep_search error: {e}")

@@ -10,6 +10,7 @@ from typing import Any, Generator, List, Optional
 from agent_core.config import (
     COMPACTION_TRIGGER_CHARS,
     CONTEXT_DIGEST_ENABLED,
+    resolve_active_tool_names,
     resolve_active_tool_packs,
 )
 from agent_core.context import retrieve_kernel_context
@@ -143,7 +144,11 @@ def _iter_agent_events_body(
         current_input=current_input,
     )
 
-    _cached_schemas = registry.get_schemas(provider_name=provider, categories=tool_categories)
+    _cached_schemas = registry.get_schemas(
+        provider_name=provider,
+        categories=tool_categories,
+        names=resolve_active_tool_names() or None,
+    )
     _debug_dump("NEW TURN",
         provider=provider,
         model=model,

@@ -33,6 +33,7 @@ agent_core/
 | Provider Switching | Swap LLM provider/model at runtime via API |
 | Local Model Routing | Route simple file/meta tool calls to a local FunctionGemma model via Ollama; fall back to cloud for complex reasoning — configurable via `local_model` in config.json |
 | Tool Pack Filtering | Enable/disable tool categories via env or config.json |
+| Tool Mode | Restrict active tools by preset via `tool_mode` in config.json: `all` (no filtering), `read_only` (read_file, list_files, glob_search, grep_search), `shell_only` (execute_command) — enforced on schemas shown to the model and on execution |
 | MCP Integration | Expose kernel + simulation + code_rag tools to any MCP host (Claude Code, Cursor, opencode) |
 | Code RAG | SQLite-based symbol search + call graph from codebase atlas output |
 | Hot-Reload | Auto-detect file changes to tool modules and reload without restart |
@@ -88,12 +89,16 @@ Measured programmatically (JSON-serialized with 2-space indent):
 |------|---------|
 | `check_path_exists` | Path to check, relative to workspace root |
 | `get_workspace_info` | Ground-truth: root path + top-level entries |
-| `file_diff` | Verify edits by seeing 5 changed lines instead of re-reading the full file |
+| `file_diff` | Verify edits by seeing 5 changed lines instead of re-reading the full file; tracks all changes regardless of git |
 | `read_section` | Read file content around a regex pattern match |
-| `undo_last_edit` | Restore the most recent checkpoint for a file |
+| `undo_last_edit` | Restore the most recent checkpoint for a file; file_diff — shows what changed without reverting. |
 | `checkpoint_info` | List available checkpoints |
 | `run_tests` | Discover and run tests using pytest or unittest |
 | `subagent_task` | Spawns a full agent loop with its own context, Returns the sub-agent's final answer |
+| `file_skeleton` | AST structure map: eager/lazy imports, globals, classes (with method counts), functions with full signatures + line ranges + docstring hints. Non-Python files get a lightweight regex skeleton. Always fresh (on-disk), no atlas. |
+| `who_imports` | module-level import graph: what the file imports (eager/lazy) + which workspace files import it, with relative-import resolution (from .engine import X → agent_core.loop.engine). Uses an mtime-keyed parse cache. |
+| `cross_file_edit` | Surgery edits across files in one call, per-edit status.  |
+| `check_before_edit` |  read-only dry-run: validates each {path, old_string} target matches exactly once before applying. |
 
 ### Code RAG Tools (from codebase atlas, separate `code_rag` category)
 | Tool | Purpose |

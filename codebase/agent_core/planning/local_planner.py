@@ -10,6 +10,7 @@ from agent_core.loop.messages import (
     build_tool_results_msg, build_single_tool_result_msg,
 )
 from agent_core.loop._helpers import _truncate_result, _QUESTION_TOOLS
+from agent_core.config import resolve_active_tool_names
 from agent_core.tools.types import ToolResult
 
 
@@ -81,6 +82,7 @@ class LocalPlanner:
             schemas = registry.get_schemas(
                 provider_name="ollama",
                 categories=self.local_categories,
+                names=resolve_active_tool_names() or None,
             )
             result = self.provider.generate(
                 prompt="",

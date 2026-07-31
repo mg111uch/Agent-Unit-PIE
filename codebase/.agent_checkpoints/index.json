@@ -82,5 +82,29 @@
     "checkpoint": "temp_dedup_smoke.py__aa6cebbfe820.ckpt",
     "hash": "aa6cebbfe82052b6b6a1cb651b6084ec",
     "timestamp": 1785478958.5919764
+  },
+  {
+    "file": "_xtest/a.txt",
+    "checkpoint": "_xtest__a.txt__b796f3147406.ckpt",
+    "hash": "b796f31474066cef4f4fec000b9edb76",
+    "timestamp": 1785499246.5154457
+  },
+  {
+    "file": "_xtest/b.txt",
+    "checkpoint": "_xtest__b.txt__1ec013858f0e.ckpt",
+    "hash": "1ec013858f0e5fbe80af7ad0c9cf71f4",
+    "timestamp": 1785499246.521296
+  },
+  {
+    "file": "_vt.py",
+    "checkpoint": "_vt.py__10947cef3db1.ckpt",
+    "hash": "10947cef3db17b6bcf7bd37f1e0461fe",
+    "timestamp": 1785500385.1447904
+  },
+  {
+    "file": "_vt3.py",
+    "checkpoint": "_vt3.py__709bbfa4e457.ckpt",
+    "hash": "709bbfa4e4574307131eccca18b70f36",
+    "timestamp": 1785500385.1569345
   }
 ]

@@ -191,41 +191,10 @@
   <ul>
     <li>
       <span class="tag tag-tool">TOOL</span>
-      <strong><code>pie_apply_diffs(diffs: list[{path, old, new}])</code></strong> —
-      Apply multiple <code>edit</code>-style replacements across different files
-      in one tool call. Unlike <code>pie_batch_edit</code> (single-file only),
-      this would let you apply the same fix pattern to messages.py + engine.py +
-      response_parse.py in parallel. This session had 4 cross-file edits that
-      needed the same uuid-fallback pattern.
-    </li>
-    <li>
-      <span class="tag tag-tool">TOOL</span>
-      <strong><code>pie_find_duplicate_pattern(file, pattern)</code></strong> —
-      Finds all locations matching a code pattern (e.g.
-      <code>is_ok = .*\.ok and not .*\.startswith\("Error"\)</code>) and returns
-      line numbers + context. Essential for identifying batch-edit candidates.
-      This session manually grepped for 3 patterns across 5 files.
-    </li>
-    <li>
-      <span class="tag tag-tool">TOOL</span>
       <strong><code>pie_validate_imports(package)</code></strong> —
       Static circular import detection: resolves all import chains in a package
       and flags cycles. Would have caught the debate_ops circular import in
       <code>tools/__init__.py</code> without runtime trial-and-error.
-    </li>
-    <li>
-      <span class="tag tag-tool">TOOL</span>
-      <strong><code>pie_verify_edit(path, old_string, new_string)</code></strong> —
-      Check whether a planned edit would match the current file content, without
-      applying it. Returns "match found at line X" or "no match" + the closest
-      diff fragment. Prevents the "pie_batch_edit failure → fallback to individual
-      edits" pattern that burned 3+ tool calls in this session.
-    </li>
-    <li>
-      <span class="tag tag-tool">TOOL</span>
-      <strong><code>pie_interactive_diff(path, changes)</code></strong> —
-      Previews the diff for a set of planned edits without applying them.
-      Lets you verify correctness before writing. Saves the read-edit-revert loop.
     </li>
     <li>
       <span class="tag tag-tool">TOOL</span>
@@ -241,21 +210,6 @@
       awareness (function defs + all call sites). E.g. <code>_STRING_ARG_KEYS</code>
       → <code>_SINGLE_ARG_TOOLS</code> in 3 files. This session manually applied
       renames with 6 individual edits.
-    </li>
-    <li>
-      <span class="tag tag-tool">TOOL</span>
-      <strong><code>pie_session_summary()</code></strong> —
-      Output a compact summary of all edit, read, and grep operations in the
-      current session, grouped by file, with token cost per file. Lets the agent
-      audit its own efficiency and adjust strategy mid-session. This session's
-      40+ file operations could have been collapsed to ~15.
-    </li>
-    <li>
-      <span class="tag tag-tool">TOOL</span>
-      <strong><code>pie_run_tests(scope, timeout)</code></strong> —
-      Discover and run tests for a given module, stream results. Today the
-      agent must manually find and invoke the test command. This project's
-      validation is a specific script path — would save a lookup.
     </li>
   </ul>
 

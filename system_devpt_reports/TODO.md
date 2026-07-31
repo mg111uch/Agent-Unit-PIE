@@ -39,3 +39,5 @@ grok --resume 019f9d9d-733b-7a53-b581-f8dbfae3a8b4
 
 
 - **Session compaction:** Objective, Important Details, Work State (Completed, Active, Blocked), Next Move, Relevant Files
+
+- **Git commit line** Read and shell only modes in this commit not previous

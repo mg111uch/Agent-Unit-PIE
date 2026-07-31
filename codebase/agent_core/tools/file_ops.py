@@ -1,12 +1,47 @@
 from __future__ import annotations
 
 import os
+import subprocess
+import sys
 
 from agent_core.workspace import resolve, PathEscapeError, to_relative, not_found_message
 from agent_core.tools.undo_ops import save_checkpoint
-from agent_core.config import EXCLUDE_DIRS
+from agent_core.config import EXCLUDE_DIRS, CODEBASE_ROOT, POST_EDIT_IMPORT_CHECK
 from agent_core.tools.types import ToolResult, _parse_arg
 from agent_core.tools.diff_ops import _render_unified_diff, _compute_diff
+
+
+def _verify_python(full: str, rel: str) -> str:
+    """Post-edit verification for .py files. Returns '[verify]' warning text or ''.
+
+    Always py_compiles (fast, in-process). When the file is under agent_core/tools/
+    and post_edit_import_check is enabled, also imports agent_core.tools in a
+    subprocess to catch schema/registration errors. Warn-only — never fails the edit.
+    """
+    if not rel.endswith(".py"):
+        return ""
+    try:
+        with open(full, "r", encoding="utf-8") as f:
+            compile(f.read(), full, "exec")
+    except SyntaxError as e:
+        return f"[verify] {rel}: SYNTAX ERROR (line {e.lineno}): {e.msg}"
+    except Exception as e:
+        return f"[verify] {rel}: compile failed: {e}"
+    if not (POST_EDIT_IMPORT_CHECK and rel.startswith("agent_core/tools/")):
+        return ""
+    try:
+        r = subprocess.run(
+            [sys.executable, "-c", "import agent_core.tools"],
+            cwd=CODEBASE_ROOT, capture_output=True, text=True, timeout=15,
+        )
+        if r.returncode != 0:
+            tail = "\n".join((r.stderr or r.stdout).splitlines()[-5:])
+            return f"[verify] {rel}: import agent_core.tools FAILED:\n{tail}"
+    except subprocess.TimeoutExpired:
+        return f"[verify] {rel}: import check timed out (skipped)"
+    except Exception as e:
+        return f"[verify] {rel}: import check error: {e}"
+    return ""
 
 
 def _record_file_access(rel, mode):
@@ -224,7 +259,9 @@ def write_to_file(input_data) -> ToolResult:
             if st is not None and not dry_run:
                 st.put_file(rel, content, mtime=os.path.getmtime(full_path))
                 st.record_edit(rel, f"create {len(content)} chars")
-            return ToolResult(ok=True, data=f"[CREATE] {rel} ({len(content)} chars)")
+            verify = "" if dry_run else _verify_python(full_path, rel)
+            return ToolResult(ok=True, data=f"[CREATE] {rel} ({len(content)} chars)"
+                                          + (f"\n{verify}" if verify else ""))
 
         elif mode == "overwrite":
             ckpt_saved = save_checkpoint(path) if not dry_run else None
@@ -236,7 +273,9 @@ def write_to_file(input_data) -> ToolResult:
                 st.put_file(rel, content, mtime=os.path.getmtime(full_path))
                 st.record_edit(rel, f"overwrite {len(content)} chars")
             ckpt = " [checkpoint saved]" if ckpt_saved else ""
-            return ToolResult(ok=True, data=f"[OVERWRITE] {rel} ({len(content)} chars){ckpt}")
+            verify = "" if dry_run else _verify_python(full_path, rel)
+            return ToolResult(ok=True, data=f"[OVERWRITE] {rel} ({len(content)} chars){ckpt}"
+                                          + (f"\n{verify}" if verify else ""))
 
         elif mode == "append":
             _ensure_dir(full_path)
@@ -246,7 +285,9 @@ def write_to_file(input_data) -> ToolResult:
             if st is not None and not dry_run:
                 st.mark_stale(rel)
                 st.record_edit(rel, f"append +{len(content)} chars")
-            return ToolResult(ok=True, data=f"[APPEND] {rel} (+{len(content)} chars)")
+            verify = "" if dry_run else _verify_python(full_path, rel)
+            return ToolResult(ok=True, data=f"[APPEND] {rel} (+{len(content)} chars)"
+                                          + (f"\n{verify}" if verify else ""))
 
         else:
             return ToolResult(ok=False, message=f"Unknown mode '{mode}'")
@@ -343,11 +384,21 @@ def edit_file(input_data) -> ToolResult:
         path = data.get("path", "")
         edits = data.get("edits")
         if edits is not None:
-            return _apply_edits(path, edits)
-        old = data.get("old_string", "")
-        new = data.get("new_string", "")
-        replace_all = data.get("replace_all", False)
-        return _apply_single_edit(path, old, new, replace_all=replace_all)
+            result = _apply_edits(path, edits)
+        else:
+            old = data.get("old_string", "")
+            new = data.get("new_string", "")
+            replace_all = data.get("replace_all", False)
+            result = _apply_single_edit(path, old, new, replace_all=replace_all)
+        if result.ok and path:
+            try:
+                full = resolve(path)
+                verify = _verify_python(full, to_relative(full))
+            except Exception:
+                verify = ""
+            if verify:
+                result.data = f"{result.data}\n{verify}"
+        return result
     except PathEscapeError as e:
         return ToolResult(ok=False, message=str(e))
     except Exception as e:

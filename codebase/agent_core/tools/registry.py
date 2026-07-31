@@ -226,23 +226,28 @@ class ToolRegistry:
         self._materialize()
         return dict(self._meta)
 
-    def get_tools(self, categories: Optional[List[str]] = None) -> Dict[str, Callable]:
+    def get_tools(self, categories: Optional[List[str]] = None, names: Optional[set] = None) -> Dict[str, Callable]:
         self._materialize(categories)
         if categories is None:
-            return self.tools_dict
-        result = {
-            n: fn for n, fn in self._tools.items()
-            if self._categories.get(n) in categories
-        }
-        for mw in self._middleware:
-            result = {n: mw(n, fn) for n, fn in result.items()}
+            result = self.tools_dict
+        else:
+            result = {
+                n: fn for n, fn in self._tools.items()
+                if self._categories.get(n) in categories
+            }
+            for mw in self._middleware:
+                result = {n: mw(n, fn) for n, fn in result.items()}
+        if names:
+            result = {n: fn for n, fn in result.items() if n in names}
         return result
 
-    def get_schemas(self, provider_name: Optional[str] = None, categories: Optional[List[str]] = None) -> List[dict]:
+    def get_schemas(self, provider_name: Optional[str] = None, categories: Optional[List[str]] = None, names: Optional[set] = None) -> List[dict]:
         self._materialize(categories)
         schemas = self.schemas_list
         if categories is not None:
             schemas = [s for s in schemas if self._categories.get(s["name"]) in categories]
+        if names:
+            schemas = [s for s in schemas if s["name"] in names]
         if provider_name == "gemini":
             return [{"function_declarations": schemas}]
         return [{"type": "function", "function": s} for s in schemas]

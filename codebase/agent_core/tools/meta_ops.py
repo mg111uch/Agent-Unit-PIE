@@ -4,7 +4,7 @@ import json, os, re
 
 from agent_core.workspace import resolve, WORKSPACE_ROOT, PathEscapeError, to_relative, root_basename_hint
 from agent_core.config import EXCLUDE_DIRS
-from agent_core.tools.types import ToolResult
+from agent_core.tools.types import ToolResult, _parse_arg
 
 _exclude_set = set(EXCLUDE_DIRS)
 
@@ -132,3 +132,125 @@ def read_section_tool(params: dict) -> ToolResult:
         return ToolResult(ok=False, message=f"invalid regex pattern '{pattern}': {e}")
     except Exception as e:
         return ToolResult(ok=False, message=f"reading '{path}': {e}")
+
+
+def cross_file_edit(input_data) -> ToolResult:
+    """Apply edits across multiple files in one call (reuses _apply_single_edit).
+
+    input_data = {"edits": [{"path": "...", "old_string": "...", "new_string": "...",
+                             "replace_all": false}, ...]}
+    """
+    try:
+        data = _parse_arg(input_data, {})
+        edits = data.get("edits")
+        if not edits or not isinstance(edits, list):
+            return ToolResult(ok=False, message="'edits' (list of {path, old_string, new_string}) is required.")
+        from agent_core.tools.file_ops import _apply_single_edit, _verify_python
+        results = []
+        ok_count = 0
+        applied_py_paths = []
+        for i, e in enumerate(edits):
+            if not isinstance(e, dict):
+                results.append(f"[edit {i}] ERROR: expected an object with path/old_string/new_string")
+                continue
+            path = e.get("path", "")
+            old = e.get("old_string", "")
+            new = e.get("new_string", "")
+            replace_all = e.get("replace_all", False)
+            if not path or not old:
+                results.append(f"[edit {i}] ERROR: 'path' and 'old_string' are required")
+                continue
+            r = _apply_single_edit(path, old, new, replace_all=replace_all)
+            if r.ok:
+                ok_count += 1
+                if path.endswith(".py") and path not in applied_py_paths:
+                    applied_py_paths.append(path)
+            results.append(f"[edit {i}] {r.data if r.ok else f'ERROR: {r.message}'}")
+        verify_lines = []
+        for path in applied_py_paths:
+            try:
+                v = _verify_python(resolve(path), to_relative(resolve(path)))
+            except Exception:
+                v = ""
+            if v:
+                verify_lines.append(v)
+        if verify_lines:
+            results.append("[verify]\n" + "\n".join(verify_lines))
+        results.append(f"Summary: {ok_count}/{len(edits)} edits applied")
+        return ToolResult(ok=ok_count > 0, data="\n\n".join(results))
+    except Exception as e:
+        return ToolResult(ok=False, message=f"cross_file_edit error: {e}")
+
+
+def _find_match_lines(content: str, old: str) -> list[int]:
+    if "\n" in old:
+        idx = content.find(old)
+        if idx < 0:
+            return []
+        return [content[:idx].count("\n") + 1]
+    return [i + 1 for i, line in enumerate(content.splitlines()) if old in line]
+
+
+def _closest_line(content: str, old: str):
+    tokens = [t for t in old.split() if len(t) >= 3]
+    if not tokens:
+        return None
+    token = tokens[0]
+    for i, line in enumerate(content.splitlines()):
+        if token in line:
+            return i + 1, line.strip()[:120]
+    return None
+
+
+def check_before_edit(input_data) -> ToolResult:
+    """Read-only: verify planned edits would match exactly once BEFORE applying.
+
+    input_data = {"edits": [{"path": "...", "old_string": "..."}, ...]}
+    (also accepts a single {"path", "old_string"}).
+    Returns per-edit: OK (match line), NO MATCH (+ closest line), or MULTIPLE (line list).
+    """
+    try:
+        data = _parse_arg(input_data, {})
+        if "edits" in data:
+            edits = data["edits"]
+        elif data.get("path") and data.get("old_string"):
+            edits = [{"path": data["path"], "old_string": data["old_string"]}]
+        else:
+            edits = None
+        if not edits or not isinstance(edits, list):
+            return ToolResult(ok=False, message="'edits' (list of {path, old_string}) is required.")
+        results = []
+        ok_count = 0
+        for i, e in enumerate(edits):
+            if not isinstance(e, dict):
+                results.append(f"[edit {i}] ERROR: expected an object with path/old_string")
+                continue
+            path = e.get("path", "")
+            old = e.get("old_string", "")
+            if not path or not old:
+                results.append(f"[edit {i}] ERROR: 'path' and 'old_string' are required")
+                continue
+            try:
+                full = resolve(path)
+            except PathEscapeError as err:
+                results.append(f"[edit {i}] ERROR: {err}")
+                continue
+            if not os.path.isfile(full):
+                results.append(f"[edit {i}] ERROR: file not found: {path}")
+                continue
+            with open(full, "r", encoding="utf-8") as f:
+                content = f.read()
+            lines = _find_match_lines(content, old)
+            if len(lines) == 1:
+                ok_count += 1
+                results.append(f"[edit {i}] OK — 1 match at line {lines[0]}  ({path})")
+            elif not lines:
+                close = _closest_line(content, old)
+                hint = f"  closest: line {close[0]}: \"{close[1]}\"" if close else ""
+                results.append(f"[edit {i}] NO MATCH{hint}  ({path})")
+            else:
+                results.append(f"[edit {i}] MULTIPLE ({len(lines)} matches at lines {', '.join(map(str, lines))})  ({path})")
+        results.append(f"Summary: {ok_count}/{len(edits)} edits would match exactly once")
+        return ToolResult(ok=ok_count > 0, data="\n\n".join(results))
+    except Exception as e:
+        return ToolResult(ok=False, message=f"check_before_edit error: {e}")
