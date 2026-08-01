@@ -14,6 +14,7 @@ import asyncio
 import importlib
 import os
 import sys
+import time
 from pathlib import Path
 from typing import Any
 
@@ -31,16 +32,28 @@ from mcp.types import (
 )
 
 from agent_core.tools import registry
-from agent_core.tools.registry import CAT_FILE, CAT_KERNEL, CAT_SIM, CAT_META, CAT_GIT, CAT_CODE_RAG, CAT_OBSERVER
+from agent_core.tools.registry import CAT_FILE, CAT_KERNEL, CAT_SIM, CAT_META, CAT_GIT, CAT_CODE_RAG, CAT_OBSERVER, CAT_DEBATE
+from agent_core.config import resolve_active_tool_packs
 from agent_core.loop.executor import _normalize_tool_arg
 
-# Expose kernel, sim, code_rag, and unique file-MCP tools only
-# CAT_FILE (read_file, write_to_file, etc.) kept internal — redundant with opencode built-ins
-EXPOSED_CATEGORIES = [CAT_KERNEL, CAT_SIM, CAT_CODE_RAG, CAT_FILE, CAT_OBSERVER]
+# MCP exposure policy:
+# - CAT_FILE never exposed (redundant with opencode built-ins)
+# - CAT_META always exposed
+# - other packs exposed only when enabled in config (tool_packs)
+_META_ALWAYS_ON = {CAT_META}
+_FILE_NEVER_EXPOSED = CAT_FILE
+
+
+def _exposed_categories() -> list[str]:
+    active = set(resolve_active_tool_packs())
+    others = {CAT_KERNEL, CAT_SIM, CAT_GIT, CAT_CODE_RAG, CAT_OBSERVER, CAT_DEBATE} & active
+    return sorted(_META_ALWAYS_ON | others)
 
 # Hot-reload support: watches all .py files under agent_core/tools/
 _WATCH_DIR = "agent_core/tools/"
 _mtime_cache: dict[str, int] = {}
+_RELOAD_POLL_INTERVAL = 2.0
+_last_reload_check = 0.0
 
 
 def _do_reload():
@@ -54,6 +67,11 @@ def _do_reload():
 
 def _reload_if_changed():
     """Reload all tool modules when any .py file under _WATCH_DIR changes."""
+    global _last_reload_check
+    now = time.monotonic()
+    if now - _last_reload_check < _RELOAD_POLL_INTERVAL:
+        return
+    _last_reload_check = now
     codebase = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     watch_path = os.path.join(codebase, _WATCH_DIR)
     changed = False
@@ -74,7 +92,7 @@ server = Server("pie-kernel-sim")
 
 
 def _build_tool_list() -> list[Tool]:
-    mcp_tools = registry.to_mcp_tools(categories=EXPOSED_CATEGORIES)
+    mcp_tools = registry.to_mcp_tools(categories=_exposed_categories())
     return [Tool(**t) for t in mcp_tools]
 
 
@@ -88,8 +106,7 @@ async def list_mcp_tools() -> list[Tool]:
 async def call_mcp_tool(name: str, arguments: dict[str, Any] | None) -> CallToolResult:
     _reload_if_changed()
 
-    prefix = registry._mcp_prefix
-    reg_name = name[len(prefix):] if prefix and name.startswith(prefix) else name
+    reg_name = name
 
     # Built-in hot_reload — re-registers tools and notifies client
     if reg_name == "hot_reload":
@@ -102,7 +119,7 @@ async def call_mcp_tool(name: str, arguments: dict[str, Any] | None) -> CallTool
             content=[TextContent(type="text", text="Tools reloaded. Client notified — new tools should appear.")]
         )
 
-    tools = registry.get_tools(categories=EXPOSED_CATEGORIES)
+    tools = registry.get_tools(categories=_exposed_categories())
     if reg_name not in tools:
         return CallToolResult(
             content=[TextContent(type="text", text=f"Unknown tool: {name}")],

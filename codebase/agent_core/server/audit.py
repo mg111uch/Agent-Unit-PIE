@@ -10,7 +10,7 @@ from agent_core.tools.types import ToolResult
 _WRITE_TOOLS = frozenset({
     "write_to_file", "edit_file", "execute_command", "todo",
     "undo_last_edit", "git_commit", "kernel_store_context",
-    "kernel_create_event", "kernel_emit_signal", "run_tests",
+    "kernel_create_event", "kernel_emit_signal",
 })
 
 

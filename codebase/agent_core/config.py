@@ -38,6 +38,7 @@ TOOL_MODES: dict[str, set[str]] = {
 }
 
 GIT_TOOLS_ENABLED: bool = _CONFIG.get("git_tools_enabled", False)
+SUBAGENT_TASK_ENABLED: bool = _CONFIG.get("subagent_task_enabled", False)
 ENABLE_CHECKPOINTS: bool = _CONFIG.get("enable_checkpoints", False)
 MAX_CHECKPOINTS: int = _CONFIG.get("max_checkpoints", 50)
 AGENTS_MD_ENABLED: bool = _CONFIG.get("agents_md_enabled", False)

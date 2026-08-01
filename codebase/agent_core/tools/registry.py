@@ -115,14 +115,12 @@ def obj_p(desc, *, properties=None, additionalProperties=False, req=False):
 
 
 class ToolRegistry:
-    def __init__(self, mcp_prefix: str = ""):
+    def __init__(self):
         self._tools: Dict[str, Callable] = {}
         self._schemas: Dict[str, dict] = {}
         self._meta: Dict[str, Dict[str, str]] = {}
         self._categories: Dict[str, str] = {}
         self._risk_levels: Dict[str, str] = {}
-        self._mcp_expose: Dict[str, bool] = {}
-        self._mcp_prefix = mcp_prefix
         self._default_category: str | None = None
         self._middleware: List[Callable] = []
         self._lazy_loaders: Dict[str, Callable[[], None]] = {}
@@ -130,7 +128,7 @@ class ToolRegistry:
     def set_default_category(self, category: str):
         self._default_category = category
 
-    def simple(self, name, fn, description, mcp_expose=True, **kw):
+    def simple(self, name, fn, description, **kw):
         """Compact registration: pass param specs as keyword args.
         
         Usage:
@@ -150,7 +148,7 @@ class ToolRegistry:
                     params[k]["items"] = {"t": "string"}
             elif isinstance(v, dict):
                 params[k] = v
-        self.register(name, fn, description=description, params=params, mcp_expose=mcp_expose)
+        self.register(name, fn, description=description, params=params)
 
     def register(
         self,
@@ -164,7 +162,6 @@ class ToolRegistry:
         meta: Optional[Dict[str, str]] = None,
         category: Optional[str] = None,
         risk_level: str = "low",
-        mcp_expose: bool = True,
     ):
         if category is None:
             category = self._default_category or "file"
@@ -186,7 +183,6 @@ class ToolRegistry:
 
         self._categories[name] = category
         self._risk_levels[name] = risk_level
-        self._mcp_expose[name] = mcp_expose
 
     def register_lazy(self, category: str, loader: Callable[[], None]):
         """Register a loader that registers a category's tools on first access."""
@@ -259,17 +255,15 @@ class ToolRegistry:
             if categories is None
             else [n for n in self._tools if self._categories.get(n) in categories]
         )
-        prefix = self._mcp_prefix
         return [
             {
-                "name": prefix + name,
+                "name": name,
                 "description": self._schemas.get(name, {}).get("description", ""),
                 "inputSchema": self._schemas.get(name, {}).get(
                     "parameters", {"type": "object", "properties": {}}
                 ),
             }
             for name in names
-            if self._mcp_expose.get(name, True)
         ]
 
     def add_middleware(self, middleware_fn: Callable):

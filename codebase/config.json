@@ -57,6 +57,7 @@
   "debug_dump_append_mode": true,
   "debug_dump_enabled": true,
   "git_tools_enabled": false,
+  "subagent_task_enabled": false,
   "tool_mode": "all",  
   "tool_packs": {
     "file": true,

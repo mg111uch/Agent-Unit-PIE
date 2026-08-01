@@ -1,7 +1,7 @@
 # Session end ask
-- In this session did you feel the need of any other `tool` or any post or pre chat task `hook` which would have been useful to implement plan or fixes faster and more efficiently using lesser number of tokens. Also suggest methods or tools so that if an agent next time tries to access the same files, it could do it much faster or with accuracy and precision, so they not keep repeating same patterns.In which step the most tokens are spend and how can it be saved by making a tool or some other trick. Also which are the tool call patterns which gets repeated and we hardcode in the harness itself  to chain those tools ao that llms have to work lesser and smaller llms could work efiiciently with lesser drift. Compare your recommendations with already existing tools, dont suggest duplicates doing same functionality with different name, only suggest novel helpful tools.
+- In this session did you feel the need of any other `tool` or any post chat, mid chat or pre chat task `hook` which would have been useful to implement plan or fixes faster and more efficiently using lesser number of tokens. Also suggest methods or tools so that if an agent next time tries to access the same files, it could do it much faster or with accuracy and precision, so they not keep repeating same patterns.In which step the most tokens are spend and how can it be saved by making a tool or some other trick. Also which are the tool call patterns which gets repeated and we hardcode in the harness itself  to chain those tools ao that llms have to work lesser and smaller llms could work efiiciently with lesser drift. Compare your recommendations with already existing tools, dont suggest duplicates doing same functionality with different name, only suggest novel helpful tools.
 
-- Give multiple suggestions based on the files you accessed in this session so that project lines of code could be reduced without changing functionality, making def of repeated code blocks which are bigger than 20 loc and repeated 2 or more times. Also how execution time , token consumption could be improved and optimized for future agents. 
+- Give multiple suggestions based on the files you accessed in this session so that project lines of code could be reduced without changing functionality, making def out of repeated code blocks which are bigger than 25 loc (individually not cumulative) and repeated 2 or more times and cumulatively save more than 50 loc. Only report those which save more than 50 loc cumulatively as we dont want non trivial defs pile up in the codebase.Look for dead code candidates, Also how execution time , token consumption could be improved and optimized for future agents. 
 
 - Append your answer in `Agentic_Unit_PIE/system_devpt_reports/FixesIssues.md` below the already generated plan.
 
@@ -36,8 +36,8 @@ grok --resume 019f9d9d-733b-7a53-b581-f8dbfae3a8b4
 
 # Tips
 - Close mcp server connection before git add commit push
-
+- 
 
 - **Session compaction:** Objective, Important Details, Work State (Completed, Active, Blocked), Next Move, Relevant Files
 
-- **Git commit line** Read and shell only modes in this commit not previous
+- **Git commit line** 

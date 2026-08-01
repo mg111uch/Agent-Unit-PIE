@@ -5,7 +5,7 @@
       "type": "local",
       "command": ["/home/manigupt/miniconda3/envs/myenv/bin/python", "-m", "agent_core.mcp_server"],
       "cwd": "/home/manigupt/Hello/Agentic_Unit_PIE/codebase",
-      "enabled": false,
+      "enabled": true,
       "environment": {
         "PYTHONPATH": "/home/manigupt/Hello/Agentic_Unit_PIE/codebase",
         "WORKSPACE_ROOT": "/home/manigupt/Hello/Agentic_Unit_PIE",

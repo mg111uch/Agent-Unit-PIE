@@ -10,6 +10,8 @@
 - **Existence/location checks only — do not read contents.** If the user asks whether a file exists, stop after `check_path_exists` or `list_files` confirms it. Do not call `read_file` or include file contents in your answer unless the user explicitly asked about the content.**
 <!-- /read_only -->
 
+- **Delegate open-ended research to `subagent_task`** — When a task requires exploring unfamiliar code with multiple rounds of search/read/grep, use `subagent_task` so the sub-agent's exploration doesn't pollute your context. Only read the files the sub-agent identifies as needing edits.
+
 - `execute_command` runs trusted commands only — use it for builds/tests/format.
 - For tasks touching >1 file or requiring ~3+ calls, first call `todo` (action=create) with a short numbered plan. Update it as you go; `todo` action=read shows the current plan.
 - Before editing, `read_file` first. Never guess file contents or exact whitespace.

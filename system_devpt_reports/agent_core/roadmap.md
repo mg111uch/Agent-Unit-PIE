@@ -13,6 +13,5 @@ _Not verified. Never cite as working._
 
 ## Explicitly deferred
 - Rewriting the Next app stack
-- Full self-evolution loop before registry + native tools exist
 
 _Design essay moved to `project_docs/agent_core_design.md`_

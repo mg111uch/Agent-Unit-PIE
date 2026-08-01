@@ -385,7 +385,8 @@ def list_capabilities_tool(params: dict) -> str:
         _sys2.path.insert(0, str(_project_root() / "scripts"))
         from kernel.hypothesis.hypothesis_engine import hypothesis_engine
         from scripts.seed_hypotheses import seed_all
-        seed_all(hypothesis_engine)
+        if not hypothesis_engine.hypotheses:
+            seed_all(hypothesis_engine)
     except Exception as e:
         return json.dumps({"error": f"HypothesisEngine not available: {e}"})
     htype = params.get("type", "")

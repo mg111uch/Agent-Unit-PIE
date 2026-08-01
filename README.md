@@ -1,6 +1,6 @@
-## 🧠 Agent Unit_PIE 
+# 🧠 Agent Unit_PIE 
 
-- resembles __init__.py
+- Name resembles __init__.py
 
 ### Universal Unit Pattern Intelligence Engine (PIE) 
 
@@ -101,3 +101,37 @@ The project aims to build persistent evolving world models and digital twins for
 * simulates futures
 * generates strategies
 * improves itself recursively
+
+---
+
+### OpenCode tool list (Native + MCP-Metatools)
+
+**File / codebase tools**
+- `read` / `write` / `edit` — read, write, edit files
+- `glob` — find files by pattern
+- `grep` — content search with regex
+- `pie_file_skeleton` — AST structural map of a file
+- `pie_read_section` — read a file section around a regex match
+- `pie_file_diff` — show uncommitted changes diff
+- `pie_check_path_exists` — check file/dir existence
+
+**Cross-file edit / validation**
+- `pie_check_before_edit` — dry-run verify edit targets match
+- `pie_cross_file_edit` — apply edits across multiple files in one call
+- `pie_undo_last_edit` — restore last checkpoint
+- `pie_checkpoint_info` — list available checkpoints
+
+**Code intelligence**
+- `pie_who_imports` — module import graph / blast radius
+- `pie_get_workspace_info` — workspace root + top-level entries
+
+**Execution / agents**
+- `bash` — run terminal commands
+- `task` — spawn subagents (explore, general)
+- `skill` — load a skill
+- `todowrite` — track tasks
+- `question` — ask the user questions
+
+**Web**
+- `webfetch` — fetch a URL
+- `websearch` — real-time web search

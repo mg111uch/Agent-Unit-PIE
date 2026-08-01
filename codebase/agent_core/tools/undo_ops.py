@@ -132,7 +132,7 @@ def undo_last_edit(file_path: str | None = None) -> str:
         return f"Error restoring checkpoint: {e}"
 
 
-def checkpoint_info() -> str:
+def checkpoint_info(_=None) -> str:
     """Return summary of available checkpoints."""
     index = _load_index()
     if not index:

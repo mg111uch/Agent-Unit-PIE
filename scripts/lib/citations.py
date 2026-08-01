@@ -92,8 +92,9 @@ def resolve_symbol(filename, funcname):
             except ValueError:
                 resolved_path = abs_path
     if not found and funcname:
+        basename = Path(filename).name
         result = subprocess.run(
-            ["grep", "-rl", f"def {funcname}(", str(CODEBASE_DIR), "--include", filename],
+            ["grep", "-rl", f"def {funcname}(", str(CODEBASE_DIR), "--include", basename],
             capture_output=True, text=True, timeout=30,
         )
         stdout = result.stdout.strip()
