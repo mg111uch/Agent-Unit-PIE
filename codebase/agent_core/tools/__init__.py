@@ -63,7 +63,6 @@ from agent_core.tools.code_rag import (
     project_root_tool,
     report_freshness_tool,
     extract_symbols_to_file_tool,
-    batch_file_api_tool,
     report_inventory_tool,
     report_schema_check_tool,
     list_capabilities_tool,
@@ -75,18 +74,16 @@ from agent_core.tools.search_ops import glob_search, grep_search
 from agent_core.tools.ast_ops import file_skeleton, who_imports
 from agent_core.tools.context_dump import minimal_context_dump
 from agent_core.tools.tool_introspect import tool_anatomy
+from agent_core.tools.chain.chain_engine import make_chain_tool
+from agent_core.tools.chain.chains import CHAIN_SPECS
+from agent_core.tools.chain.chain_admin import chain_admin
+from agent_core.tools.chain.workflow_status import workflow_status_tool
 from agent_core.tools.registry import (
     ToolRegistry, CAT_FILE, CAT_KERNEL, CAT_SIM, CAT_META, CAT_GIT, CAT_OBSERVER, CAT_CODE_RAG, CAT_DEBATE,
-    str_p, int_p, float_p, bool_p, arr_p, obj_p, derive_schema,
+    CAT_CHAIN, str_p, int_p, float_p, bool_p, arr_p, obj_p, derive_schema,
 )
 from agent_core.tools.observer_ops import tool_stats, file_stats, user_reading_budget
 from agent_core.config import SUBAGENT_TASK_ENABLED
-
-
-PATHS_PARAM = {
-    "paths": {"type": "array", "items": {"type": "string"}, "required": True,
-              "description": "List of file paths relative to workspace root"},
-}
 
 
 from agent_core.tools.types import ToolError, ToolResult
@@ -299,8 +296,9 @@ _CODE_RAG_SPECS = [
      "Return real-time statistics about the indexed codebase (total symbols, call edges, token ranges, risk distribution). Use this once at the start of a session to calibrate token budget and batch sizes.",
      {}),
     ("file_api", file_api_tool, CAT_CODE_RAG,
-     "Return the public API surface of a file: class names + method signatures (with docstring first line), module-level function signatures, and exported symbols — without any method bodies. Use for orientation before making changes.",
-     {"path": str_p("File path relative to workspace root", req=True)}),
+     "Return the public API surface of one or more files: class names + method signatures (with docstring first line), module-level function signatures, and exported symbols — without any method bodies. Pass paths=[...] to batch multiple files in one call (any files, not just kernel). Use for orientation before making changes.",
+     {"path": str_p("Single file path relative to workspace root"),
+      "paths": arr_p("string", "Batch: list of file paths relative to workspace root to query in one call — use when exploring 2+ files")}),
     ("call_chain", call_chain_tool, CAT_CODE_RAG,
      "Trace the shortest call chain from one function to any function in another module. Uses the existing call-edge index. Example: call_chain('detect_contradictions', 'kernel.semantic_memory').",
      {"start_fn": str_p("Starting function or class name", req=True),
@@ -322,9 +320,6 @@ _CODE_RAG_SPECS = [
     ("report_freshness", report_freshness_tool, CAT_CODE_RAG,
      "Scan all system_devpt_reports/*.md files, parse their _Last verified date stamps, and flag any that are stale (file's last git change is newer than the stamp, or cited file:function() symbols no longer resolve in the atlas). Use this before relying on a status report for planning.",
      {}),
-    ("batch_file_api", batch_file_api_tool, CAT_CODE_RAG,
-     "Query the codebase atlas for the public API surface of multiple files in one call. Each file returns class names + method signatures, module-level function signatures, and exported symbols — without any method bodies. Use this instead of calling file_api sequentially for each file.",
-     PATHS_PARAM),
     ("minimal_context_dump", minimal_context_dump, CAT_CODE_RAG,
      "Generate a compact context file for an external LLM by chaining existing atlas tools. Given a problem description and symbols, it resolves the blast radius, fetches only relevant symbol source (not whole files), includes API signatures for peripheral files, and writes one capped file. Prefer this over full-file dumps like copyContent.py.",
      {"problem_description": str_p("The problem or question that needs external LLM context", req=True),
@@ -365,6 +360,40 @@ _OBSERVER_SPECS = [
      "Hot-reload all tool modules and notify the client to refresh its tool list. No restart needed.",
      {}, False),
 ]
+
+# Composite tool chains: one exposed call runs a sequence of existing tools locally.
+_CHAIN_SPECS = [
+    (spec.name, make_chain_tool(spec), CAT_CHAIN, spec.description, spec.params)
+    for spec in CHAIN_SPECS
+]
+
+
+def _register_stored_chains():
+    """Reload approved mined chains from SQLite (survives restarts) as live tools."""
+    registered = 0
+    try:
+        from agent_core.tools.chain.chain_store import chain_store
+        from agent_core.tools.chain.chain_engine import make_chain_tool as _mct
+        from agent_core.tools.chain.chain_spec import ChainSpec, Step as _Step
+        for row in chain_store.list_specs(status="approved"):
+            name = row["name"]
+            if registry.has_tool(name):
+                continue
+            spec = ChainSpec(
+                name=name, category=row["category"], description=row["description"],
+                params=row.get("params", {}),
+                steps=[_Step(tool=s["tool"], args=s.get("args", {}), name=s.get("name", ""),
+                             collect=s.get("collect", {}), optional=s.get("optional", False))
+                       for s in row.get("steps", [])],
+                budget_tokens=row.get("budget_tokens", 16000),
+                step_cap_chars=row.get("step_cap_chars", 8000),
+            )
+            registry.register(name, tool_call(_mct(spec)), description=spec.description,
+                              params=spec.params, category=CAT_CHAIN)
+            registered += 1
+    except Exception:
+        pass  # store/db absence must never break startup
+    return registered
 
 
 def _register_kernel_tools():
@@ -477,6 +506,20 @@ def _register_all():
     _register_kernel_tools()
     _register(_CODE_RAG_SPECS)
     _register(_OBSERVER_SPECS)
+    _register(_CHAIN_SPECS)
+    _register([
+        ("chain_admin", chain_admin, CAT_CHAIN,
+         "Manage mined tool chains: list | candidates | approve (name=...) | activate (name=...) "
+         "| delete (name=...). Read-only mined chains auto-promote; write chains need approve to "
+         "go live; inactive mined chains can be reactivated with activate.",
+         {"action": str_p("One of: list, candidates, approve, activate, delete", req=True),
+          "name": str_p("Chain name to approve/activate/delete")}),
+        ("workflow_status", workflow_status_tool, CAT_OBSERVER,
+         "Show the evolving workflow graph: summary | full | candidates | evolve. "
+         "Evolve rebuilds the graph from chains, mining candidates, and session telemetry.",
+         {"mode": str_p("One of: summary (default), full, candidates, evolve")}),
+    ])
+    _register_stored_chains()
     registry.register_lazy(CAT_DEBATE, _register_debate_tools)
     registry.register_lazy(CAT_SIM, _register_sim_tools)
 

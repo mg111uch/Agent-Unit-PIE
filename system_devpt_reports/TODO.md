@@ -30,9 +30,7 @@ grok --resume 019f9d9d-733b-7a53-b581-f8dbfae3a8b4
 - grep search rules or tools for tui_output search - When analyzing a conversation log file (e.g. `tui_output.txt`), grep for structural markers like `[FINAL]`, `[NEW TURN]`, `total_tokens`, `"ok": false`, `latency_seconds`, or `"kind": "final"` rather than generic keywords like `Error` or `fail` which may match irrelevant instructions in the file's header.
 
 - Add Todo dismiss
-- Register file_diff under CAT_META and move batch_read and batch_edit from meta to CAT_file
-
-- Implement each turn steps limit to 6 in config so add rule to plan first.
+- 
 
 # Tips
 - Close mcp server connection before git add commit push
@@ -40,4 +38,4 @@ grok --resume 019f9d9d-733b-7a53-b581-f8dbfae3a8b4
 
 - **Session compaction:** Objective, Important Details, Work State (Completed, Active, Blocked), Next Move, Relevant Files
 
-- **Git commit line** 
+- **Git commit line** Removed batch_file_api, Added tool chains engine

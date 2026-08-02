@@ -70,7 +70,7 @@
     <li>
       <span class="tag tag-avoid">AVOID</span>
       <strong>Sequential <code>pie_file_api</code> calls</strong> for 2+ files.
-      Use <code>pie_batch_file_api</code> — it does the same work in one round trip.
+      Use one <code>pie_file_api</code> with <code>paths=[...]</code> — it does the same work in one round trip.
     </li>
     <li>
       <span class="tag tag-avoid">AVOID</span>
@@ -212,7 +212,7 @@ const data = {"nodes":[
   ["update_status", "Update status.md\nif source was changed\nbump _Last verified", "rect", "#c0e0c0"]
 ],"edges":[
   ["start", "scope", ""],
-  ["scope", "orient", "2+ files?\nuse batch_file_api"],
+  ["scope", "orient", "2+ files?\nuse file_api paths"],
   ["orient", "meta", ""],
   ["meta", "fetch", "Pick ~5-8\nsymbols max"],
   ["fetch", "analyze", ""],

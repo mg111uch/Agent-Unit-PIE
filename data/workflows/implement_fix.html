@@ -81,7 +81,7 @@
     <li>
       <span class="tag tag-avoid">AVOID</span>
       <strong>Sequential Read of every file</strong> before starting edits.
-      Batch with <code>pie_batch_read</code> or <code>pie_batch_file_api</code>.
+      Batch with <code>pie_batch_read</code> or <code>pie_file_api</code> (pass <code>paths=[...]</code>).
       This session read ~15 files — could have been 4 batch calls instead of 15.
     </li>
     <li>
@@ -173,7 +173,7 @@
     <li>
       <span class="tag tag-do">DO</span>
       <strong>Batch file reads</strong> with <code>pie_batch_read</code> or
-      <code>pie_batch_file_api</code> when you need context from 2+ files.
+      <code>pie_file_api</code> with <code>paths=[...]</code> when you need context from 2+ files.
       This session's provider investigation read 3 files serially — one batch
       call would have saved 2 round trips.
     </li>

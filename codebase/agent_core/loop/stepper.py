@@ -15,6 +15,7 @@ from agent_core.loop._helpers import (
     _debug_dump,
     _check_cancelled,
     _finish_tool_events,
+    _feed_chain_miner,
     _QUESTION_TOOLS,
 )
 from agent_core.loop.messages import (
@@ -211,6 +212,7 @@ def dispatch_step(
                 "call_id": result.get("call_id", tc.call_id or ""), "step": step,
             }
             _finish_tool_events(step_state, tc.name)
+            _feed_chain_miner(session_id, tc.name, tc.arguments)
         if local_step and local_planner:
             local_planner.record_success()
 
@@ -303,6 +305,7 @@ def dispatch_step(
         }
 
         _finish_tool_events(step_state, tool)
+        _feed_chain_miner(session_id, tool, tool_input)
         if local_step and local_planner:
             local_planner.record_success()
 

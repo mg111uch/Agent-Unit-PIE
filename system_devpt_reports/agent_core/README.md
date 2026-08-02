@@ -27,7 +27,7 @@ agent_core/
 
 | Capability | Description |
 |------------|-------------|
-| Pluggable Tools | File Ops, Meta, Code RAG, Kernel, Debate, Simulation, Git, Observer |
+| Pluggable Tools | File Ops, Meta, Code RAG, Kernel, Debate, Simulation, Git, Observer, Chain (composite multi-tool calls) |
 | Auto-Research | Goal-autonomous research using shared agent loop (`/auto`) |
 | Debate Mode | Structured topic exploration with belief tracking (`/argu`) |
 | Provider Switching | Swap LLM provider/model at runtime via API (`/api/switch-provider`); `GET /api/providers` lists available providers |
@@ -125,16 +125,40 @@ Measured programmatically (JSON-serialized with 2-space indent):
 | `get_callers_callees` | Recursive graph traversal — who calls this symbol and what it calls |
 | `find_impact` | List everything that depends on a symbol (all transitive callers) |
 | `get_index_info` | Real-time atlas stats (symbols, edges, token ranges, risk distribution) — call once at session start to calibrate budget |
-| `file_api` | Public API surface of a file: classes → method signatures (with docstring first line), module-level functions, no bodies. Hierarchical, class-organized. |
+| `file_api` | Public API surface of one or more files (pass `paths=[...]` to batch — any files, not just kernel): classes → method signatures (with docstring first line), module-level functions, no bodies. Hierarchical, class-organized. |
 | `call_chain` | Shortest call chain from a function to any symbol in another module via BFS over `call_edges` |
 | `compare_apis` | API-level diff between two files (only_in_a, only_in_b, signature_mismatches) |
 | `symbols_by_file` | Complete flat symbol inventory of a file by path alone — no query needed |
 | `atlas_status` | Check if atlas is indexed, ingestion timestamp, file/symbol/call-edge counts |
 | `project_root` | Return absolute project root and codebase root paths |
-| `batch_file_api` | Query atlas for API surfaces of multiple kernel files in one call — avoids sequential `file_api` round trips |
 | `report_freshness` | Scan all `system_devpt_reports/*.md` for stale `_Last verified` stamps and broken citations |
 | `extract_symbols_to_file` | Fetch bodies of named symbols from atlas, write to destination with headers |
 | `minimal_context_dump` | Chains blast radius → symbol source → peripheral API sigs into one capped file |
+
+### Chain Tools (composite `chain` category)
+| Tool | Purpose |
+|------|---------|
+| `probe_module` | file_skeleton → who_imports → find_impact (optional) — one-call module orientation |
+| `orient_symbols` | get_index_info → file_api → get_symbols_meta → get_symbol — cheap-to-full symbol fetch |
+| `doc_audit` | report_freshness → report_schema_check → report_inventory — doc health in one call |
+| `safe_edit` | check_before_edit → edit_file → file_diff — validate, apply, and verify a single-file edit batch |
+
+Runs each step through the `ChainEngine` (`agent_core/tools/chain/chain_engine.py`), binding `$input.X`/`$step.<key>` refs, with per-step budget caps. Gated by `tool_packs.chain` in config.json (default off).
+
+#### Self-evolving workflow graph (mining + evolution)
+`agent_core/tools/chain/chain_miner.py` observes tool-call sequences (in-loop via `_feed_chain_miner` in `loop/_helpers.py`, and session-end via `ChainMiner.mine_session`) and mines repeated contiguous sub-sequences into new `ChainSpec`s. Persisted in SQLite (`agent_core/tools/chain/chain_store.py`, tables `chain_specs` + `chain_candidates` in the kernel DB) and approved mined chains are reloaded as live tools on startup (`_register_stored_chains`).
+
+- Read-only chains auto-promote to `approved` (live) immediately.
+- Chains with any write step persist as `pending` — promoted live only via `chain_admin approve <name>`.
+- Gated by the `workflow_learn` block in config.json: `enabled`, `min_occurrences` (2), `max_sequence_len` (4), `in_loop`, `session_end`, `graph_evolve`, `context_hints`, `stale_after_days` (14), `min_savings_tokens` (0).
+- `chain_admin` tool (category `chain`): `list`, `candidates`, `approve name=...`, `activate name=...`, `delete name=...`.
+- `workflow_status` tool (observer): `summary` (default), `full` (graph nodes/edges/clusters/notes), `candidates`, `evolve` (rebuild graph from chains + candidates + session telemetry).
+- Repeated tools inside a mined chain get unique step names (`tool_2`); periodic repeats (`[a,b,a,b]`) collapse to their base (`[a,b]`).
+- **Feedback loop:** `workflow_hints()` injects live chains (only when `tool_packs.chain` is on) + top DO/AVOID notes into the turn context at every step, gated by `workflow_learn.context_hints`. Chains are never hinted when not exposed, so the agent is never told to call a tool it can't see.
+- **Lifecycle:** approved mined chains unused for > `stale_after_days` are auto-demoted to `inactive` (unregistered) at session-end; `chain_admin activate` restores them. Handwritten chains are never touched.
+- **Savings scoring:** candidates carry `savings_est` (≈ tokens saved per chain, from `tool_stats` avg output tokens). `min_savings_tokens` gates auto-promotion: read-only chains below the bar stay `pending`.
+
+**Workflow graph (Part 3 / P4):** `agent_core/tools/chain/graph_evolver.py` (`GraphEvolver`) maintains the evolving graph in SQLite — tables `graph_nodes`, `graph_edges`, `graph_clusters`, `graph_notes`, `graph_state`, `tool_sequences`. Each chain becomes a cluster node (dagre compound) with its steps as an ordered edge chain; mining candidates become dashed diamond shortcut edges; observed session usage (`tool_sequences`) becomes DO/AVOID notes and per-tool stats. `scripts/render_graph.py` serves a dagre-d3 HTML view of the SQLite graph over HTTP (default port 8123, auto-opens the browser; `--output FILE` writes a static file instead) with cluster subgraphs + a toggleable notes panel; the served page re-renders from SQLite on every refresh. Graph evolution runs from the session-end hook in `loop/engine.py` (gated by `workflow_learn.graph_evolve`).
 
 ### Kernel Tools
 | Tool | Purpose |
@@ -175,3 +199,176 @@ Measured programmatically (JSON-serialized with 2-space indent):
 | `file_stats` | Most accessed files by read/write/edit, grouped by file — flags high-churn candidates |
 | `user_reading_budget` | Track daily LLM output lines read by user. Call with `record_lines=N` to log; warns when &lt;20% budget remains |
 | `hot_reload` | Built-in (handled by `mcp_server.py`). Re-registers all tools + sends `notifications/tools/list_changed` to MCP client |
+
+----------
+
+# Final Plan: Tool Chains + Self-Evolving Workflow Graph
+
+**Decisions locked in:**
+- **Auto-promotion:** read-only chains auto-register; write/edit chains require approval.
+- **Persistence:** everything in SQLite (graph + telemetry + patterns + chains).
+- **Mining trigger:** both session-end batch AND in-loop lightweight check, each behind config flags (both can be disabled).
+- **Phase 1 chains:** `probe_module`, `orient_symbols`, `doc_audit`, `safe_edit`.
+
+---
+
+## Part 1 — Tool Chains (deterministic composite tools)
+
+New package `agent_core/tools/chain/`:
+- **`chain_spec.py`** — `ChainSpec` + `Step` dataclasses (declarative: name, category, description, params spec, `steps[]`, budget). Each step: `{tool, args, collect}` where `args` bind `$input.X` / `$step.<prev>.<field>` / literals, and `collect` slices step output into named intermediates + the final JSON.
+- **`chain_engine.py`** — `ChainEngine`: resolves each step's tool via `registry.get_tools` (same wrapped fns the loop uses), normalizes args, calls, normalizes results (both `ToolResult` and raw-string incl. `"Error"` prefix, mirroring `executor.py:97`), binds outputs, accumulates under a token budget (reuse `context_dump.py:13` `_add_section` idea), short-circuits on error. Returns one JSON dict.
+- **`chains.py`** — data-only list:
+
+| Chain | Cat | Steps | Kills pattern |
+|---|---|---|---|
+| `probe_module` | meta | `file_skeleton` → `who_imports` → `find_impact` | "read file to understand structure" (sessions 2/3/5) |
+| `orient_symbols` | code_rag | `get_index_info` → `file_api(paths)` → `get_symbols_meta` → `get_symbol` | CALIBRATE→ORIENT→META→FETCH, hardcoded |
+| `doc_audit` | meta | `report_freshness` → `report_schema_check` → `report_inventory` | session-1 doc audits |
+| `safe_edit` | meta | `check_before_edit` → `edit_file` → `file_diff` | batch_edit failure-recovery (implement_fix) |
+
+- **Registration:** new category `CAT_CHAIN = "chain"` in `registry.py`, gated by `tool_packs.chain`, registered through the `_register` spec table so `hot_reload` + `tool_anatomy` track them. `make_chain_tool(spec)` factory follows `_make_rag_tool` shape, wrapped in `tool_call`.
+
+---
+
+## Part 2 — Observation → Mining → Auto-Promotion
+
+**2a. Hook + telemetry**
+- Extend `_finish_tool_events` (`_helpers.py:132`) to record `{name, category, ts, args_summary, output_chars}`.
+- Wire the dead `session_state.observe_tool_result` to capture ok/fail + result size.
+- Persist ordered per-session sequences to SQLite (below).
+- **Session-end hook** at loop exit (`engine.py:283`) — none exists today.
+
+**2b. Mining (both triggers, flag-gated)**
+- `pattern_miner.py` — `PatternMiner`: slide-window n-gram counting (n=2..4) over tool names; keep only deterministic read-only sequences; score by frequency × savings (`Σ output_chars − one chain call`) × determinism.
+- **Session-end batch:** full mine over accumulated `tool_sequences` → writes candidates to `patterns` table.
+- **In-loop lightweight:** cheap lookup against a cached pattern table checked during the turn; read-only promotion only; never blocks the hot path.
+- Config flags (in `config.json`):
+  ```
+  "workflow_learn": {
+    "enabled": true,
+    "session_end_mining": true,
+    "in_loop_mining": false,
+    "auto_promote_readonly": true,
+    "min_frequency": 3, "min_savings_tokens": 2000
+  }
+  ```
+  `enabled:false` deactivates both triggers.
+
+**2c. Promotion (`chain_promoter.py`)**
+- Deterministic, no LLM in the decision. Read-only pattern meeting thresholds → templated `ChainSpec` written into a `chains_learned.py` that `_register_all()` picks up (appears as a real tool next reload). Write/edit patterns → status `pending_approval`, surfaced via the `workflow_status` tool for a confirm.
+
+---
+
+## Part 3 — Graph in SQLite + Subgraphs + Evolver
+
+**3a. Storage (all SQLite, new `data/logs/workflow.db`, managed by `workflow_store.py`):**
+- `tool_sequences` (session_id, seq JSON, outcome, ts)
+- `patterns` (pattern JSON, frequency, determinism, savings, status)
+- `chains` (chain_id, spec JSON, source, status, ts)
+- `graph_nodes` / `graph_edges` / `graph_clusters` (id, label, shape, color, cluster_id, chain_id, stats JSON)
+- `graph_notes` (section, text, tag do/avoid)
+- `graph_state` (version, last_evolved_at)
+
+**3b. Renderer (`scripts/render_graph.py` + shared JS template):**
+- Reads SQLite → emits the `data={nodes,edges,clusters}` view → renders `Agent_graph.html` and per-workflow HTML via one dagre-d3 template.
+- Subgraph merge: dagre compound nodes (`g.setParent(child, clusterId)`) — each workflow (`minimal_context`, `implement_fix`) becomes a **cluster node** inside the main graph.
+
+**3c. `graph_evolver.py` (`GraphEvolver`) + `workflow_status` tool:**
+- Runs from the session-end hook with mined patterns: adds shortcut edges (pattern already a graph path, executed redundantly), collapses a promoted pattern into a single `chain` node referencing its tool, appends DO/AVOID notes from outcome stats.
+- `workflow_status` tool (observer/meta) exposes the live graph, pattern candidates, and pending-approval chains for the LLM/user.
+
+---
+
+## Phases (small scope, each independently shippable/reversible)
+1. **P1:** chain runtime + 4 hand-written chains (biggest immediate token win).
+2. **P2:** hook + telemetry + SQLite sequences.
+3. **P3:** miner + dual triggers + deterministic promoter (+ approval gate).
+4. **P4:** graph refactor to SQLite + shared renderer + subgraph clusters + evolver.
+
+**Key risks & mitigations**
+- Chain schema bloat adds ~2k tokens/turn → mitigated by `tool_packs.chain` gating.
+- In-loop mining coupling → gated off by default, cached lookups only.
+- Auto-registered chains accumulating → status field + `chains` table allows clean deactivation; no unregister path exists today, so evolver marks inactive rather than deleting.
+- Side-effect safety → read-only auto, writes gated by approval.
+
+Ready to start with P1 whenever you are — or I can drill into any part of this first.
+
+---
+
+# Implementation Status (updated 2026-08-02)
+
+All 4 parts implemented, tested, and shipped. Deviations from the original plan are
+flagged inline; each is a deliberate adaptation to the project's conventions
+(one persistence path in SQLite, no file-generated modules, no LLM in the loop).
+
+## P1 — Tool Chains: DONE
+- `agent_core/tools/chain/chain_spec.py` — `ChainSpec` + `Step` dataclasses with
+  `$input.X` / `$step.<key>.<path>` / literal binding and `collect` slicing.
+- `chain_engine.py` — `ChainEngine.run()` resolves steps via the live registry,
+  normalizes `ToolResult` + raw-string results (incl. `"Error"` prefix), binds
+  outputs, applies per-step char caps + total token budget, short-circuits on
+  errors, returns one JSON dict. `make_chain_tool(spec)` returns the wrapped fn.
+- `chains.py` — the 4 handwritten chains: `probe_module`, `orient_symbols`,
+  `doc_audit`, `safe_edit`.
+- Registration — `CAT_CHAIN` in `registry.py`, exposed only when
+  `tool_packs.chain` is on in config.json (default off). Hot-reload + anatomy track
+  them via the `_register` spec table.
+
+## P2 + P3 — Mining, Telemetry, Promotion: DONE (names adapted)
+- Hooks: in-loop `_feed_chain_miner(session_id, tool, args)` in
+  `loop/_helpers.py` (both stepper paths); session-end batch in
+  `loop/engine.py` `finally:` block.
+- **Deviation 2b:** miner is `chain/chain_miner.py` (`ChainMiner`), not
+  `pattern_miner.py`. Same slide-window n-gram counting over tool names (n=2..4,
+  `max_sequence_len`), periodic-repeat collapse (`[a,b,a,b]` → `[a,b]`), and
+  repeated tools get unique step names (`tool_2`).
+- **Deviation 2c:** no `chain_promoter.py` or generated `chains_learned.py`.
+  Promotion is inline in the miner: read-only → `approved` (live via
+  `_register_live`); write steps → `pending`. Persisted in SQLite and reloaded
+  live on startup by `_register_stored_chains()` in `tools/__init__.py`.
+- **Deviation config keys:** actual flags are `min_occurrences` (2),
+  `max_sequence_len` (4), `in_loop`, `session_end`, `graph_evolve`,
+  `context_hints`, `stale_after_days` (14), `min_savings_tokens` (0). The plan's
+  `session_end_mining`/`in_loop_mining`/`min_frequency` names were simplified.
+
+## P4 — Graph + Renderer + Evolver: DONE
+- **Deviation 3a:** storage lives in the existing `kernel.db` via
+  `chain_store.py` (not a new `workflow.db`/`workflow_store.py`) to honor the
+  one-persistence-path rule. Tables: `tool_sequences`, `graph_nodes`,
+  `graph_edges`, `graph_clusters`, `graph_notes`, `graph_state` (+ existing
+  `chain_specs`, `chain_candidates`).
+- `graph_evolver.py` (`GraphEvolver`) rebuilds the graph deterministically at
+  session-end: chain clusters with ordered step nodes/edges, candidates as
+  diamond shortcut edges, session usage as DO/AVOID notes + per-tool stats.
+  Bumps `graph_state.version` on every evolve.
+- `scripts/render_graph.py` serves the graph over HTTP (default port 8123, auto-opens the
+  browser; `--output FILE` writes a static file instead). The served page re-renders from
+  SQLite on every refresh, via one dagre-d3 template with compound cluster subgraphs
+  (`g.setParent`) + a toggleable notes panel.
+- `workflow_status` tool (observer) — `summary` | `full` | `candidates` |
+  `evolve`.
+
+## Post-plan additions (feedback loop, lifecycle, savings)
+- **Feedback loop:** `graph_evolver.workflow_hints()` injects live chains +
+  top DO/AVOID notes into turn context every step (gated by
+  `workflow_learn.context_hints`). Chains are listed **only** when
+  `tool_packs.chain` is enabled, so the agent is never told to call a tool it
+  can't see.
+- **Lifecycle:** `sweep_stale_chains()` demotes approved mined chains unused for
+  > `stale_after_days` to `inactive` (unregistered) at session-end;
+  `chain_admin activate` restores them. Handwritten chains are never touched.
+  This closes the original "no unregister path" risk — `registry.unregister`
+  now exists.
+- **Savings scoring:** candidates carry `savings_est` ≈ (Σ step avg output
+  tokens − largest step) × occurrences, from `tool_stats`. `min_savings_tokens`
+  gates read-only auto-promotion (below bar → `pending`). Displayed by
+  `chain_admin candidates` / `workflow_status candidates`.
+
+## Known limits / next candidates
+- `tool_packs.chain` is off by default; the whole pipeline is invisible to the
+  LLM until it is enabled (the original schema-bloat mitigation). The context
+  hints degrade gracefully to the "chains disabled" note.
+- Mining was validated with synthetic feeds; validating against the 8 real
+  transcripts in `sessions_analysis/` is a natural next step.
+- All paths are smoke-tested via `conda run -n myenv python`; no formal test
+  suite exists yet.

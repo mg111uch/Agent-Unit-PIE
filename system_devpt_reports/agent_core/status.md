@@ -1,6 +1,5 @@
 # Agent Core Status
-_Last verified: 2026-08-01_
-
+_Last verified: 2026-08-02_
 > Capability claims are hypotheses. Re-validate: `python scripts/validate_capabilities.py`
 > For a user-facing feature overview, see `README.md`.
 
@@ -26,6 +25,13 @@ _Last verified: 2026-08-01_
 - Test coverage for agent loop edge cases — low
 
 ## Recent Changes (newest first, max 10)
+- Feedback loop: `workflow_hints()` injects live chains (only when `tool_packs.chain` on) + top DO/AVOID notes into turn context every step, gated by `workflow_learn.context_hints` — `agent_core/tools/chain/graph_evolver.py:workflow_hints()`, `agent_core/loop/engine.py:iter_agent_events()`
+- Chain lifecycle: approved mined chains unused > `stale_after_days` (14) auto-demote to `inactive` + unregister at session-end; `chain_admin activate` restores — `agent_core/tools/chain/graph_evolver.py:sweep_stale_chains()`, `agent_core/tools/chain/chain_admin.py`
+- Savings scoring: candidates carry `savings_est` (tokens saved, from tool_stats avg output tokens); `min_savings_tokens` gates read-only auto-promotion (below bar → pending) — `agent_core/tools/chain/chain_miner.py:estimate_savings()`
+- Workflow graph: `graph_evolver.py` (GraphEvolver) maintains nodes/edges/clusters/notes/state + `tool_sequences` in kernel.db; `scripts/render_graph.py` serves a dagre-d3 view over HTTP (default port 8123) with cluster subgraphs, re-rendering from SQLite per refresh — `agent_core/tools/chain/graph_evolver.py`
+- `workflow_status` tool (observer): summary | full | candidates | evolve — `agent_core/tools/chain/workflow_status.py`
+- Self-evolving chains: `chain_miner.py` mines repeated tool sequences (in-loop + session-end), auto-promotes read-only, `pending` for writes; `chain_store.py` persists chain_specs/chain_candidates; `_register_stored_chains` reloads approved mined chains at startup — `agent_core/tools/chain/`
+- Tool chains: `chain_spec.py`/`chain_engine.py` run composite tools (probe_module, orient_symbols, doc_audit, safe_edit) with $input/$step binding + budget caps — `agent_core/tools/chain/chain_engine.py`
 - MCP exposure policy: CAT_META always, CAT_FILE never, other tool packs only when enabled in config — `agent_core/mcp_server.py:_exposed_categories()`
 - `subagent_task` moved to CAT_FILE, gated by `subagent_task_enabled` config flag (default off) — `agent_core/tools/__init__.py:_register_file_tools()`, `agent_core/config.py:SUBAGENT_TASK_ENABLED`
 - Local model routing: LocalPlanner + OllamaProvider for per-step delegation of file/meta tools to FunctionGemma, with config.json on/off toggle — `agent_core/planning/local_planner.py:should_route_local()`

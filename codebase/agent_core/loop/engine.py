@@ -10,6 +10,7 @@ from typing import Any, Generator, List, Optional
 from agent_core.config import (
     COMPACTION_TRIGGER_CHARS,
     CONTEXT_DIGEST_ENABLED,
+    WORKFLOW_LEARN_CONTEXT_HINTS,
     resolve_active_tool_names,
     resolve_active_tool_packs,
 )
@@ -66,6 +67,15 @@ def iter_agent_events(
         if state.workspace_root or state.file_cache or state.todo_plan or state.edits_log:
             context_info = (context_info or "") + "\n\n" + digest
 
+    if WORKFLOW_LEARN_CONTEXT_HINTS:
+        try:
+            from agent_core.tools.chain.graph_evolver import graph_evolver
+            hints = graph_evolver.workflow_hints()
+            if hints:
+                context_info = (context_info or "") + "\n\n" + hints
+        except Exception:
+            pass  # hints must never break the turn
+
     conv_id = conversation_id
     _interaction_id = conversation_id
 
@@ -96,6 +106,24 @@ def iter_agent_events(
         )
     finally:
         reset_session_state(_state_token)
+        try:
+            if msg_store is not None and session_id:
+                from agent_core.config import WORKFLOW_LEARN_SESSION_END, WORKFLOW_LEARN_GRAPH_EVOLVE
+                if WORKFLOW_LEARN_SESSION_END:
+                    from agent_core.tools.chain.chain_miner import miner
+                    miner.mine_session(session_id, msg_store)
+                if WORKFLOW_LEARN_GRAPH_EVOLVE:
+                    from agent_core.tools.chain.chain_store import chain_store
+                    sequence = [tc.get("name") for msg in msg_store.get_messages(session_id, limit=10000)
+                                for tc in (msg.get("tool_calls") or [])
+                                if tc.get("name")]
+                    if len(sequence) >= 2:
+                        chain_store.upsert_sequence(session_id, sequence)
+                    from agent_core.tools.chain.graph_evolver import graph_evolver
+                    graph_evolver.sweep_stale_chains()
+                    graph_evolver.evolve()
+        except Exception:
+            pass  # session-end mining must never break the turn
 
 
 def _iter_agent_events_body(

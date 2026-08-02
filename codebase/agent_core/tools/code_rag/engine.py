@@ -189,11 +189,13 @@ class CodeRAG:
         cur = conn.execute(self._build_call_cte("callers", limit=100), (symbol["id"],))
         return [dict(r) for r in cur.fetchall()]
 
-    def batch_file_api(self, paths: List[str]) -> Dict[str, Any]:
+    def file_api(self, paths) -> Dict[str, Any]:
+        if isinstance(paths, str):
+            paths = [paths]
         results = {}
         for path in paths:
             resolved = _resolve_path(path)
-            results[path] = self.file_api(resolved)
+            results[path] = self._file_api_single(resolved)
         return {"files": results, "total": len(paths)}
 
     def atlas_status(self) -> Dict[str, Any]:
@@ -244,7 +246,7 @@ class CodeRAG:
             "risk_distribution": risk_dist,
         }
 
-    def file_api(self, path: str) -> Dict[str, Any]:
+    def _file_api_single(self, path: str) -> Dict[str, Any]:
         conn = self._get_conn()
         rows = conn.execute(
             "SELECT symbol_name, symbol_type, parent_name, signature, "
@@ -314,8 +316,8 @@ class CodeRAG:
         return {"error": f"No call chain from '{start_fn}' to module '{end_module}'."}
 
     def compare_apis(self, path_a: str, path_b: str) -> Dict[str, Any]:
-        api_a = self.file_api(path_a)
-        api_b = self.file_api(path_b)
+        api_a = self._file_api_single(path_a)
+        api_b = self._file_api_single(path_b)
         def key(sym):
             return (sym.get("parent_name") or "", sym["symbol_name"])
         sigs_a = {}

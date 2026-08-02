@@ -12,7 +12,6 @@ from agent_core.tools.code_rag.tools import (
     symbols_by_file_tool,
     atlas_status_tool,
     project_root_tool,
-    batch_file_api_tool,
     report_freshness_tool,
     extract_symbols_to_file_tool,
     report_inventory_tool,

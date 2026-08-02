@@ -52,6 +52,19 @@ RATE_LIMIT_TOOL_WRITES: int = _CONFIG.get("rate_limits", {}).get("tool_writes_pe
 DEBUG_DUMP_ENABLED: bool = _CONFIG.get("debug_dump_enabled", False)
 DEBUG_DUMP_APPEND_MODE: bool = bool(_CONFIG.get("debug_dump_append_mode", False))
 
+# Self-evolving tool chains: observe tool-call sequences, mine repeated patterns
+# into new chains, auto-promote read-only chains, persist everything in SQLite.
+_WF = _CONFIG.get("workflow_learn", {})
+WORKFLOW_LEARN_ENABLED: bool = bool(_WF.get("enabled", True))
+WORKFLOW_LEARN_MIN_OCCURRENCES: int = int(_WF.get("min_occurrences", 2))
+WORKFLOW_LEARN_MAX_SEQUENCE: int = int(_WF.get("max_sequence_len", 4))
+WORKFLOW_LEARN_IN_LOOP: bool = bool(_WF.get("in_loop", True))
+WORKFLOW_LEARN_SESSION_END: bool = bool(_WF.get("session_end", True))
+WORKFLOW_LEARN_GRAPH_EVOLVE: bool = bool(_WF.get("graph_evolve", True))
+WORKFLOW_LEARN_CONTEXT_HINTS: bool = bool(_WF.get("context_hints", True))
+WORKFLOW_LEARN_STALE_AFTER_DAYS: int = int(_WF.get("stale_after_days", 14))
+WORKFLOW_LEARN_MIN_SAVINGS_TOKENS: int = int(_WF.get("min_savings_tokens", 0))
+
 # Efficiency / context management
 COMPACTION_TRIGGER_CHARS: int = int(_CONFIG.get("compaction_trigger_chars", 48_000))
 CONTEXT_DIGEST_ENABLED: bool = bool(_CONFIG.get("context_digest_enabled", True))

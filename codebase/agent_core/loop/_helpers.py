@@ -137,6 +137,20 @@ def _finish_tool_events(step_state, tool_name):
     })
 
 
+def _feed_chain_miner(session_id, tool_name, arguments):
+    """In-loop mining hook — never let mining break the loop."""
+    if not session_id:
+        return
+    try:
+        from agent_core.config import WORKFLOW_LEARN_IN_LOOP
+        if not WORKFLOW_LEARN_IN_LOOP:
+            return
+        from agent_core.tools.chain.chain_miner import miner
+        miner.feed(session_id, tool_name, arguments)
+    except Exception:
+        pass
+
+
 def _generate_with_cancel(
     orchestrator: Any,
     cancel_event: Optional[threading.Event],

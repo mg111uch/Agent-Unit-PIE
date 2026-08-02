@@ -188,6 +188,17 @@ class ToolRegistry:
         """Register a loader that registers a category's tools on first access."""
         self._lazy_loaders[category] = loader
 
+    def unregister(self, name: str) -> bool:
+        """Remove a tool (used when a mined chain is superseded by a longer one)."""
+        if name not in self._tools:
+            return False
+        self._tools.pop(name, None)
+        self._schemas.pop(name, None)
+        self._meta.pop(name, None)
+        self._categories.pop(name, None)
+        self._risk_levels.pop(name, None)
+        return True
+
     def _materialize(self, categories: Optional[List[str]] = None):
         """Run pending lazy loaders. With categories=None, materialize everything."""
         if not self._lazy_loaders:
@@ -296,3 +307,4 @@ CAT_GIT = "git"
 CAT_CODE_RAG = "code_rag"
 CAT_OBSERVER = "observer"
 CAT_DEBATE = "debate"
+CAT_CHAIN = "chain"

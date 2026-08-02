@@ -32,7 +32,7 @@ from mcp.types import (
 )
 
 from agent_core.tools import registry
-from agent_core.tools.registry import CAT_FILE, CAT_KERNEL, CAT_SIM, CAT_META, CAT_GIT, CAT_CODE_RAG, CAT_OBSERVER, CAT_DEBATE
+from agent_core.tools.registry import CAT_FILE, CAT_KERNEL, CAT_SIM, CAT_META, CAT_GIT, CAT_CODE_RAG, CAT_OBSERVER, CAT_DEBATE, CAT_CHAIN
 from agent_core.config import resolve_active_tool_packs
 from agent_core.loop.executor import _normalize_tool_arg
 
@@ -46,7 +46,7 @@ _FILE_NEVER_EXPOSED = CAT_FILE
 
 def _exposed_categories() -> list[str]:
     active = set(resolve_active_tool_packs())
-    others = {CAT_KERNEL, CAT_SIM, CAT_GIT, CAT_CODE_RAG, CAT_OBSERVER, CAT_DEBATE} & active
+    others = {CAT_KERNEL, CAT_SIM, CAT_GIT, CAT_CODE_RAG, CAT_OBSERVER, CAT_DEBATE, CAT_CHAIN} & active
     return sorted(_META_ALWAYS_ON | others)
 
 # Hot-reload support: watches all .py files under agent_core/tools/

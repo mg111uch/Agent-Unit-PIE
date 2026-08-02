@@ -9,7 +9,7 @@
         "gemini-3.1-flash-lite",
         "gemini-3.6-flash",
         "gemini-3.5-flash",
-        "gemini-3.1-pro-preview",        
+        "gemini-3.1-pro-preview",
         "gemma-4-31b-it",
         "gemma-4-26b-a4b-it"
       ]
@@ -38,12 +38,27 @@
     }
   },
   "allowed_commands": [
-    "ls", "cat", "mkdir", "cd", "pwd", "python", "pytest"
-  ],  
+    "ls",
+    "cat",
+    "mkdir",
+    "cd",
+    "pwd",
+    "python",
+    "pytest"
+  ],
   "enable_checkpoints": true,
   "max_checkpoints": 50,
   "agents_md_enabled": true,
-  "exclude_dirs": [".git", ".agent_checkpoints", ".pytest_cache", ".adk", "node_modules", "__pycache__", ".venv", "children"],
+  "exclude_dirs": [
+    ".git",
+    ".agent_checkpoints",
+    ".pytest_cache",
+    ".adk",
+    "node_modules",
+    "__pycache__",
+    ".venv",
+    "children"
+  ],
   "sandbox_enabled": false,
   "post_edit_import_check": true,
   "codebase_atlas_dir": "../atlas_output",
@@ -58,7 +73,7 @@
   "debug_dump_enabled": true,
   "git_tools_enabled": false,
   "subagent_task_enabled": false,
-  "tool_mode": "all",  
+  "tool_mode": "all",
   "tool_packs": {
     "file": true,
     "meta": false,
@@ -66,14 +81,18 @@
     "debate": false,
     "sim": false,
     "git": false,
-    "code_rag": false
-},
+    "code_rag": false,
+    "chain": false
+  },
   "local_model": {
     "enabled": false,
     "provider": "ollama",
     "model": "gemma-2-2b-it",
     "endpoint": "http://localhost:11434",
-    "local_categories": ["file", "meta"],
+    "local_categories": [
+      "file",
+      "meta"
+    ],
     "fallback_to_cloud": true,
     "max_local_steps": 3,
     "timeout_seconds": 30
@@ -81,5 +100,16 @@
   "rate_limits": {
     "llm_calls_per_minute": 10,
     "tool_writes_per_minute": 30
+  },
+  "workflow_learn": {
+    "enabled": true,
+    "min_occurrences": 2,
+    "max_sequence_len": 4,
+    "in_loop": true,
+    "session_end": true,
+    "graph_evolve": true,
+    "context_hints": true,
+    "stale_after_days": 14,
+    "min_savings_tokens": 0
   }
 }

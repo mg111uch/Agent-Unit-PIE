@@ -94,7 +94,7 @@ def minimal_context_dump(params: dict) -> str:
             file_paths = [file_paths]
         for fp in file_paths:
             resolved = _resolve_path(fp)
-            api = rag.file_api(resolved)
+            api = rag._file_api_single(resolved)
             if api["total_api_symbols"] == 0:
                 continue
             api_lines = [f"## API: {fp}"]

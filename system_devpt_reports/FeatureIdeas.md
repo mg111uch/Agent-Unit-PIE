@@ -4,28 +4,6 @@ _Last updated: 2026-07-23_
 _Source: multi-agent implementation of FeatureIdeas + original FixesIssues plan_  
 _Verified against live repo + `pie_report_inventory` / `pie_list_capabilities` / `validate_capabilities.py`_
 
----
-
-## 0. What is done (do not re-implement)
-
-Phase 1 + most of Phase 2 completed by multi-agent work. Verified:
-
-| Area | Evidence |
-|------|----------|
-| **A1–A8** Status schema | All 5 module `status.md` use template + `_Last verified: 2026-07-23`; sum ≈109 lines (&lt;250). `debate_argu/improvement.md` deleted |
-| **B1–B4** Scripts | `scripts/lib/citations.py`; seed auto-discovers `*/status.md`; validate has `--json` / module grouping; 30/30 capabilities PASS |
-| **C1–C5** MCP report tools | `pie_report_inventory`, `pie_report_schema_check`, `pie_list_capabilities`, `pie_resolve_citations` live |
-| **D1–D4** AGENTS.md | Report maintenance protocol, batch_file_api rule, one-command seed+validate, status ≻ roadmap |
-| **E1–E3** Dogfood Stage 1 | 30 `capability_claim` + 15 `known_gap` hypotheses seeded; validate exit 0 |
-| **F1–F4** Doc slim | Thin statuses; `agent_core` design essay → `project_docs/agent_core_design.md`; slim agent_core/debate roadmaps |
-
-**One-command health:**  
-`python scripts/seed_hypotheses.py --quiet && python scripts/validate_capabilities.py --quiet`
-
-**Operational tools:** `pie_report_freshness`, `pie_report_inventory`, `pie_report_schema_check`, `pie_list_capabilities`, `pie_resolve_citations`
-
----
-
 ## 1. Not done — open backlog
 
 ### 1.1 Process / docs (small, high leverage)
@@ -33,9 +11,6 @@ Phase 1 + most of Phase 2 completed by multi-agent work. Verified:
 | ID | Task | Why open | Verification |
 |----|------|----------|--------------|
 | **B5** | Shrink seed + validate + `citations.py` to ≤250 LOC (now ~336) | Shared lib kept full resolve/parse surface | `wc -l scripts/seed_hypotheses.py scripts/validate_capabilities.py scripts/lib/citations.py` ≤ 250 without dropping flags |
-| **B6** | Investigate prompt/schema caching for LLM providers | OpenRouter Anthropic models pass `cache_control`; Gemini supports `CachedContent`. Check which models are actually routed and enable caching for static tool-schema + system-prompt block to save on repeated calls. | Verify per-model: cache hit rate >0 after 3+ identical-turn calls |
-| **D5** | Audit `codebase/prompt_fragments/` for always-on bloat; load only enabled packs | Never prioritized; ~105 lines across 10 fragments | Measure system prompt size before/after; packs filter verified in `prompts.py` |
-| **F5** | Cap roadmaps | `codebase_atlas/roadmap.md` still ~201 lines; `kernel/roadmap.md` ~65; `populaDyn_simu/roadmap.md` empty | Near-term sections short; long wishlists → `project_docs/` or delete empty |
 | **F6** | Document “do not Read `atlas_output/children/` for routine work” in AGENTS.md | Missed | Rule present under tooling / anti-patterns |
 | **Schema-check false positives** | `pie_report_schema_check` flags Known Gaps / Recent Changes bullets as “without citation” | Checker treats all bullets like Capability lines | Only enforce citations under `## Current Capability` |
 

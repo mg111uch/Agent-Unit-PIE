@@ -96,7 +96,6 @@ def _post_meta(symbols):
 # ── Factory-generated tools (7) ──────────────────────────────────────
 
 get_index_info_tool = _make_rag_tool("get_index_info")
-batch_file_api_tool = _make_rag_tool("batch_file_api", required=["paths"])
 call_chain_tool = _make_rag_tool("call_chain", required=["start_fn","end_module"], optional=["file_path"])
 compare_apis_tool = _make_rag_tool("compare_apis", required=["path_a","path_b"], resolve=["path_a","path_b"])
 search_symbols_tool = _make_rag_tool("search_symbols", required=[], optional=["query","queries","type_filter","top_k"], post=_post_search, err_no_atlas=_NO_ATLAS_LONG)
@@ -112,12 +111,19 @@ def file_api_tool(params):
         return "Codebase atlas not found."
     if not rag.ensure_indexed():
         return "Code RAG database not found or not indexed."
-    path = params.get("path", "")
-    if not path:
-        return "Error: 'path' parameter is required."
-    resolved = _resolve_path(path)
-    result = rag.file_api(resolved)
-    return json.dumps(_post_file_api(result), separators=(",", ":"))
+    paths = params.get("paths")
+    if isinstance(paths, str):
+        paths = [paths]
+    single = params.get("path")
+    if single:
+        paths = [single] + (paths or [])
+    if not paths:
+        return "Error: 'path' (string) or 'paths' (list) parameter is required."
+    result = rag.file_api(paths)
+    posted = {k: _post_file_api(v) for k, v in result["files"].items()}
+    if len(paths) == 1:
+        return json.dumps(posted[paths[0]], separators=(",", ":"))
+    return json.dumps({"files": posted, "total": len(paths)}, separators=(",", ":"))
 
 def symbols_by_file_tool(params):
     rag = _get_rag()
