@@ -17,7 +17,7 @@
     "openrouter": {
       "default_model": "openai/gpt-oss-20b:free",
       "models": [
-        "deepseek/deepseek-v4-flash",
+        "google/gemma-4-26b-a4b-it:free",
         "openai/gpt-oss-120b:free",
         "openai/gpt-oss-20b:free",
         "nvidia/nemotron-3-ultra-550b-a55b:free",
@@ -25,7 +25,7 @@
         "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
         "nvidia/nemotron-3-nano-30b-a3b:free",
         "poolside/laguna-s-2.1:free",
-        "poolside/laguna-m.1:free",
+        "poolside/laguna-xs-2.1:free",
         "inclusionai/ling-3.0-flash:free",
         "bytedance-seed/seedream-4.5"
       ]
@@ -101,6 +101,8 @@
     "llm_calls_per_minute": 10,
     "tool_writes_per_minute": 30
   },
+  "tool_nudge_threshold": 20,
+  "gemini_skip_tools_on_chain": true,
   "workflow_learn": {
     "enabled": true,
     "min_occurrences": 2,

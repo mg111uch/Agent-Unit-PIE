@@ -72,6 +72,12 @@ def debate_step(raw_input: Any) -> str:
     topic = raw_input.get("topic", "")
     session_id = raw_input.get("_session_id", "")
     prepare_only = raw_input.get("prepare_only", False)
+    complete_only = raw_input.get("complete_only", False)
+
+    if complete_only:
+        if not session_id:
+            return json.dumps({"error": "_session_id is required"})
+        return _debate_wait_and_process(session_id)
 
     if not topic:
         return json.dumps({"error": "topic is required"})
@@ -119,7 +125,15 @@ def debate_step(raw_input: Any) -> str:
         return json.dumps({"questions": [question]})
 
     # --- Phase 2: Wait for answer (blocking, with timeout) ---
-    answered = event.wait(timeout=300)
+    return _debate_wait_and_process(session_id)
+
+
+def _debate_wait_and_process(session_id: str) -> str:
+    """Block on an already-registered pending debate question, then process the answer."""
+    entry = _pending.get(session_id)
+    if entry is None:
+        return json.dumps({"cancelled": True})
+    answered = entry["event"].wait(timeout=300)
     if not answered:
         _pending.pop(session_id, None)
         return json.dumps({"cancelled": True, "reason": "timeout"})

@@ -179,11 +179,19 @@ _FILE_SPECS = [
       "items": arr_p("string", "List of task descriptions (for create/update)"),
       "ids": arr_p("integer", "Task IDs to mark done (for mark_done)")}),
     ("ask_user_question", ask_user_question, CAT_FILE,
-     "Ask the user for input, clarification, or a decision. Provide up to 3 options per question (a 4th 'custom answer' text input is always available). Can ask multiple questions at once — user answers them one by one.",
+     "Ask the user for input, clarification, or a decision. Use this for ALL interactive questions/quizzes/polls the user should answer in the chat UI — never just type questions in your reply text. Provide up to 3 options per question (a custom-answer text input is always available); can ask multiple questions at once, answered one by one.",
      {"questions": {"t": "array", "desc": "Questions to ask. User answers them sequentially. Max 3 options each.", "r": True,
                     "items": {"type": "object", "properties": {
                         "question": {"type": "string", "description": "The question text"},
-                        "options": {"type": "array", "items": {"type": "string"}, "description": "Up to 3 predefined answer choices"}},
+                        "header": {"type": "string", "description": "Optional short title shown above the question"},
+                        "options": {"type": "array",
+                                    "items": {"anyOf": [
+                                        {"type": "string"},
+                                        {"type": "object", "properties": {
+                                            "label": {"type": "string", "description": "Short answer choice label"},
+                                            "description": {"type": "string", "description": "Optional hint shown under the label"}},
+                                         "required": ["label"], "additionalProperties": False}]},
+                                    "description": "Up to 3 predefined answer choices; each a plain string or an object with label (+ optional description)"}},
                         "additionalProperties": False}}}),
 ]
 

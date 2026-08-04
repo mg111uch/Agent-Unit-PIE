@@ -24,13 +24,13 @@ Also give suggestions for this workflow optimization, patterns which could be av
 - But most of the fixes you suggested are project specific. I want project agnostic fixes so that model does not dirft. Look for the instructions you followed in your system prompt to implement this same task earlier. Suggest those
 
 # Questions
-grok --resume 019f9d9d-733b-7a53-b581-f8dbfae3a8b4
+grok --resume 019fc7b4-a7a3-7a20-86f1-6feab4f594bc
 
 - Front end user_question tool not working.
 - grep search rules or tools for tui_output search - When analyzing a conversation log file (e.g. `tui_output.txt`), grep for structural markers like `[FINAL]`, `[NEW TURN]`, `total_tokens`, `"ok": false`, `latency_seconds`, or `"kind": "final"` rather than generic keywords like `Error` or `fail` which may match irrelevant instructions in the file's header.
 
 - Add Todo dismiss
-- 
+- ask me 3 questions on indian history
 
 # Tips
 - Close mcp server connection before git add commit push
@@ -38,4 +38,4 @@ grok --resume 019f9d9d-733b-7a53-b581-f8dbfae3a8b4
 
 - **Session compaction:** Objective, Important Details, Work State (Completed, Active, Blocked), Next Move, Relevant Files
 
-- **Git commit line** Removed batch_file_api, Added tool chains engine
+- **Git commit line** 

@@ -86,14 +86,19 @@ AgentStore.handleMessage = (msg) => {
       if (fnl) {
         fnl.isStreaming = false
         fnl.isThinking = false
+        fnl.pendingQuestion = false
         if (msg.full_content) fnl.content = msg.full_content
         AgentStore.currentToolCall = null
       }
+      AgentStore.pendingToolCount = 0
+      AgentStore.pendingQuestions = null
       break
     case 'error':
       AgentStore.error = msg.message
       const ea = lastAssistant()
       if (ea) { ea.content += '\n[Error: ' + msg.message + ']'; ea.isStreaming = false; ea.isThinking = false }
+      AgentStore.pendingToolCount = 0
+      AgentStore.pendingQuestions = null
       break
     case 'llm_call':
       AgentStore.llmCallActive = msg.status === 'start'
@@ -108,6 +113,8 @@ AgentStore.handleMessage = (msg) => {
       break
     case 'question':
       AgentStore.pendingQuestions = msg.questions
+      const qa = lastAssistant()
+      if (qa) { qa.isThinking = false; qa.pendingQuestion = true }
       break
     case 'summary':
       const sm = lastAssistant()

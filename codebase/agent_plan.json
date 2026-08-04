@@ -1,1 +1,7 @@
-[]
+[
+  {
+    "id": 1,
+    "text": "file tool self-test: testing basic file and execution tools in tmp/tooltest",
+    "done": false
+  }
+]

@@ -5,11 +5,22 @@ import os
 import sqlite3
 import threading
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any, Optional, List
 
 from agent_core.secrets_redactor import redact
 
-from pathlib import Path
+
+def _redact_nested(value: Any) -> Any:
+    """Redact secrets inside a nested structure, preserving its shape."""
+    if isinstance(value, dict):
+        return {k: _redact_nested(v) for k, v in value.items()}
+    if isinstance(value, list):
+        return [_redact_nested(v) for v in value]
+    if isinstance(value, str):
+        return redact(value)
+    return value
+
 _AGENT_DIR = Path(__file__).resolve().parent
 _CODEBASE_DIR = _AGENT_DIR.parent
 _PROJECT_ROOT = _CODEBASE_DIR.parent
@@ -112,7 +123,7 @@ class MessageStore:
                 raw = json.loads(row[2])
                 for tc in raw if isinstance(raw, list) else [raw]:
                     if isinstance(tc, dict) and "arguments" in tc:
-                        tc["arguments"] = redact(str(tc["arguments"]))
+                        tc["arguments"] = _redact_nested(tc["arguments"])
                 msg["tool_calls"] = raw
             if row[3] is not None:
                 raw = json.loads(row[3])

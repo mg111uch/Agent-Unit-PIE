@@ -6,9 +6,11 @@ Gemini provider using the Interactions API (google-genai >= 2.3.0).
 
 from __future__ import annotations
 
+import hashlib
 import json
 from typing import Any, Dict, Generator, List, Optional
 
+from agent_core.config import GEMINI_SKIP_TOOLS_ON_CHAIN
 from agent_core.providers import BaseLLMProvider
 
 
@@ -111,7 +113,7 @@ def _parse_interaction(res: Any) -> dict[str, Any]:
         "response": output,
         "tool_calls": tool_calls or None,
         "conversation_id": _get(res, "id", None),
-        "usage": self._build_usage_dict(token_count),
+        "usage": BaseLLMProvider._build_usage_dict(token_count),
     }
 
 
@@ -176,12 +178,22 @@ def _messages_to_steps(
     return steps, sys_inst
 
 
+def _tools_fingerprint(tools: Optional[List[Dict[str, Any]]]) -> Optional[str]:
+    """Stable hash of the formatted tool schema set, or None when empty."""
+    if not tools:
+        return None
+    formatted = _format_tool_for_gemini(tools)
+    raw = json.dumps(formatted, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(raw.encode("utf-8")).hexdigest()
+
+
 class GeminiProvider(BaseLLMProvider):
     def __init__(self, api_key: str, model: str = "gemini-3.5-flash"):
         from google import genai
         self.client = genai.Client(api_key=api_key)
         self.default_model = model
         self._supports_stateful = True
+        self._last_tools_fp: Optional[str] = None
 
     def generate(
         self,
@@ -229,10 +241,25 @@ class GeminiProvider(BaseLLMProvider):
                 full = f"{system_prompt}\n\n{prompt}"
             call_kwargs["input"] = full
 
-        if tools:
+        fp = _tools_fingerprint(tools)
+        skip_tools = bool(
+            conversation_id
+            and fp
+            and GEMINI_SKIP_TOOLS_ON_CHAIN
+            and fp == self._last_tools_fp
+        )
+        if not skip_tools and fp:
             call_kwargs["tools"] = _format_tool_for_gemini(tools)
+        self._last_tools_fp = fp
 
-        res = self.client.interactions.create(**call_kwargs)
+        try:
+            res = self.client.interactions.create(**call_kwargs)
+        except Exception:
+            if "tools" not in call_kwargs and fp:
+                call_kwargs["tools"] = _format_tool_for_gemini(tools)
+                res = self.client.interactions.create(**call_kwargs)
+            else:
+                raise
         return _parse_interaction(res)
 
     def _generate_with_messages(
@@ -266,6 +293,7 @@ class GeminiProvider(BaseLLMProvider):
             call_kwargs["system_instruction"] = system_prompt or sys_inst
         if tools:
             call_kwargs["tools"] = _format_tool_for_gemini(tools)
+            self._last_tools_fp = _tools_fingerprint(tools)
 
         res = self.client.interactions.create(**call_kwargs)
         return _parse_interaction(res)
@@ -329,10 +357,24 @@ class GeminiProvider(BaseLLMProvider):
             "input": input_data,
         }
         # Do not resend system_instruction on chained turns (can cause invalid_request).
-        if tools:
+        fp = _tools_fingerprint(tools)
+        skip_tools = bool(
+            fp and GEMINI_SKIP_TOOLS_ON_CHAIN and fp == self._last_tools_fp
+        )
+        if not skip_tools and fp:
             call_kwargs["tools"] = _format_tool_for_gemini(tools)
+        self._last_tools_fp = fp
 
-        res = self.client.interactions.create(**call_kwargs)
+        try:
+            res = self.client.interactions.create(**call_kwargs)
+        except Exception:
+            # If we skipped tools (schema persisted server-side) but the API
+            # actually required them, retry once with tools attached.
+            if "tools" not in call_kwargs and fp:
+                call_kwargs["tools"] = _format_tool_for_gemini(tools)
+                res = self.client.interactions.create(**call_kwargs)
+            else:
+                raise
         return _parse_interaction(res)
 
     def _generate_stateless(

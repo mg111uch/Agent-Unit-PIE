@@ -10,6 +10,13 @@ AgentComponents.QuestionPanel = {
 
     const current = Vue.computed(() => props.questions[currentIndex.value])
 
+    function optLabel(opt) {
+      return opt && typeof opt === 'object' && opt.label ? opt.label : opt
+    }
+    function optDescription(opt) {
+      return opt && typeof opt === 'object' && opt.description ? opt.description : ''
+    }
+
     const canSubmit = Vue.computed(() => {
       if (customMode.value[currentIndex.value]) return customVal.value.trim().length > 0
       return answers.value[currentIndex.value] !== undefined
@@ -17,7 +24,7 @@ AgentComponents.QuestionPanel = {
 
     function selectOption(opt) {
       const idx = currentIndex.value
-      answers.value[idx] = opt
+      answers.value[idx] = optLabel(opt)
       customMode.value[idx] = false
     }
 
@@ -38,6 +45,6 @@ AgentComponents.QuestionPanel = {
       }
     }
 
-    return { currentIndex, answers, customMode, customVal, current, canSubmit, selectOption, toggleCustom, submit }
+    return { currentIndex, answers, customMode, customVal, current, canSubmit, optLabel, optDescription, selectOption, toggleCustom, submit }
   }
 }

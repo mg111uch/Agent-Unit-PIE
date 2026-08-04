@@ -8,11 +8,33 @@ Supports native function calling via tools=[] parameter.
 
 from __future__ import annotations
 
+import ast
 import json
 import uuid
 from typing import Dict, Any, Optional, List, Generator
 
 from agent_core.providers import BaseLLMProvider
+
+
+def _coerce_arguments(value: Any) -> Any:
+    """Return tool-call arguments as a dict so json.dumps emits a JSON object.
+
+    Older message-store code wrote arguments as a Python repr string; upstream
+    OpenAI-style providers reject a non-object 'arguments'. Normalize such
+    strings back to a dict before re-serializing.
+    """
+    if isinstance(value, dict):
+        return value
+    if isinstance(value, str):
+        try:
+            parsed = json.loads(value)
+        except json.JSONDecodeError:
+            try:
+                parsed = ast.literal_eval(value)
+            except (ValueError, SyntaxError):
+                return {}
+        return parsed if isinstance(parsed, dict) else {}
+    return {}
 
 
 def _convert_messages_to_openai(
@@ -61,7 +83,7 @@ def _convert_messages_to_openai(
                         "type": "function",
                         "function": {
                             "name": tc.get("name", ""),
-                            "arguments": json.dumps(tc.get("arguments", {})),
+                            "arguments": json.dumps(_coerce_arguments(tc.get("arguments", {}))),
                         },
                     }
                     for tc in tool_calls

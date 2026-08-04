@@ -73,9 +73,11 @@ def execute_command_raw(cmd: str) -> str:
     if SANDBOX_ENABLED:
         return _run_sandboxed(cmd)
 
+    cwd = get_user_workspace_root() or WORKSPACE_ROOT
     try:
         result = subprocess.run(
-            cmd, shell=True, capture_output=True, text=True, timeout=30
+            cmd, shell=True, cwd=cwd,
+            capture_output=True, text=True, timeout=30
         )
         return _format_subprocess_output(result)
     except subprocess.TimeoutExpired:

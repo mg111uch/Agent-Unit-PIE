@@ -69,6 +69,14 @@ WORKFLOW_LEARN_MIN_SAVINGS_TOKENS: int = int(_WF.get("min_savings_tokens", 0))
 COMPACTION_TRIGGER_CHARS: int = int(_CONFIG.get("compaction_trigger_chars", 48_000))
 CONTEXT_DIGEST_ENABLED: bool = bool(_CONFIG.get("context_digest_enabled", True))
 
+# Loop guard: nudge the LLM to wrap up only after this many tool calls per step
+# without a final answer. Low values truncate legitimate long tool sequences.
+TOOL_NUDGE_THRESHOLD: int = int(_CONFIG.get("tool_nudge_threshold", 12))
+
+# Gemini stateful turns: skip re-sending an unchanged tool schema on chained
+# calls (schema persists server-side) to cut per-step token cost.
+GEMINI_SKIP_TOOLS_ON_CHAIN: bool = bool(_CONFIG.get("gemini_skip_tools_on_chain", True))
+
 _raw_atlas_dir = _CONFIG.get("codebase_atlas_dir", "")
 CODEBASE_ATLAS_DIR: str = os.path.abspath(os.path.join(CODEBASE_ROOT, _raw_atlas_dir)) if _raw_atlas_dir else ""
 

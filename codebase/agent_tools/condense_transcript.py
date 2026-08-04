@@ -15,7 +15,10 @@ Strategy (all reversible/inspectable — nothing is silently dropped):
   2. "Messages Sent" JSON arrays grow by one exchange per step and repeat
      everything before that verbatim. We diff each array against the
      previous one and only print the new suffix, replacing the unchanged
-     prefix with <<N PRIOR MESSAGES UNCHANGED (see step S)>>.
+     prefix with <<N PRIOR MESSAGES UNCHANGED (see step S)>>. Inside that
+     suffix, tool_calls/tool_results payloads are replaced with pointers to
+     the dedicated [LLM RESPONSE] / [TOOL RESULTS] blocks (shown once each),
+     so the same questions/args/results are never reprinted by the history.
   3. "Full Result" JSON blocks nest a `raw_response` object that duplicates
      `response`/`tool_calls` already shown elsewhere in the same block.
      That nested duplicate is stripped to a placeholder, keeping only the
@@ -23,8 +26,18 @@ Strategy (all reversible/inspectable — nothing is silently dropped):
   4. Consecutive near-identical terminal diagnostic lines (e.g. 7 straight
      "parse ok=False" lines) are collapsed into one line with a count/range.
 
+Optional flags:
+    --no-sysprompt      replace the System Prompt + agents.md body with a
+                        placeholder (reader knows a system prompt was injected
+                        without re-reading its text). Keeps the transcript
+                        focused on the actual tool-call conversation.
+    --no-tool-schemas   replace the [TOOL SCHEMAS] JSON dump with a placeholder.
+                        Tool schemas are static boilerplate that repeats on
+                        every server run; a marker is enough to know tools exist.
+
 Usage:
     python condense_transcript.py input.txt -o condensed.txt --stats
+    python condense_transcript.py input.txt --no-sysprompt --no-tool-schemas
     python condense_transcript.py input.txt            # writes to stdout
 """
 import argparse
@@ -82,6 +95,45 @@ def dedupe_named_blocks(text, legend: BlockLegend):
 
 
 # ---------------------------------------------------------------------------
+# 1b. Optional flag-based placeholders (System Prompt + agents.md, tool schemas)
+# ---------------------------------------------------------------------------
+
+# Canonical dump form: "System Prompt:\n<body>\n\nUser Input:"
+SYS_PROMPT_RE = re.compile(r"(System Prompt:\n)(.*?)(\n\nUser Input:)", re.S)
+# Hand-trimmed variant seen in some transcripts: a bare marker line on its own.
+BARE_SYS_PROMPT_RE = re.compile(r"^<System Prompt \+ agents\.md>\s*$", re.M)
+# "[TOOL SCHEMAS]" header + separator + "Schemas:\n[ ... ]\n"
+TOOL_SCHEMAS_RE = re.compile(
+    r"(\[TOOL SCHEMAS\]\s*={5,}\s*\n\s*Schemas:\n)(\[.*?\n\])(\n)", re.S
+)
+
+
+def strip_sys_prompt(text: str) -> str:
+    """Replace the System Prompt + agents.md body with a short placeholder."""
+    def _sub(m):
+        body = m.group(2)
+        marker = (f"<<System Prompt + agents.md present ({len(body)} chars) — "
+                  f"omitted by --no-sysprompt>>")
+        return f"{m.group(1)}{marker}{m.group(3)}"
+    text = SYS_PROMPT_RE.sub(_sub, text)
+    text = BARE_SYS_PROMPT_RE.sub(
+        "<<System Prompt + agents.md present (trimmed) — omitted by "
+        "--no-sysprompt>>", text
+    )
+    return text
+
+
+def strip_tool_schemas(text: str) -> str:
+    """Replace the [TOOL SCHEMAS] JSON array with a placeholder."""
+    def _sub(m):
+        schemas = m.group(2)
+        marker = (f"<<tool schemas present ({len(schemas)} chars) — "
+                  f"omitted by --no-tool-schemas>>")
+        return f"{m.group(1)}{marker}{m.group(3)}"
+    return TOOL_SCHEMAS_RE.sub(_sub, text)
+
+
+# ---------------------------------------------------------------------------
 # 2. "Messages Sent" JSON array prefix-delta compression
 # ---------------------------------------------------------------------------
 
@@ -92,6 +144,28 @@ STEP_RE = re.compile(r"^Step:\n(\d+)\s*$", re.M)
 def _msg_key(msg):
     """Stable string form of one message element, for equality comparison."""
     return json.dumps(msg, sort_keys=True)
+
+
+_TOOL_CALLS_PLACEHOLDER = ("<<tool_calls omitted - see [LLM RESPONSE] "
+                           "Tool Calls Raw>>")
+_TOOL_RESULTS_PLACEHOLDER = ("<<tool_results omitted - see [TOOL RESULTS] "
+                             "Results>>")
+
+
+def _compact_msg(msg):
+    """Copy of a message with tool payloads replaced by pointers to the
+    dedicated [LLM RESPONSE] / [TOOL RESULTS] blocks. Every tool_call /
+    tool_result is always shown there too, so nothing is lost — this only
+    stops the growing Messages Sent history from re-printing them verbatim."""
+    if not isinstance(msg, dict):
+        return msg
+    if msg.get("tool_calls"):
+        msg = dict(msg)
+        msg["tool_calls"] = _TOOL_CALLS_PLACEHOLDER
+    if msg.get("tool_results"):
+        msg = dict(msg)
+        msg["tool_results"] = _TOOL_RESULTS_PLACEHOLDER
+    return msg
 
 
 def compress_messages_sent(text):
@@ -123,7 +197,7 @@ def compress_messages_sent(text):
             block += (f"\n  <<{common} PRIOR MESSAGES UNCHANGED "
                        f"(same as step {prev_step})>>,")
         for i, msg in enumerate(new_tail):
-            body = json.dumps(msg, indent=2)
+            body = json.dumps(_compact_msg(msg), indent=2)
             body = "\n".join("  " + line for line in body.splitlines())
             block += "\n" + body
             if i != len(new_tail) - 1:
@@ -247,6 +321,17 @@ def strip_full_result_tool_calls_dupe(text):
     return "".join(out)
 
 
+def _strip_internal_keys(v):
+    """Recursively drop keys prefixed with '_' (e.g. `_session_id` injected
+    into tool args by the loop, absent from the original LLM response)."""
+    if isinstance(v, dict):
+        return {k: _strip_internal_keys(val)
+                for k, val in v.items() if not k.startswith("_")}
+    if isinstance(v, list):
+        return [_strip_internal_keys(x) for x in v]
+    return v
+
+
 def strip_tool_results_calls_dupe(text):
     """The "Calls:" list inside [TOOL RESULTS (multi)] repeats the
     preceding record's "Tool Calls Raw:" verbatim. Collapse it."""
@@ -289,7 +374,7 @@ def strip_tool_results_calls_dupe(text):
                 calls_parsed = json.loads(calls_body)
                 tcr_norm = [{"name": c.get("name"), "args": c.get("arguments"),
                              "call_id": c.get("id")} for c in tcr_parsed]
-                same = tcr_norm == calls_parsed
+                same = _strip_internal_keys(tcr_norm) == _strip_internal_keys(calls_parsed)
             except (json.JSONDecodeError, TypeError, AttributeError):
                 same = False
             if same:
@@ -361,7 +446,12 @@ def step_at(lines, idx):
 # Driver
 # ---------------------------------------------------------------------------
 
-def condense(text: str) -> str:
+def condense(
+    text: str,
+    *,
+    no_sysprompt: bool = False,
+    no_tool_schemas: bool = False,
+) -> str:
     legend = BlockLegend()
     text = dedupe_named_blocks(text, legend)
     text = compress_messages_sent(text)
@@ -369,6 +459,10 @@ def condense(text: str) -> str:
     text = strip_full_result_tool_calls_dupe(text)
     text = strip_tool_results_calls_dupe(text)
     text = collapse_repeated_diag_lines(text)
+    if no_sysprompt:
+        text = strip_sys_prompt(text)
+    if no_tool_schemas:
+        text = strip_tool_schemas(text)
     return text
 
 
@@ -379,12 +473,20 @@ def main():
     ap.add_argument("-o", "--output", help="output path (default: stdout)")
     ap.add_argument("--stats", action="store_true",
                      help="print before/after size stats to stderr")
+    ap.add_argument("--no-sysprompt", action="store_true",
+                     help="replace System Prompt + agents.md content with a placeholder")
+    ap.add_argument("--no-tool-schemas", action="store_true",
+                     help="replace the [TOOL SCHEMAS] JSON dump with a placeholder")
     args = ap.parse_args()
 
     with open(args.input, "r", encoding="utf-8", errors="ignore") as f:
         original = f.read()
 
-    condensed = condense(original)
+    condensed = condense(
+        original,
+        no_sysprompt=args.no_sysprompt,
+        no_tool_schemas=args.no_tool_schemas,
+    )
 
     if args.stats:
         before, after = len(original), len(condensed)

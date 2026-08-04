@@ -10,7 +10,7 @@ from agent_core.tools import ToolResult, registry
 from agent_core.loop._helpers import (
     _truncate_result,
     _compact_corrective_exchange,
-    _run_interactive_tool,
+    _prepare_interactive_tool,
     _handle_corrective_bookkeeping,
     _debug_dump,
     _check_cancelled,
@@ -35,7 +35,9 @@ _EDIT_TOOLS = ("edit_file", "write_to_file")
 def _deadline_corrective(step: int) -> str:
     return (
         f"\n\n[CORRECTIVE] You have made {step + 1} tool calls without producing a final answer. "
-        f"Stop and answer the user's question now."
+        f"If the remaining tool steps are genuinely needed to complete the user's request, "
+        f"continue executing them. If you are done, give the final answer now. "
+        f"Never claim a tool step ran or passed unless you actually executed it."
     )
 
 
@@ -66,6 +68,7 @@ def dispatch_step(
     conv_id: str | None,
     local_step: bool,
     reply: str,
+    nudge_threshold: int = 4,
 ) -> Generator[dict, None, bool]:
     """Yield events for one agent step, return True if loop should exit."""
 
@@ -180,12 +183,13 @@ def dispatch_step(
             else:
                 tc = question_calls[0]
                 arg = tc.arguments if isinstance(tc.arguments, dict) else {}
-                result_obj, questions = _run_interactive_tool(tc.name, arg, tools, session_id)
+                run_tool, questions = _prepare_interactive_tool(tc.name, arg, tools, session_id)
                 if questions:
                     yield {
                         "type": "question", "questions": questions,
                         "session_id": session_id, "step": step,
                     }
+                result_obj = run_tool()
                 if isinstance(result_obj, ToolResult):
                     result_str = result_obj.to_string()
                     is_ok = result_obj.ok
@@ -246,7 +250,7 @@ def dispatch_step(
                 else:
                     step_state.current_input += corrective
 
-        if step >= 4:
+        if step >= nudge_threshold:
             all_editing = all(r.get("tool") in _EDIT_TOOLS for r in results)
             if not all_editing:
                 msg = _deadline_corrective(step)
@@ -276,12 +280,13 @@ def dispatch_step(
                     tool_arg = {"input": tool_input}
             if tool == "debate_step" and not isinstance(tool_arg, dict):
                 tool_arg = {"topic": str(tool_input)}
-            result_obj, questions = _run_interactive_tool(tool, tool_arg, tools, session_id)
+            run_tool, questions = _prepare_interactive_tool(tool, tool_arg, tools, session_id)
             if questions:
                 yield {
                     "type": "question", "questions": questions,
                     "session_id": session_id, "step": step,
                 }
+            result_obj = run_tool()
         else:
             result_obj = tools[tool](tool_input)
 
@@ -354,7 +359,7 @@ def dispatch_step(
             step_state.last_result = None
 
         followup_text = tool_followup(tool, tool_input, result_str)
-        if step >= 4 and tool not in _EDIT_TOOLS:
+        if step >= nudge_threshold and tool not in _EDIT_TOOLS:
             followup_text += _deadline_corrective(step)
         if use_messages:
             step_state.current_messages.append({"role": "user", "content": followup_text})

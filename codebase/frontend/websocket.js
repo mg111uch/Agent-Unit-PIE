@@ -13,8 +13,12 @@ function connect() {
   }
   ws.onmessage = (e) => {
     try {
-      AgentStore.handleMessage(JSON.parse(e.data))
-    } catch (_) {}
+      const msg = JSON.parse(e.data)
+      if (msg.type === 'question') console.log('[ws] question received, n=', (msg.questions || []).length)
+      AgentStore.handleMessage(msg)
+    } catch (err) {
+      console.error('[ws] handleMessage failed:', err, e.data)
+    }
   }
 }
 
@@ -30,7 +34,11 @@ AgentStore.sendMessage = (content) => {
   sendJson({ type: 'chat', content })
 }
 
-AgentStore.sendCancel = () => { sendJson({ type: 'cancel' }) }
+AgentStore.sendCancel = () => {
+  AgentStore.pendingQuestions = null
+  AgentStore.pendingToolCount = 0
+  sendJson({ type: 'cancel' })
+}
 
 AgentStore.resetConversation = () => {
   AgentStore.messages = []

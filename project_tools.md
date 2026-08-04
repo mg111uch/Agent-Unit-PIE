@@ -7,6 +7,10 @@
 
 - **Load saved atlas and serve** `python -m codebase_atlas.main --output-dir /home/manigupt/Hello/Agentic_Unit_PIE/atlas_output --load`
 
+- **Condense log:** `cd /home/manigupt/Hello/Agentic_Unit_PIE/codebase/agent_tools python condense_transcript.py /home/manigupt/Hello/Agentic_Unit_PIE/codebase/tui_output.txt -o /home/manigupt/Hello/Agentic_Unit_PIE/codebase/condensed.txt --stats --no-sysprompt --no-tool-schemas`
+
+- **Condense log working** `cd codebase python agent_tools/condense_transcript.py tui_output.txt -o condensed.txt --stats  --no-sysprompt --no-tool-schemas`
+
 - **Copy Content:** `cd /home/manigupt/Hello/Agentic_Unit_PIE/codebase/agent_tools/atlas_tools && conda run -n myenv python copyContent.py --mode dump --md_file /home/manigupt/Hello/Agentic_Unit_PIE/codefiles_map.md --base_path /home/manigupt/Hello/Agentic_Unit_PIE --output_file /home/manigupt/Hello/Agentic_Unit_PIE/code_dump.txt --start_marker '### FILE_MAP Tree' --end_marker '### End Tree'`
 
 - **Codebase size:** `cd /home/manigupt/Hello/Agentic_Unit_PIE/codebase/agent_tools/atlas_tools && conda run -n myenv python codebase_size.py --directory /home/manigupt/Hello/Agentic_Unit_PIE/codebase --extensions .py .js .html --output-file /home/manigupt/Hello/Agentic_Unit_PIE/codefiles_map.md --start-marker "## Codebase size" --end-marker "## End Codebase size"`

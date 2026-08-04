@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import sys
+import time
 from typing import Optional
 
 from dotenv import load_dotenv
@@ -101,9 +102,27 @@ SYSTEM_PROMPT = load_system_prompt(
 )
 workspace_root = WORKSPACE_ROOT
 conversations: dict[str, Optional[str]] = {}
+user_sessions: dict[str, str] = {}
 msg_store = MessageStore()
 rate_limiter = RateLimiter()
 audit_log = AuditLog()
+
+
+def get_or_create_session(user_key: str) -> str:
+    """Stable server-side session id per user, persisted across turns.
+
+    Provider conversation_ids are often null (e.g. openrouter free models),
+    so message history is keyed by this id instead of the provider thread.
+    """
+    sid = user_sessions.get(user_key)
+    if not sid:
+        sid = f"session_{user_key}_{time.time_ns()}"
+        user_sessions[user_key] = sid
+    return sid
+
+
+def reset_session(user_key: str) -> None:
+    user_sessions.pop(user_key, None)
 
 local_planner = None
 _local_cfg = load_config().get("local_model", {})

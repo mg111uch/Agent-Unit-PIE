@@ -88,6 +88,7 @@
           </div>
           <!-- Content -->
           <div v-if="msg.content" class="text-sm leading-relaxed" v-html="renderMarkdown(msg.content)"></div><span v-if="msg.isStreaming && !msg.isThinking" class="stream-cursor"></span>
+          <p v-else-if="msg.pendingQuestion" class="text-sm text-sky-400">Answer the question below<span class="thinking-dots"></span></p>
           <p v-else-if="msg.isThinking" class="text-sm text-zinc-500 italic">Thinking<span class="thinking-dots"></span></p>
           <div class="flex items-center justify-between mt-1">
             <div v-if="!msg.isStreaming && (msg.usage || msg.latency != null || msg.totalSteps)" class="flex flex-wrap gap-x-4 gap-y-0.5 text-[11px] text-zinc-600">
@@ -133,7 +134,7 @@
       </div>
       <div v-if="toolCall.result">
         <p class="text-[10px] font-medium uppercase tracking-wider mb-1"
-          :class="toolCall.ok === false ? 'text-red-400' : 'text-zinc-500">Result</p>
+          :class="toolCall.ok === false ? 'text-red-400' : 'text-zinc-500'">Result</p>
         <div class="text-xs markdown-body bg-zinc-950 rounded p-2 overflow-y-auto max-h-48"
           :class="toolCall.ok === false ? 'text-red-300' : ''" v-html="renderResult(toolCall.result)"></div>
       </div>
@@ -151,31 +152,35 @@
 </template>
 
 <template id="question-panel-tmpl">
-  <div class="rounded-xl border border-zinc-700/80 bg-zinc-900/80 p-4 my-3">
-    <div v-if="questions.length > 1" class="flex items-center gap-2 mb-3">
-      <span class="text-[10px] text-zinc-500">Question {{ currentIndex + 1 }} of {{ questions.length }}</span>
-      <div class="flex gap-1">
-        <span v-for="(_, i) in questions" :key="i" class="w-2 h-2 rounded-full"
-          :class="i === currentIndex ? 'bg-sky-500' : i < currentIndex ? 'bg-sky-500/40' : 'bg-zinc-700'"></span>
+  <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
+    <div class="w-full max-w-md mx-4 rounded-xl border border-zinc-700/80 bg-zinc-900 p-4 shadow-2xl">
+      <div v-if="questions.length > 1" class="flex items-center gap-2 mb-3">
+        <span class="text-[10px] text-zinc-500">Question {{ currentIndex + 1 }} of {{ questions.length }}</span>
+        <div class="flex gap-1">
+          <span v-for="(_, i) in questions" :key="i" class="w-2 h-2 rounded-full"
+            :class="i === currentIndex ? 'bg-sky-500' : i < currentIndex ? 'bg-sky-500/40' : 'bg-zinc-700'"></span>
+        </div>
       </div>
-    </div>
-    <p class="text-sm text-zinc-200 mb-3">{{ current.question }}</p>
-    <div v-if="current.options && !customMode[currentIndex]" class="flex flex-wrap gap-2 mb-3">
-      <button v-for="(opt, i) in current.options" :key="i" @click="selectOption(opt)"
-        class="px-3 py-1.5 rounded-lg border text-xs transition-colors"
-        :class="answers[currentIndex] === opt ? 'border-sky-500 bg-sky-500/10 text-sky-300' : 'border-zinc-700 text-zinc-400 hover:border-zinc-500'">
-        {{ opt }}
+      <span v-if="current.header" class="text-[10px] font-medium uppercase tracking-wider text-sky-400 block mb-1">{{ current.header }}</span>
+      <p class="text-sm text-zinc-200 mb-3">{{ current.question }}</p>
+      <div v-if="current.options && !customMode[currentIndex]" class="flex flex-col gap-2 mb-3">
+        <button v-for="(opt, i) in current.options" :key="i" @click="selectOption(opt)"
+          class="px-3 py-2 rounded-lg border text-xs text-left transition-colors"
+          :class="answers[currentIndex] === optLabel(opt) ? 'border-sky-500 bg-sky-500/10 text-sky-300' : 'border-zinc-700 text-zinc-400 hover:border-zinc-500'">
+          <span>{{ optLabel(opt) }}</span>
+          <span v-if="optDescription(opt)" class="block text-[10px] opacity-70 mt-0.5">{{ optDescription(opt) }}</span>
+        </button>
+      </div>
+      <button @click="toggleCustom" class="text-xs text-zinc-500 hover:text-zinc-300 mb-2 block">
+        {{ customMode[currentIndex] ? 'Pick an option' : 'Custom answer...' }}
+      </button>
+      <textarea v-if="customMode[currentIndex]" v-model="customVal" rows="2" class="w-full text-xs bg-zinc-950 border border-zinc-700 rounded-lg p-2 text-zinc-200 resize-none mb-3"></textarea>
+      <button @click="submit" :disabled="!canSubmit"
+        class="w-full py-2 rounded-lg text-sm font-medium transition-colors"
+        :class="canSubmit ? 'bg-sky-600 hover:bg-sky-500 text-white' : 'bg-zinc-700 text-zinc-500 cursor-not-allowed'">
+        {{ currentIndex < questions.length - 1 ? 'Next Question' : 'Send Answer' }}
       </button>
     </div>
-    <button @click="toggleCustom" class="text-xs text-zinc-500 hover:text-zinc-300 mb-2 block">
-      {{ customMode[currentIndex] ? 'Pick an option' : 'Custom answer...' }}
-    </button>
-    <textarea v-if="customMode[currentIndex]" v-model="customVal" rows="2" class="w-full text-xs bg-zinc-950 border border-zinc-700 rounded-lg p-2 text-zinc-200 resize-none mb-3"></textarea>
-    <button @click="submit" :disabled="!canSubmit"
-      class="w-full py-2 rounded-lg text-sm font-medium transition-colors"
-      :class="canSubmit ? 'bg-sky-600 hover:bg-sky-500 text-white' : 'bg-zinc-700 text-zinc-500 cursor-not-allowed'">
-      {{ currentIndex < questions.length - 1 ? 'Next Question' : 'Send Answer' }}
-    </button>
   </div>
 </template>
 

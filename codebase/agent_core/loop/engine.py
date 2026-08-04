@@ -10,6 +10,7 @@ from typing import Any, Generator, List, Optional
 from agent_core.config import (
     COMPACTION_TRIGGER_CHARS,
     CONTEXT_DIGEST_ENABLED,
+    TOOL_NUDGE_THRESHOLD,
     WORKFLOW_LEARN_CONTEXT_HINTS,
     resolve_active_tool_names,
     resolve_active_tool_packs,
@@ -304,9 +305,10 @@ def _iter_agent_events_body(
                 local_planner=local_planner,
                 state=state,
                 use_messages=use_messages,
-                conv_id=conv_id,
+                conv_id=_interaction_id,
                 local_step=_local_step,
                 reply=reply,
+                nudge_threshold=TOOL_NUDGE_THRESHOLD,
             )
             if should_exit:
                 return
@@ -319,7 +321,7 @@ def _iter_agent_events_body(
                 "message": (
                     f"Exception in step {step}: {str(e)}\n{traceback.format_exc()}"
                 ),
-                "conversation_id": conv_id,
+                "conversation_id": _interaction_id,
             }
             return
 

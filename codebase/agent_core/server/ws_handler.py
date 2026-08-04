@@ -5,7 +5,6 @@ from __future__ import annotations
 import asyncio
 import os
 import threading
-import time
 from typing import Optional
 
 from fastapi import WebSocket, WebSocketDisconnect, Query
@@ -86,6 +85,7 @@ async def websocket_agent(websocket: WebSocket, token: str = Query(default=None)
                 conv_id = None
                 session_state = SessionState()
                 _srv.conversations[user_key] = None
+                _srv.reset_session(user_key)
                 if DEBUG_DUMP_ENABLED:
                     open(_DEBUG_LOG, "w").close()
                 await websocket.send_json({"type": "reset", "status": "ok"})
@@ -121,6 +121,7 @@ async def handle_slash(
     if command in ("/new", "/clear", "/reset", "/session"):
         if DEBUG_DUMP_ENABLED:
             open(_DEBUG_LOG, "w").close()
+        _srv.reset_session(user_key)
         await websocket.send_json(
             {
                 "type": "reset",
@@ -200,7 +201,7 @@ async def handle_chat(
     session_state: Optional[SessionState] = None,
 ) -> Optional[str]:
     conv_id = conversation_id
-    session_id = conversation_id or f"session_{user_input[:32]}_{int(time.time())}"
+    session_id = _srv.get_or_create_session(user_key)
     loop = asyncio.get_running_loop()
 
     _srv.msg_store.add_message(
@@ -249,9 +250,51 @@ async def handle_chat(
     worker_future = loop.run_in_executor(None, _worker)
 
     while True:
-        event = await queue.get()
+        queue_task = asyncio.create_task(queue.get())
+        recv_task = asyncio.create_task(websocket.receive_json())
+        done, pending = await asyncio.wait(
+            [queue_task, recv_task], return_when=asyncio.FIRST_COMPLETED
+        )
+        # Cancel and FULLY drain any still-running task. A cancelled
+        # websocket.receive_json() must be awaited before a new receive is
+        # issued (either here or in the question branch), otherwise the
+        # underlying receive() slot stays claimed and starlette raises
+        # "RuntimeError: cannot call recv while another coroutine is already
+        # waiting for the next message" — which silently kills the turn.
+        for t in pending:
+            t.cancel()
+            try:
+                await t
+            except asyncio.CancelledError:
+                pass
+            except Exception:
+                pass
+
+        if queue_task in done:
+            event = queue_task.result()
+            if event is None:
+                break
+        else:
+            event = None
+
+        # A websocket message may have arrived while the worker ran. Forward
+        # cancel to the worker's cancel_event so the in-flight LLM call is
+        # aborted promptly instead of waiting for the queue to drain. Also
+        # release any pending interactive question so the worker unblocks.
+        if recv_task in done:
+            try:
+                data = recv_task.result()
+            except Exception:
+                data = {}
+            if data.get("type") == "cancel" and cancel_event is not None:
+                cancel_event.set()
+                from agent_core.tools.question_ops import cancel_questions
+                cancel_questions(session_id)
+        else:
+            recv_task.cancel()
+
         if event is None:
-            break
+            continue
 
         etype = event["type"]
         if "conversation_id" in event and event.get("conversation_id") is not None:
@@ -272,6 +315,9 @@ async def handle_chat(
             continue
 
         if etype == "question":
+            if cancel_event is not None and cancel_event.is_set():
+                continue
+            print(f"[WS-DIAG] forwarding question: n_questions={len(event.get('questions') or [])} step={event.get('step', 0)}", flush=True)
             await websocket.send_json({
                 "type": "question",
                 "questions": event.get("questions", []),
@@ -282,6 +328,7 @@ async def handle_chat(
             while True:
                 data = await websocket.receive_json()
                 if data.get("type") == "question_answer":
+                    print(f"[WS-DIAG] question answered: {len(data.get('answers') or [])} answers", flush=True)
                     resolve_all_questions(
                         event.get("session_id", ""),
                         data.get("answers", []),
@@ -289,6 +336,8 @@ async def handle_chat(
                     break
                 elif data.get("type") == "cancel":
                     cancel_questions(event.get("session_id", ""))
+                    if cancel_event is not None:
+                        cancel_event.set()
                     break
             continue
 

@@ -70,30 +70,43 @@ def _compact_corrective_exchange(messages: list) -> list:
     return messages
 
 
-def _run_interactive_tool(
+def _prepare_interactive_tool(
     tool_name: str,
     tool_args: dict,
     tools: dict,
     session_id: str,
 ) -> tuple[Any, list]:
+    """Prepare an interactive tool call and return (blocking_runner, questions).
+
+    The returned runner blocks until the user answers; questions are returned
+    BEFORE blocking so the caller can yield the "question" event first and let
+    the frontend modal appear while the runner waits.
+    """
     tool_args["_session_id"] = session_id
     if tool_name == "ask_user_question":
-        return tools["ask_user_question"](tool_args), tool_args.get("questions", [])
+        from agent_core.tools.question_ops import register_questions, wait_for_questions
+        questions = tool_args.get("questions", [])
+        error = register_questions(session_id, questions)
+        if error:
+            return lambda: error, []
+        return lambda: wait_for_questions(session_id), questions
     if tool_name == "debate_step":
         debate_fn = tools.get("debate_step")
         if debate_fn is None:
-            return None, []
-        tool_args["prepare_only"] = True
-        prepare_raw = debate_fn(tool_args)
+            return lambda: None, []
+        prepare_args = dict(tool_args)
+        prepare_args["prepare_only"] = True
+        prepare_raw = debate_fn(prepare_args)
         try:
             prepare = json.loads(prepare_raw) if isinstance(prepare_raw, str) else {}
         except Exception:
             prepare = {}
         if prepare.get("done"):
-            return prepare_raw, []
-        tool_args["prepare_only"] = False
-        return debate_fn(tool_args), prepare.get("questions", [])
-    return None, []
+            return lambda: prepare_raw, []
+        run_args = dict(tool_args)
+        run_args["complete_only"] = True
+        return lambda: debate_fn(run_args), prepare.get("questions", [])
+    return lambda: None, []
 
 
 def _handle_corrective_bookkeeping(
