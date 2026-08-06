@@ -5,7 +5,7 @@ import re
 import subprocess
 from pathlib import Path
 
-from agent_core.workspace import WORKSPACE_ROOT
+from agent_core.workspace import WORKSPACE_ROOT, get_user_workspace_root
 from agent_core.config import EXCLUDE_DIRS
 from agent_core.tools.types import ToolResult, _parse_arg
 
@@ -13,10 +13,24 @@ _exclude_set = set(EXCLUDE_DIRS)
 _RG_AVAILABLE: bool | None = None
 
 
+def _normalize_pattern(pattern: str) -> str:
+    """Strip a leading workspace-root basename prefix from a glob pattern."""
+    root = get_user_workspace_root() or WORKSPACE_ROOT
+    base = os.path.basename(root)
+    cleaned = pattern.lstrip("/\\")
+    if cleaned == base or cleaned.startswith(base + "/"):
+        alt = cleaned[len(base):].lstrip("/\\")
+        if not alt:
+            alt = "**"
+        return alt
+    return pattern
+
+
 def glob_search(pattern: str = "", **kwargs) -> ToolResult:
     """Find files matching a glob pattern (e.g. '**/*.py', 'src/**/*.ts')."""
     pattern = kwargs.get("pattern") or kwargs.get("glob") or kwargs.get("input") or pattern
     try:
+        pattern = _normalize_pattern(pattern)
         matches = sorted(Path(WORKSPACE_ROOT).rglob(pattern))
         relative = []
         for p in matches:

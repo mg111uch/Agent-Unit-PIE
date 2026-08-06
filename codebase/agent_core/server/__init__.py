@@ -30,6 +30,7 @@ from agent_core.config import (
     resolve_active_tool_packs,
     resolve_active_tool_names,
     resolve_default_model,
+    resolve_context_window,
     RATE_LIMIT_LLM_CALLS,
     RATE_LIMIT_TOOL_WRITES,
     load_config,
@@ -64,6 +65,7 @@ ACTIVE_TOOLS_DICT = registry.get_tools(
 
 active_provider = resolve_active_provider()
 active_model = resolve_default_model(active_provider)
+active_context_window = resolve_context_window(active_provider, active_model)
 
 orchestrator, registered_providers, provider_models = build_orchestrator(
     default_provider=active_provider,
@@ -90,6 +92,8 @@ elif active_provider == "mock" and "mock" in orchestrator.providers:
 else:
     orchestrator.default_provider = active_provider
     orchestrator.default_model = active_model
+
+active_context_window = resolve_context_window(active_provider, active_model)
 
 log_output(
     f"[Server] Active provider={active_provider} model={active_model} "

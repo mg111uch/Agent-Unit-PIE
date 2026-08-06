@@ -12,6 +12,8 @@ from agent_core.config import (
     CONTEXT_DIGEST_ENABLED,
     TOOL_NUDGE_THRESHOLD,
     WORKFLOW_LEARN_CONTEXT_HINTS,
+    GEMINI_CHAIN_RESTART_TOKENS,
+    GEMINI_STATELESS,
     resolve_active_tool_names,
     resolve_active_tool_packs,
 )
@@ -61,27 +63,42 @@ def iter_agent_events(
     state.begin_turn()
     _state_token = set_session_state(state)
 
+    use_messages = msg_store is not None and session_id is not None
+
+    # Digest + workflow hints are ephemeral per-turn context. They are computed
+    # once, appended to the in-memory user message only, and never persisted to
+    # msg_store (which would replay stale snapshots on every later turn).
     digest = ""
     if CONTEXT_DIGEST_ENABLED and state.turn_count > 0:
-        digest = state.build_digest()
-        # Only inject non-empty useful digest (skip pure header on first empty turn)
+        # Only inject a digest that carries useful info; skip the pure header
+        # so an empty snapshot isn't billed every turn.
         if state.workspace_root or state.file_cache or state.todo_plan or state.edits_log:
-            context_info = (context_info or "") + "\n\n" + digest
+            digest = state.build_digest()
 
+    session_hints = ""
     if WORKFLOW_LEARN_CONTEXT_HINTS:
         try:
             from agent_core.tools.chain.graph_evolver import graph_evolver
-            hints = graph_evolver.workflow_hints()
-            if hints:
-                context_info = (context_info or "") + "\n\n" + hints
+            session_hints = graph_evolver.workflow_hints()
         except Exception:
             pass  # hints must never break the turn
+
+    # Stateless mode needs no server-side chain: every call already carries the
+    # compacted client history, so the id is meaningless and would only linger.
+    if GEMINI_STATELESS:
+        conversation_id = None
+    # Gemini stateful chains are billed against the full server-side context on
+    # every call. Drop the chain once the accumulated estimate passes the
+    # threshold: the next call rebuilds a fresh chain from the compacted client
+    # history, bounding per-call cost (the new conversation_id propagates out).
+    elif use_messages and state.should_restart_chain(GEMINI_CHAIN_RESTART_TOKENS):
+        state.accumulated_tokens = 0
+        conversation_id = None
 
     conv_id = conversation_id
     _interaction_id = conversation_id
 
     _tools = tools_override if tools_override is not None else registry.get_tools(categories=tool_categories)
-    use_messages = msg_store is not None and session_id is not None
 
     try:
         yield from _iter_agent_events_body(
@@ -94,6 +111,8 @@ def iter_agent_events(
             max_steps=max_steps,
             step_delay=step_delay,
             context_info=context_info,
+            digest=digest,
+            session_hints=session_hints,
             msg_store=msg_store,
             session_id=session_id,
             cancel_event=cancel_event,
@@ -138,6 +157,8 @@ def _iter_agent_events_body(
     max_steps: int,
     step_delay: float,
     context_info: str,
+    digest: str,
+    session_hints: str,
     msg_store: Any,
     session_id: Optional[str],
     cancel_event: Optional[threading.Event],
@@ -154,18 +175,22 @@ def _iter_agent_events_body(
         current_messages = compact_messages(
             current_messages, state, trigger_chars=COMPACTION_TRIGGER_CHARS
         )
-        full_input = user_input + context_info
+        extra = "\n\n".join(p for p in (context_info, digest, session_hints) if p)
+        full_input = user_input + (("\n\n" + extra) if extra else "")
         if not current_messages or not (
             current_messages[-1].get("role") == "user"
             and current_messages[-1].get("content") == full_input
         ):
+            # full_input carries ephemeral per-turn context (digest/hints) and is
+            # appended to the in-memory list ONLY — never persisted to msg_store.
             current_messages.append({
                 "role": "user",
                 "content": full_input,
             })
         current_input = ""
     else:
-        current_input = user_input + context_info
+        extra = "\n\n".join(p for p in (context_info, digest, session_hints) if p)
+        current_input = user_input + (("\n\n" + extra) if extra else "")
         current_messages = []
 
     step_state = StepState(
@@ -184,7 +209,7 @@ def _iter_agent_events_body(
         system_prompt=system_prompt or "(none)",
         user_input=user_input,
         context_info=context_info or "(none)",
-        session_digest=state.build_digest(),
+        session_digest=digest or "(none)",
         cache_hits=state.cache_hits,
         cache_misses=state.cache_misses,
         messages=current_messages if use_messages else [],
@@ -263,6 +288,15 @@ def _iter_agent_events_body(
                 return
             yield {"type": "llm_call", "status": "end", "step": step, "usage": result.get("usage", {}), "latency_seconds": result.get("latency_seconds"), "retries": result.get("retries", 0)}
 
+            state.note_usage(result.get("usage", {}))
+
+            _debug_dump("LLM USAGE",
+                step=step,
+                total_tokens=result.get("usage", {}).get("total_tokens"),
+                latency_seconds=result.get("latency_seconds"),
+                retries=result.get("retries", 0),
+            )
+
             _debug_dump("LLM RESPONSE",
                 step=step,
                 user_message_sent=step_state.current_input if not use_messages else "(see messages)",
@@ -294,6 +328,7 @@ def _iter_agent_events_body(
 
             parsed = parse_provider_response(reply, tool_calls_raw, _tools)
 
+            step_usage = result.get("usage", {})
             should_exit = yield from dispatch_step(
                 parsed, step_state,
                 step=step,
@@ -309,6 +344,7 @@ def _iter_agent_events_body(
                 local_step=_local_step,
                 reply=reply,
                 nudge_threshold=TOOL_NUDGE_THRESHOLD,
+                step_usage=step_usage,
             )
             if should_exit:
                 return

@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 import subprocess
 
-from agent_core.workspace import resolve, to_relative, WORKSPACE_ROOT, PathEscapeError
+from agent_core.workspace import resolve, resolve_for_tool, to_relative, WORKSPACE_ROOT, PathEscapeError
 from agent_core.tools.types import ToolResult, _parse_arg
 
 
@@ -44,10 +44,10 @@ def file_diff(input_data) -> ToolResult:
         path = data.get("path", "")
         if not path:
             return ToolResult(ok=False, message="'path' is required")
-        full = resolve(path)
-        rel = to_relative(full)
-        if not os.path.exists(full):
-            return ToolResult(ok=False, message=f"file not found: {path}")
+        res = resolve_for_tool(path, expect="file")
+        if not res.ok or not os.path.exists(res.full):
+            return ToolResult(ok=False, message=res.message or f"file not found: {path}")
+        full, rel = res.full, res.rel
 
         # 1. Checkpoint-based diff (shows what last edit_file changed)
         from agent_core.tools.undo_ops import _load_index, CHECKPOINT_DIR

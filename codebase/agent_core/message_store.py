@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import sqlite3
@@ -9,6 +10,24 @@ from pathlib import Path
 from typing import Any, Optional, List
 
 from agent_core.secrets_redactor import redact
+
+# Stored tool results are bounded (head + sha256 + length). The full text is
+# never needed for the LLM (it sees truncated/compacted payloads); a tool can be
+# re-invoked to refetch verbatim output on demand.
+_STORED_RESULT_MAX = 4000
+
+
+def _bound_result(text: str) -> dict:
+    """Return a bounded {head, _digest, _len} triple for a long result string."""
+    t = text if isinstance(text, str) else str(text)
+    if len(t) <= _STORED_RESULT_MAX:
+        return {"result": t}
+    digest = hashlib.sha256(t.encode("utf-8", errors="replace")).hexdigest()[:16]
+    return {
+        "result": t[:_STORED_RESULT_MAX] + f"…[truncated {len(t) - _STORED_RESULT_MAX} chars]",
+        "_digest": digest,
+        "_len": len(t),
+    }
 
 
 def _redact_nested(value: Any) -> Any:
@@ -87,6 +106,15 @@ class MessageStore:
         now = datetime.now(timezone.utc).isoformat()
         if not self.session_exists(session_id):
             self.create_session(session_id)
+        bounded_results = None
+        if tool_results:
+            bounded_results = []
+            for tr in tool_results:
+                tr = dict(tr)
+                res = tr.get("result")
+                if isinstance(res, str):
+                    tr.update(_bound_result(res))
+                bounded_results.append(tr)
         with self._lock:
             self._conn.execute(
                 "UPDATE sessions SET updated_at=? WHERE id=?", (now, session_id)
@@ -99,7 +127,7 @@ class MessageStore:
                     role,
                     content,
                     json.dumps(tool_calls) if tool_calls else None,
-                    json.dumps(tool_results) if tool_results else None,
+                    json.dumps(bounded_results) if bounded_results else None,
                     now,
                 ),
             )

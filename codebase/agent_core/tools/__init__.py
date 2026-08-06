@@ -140,9 +140,8 @@ _FILE_SPECS = [
       "limit": int_p("Max lines to return (default: 1000; pass 0 for no limit)"),
       "line_numbers": bool_p("If true (default), prefix each line with line number. Set false to save tokens when only content is needed.")}),
     ("list_files", list_files, CAT_FILE,
-     "List directory contents (shallow by default; set recursive=true for deep listing up to 3 levels; skips excluded dirs). For quick workspace orientation use get_workspace_info instead.",
-     {"path": str_p("Directory path relative to workspace root; use '.' for root"),
-      "recursive": bool_p("If true, list recursively up to 3 levels deep (default false — flat listing only)")}),
+     "List directory contents: files first, then each subdirectory with up to 5 entries previewed ('... N more entries' marks truncation). Output is capped at 50 lines. Use glob_search to locate a specific file.",
+     {"path": str_p("Directory path relative to workspace root; use '.' for root")}),
     ("write_to_file", write_to_file, CAT_FILE,
      "Create or overwrite a file (use edit_file for targeted edits)",
      {"path": str_p("File path relative to workspace root", req=True),
@@ -165,7 +164,7 @@ _FILE_SPECS = [
      "Run a shell command. Allowed: ls, cat, pwd, echo, python.",
      {"command": str_p("Shell command string to execute", req=True)}),
     ("glob_search", glob_search, CAT_FILE,
-     "Find files matching a glob pattern (e.g. '**/*.py', 'src/**/*.ts')",
+     "Find files matching a glob pattern (e.g. '**/*.py', 'src/**/*.ts'). Prefer this over recursive list_files to find a file when its directory is unknown.",
      derive_schema(glob_search, {"pattern": "Glob pattern to match files against, relative to workspace root"})),
     ("grep_search", grep_search, CAT_FILE,
      "Search file contents by regex across the workspace. Optionally pass context_lines=N to return N surrounding lines per match (default 0 — match lines only).",
@@ -178,21 +177,24 @@ _FILE_SPECS = [
      {"action": str_p("One of: read, create, update, mark_done, clear", req=True),
       "items": arr_p("string", "List of task descriptions (for create/update)"),
       "ids": arr_p("integer", "Task IDs to mark done (for mark_done)")}),
-    ("ask_user_question", ask_user_question, CAT_FILE,
-     "Ask the user for input, clarification, or a decision. Use this for ALL interactive questions/quizzes/polls the user should answer in the chat UI — never just type questions in your reply text. Provide up to 3 options per question (a custom-answer text input is always available); can ask multiple questions at once, answered one by one.",
-     {"questions": {"t": "array", "desc": "Questions to ask. User answers them sequentially. Max 3 options each.", "r": True,
-                    "items": {"type": "object", "properties": {
-                        "question": {"type": "string", "description": "The question text"},
-                        "header": {"type": "string", "description": "Optional short title shown above the question"},
-                        "options": {"type": "array",
-                                    "items": {"anyOf": [
-                                        {"type": "string"},
-                                        {"type": "object", "properties": {
-                                            "label": {"type": "string", "description": "Short answer choice label"},
-                                            "description": {"type": "string", "description": "Optional hint shown under the label"}},
-                                         "required": ["label"], "additionalProperties": False}]},
-                                    "description": "Up to 3 predefined answer choices; each a plain string or an object with label (+ optional description)"}},
-                        "additionalProperties": False}}}),
+("ask_user_question", ask_user_question, CAT_FILE,
+      "Ask the user for input, clarification, or a decision. Use this for ALL interactive questions/quizzes/polls the user should answer in the chat UI — never just type questions in your reply text. Provide up to 3 options per question (a custom-answer text input is always available); can ask multiple questions at once, answered one by one.",
+      {"questions": {"t": "array", "desc": "Questions to ask. User answers them sequentially. Max 3 options each.", "r": True,
+                     "items": {"type": "object", "properties": {
+                         "question": {"type": "string", "description": "The question text"},
+                         "header": {"type": "string", "description": "Optional short title shown above the question"},
+                         "options": {"type": "array",
+                                     "items": {"anyOf": [
+                                         {"type": "string"},
+                                         {"type": "object", "properties": {
+                                             "label": {"type": "string", "description": "Short answer choice label"},
+                                             "description": {"type": "string", "description": "Optional hint shown under the label"}},
+                                          "required": ["label"], "additionalProperties": False}]},
+                                     "description": "Up to 3 predefined answer choices; each a plain string or an object with label (+ optional description)"}},
+                         "additionalProperties": False}}}),
+    ("check_path_exists", check_path_exists, CAT_FILE,
+     "Check if a file or directory exists at the given path (cheap — no file content read). Use this to verify existence before read_file or list_files calls.",
+     derive_schema(check_path_exists, {"path": "Path to check, relative to workspace root"})),
 ]
 
 if SUBAGENT_TASK_ENABLED:
@@ -214,9 +216,6 @@ _AST_SPECS = [
 ]
 
 _META_SPECS = [
-    ("check_path_exists", check_path_exists, CAT_META,
-     "Check if a file or directory exists at the given path (cheap — no file content read). Use this to verify existence before read_file or list_files calls.",
-     derive_schema(check_path_exists, {"path": "Path to check, relative to workspace root"})),
     ("get_workspace_info", get_workspace_info, CAT_META,
      "Show workspace root and top-level entries for orientation",
      {}),

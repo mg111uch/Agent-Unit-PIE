@@ -28,12 +28,35 @@ def _debug_dump(mode: str, **kwargs):
                 if isinstance(v, str):
                     f.write(f"\n{label}:\n{v}\n")
                 elif isinstance(v, (list, dict)):
-                    f.write(f"\n{label}:\n{json.dumps(v, indent=2, default=str)}\n")
+                    f.write(f"\n{label}:\n{_dump_capped(v)}\n")
                 else:
                     f.write(f"\n{label}:\n{str(v)}\n")
             f.write(f"{'='*60}\n")
     except Exception:
         pass
+
+
+def _dump_capped(v: Any, limit: int = 8000) -> str:
+    """Serialize a list/dict for the debug log, capping total + string values."""
+    try:
+        text = json.dumps(v, indent=2, default=str)
+    except Exception:
+        text = str(v)
+    if isinstance(v, dict) or isinstance(v, list):
+        # truncate long string leaves so growing-conversation dumps stay small
+        def _cut(x):
+            if isinstance(x, str):
+                return x[:2000] + "…" if len(x) > 2000 else x
+            if isinstance(x, dict):
+                return {kk: _cut(vv) for kk, vv in x.items()}
+            if isinstance(x, list):
+                return [_cut(i) for i in x]
+            return x
+        try:
+            text = json.dumps(_cut(v), indent=2, default=str)
+        except Exception:
+            pass
+    return text[:limit]
 
 
 _QUESTION_TOOLS = {"ask_user_question", "debate_step"}

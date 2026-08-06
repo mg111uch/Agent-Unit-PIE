@@ -6,7 +6,7 @@ import os
 import re
 from typing import List, Optional
 
-from agent_core.config import CODEBASE_ROOT, AGENTS_MD_ENABLED, resolve_active_tool_mode
+from agent_core.config import CODEBASE_ROOT, AGENTS_MD_ENABLED, ALLOWED_COMMANDS, resolve_active_tool_mode
 from agent_core.workspace import WORKSPACE_ROOT
 from agent_core.tools import log_output
 from agent_core.tools.registry import CAT_FILE, CAT_KERNEL, CAT_SIM, CAT_META, CAT_CODE_RAG, CAT_DEBATE, CAT_GIT, CAT_OBSERVER
@@ -142,6 +142,9 @@ def load_system_prompt(
     template = "\n\n".join(parts)
     agents_md = load_agents_md()
     template = template.replace("{AGENTS_MD}", agents_md)
+    template = template.replace(
+        "{ALLOWED_COMMANDS}", ", ".join(sorted(ALLOWED_COMMANDS))
+    )
 
     _cache[cache_key] = (mtime, template)
     return template

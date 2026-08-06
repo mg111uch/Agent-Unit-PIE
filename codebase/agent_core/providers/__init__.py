@@ -12,8 +12,19 @@ class BaseLLMProvider:
         return self._supports_stateful
 
     @staticmethod
-    def _build_usage_dict(total_tokens: int = 0) -> Dict[str, Any]:
-        return {"total_tokens": total_tokens, "estimated_cost": 0.0}
+    def _build_usage_dict(
+        total_tokens: int = 0,
+        prompt_tokens: int = 0,
+        completion_tokens: int = 0,
+    ) -> Dict[str, Any]:
+        if not prompt_tokens and not completion_tokens:
+            prompt_tokens = int(total_tokens) - int(completion_tokens)
+        return {
+            "total_tokens": int(total_tokens),
+            "prompt_tokens": int(prompt_tokens),
+            "completion_tokens": int(completion_tokens),
+            "estimated_cost": 0.0,
+        }
 
     @staticmethod
     def _truncate_tool_result(result: str, max_chars: int = 2000) -> str:

@@ -22,7 +22,7 @@
     <div class="mx-auto max-w-3xl flex items-center justify-between h-12 px-4">
       <div class="flex items-center gap-2">
         <span :class="['connection-led', store.connected ? 'connected' : 'disconnected']"></span>
-        <h1 class="text-sm font-medium">Coding Agent</h1>
+        <h1 class="text-sm font-medium">Unit-PIE</h1>
       </div>
       <div class="relative">
         <button @click="toggle" class="flex items-center gap-1.5 text-xs text-zinc-400 hover:text-zinc-200 transition-colors px-2 py-1 rounded-lg hover:bg-zinc-800/50">
@@ -73,7 +73,7 @@
         <!-- User message -->
         <div v-if="msg.role === 'user'" class="flex justify-end">
           <div class="bg-sky-600/15 rounded-2xl px-4 py-2.5 max-w-[85%]">
-            <p class="text-sm leading-relaxed whitespace-pre-wrap">{{ msg.content }}</p>
+            <p class="text-sm leading-relaxed whitespace-pre-wrap break-safe">{{ msg.content }}</p>
             <copy-button :text="msg.content" :tool-calls="msg.toolCalls"></copy-button>
           </div>
         </div>
@@ -87,14 +87,14 @@
             </div>
           </div>
           <!-- Content -->
-          <div v-if="msg.content" class="text-sm leading-relaxed" v-html="renderMarkdown(msg.content)"></div><span v-if="msg.isStreaming && !msg.isThinking" class="stream-cursor"></span>
+          <div v-if="msg.content" class="text-sm leading-relaxed break-safe markdown-body" v-html="renderMarkdown(msg.content)"></div><span v-if="msg.isStreaming && !msg.isThinking" class="stream-cursor"></span>
           <p v-else-if="msg.pendingQuestion" class="text-sm text-sky-400">Answer the question below<span class="thinking-dots"></span></p>
           <p v-else-if="msg.isThinking" class="text-sm text-zinc-500 italic">Thinking<span class="thinking-dots"></span></p>
           <div class="flex items-center justify-between mt-1">
             <div v-if="!msg.isStreaming && (msg.usage || msg.latency != null || msg.totalSteps)" class="flex flex-wrap gap-x-4 gap-y-0.5 text-[11px] text-zinc-600">
               <span v-if="msg.totalSteps">{{ msg.totalSteps }} step{{ msg.totalSteps > 1 ? 's' : '' }}</span>
               <span v-if="msg.latency != null">{{ msg.latency.toFixed(1) }}s</span>
-              <span v-if="msg.usage && msg.usage.total_tokens">{{ msg.usage.total_tokens }} tokens</span>
+              <span v-if="msg.usage && msg.usage.total_tokens">{{ formatTokens(msg.usage.total_tokens) }} tok</span>
               <span v-if="msg.usage && msg.usage.estimated_cost">{{ formatCost(msg.usage.estimated_cost) }}</span>
               <span v-if="msg.cacheHits != null">cache {{ msg.cacheHits }} hit{{ msg.cacheHits !== 1 ? 's' : '' }}, {{ msg.cacheMisses }} miss{{ msg.cacheMisses !== 1 ? 'es' : '' }}</span>
               <span v-if="msg.retries" class="text-amber-500">{{ msg.retries }} retr{{ msg.retries > 1 ? 'ies' : 'y' }}</span>
@@ -124,13 +124,15 @@
     <button @click="expanded = !expanded" class="w-full flex items-center justify-between px-3 py-2 text-xs hover:bg-zinc-800/50 transition-colors"
       :class="toolCall.ok === false ? 'text-red-300' : 'text-zinc-300'">
       <span class="font-mono">{{ toolCall.tool }}</span>
-      <span v-if="toolCall.ok === false" class="text-[10px] text-red-400 mr-1">FAILED</span>
-      <svg class="w-3.5 h-3.5 transition-transform" :class="expanded ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+      <span class="ml-auto"></span>
+      <span v-if="toolCall.ok === false" class="text-[10px] text-red-400 mr-2">FAILED</span>
+      <span v-if="showUsage()" class="text-[10px] text-emerald-400 mr-2">{{ formatTokens(toolCall.usage.total_tokens) }} tok</span>
+      <svg class="w-3.5 h-3.5 transition-transform shrink-0" :class="expanded ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
     </button>
     <div v-show="expanded" class="border-t border-zinc-800 px-3 py-2 space-y-2">
       <div>
         <p class="text-[10px] font-medium uppercase tracking-wider text-zinc-500 mb-1">Input</p>
-        <pre class="text-xs text-zinc-400 bg-zinc-950 rounded p-2 overflow-x-auto">{{ formatInput(toolCall.input) }}</pre>
+        <pre class="text-xs text-zinc-400 bg-zinc-950 rounded p-2 overflow-x-auto break-safe">{{ formatInput(toolCall.input) }}</pre>
       </div>
       <div v-if="toolCall.result">
         <p class="text-[10px] font-medium uppercase tracking-wider mb-1"
@@ -185,8 +187,11 @@
 </template>
 
 <template id="agent-input-tmpl">
-  <div class="shrink-0 border-t border-zinc-800/60 bg-zinc-950/95 pb-4 pt-3">
-    <div class="mx-auto max-w-3xl px-4">
+  <div class="shrink-0 bg-zinc-950/95 pb-4">
+    <div class="h-0.5 w-full bg-zinc-800/60 shrink-0">
+      <div class="h-full bg-sky-500/80 transition-all duration-500" :style="{ width: tokenLinePct }"></div>
+    </div>
+    <div class="mx-auto max-w-3xl px-4 pt-3">
       <form @submit.prevent="submit" class="relative">
         <div class="relative rounded-2xl border border-zinc-700/60 focus-within:border-sky-500/50 focus-within:ring-1 focus-within:ring-sky-500/30 bg-zinc-900/90">
           <div class="absolute inset-0 px-4 py-3 text-sm whitespace-pre-wrap break-words pointer-events-none overflow-y-auto max-h-40" v-html="highlightInput()"></div>
@@ -196,8 +201,10 @@
             rows="1"></textarea>
         </div>
         <div class="flex items-center justify-between mt-2 px-1">
-          <span class="text-[14px] text-zinc-500 hidden sm:block">Ask anything, Shift+Enter newline</span>
-          <span class="text-[14px] text-zinc-500 sm:hidden">Ask anything, Shift+Enter newline</span>
+          <span class="text-[14px] text-zinc-500 hidden sm:block">Shift+Enter newline</span>
+          <span class="text-[14px] text-zinc-500 sm:hidden">Shift+Enter newline</span>
+          <span class="flex-1"></span>
+          <span v-if="store.sessionTokens > 0" class="text-[11px] text-zinc-500 tabular-nums mr-3">{{ formatTokens(store.sessionTokens) }} tok</span>
           <button type="button" v-if="store.isBusy" @click="store.sendCancel()"
             class="w-8 h-8 flex items-center justify-center rounded-lg bg-red-600 hover:bg-red-500 transition-colors">
             <svg class="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"></rect></svg>

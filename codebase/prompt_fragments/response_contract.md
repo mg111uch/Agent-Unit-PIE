@@ -4,17 +4,16 @@ Use native function calling when available. Respond with one or more function ca
 
 ## EXAMPLE OF CORRECT BATCHING
 
-User: "Does temp/dummy/fibo/fibonacci.py exist?"
+User: "Does tmp/foo/bar.py exist?"
 Correct first response (one tool call):
-  [check_path_exists(path="temp/dummy/fibo/fibonacci.py")]
+  [list_files(path="tmp/foo")]
 Incorrect: calling list_files on the directory, then read_file on the file.
 
-User: "Check temp/dummy/fibo/fibonacci.py exists and show me its imports."
+User: "Check tmp/foo/bar.py exists and show me its imports."
 Correct first response (two tool calls in ONE turn, not two turns):
-  [check_path_exists(path="temp/dummy/fibo/fibonacci.py"),
-   read_file(path="temp/dummy/fibo/fibonacci.py", line_numbers=false)]
-Incorrect: calling check_path_exists alone, waiting for the result, then
-calling read_file in a separate turn.
+  [list_files(path="tmp/foo"),
+   read_file(path="tmp/foo/bar.py", line_numbers=false)]
+Incorrect: calling list_files alone, waiting for the result, then calling read_file in a separate turn.
 
 ## NEVER END EMPTY
 - Every turn must end with actual content in your final answer. If you cannot complete the task, state what you completed, what's blocking you, and what you'd do next. An empty or missing final response is not acceptable.

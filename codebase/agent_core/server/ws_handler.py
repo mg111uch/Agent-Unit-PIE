@@ -9,7 +9,7 @@ from typing import Optional
 
 from fastapi import WebSocket, WebSocketDisconnect, Query
 
-from agent_core.config import CODEBASE_ROOT, DEBUG_DUMP_ENABLED, resolve_active_tool_packs
+from agent_core.config import CODEBASE_ROOT, DEBUG_DUMP_ENABLED, SHOW_TOOL_TOKEN_USAGE, resolve_active_tool_packs
 from agent_core.server.auth import verify_token, SKIP_AUTH
 from agent_core.server.audit import make_audit_wrapper
 from agent_core.server import app
@@ -40,6 +40,8 @@ async def websocket_agent(websocket: WebSocket, token: str = Query(default=None)
             "type": "connected",
             "user": {"id": user.get("id"), "username": user.get("username")},
             "workspace": user_ws_root,
+            "show_tool_token_usage": SHOW_TOOL_TOKEN_USAGE,
+            "context_window": getattr(_srv, "active_context_window", 0),
         }
     )
     conv_id = _srv.conversations.get(user_key)
@@ -355,6 +357,7 @@ async def handle_chat(
                 "input": event["input"],
                 "call_id": event.get("call_id", ""),
                 "step": event["step"],
+                "usage": event.get("usage", {}),
             })
         elif etype == "tool_result":
             print(f"[WS-DIAG] forwarding tool_result: tool={event['tool']} step={event['step']} ok={event.get('ok',True)} call_id='{event.get('call_id','')}' result_len={len(event.get('result',''))}", flush=True)
@@ -366,6 +369,7 @@ async def handle_chat(
                 "ok": event.get("ok", True),
                 "call_id": event.get("call_id", ""),
                 "step": event["step"],
+                "usage": event.get("usage", {}),
             })
         elif etype == "summary":
             await websocket.send_json({

@@ -55,7 +55,10 @@ AgentComponents.ToolCallCard = {
       if (val) expanded.value = true
     }, { immediate: true })
     function formatInput(input) { return prettyJSON(input) }
-    return { expanded, formatInput, renderResult: sanitizeMarkdown }
+    function showUsage() {
+      return AgentStore.showToolTokenUsage && props.toolCall?.usage?.total_tokens
+    }
+    return { expanded, formatInput, renderResult: sanitizeMarkdown, showUsage, formatTokens }
   }
 }
 
@@ -96,6 +99,6 @@ AgentComponents.AgentChat = {
       return '$' + Number(cost).toFixed(6)
     }
 
-    return { store, scrollRef, anchorRef, suggestions, send, onQuestionSubmit, groupedToolCalls, formatCost, renderMarkdown: sanitizeMarkdown }
+    return { store, scrollRef, anchorRef, suggestions, send, onQuestionSubmit, groupedToolCalls, formatCost, renderMarkdown: sanitizeMarkdown, formatTokens }
   }
 }

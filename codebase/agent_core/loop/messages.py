@@ -18,6 +18,16 @@ def tool_followup(tool: str, tool_input: Any, tool_result: Any) -> str:
     )
 
 
+def short_followup() -> str:
+    """Followup for messages-based loops where the tool result already lives in
+    a preceding tool message — avoids duplicating the full result as text.
+    """
+    return (
+        "Answer the user's question now with a final answer. "
+        "Do not make another tool call unless you have no data to answer with yet."
+    )
+
+
 def serialize_tool_input(tool_input: Any) -> str:
     if isinstance(tool_input, str):
         return tool_input
@@ -28,19 +38,18 @@ def serialize_tool_input(tool_input: Any) -> str:
 
 
 def build_tool_calls_msg(tool_calls: List[ParsedToolCall]) -> dict:
-    return {
-        "role": "assistant",
-        "content": None,
-        "tool_calls": [
-            {
-                "name": tc.name,
-                "arguments": tc.arguments,
-                "id": tc.call_id or "",
-                "_call_id": tc.call_id or "",
-            }
-            for tc in tool_calls
-        ],
-    }
+    calls = []
+    for tc in tool_calls:
+        call = {
+            "name": tc.name,
+            "arguments": tc.arguments,
+            "id": tc.call_id or "",
+            "_call_id": tc.call_id or "",
+        }
+        if tc.thought_signature:
+            call["thought_signature"] = tc.thought_signature
+        calls.append(call)
+    return {"role": "assistant", "content": None, "tool_calls": calls}
 
 
 def build_tool_results_msg(results: List[dict]) -> dict:

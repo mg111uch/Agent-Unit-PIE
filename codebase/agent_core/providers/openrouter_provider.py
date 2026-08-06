@@ -10,10 +10,99 @@ from __future__ import annotations
 
 import ast
 import json
+import re
 import uuid
 from typing import Dict, Any, Optional, List, Generator
 
+from agent_core.config import (
+    OPENROUTER_SKIP_TOOLS_ON_CHAIN,
+    OPENROUTER_PRUNE_TOOLS_ON_CHAIN,
+    OPENROUTER_RETRY_SKIPPED_CHAIN,
+)
 from agent_core.providers import BaseLLMProvider
+
+
+def _is_chained_turn(messages: List[Dict[str, Any]]) -> bool:
+    """True when tools were already used since the current user prompt — i.e.
+    the conversation currently ends in a tool exchange (tool results or a fresh
+    tool call). Each new user prompt starts a turn, so the tool schemas are
+    re-sent at the start of every user prompt and omitted on the tool-chain
+    follow-ups within it.
+    """
+    if not messages:
+        return False
+    last = messages[-1]
+    role = last.get("role")
+    if role == "tool" and last.get("tool_results"):
+        return True
+    if role == "assistant" and last.get("tool_calls"):
+        return True
+    return False
+
+
+# Tools always re-sent on chained turns. Everything else is pruned from the
+# request so the per-call schema stays small (Issues2.md: dynamic tool loading).
+_CHAIN_BASE_TOOLS = {
+    "read_file", "list_files", "grep_search", "glob_search",
+    "execute_command", "edit_file", "write_to_file",
+}
+
+
+def _tool_schema_name(tool: Dict[str, Any]) -> str:
+    """Extract a tool's name from either OpenAI-style or flat registry dicts."""
+    if not isinstance(tool, dict):
+        return ""
+    fn = tool.get("function")
+    if isinstance(fn, dict):
+        return str(fn.get("name", "") or "")
+    return str(tool.get("name", "") or "")
+
+
+def _tools_used_this_turn(messages: List[Dict[str, Any]]) -> set[str]:
+    """Collect tool names already called since the last user prompt."""
+    used: set[str] = set()
+    for msg in reversed(messages):
+        if msg.get("role") == "user" and msg.get("content"):
+            break
+        for tc in msg.get("tool_calls") or []:
+            name = tc.get("name", "")
+            if name:
+                used.add(name)
+    return used
+
+
+def _prune_tools_for_chain(tools: List[Dict[str, Any]], messages: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Dynamic tool exposure: on chained turns send only the base set plus the
+    tools already used this turn, instead of re-sending the full schema each step.
+
+    Non-chained turns always get the full set. Returns the original list when
+    nothing is pruned so callers can distinguish 'no-op' from 'reduced'.
+    """
+    keep = _CHAIN_BASE_TOOLS | _tools_used_this_turn(messages)
+    pruned = [t for t in tools if _tool_schema_name(t) in keep]
+    if len(pruned) < len(tools):
+        return pruned
+    return tools
+
+
+def _looks_like_tool_intent(text: str) -> bool:
+    """Heuristic: does a text-only reply still read as a tool attempt (JSON
+    action envelope or XML <tool_call>)? Used to decide whether a skipped-chained
+    turn should retry WITH tools — a plain final answer should not.
+    """
+    if not text or not text.strip():
+        return True
+    if "<tool_call" in text:
+        return True
+    m = re.search(r"\{.*\}", text, re.DOTALL)
+    if m:
+        try:
+            data = json.loads(m.group(0))
+        except Exception:
+            return False
+        if isinstance(data, dict) and ("action" in data or "tool_call" in data):
+            return True
+    return False
 
 
 def _coerce_arguments(value: Any) -> Any:
@@ -26,12 +115,18 @@ def _coerce_arguments(value: Any) -> Any:
     if isinstance(value, dict):
         return value
     if isinstance(value, str):
+        s = value.strip()
         try:
-            parsed = json.loads(value)
+            parsed = json.loads(s)
         except json.JSONDecodeError:
-            try:
-                parsed = ast.literal_eval(value)
-            except (ValueError, SyntaxError):
+            # Only fall back to literal_eval for short, dict-shaped strings so
+            # untrusted/corrupted msg_store entries are never evaluated at large.
+            if s.startswith("{") and len(s) <= 4096:
+                try:
+                    parsed = ast.literal_eval(s)
+                except (ValueError, SyntaxError):
+                    return {}
+            else:
                 return {}
         return parsed if isinstance(parsed, dict) else {}
     return {}
@@ -69,7 +164,7 @@ def _convert_messages_to_openai(
                 oai_messages.append({
                     "role": "tool",
                     "content": msg.get("content", ""),
-                    "tool_call_id": msg.get("tool_call_id", "unknown"),
+                    "tool_call_id": msg.get("tool_call_id", "") or f"call_{uuid.uuid4().hex[:12]}",
                 })
             continue
 
@@ -106,6 +201,47 @@ class OpenRouterProvider(BaseLLMProvider):
         )
         self.default_model = model
 
+    def _parse_chat_response(self, res: Any) -> Dict[str, Any]:
+        choice = res.choices[0] if res.choices else None
+        response_text = ""
+        structured_calls = None
+
+        if choice and choice.message:
+            if choice.message.tool_calls:
+                structured_calls = []
+                for tc in choice.message.tool_calls:
+                    raw_args = tc.function.arguments or "{}"
+                    try:
+                        args = json.loads(raw_args)
+                    except json.JSONDecodeError:
+                        args = {"input": raw_args}
+                    structured_calls.append({
+                        "id": tc.id,
+                        "name": tc.function.name,
+                        "arguments": args,
+                    })
+            response_text = choice.message.content or ""
+            if not response_text and not structured_calls:
+                refusal = getattr(choice.message, "refusal", None)
+                if refusal:
+                    response_text = str(refusal)
+
+        token_count = res.usage.total_tokens if res.usage else 0
+        prompt_tokens = res.usage.prompt_tokens if res.usage else 0
+        completion_tokens = res.usage.completion_tokens if res.usage else 0
+
+        return {
+            "status": "success",
+            "response": response_text if response_text is not None else "",
+            "tool_calls": structured_calls,
+            "conversation_id": None,
+            "usage": self._build_usage_dict(
+                token_count,
+                prompt_tokens=prompt_tokens,
+                completion_tokens=completion_tokens,
+            ),
+        }
+
     def generate(
         self,
         prompt: str = "",
@@ -132,44 +268,42 @@ class OpenRouterProvider(BaseLLMProvider):
             temperature=temperature,
             max_tokens=max_tokens,
         )
+        chained = _is_chained_turn(messages or [])
+        tools_skipped = bool(tools) and OPENROUTER_SKIP_TOOLS_ON_CHAIN and chained
         if tools:
-            api_kwargs["tools"] = tools
+            if tools_skipped:
+                pass  # omit tools entirely
+            elif chained and OPENROUTER_PRUNE_TOOLS_ON_CHAIN:
+                api_kwargs["tools"] = _prune_tools_for_chain(tools, messages or [])
+            else:
+                api_kwargs["tools"] = tools
 
         res = self.client.chat.completions.create(**api_kwargs)
+        parsed = self._parse_chat_response(res)
 
-        choice = res.choices[0] if res.choices else None
-        response_text = ""
-        structured_calls = None
-
-        if choice and choice.message:
-            if choice.message.tool_calls:
-                structured_calls = []
-                for tc in choice.message.tool_calls:
-                    raw_args = tc.function.arguments or "{}"
-                    try:
-                        args = json.loads(raw_args)
-                    except json.JSONDecodeError:
-                        args = {"input": raw_args}
-                    structured_calls.append({
-                        "id": tc.id,
-                        "name": tc.function.name,
-                        "arguments": args,
-                    })
-            response_text = choice.message.content or ""
-            if not response_text and not structured_calls:
-                refusal = getattr(choice.message, "refusal", None)
-                if refusal:
-                    response_text = str(refusal)
-
-        token_count = res.usage.total_tokens if res.usage else 0
-
-        return {
-            "status": "success",
-            "response": response_text if response_text is not None else "",
-            "tool_calls": structured_calls,
-            "conversation_id": None,
-            "usage": self._build_usage_dict(token_count),
-        }
+        # OpenAI-compatible models can't emit tool_calls when the schema isn't in
+        # the request — so a skipped chained turn may drop an intended tool call.
+        # Retry once WITH tools only when the reply still reads as a tool attempt
+        # (never on a plain final answer), so a skipped chain step doesn't always
+        # cost a second call (which would negate the token saving).
+        if (
+            tools_skipped
+            and not parsed.get("tool_calls")
+            and tools
+            and OPENROUTER_RETRY_SKIPPED_CHAIN
+            and _looks_like_tool_intent(parsed.get("response", ""))
+        ):
+            api_kwargs["tools"] = tools
+            try:
+                res2 = self.client.chat.completions.create(**api_kwargs)
+            except Exception:
+                return parsed
+            parsed2 = self._parse_chat_response(res2)
+            if parsed2.get("tool_calls"):
+                parsed = parsed2
+            elif parsed2.get("response") and not parsed.get("response"):
+                parsed = parsed2
+        return parsed
 
     def generate_stream(
         self,
@@ -199,8 +333,15 @@ class OpenRouterProvider(BaseLLMProvider):
             max_tokens=max_tokens,
             stream=True,
         )
+        chained = _is_chained_turn(messages or [])
+        tools_skipped = bool(tools) and OPENROUTER_SKIP_TOOLS_ON_CHAIN and chained
         if tools:
-            api_kwargs["tools"] = tools
+            if tools_skipped:
+                pass  # omit tools entirely
+            elif chained and OPENROUTER_PRUNE_TOOLS_ON_CHAIN:
+                api_kwargs["tools"] = _prune_tools_for_chain(tools, messages or [])
+            else:
+                api_kwargs["tools"] = tools
 
         stream = self.client.chat.completions.create(**api_kwargs)
 

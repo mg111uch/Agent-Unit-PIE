@@ -30,6 +30,7 @@ class ParsedToolCall:
     arguments: dict
     raw: str = ""
     call_id: str = ""
+    thought_signature: str = ""
 
 
 _MCP_PREFIXES = ["pie_"]
@@ -87,6 +88,7 @@ def parse_provider_response(
                         name=resolved,
                         arguments=args or {},
                         call_id=str(call_id) if call_id else "",
+                        thought_signature=str(tc.get("thought_signature", "") or ""),
                     )
                 )
             else:

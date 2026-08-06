@@ -11,7 +11,7 @@ from typing import Any, Optional
 
 from agent_core.config import COMPACTION_TRIGGER_CHARS
 
-KEEP_RAW_TAIL = 6  # keep last N messages verbatim after compaction
+KEEP_RAW_TAIL = 4  # keep last N messages verbatim after compaction
 
 _current: ContextVar[Optional["SessionState"]] = ContextVar("session_state", default=None)
 
@@ -42,7 +42,6 @@ class SessionState:
     workspace_root: Optional[str] = None
     top_level_entries: Optional[list[str]] = None
     file_cache: dict[str, FileCacheEntry] = field(default_factory=dict)
-    dir_cache: dict[str, str] = field(default_factory=dict)
     todo_plan: Optional[list[str]] = None
     turn_count: int = 0
     tool_calls_this_turn: int = 0
@@ -51,6 +50,7 @@ class SessionState:
     outcomes: list[str] = field(default_factory=list)
     cache_hits: int = 0
     cache_misses: int = 0
+    accumulated_tokens: int = 0
 
     def begin_turn(self) -> None:
         self.turn_count += 1
@@ -58,6 +58,16 @@ class SessionState:
 
     def note_tool_call(self) -> None:
         self.tool_calls_this_turn += 1
+
+    def note_usage(self, usage: dict) -> None:
+        """Accumulate billed tokens for the chain-restart policy."""
+        tokens = int(usage.get("total_tokens", 0) or 0)
+        if tokens > 0:
+            self.accumulated_tokens += tokens
+
+    def should_restart_chain(self, threshold: int) -> bool:
+        """True when the stateful chain should be dropped and rebuilt compacted."""
+        return threshold > 0 and self.accumulated_tokens >= threshold
 
     def build_digest(self) -> str:
         lines = ["[session context — do not re-fetch unless marked stale]"]
@@ -107,10 +117,6 @@ class SessionState:
         ent = self.file_cache.get(path)
         if ent:
             ent.stale = True
-        self.dir_cache.pop(path, None)
-        # parent dir listing may be stale if create/delete
-        parent = path.rsplit("/", 1)[0] if "/" in path else "."
-        self.dir_cache.pop(parent, None)
         if path not in self.files_touched:
             self.files_touched.append(path)
 
@@ -149,6 +155,32 @@ def estimate_message_chars(messages: list[dict]) -> int:
     return n
 
 
+def _collapse_redundancies(messages: list[dict]) -> list[dict]:
+    """Drop low-value message content and merge consecutive user followups.
+
+    - Assistant reply text is redundant when the turn also carries tool_calls
+      (the results that follow carry the actual content).
+    - Consecutive user messages (from corrective appends) are merged, keeping
+      the latest so prompts don't pile up.
+    """
+    out: list[dict] = []
+    for m in messages:
+        nm = dict(m)
+        if (
+            nm.get("role") == "assistant"
+            and nm.get("tool_calls")
+            and isinstance(nm.get("content"), str)
+        ):
+            nm["content"] = None
+        if nm.get("role") == "user" and out and out[-1].get("role") == "user":
+            content = nm.get("content")
+            if isinstance(content, str):
+                out[-1]["content"] = "[prior prompt collapsed]\n" + content
+            continue
+        out.append(nm)
+    return out
+
+
 def compact_messages(
     messages: list[dict],
     state: Optional[SessionState] = None,
@@ -156,7 +188,12 @@ def compact_messages(
     keep_tail: int = KEEP_RAW_TAIL,
 ) -> list[dict]:
     """Rule-based compaction: shrink old tool results when history grows large."""
-    if not messages or estimate_message_chars(messages) < trigger_chars:
+    if not messages:
+        return messages
+
+    messages = _collapse_redundancies(messages)
+
+    if estimate_message_chars(messages) < trigger_chars:
         return messages
 
     if len(messages) <= keep_tail + 2:
@@ -168,6 +205,7 @@ def compact_messages(
         summary_bits.append(state.history_summary())
     files = set()
     tools_used = set()
+    corrections = 0
     for m in head:
         for tc in m.get("tool_calls") or []:
             tools_used.add(tc.get("name", "?"))
@@ -180,6 +218,10 @@ def compact_messages(
             res = str(tr.get("result", ""))[:300]
             for p in re.findall(r"[\w./-]+\.(?:py|js|ts|md|json|txt)", res):
                 files.add(p)
+        if m.get("role") == "user":
+            c = str(m.get("content", "") or "")
+            if c.startswith("Tool used:") or "[CORRECTIVE]" in c:
+                corrections += 1
 
     summary = {
         "role": "user",
@@ -187,8 +229,9 @@ def compact_messages(
             "[compacted earlier turns]\n"
             + (summary_bits[0] + "\n" if summary_bits else "")
             + f"Tools used: {sorted(tools_used)}\n"
-            f"Paths seen: {sorted(files)[:40]}\n"
-            "Raw tool payloads for those turns were dropped to save context."
+            f"Paths seen: {sorted(files)[:20]}\n"
+            + (f"Prior corrections folded: {corrections}\n" if corrections else "")
+            + "Raw tool payloads for those turns were dropped to save context."
         ),
     }
     # Keep first user message if present
@@ -196,8 +239,8 @@ def compact_messages(
     if head and head[0].get("role") == "user":
         first = dict(head[0])
         content = first.get("content") or ""
-        if len(content) > 500:
-            first["content"] = content[:500] + "…[truncated]"
+        if len(content) > 400:
+            first["content"] = content[:400] + "…[truncated]"
         prefix = [first]
 
     compacted = prefix + [summary] + _shrink_tool_payloads(tail, aggressive=False)
@@ -236,8 +279,6 @@ def observe_tool_result(state: SessionState, tool: str, arguments: Any, result: 
     elif tool == "read_file":
         # read_file tool handles its own caching (with mtime) — skip observer double-cache
         pass
-    elif tool == "list_files" and ok and path:
-        state.dir_cache[path or "."] = result
     elif tool in ("edit_file", "write_to_file") and path:
         if ok:
             state.mark_stale(path)

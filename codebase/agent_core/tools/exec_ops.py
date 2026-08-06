@@ -36,6 +36,40 @@ def _format_subprocess_output(result: subprocess.CompletedProcess) -> str:
     return output or "(No output)"
 
 
+_MKDIR_RE = re.compile(r"^\s*mkdir(?:\s+-[a-zA-Z]+)?\s+(.+)$")
+
+
+def _mkdir_target(cmd: str) -> str | None:
+    """Extract the target path of a plain mkdir command, if any."""
+    m = _MKDIR_RE.match(cmd)
+    if not m:
+        return None
+    target = m.group(1).strip().strip("'\"").rstrip("/\\")
+    return target or None
+
+
+def _verify_command_effect(cmd: str, result: subprocess.CompletedProcess) -> str:
+    """Confirm the effect of a successful command that produced no output.
+
+    For mkdir, verify the created directory exists and report it so the LLM
+    doesn't need a separate list_files/read_file call to confirm creation.
+    """
+    text = _format_subprocess_output(result)
+    if result.returncode != 0 or text not in ("", "(No output)"):
+        return text
+    target = _mkdir_target(cmd)
+    if target:
+        try:
+            from agent_core.workspace import resolve_for_tool
+            res = resolve_for_tool(target, expect="dir")
+            if res.ok:
+                return f"[OK] directory verified: {res.rel}"
+            return f"Command succeeded (mkdir) but directory could not be verified: {target}"
+        except Exception:
+            return f"[OK] mkdir completed: {target}"
+    return "(No output — command succeeded)"
+
+
 def _run_sandboxed(cmd: str, timeout: int = 60) -> str:
     ws = get_user_workspace_root() or WORKSPACE_ROOT
     try:
@@ -47,7 +81,7 @@ def _run_sandboxed(cmd: str, timeout: int = 60) -> str:
              "sh", "-c", cmd],
             capture_output=True, text=True, timeout=timeout,
         )
-        return _format_subprocess_output(result)
+        return _verify_command_effect(cmd, result)
     except FileNotFoundError:
         return "Sandbox error: Docker not found. Set sandbox_enabled=false or install Docker."
     except subprocess.TimeoutExpired:
@@ -79,7 +113,7 @@ def execute_command_raw(cmd: str) -> str:
             cmd, shell=True, cwd=cwd,
             capture_output=True, text=True, timeout=30
         )
-        return _format_subprocess_output(result)
+        return _verify_command_effect(cmd, result)
     except subprocess.TimeoutExpired:
         msg = f"Command timed out after 30 seconds: {cmd}"
         log_output(f"[ERROR] {msg}")

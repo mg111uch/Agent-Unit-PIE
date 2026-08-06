@@ -12,7 +12,7 @@ import os
 import re
 
 from agent_core.config import EXCLUDE_DIRS
-from agent_core.workspace import WORKSPACE_ROOT, resolve, to_relative, PathEscapeError
+from agent_core.workspace import WORKSPACE_ROOT, resolve, resolve_for_tool, to_relative, PathEscapeError
 from agent_core.tools.types import ToolResult
 
 _exclude_set = set(EXCLUDE_DIRS)
@@ -191,14 +191,11 @@ def file_skeleton(input_data=None) -> ToolResult:
         blocks = []
         ok_count = 0
         for p in paths:
-            full = resolve(p)
-            rel = to_relative(full)
-            if not os.path.exists(full):
-                blocks.append(f"--- {rel} ---\nERROR: file not found")
+            res = resolve_for_tool(p, expect="file")
+            if not res.ok:
+                blocks.append(f"--- {p} ---\nERROR: {res.message}")
                 continue
-            if os.path.isdir(full):
-                blocks.append(f"--- {rel} ---\nERROR: is a directory, not a file")
-                continue
+            full, rel = res.full, res.rel
             ok_count += 1
             blocks.append("\n".join(_skeleton_for(full, rel)))
         return ToolResult(ok=ok_count > 0, data="\n\n".join(blocks))
@@ -301,11 +298,11 @@ def who_imports(input_data=None) -> ToolResult:
         index = _scan_workspace()
         blocks = []
         for p in paths:
-            full = resolve(p)
-            rel = to_relative(full)
-            if not os.path.isfile(full):
-                blocks.append(f"--- {rel} ---\nERROR: file not found")
+            res = resolve_for_tool(p, expect="file")
+            if not res.ok:
+                blocks.append(f"--- {p} ---\nERROR: {res.message}")
                 continue
+            full, rel = res.full, res.rel
             if not rel.endswith(".py"):
                 blocks.append(f"--- {rel} ---\n(non-Python file — no import graph)")
                 continue

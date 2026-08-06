@@ -20,6 +20,7 @@ from agent_core.loop._helpers import (
 )
 from agent_core.loop.messages import (
     tool_followup,
+    short_followup,
     serialize_tool_input,
     build_tool_calls_msg,
     build_tool_results_msg,
@@ -28,6 +29,7 @@ from agent_core.loop.messages import (
 from agent_core.loop.streaming import stream_final
 from agent_core.loop.executor import execute_tool_calls
 from agent_core.loop.session_state import SessionState
+from agent_core.config import DIRECT_FINAL_TOOLS
 
 _EDIT_TOOLS = ("edit_file", "write_to_file")
 
@@ -69,6 +71,7 @@ def dispatch_step(
     local_step: bool,
     reply: str,
     nudge_threshold: int = 4,
+    step_usage: dict | None = None,
 ) -> Generator[dict, None, bool]:
     """Yield events for one agent step, return True if loop should exit."""
 
@@ -92,11 +95,15 @@ def dispatch_step(
             _compact_corrective_exchange(step_state.current_messages)
         step_state.current_input = _handle_corrective_bookkeeping(
             use_messages, step_state.current_messages, step_state.current_input,
-            msg_store, session_id, "parse", corrective, corrective_text,
+            msg_store, session_id, "parse", corrective,
+            short_followup() if use_messages else corrective_text,
         )
         if local_step and local_planner:
             local_planner.record_fallback()
         return False
+
+    # A successful structured parse means the raw-failure streak is over.
+    step_state.consecutive_raw_failures = 0
 
     # --- final ---
     if parsed.kind == "final":
@@ -144,7 +151,8 @@ def dispatch_step(
             _compact_corrective_exchange(step_state.current_messages)
         step_state.current_input = _handle_corrective_bookkeeping(
             use_messages, step_state.current_messages, step_state.current_input,
-            msg_store, session_id, parsed.tool or "unknown", corrective, followup_text,
+            msg_store, session_id, parsed.tool or "unknown", corrective,
+            short_followup() if use_messages else followup_text,
         )
         if local_step and local_planner:
             local_planner.record_fallback()
@@ -158,7 +166,8 @@ def dispatch_step(
             msg_store.add_message(
                 session_id=session_id, role="assistant", content=None,
                 tool_calls=[
-                    {"name": tc.name, "arguments": tc.arguments, "id": tc.call_id or "", "_call_id": tc.call_id or ""}
+                    {"name": tc.name, "arguments": tc.arguments, "id": tc.call_id or "", "_call_id": tc.call_id or "",
+                     **({"thought_signature": tc.thought_signature} if tc.thought_signature else {})}
                     for tc in parsed.tool_calls
                 ],
             )
@@ -168,6 +177,7 @@ def dispatch_step(
             yield {
                 "type": "tool_call", "tool": tc.name, "input": input_str,
                 "call_id": tc.call_id or "", "step": step,
+                "usage": step_usage or {},
             }
 
         question_calls = [tc for tc in parsed.tool_calls if tc.name in _QUESTION_TOOLS]
@@ -175,11 +185,15 @@ def dispatch_step(
 
         if question_calls:
             if other_calls or len(question_calls) > 1:
-                name = question_calls[0].name
+                # Every tool call must get a result so tool_result ids stay in
+                # sync with the tool_calls emitted above (APIs reject a count
+                # mismatch on the next call).
                 results = [{
-                    "tool": name, "result": f"Error: {name} cannot be combined with other tools in the same turn.",
-                    "ok": False, "call_id": question_calls[0].call_id or "",
-                }]
+                    "tool": tc.name,
+                    "result": f"Error: {tc.name} cannot be combined with other tools in the same turn.",
+                    "ok": False,
+                    "call_id": tc.call_id or "",
+                } for tc in parsed.tool_calls]
             else:
                 tc = question_calls[0]
                 arg = tc.arguments if isinstance(tc.arguments, dict) else {}
@@ -214,6 +228,7 @@ def dispatch_step(
                 "result": _truncate_result(result.get("result", ""), 2000),
                 "ok": result.get("ok", True),
                 "call_id": result.get("call_id", tc.call_id or ""), "step": step,
+                "usage": step_usage or {},
             }
             _finish_tool_events(step_state, tc.name)
             _feed_chain_miner(session_id, tc.name, tc.arguments)
@@ -269,7 +284,7 @@ def dispatch_step(
         tool_input = parsed.tool_input
         input_str = serialize_tool_input(tool_input)
 
-        yield {"type": "tool_call", "tool": tool, "input": input_str, "step": step}
+        yield {"type": "tool_call", "tool": tool, "input": input_str, "step": step, "usage": step_usage or {}}
 
         if tool in _QUESTION_TOOLS:
             tool_arg = tool_input if isinstance(tool_input, dict) else {}
@@ -307,6 +322,7 @@ def dispatch_step(
         yield {
             "type": "tool_result", "tool": tool, "input": input_str,
             "result": _truncate_result(result_str, 2000), "ok": ok, "step": step,
+            "usage": step_usage or {},
         }
 
         _finish_tool_events(step_state, tool)
@@ -346,7 +362,7 @@ def dispatch_step(
                     f"in a row with the same error. STOP repeating it. Re-read state using "
                     f"get_workspace_info / list_files / read_file, then adjust your approach."
                 )
-                followup_text = tool_followup(tool, tool_input, result_str) + corrective
+                followup_text = (short_followup() if use_messages else tool_followup(tool, tool_input, result_str)) + corrective
                 if use_messages:
                     step_state.current_messages.append({"role": "user", "content": followup_text})
                 else:
@@ -358,7 +374,31 @@ def dispatch_step(
             step_state.last_tool = None
             step_state.last_result = None
 
-        followup_text = tool_followup(tool, tool_input, result_str)
+        # Determinstic single-purpose tools can answer directly when they
+        # succeed as the first step — skip the extra "confirm" LLM round-trip.
+        if (
+            ok
+            and tool in DIRECT_FINAL_TOOLS
+            and step == 1
+            and step_state.consecutive_failures == 0
+            and tool not in _QUESTION_TOOLS
+        ):
+            final_text = f"[{tool}] {result_str[:300]}"
+            _debug_dump("DIRECT FINAL", step=step, tool=tool)
+            if use_messages:
+                msg_store.add_message(
+                    session_id=session_id, role="assistant", content=final_text,
+                )
+            yield {
+                "type": "summary", "step": step, "total_steps": step,
+                "cache_hits": state.cache_hits, "cache_misses": state.cache_misses,
+            }
+            yield from stream_final(
+                final_text, step=step, conversation_id=conv_id, cancel_event=cancel_event,
+            )
+            return True
+
+        followup_text = short_followup() if use_messages else tool_followup(tool, tool_input, result_str)
         if step >= nudge_threshold and tool not in _EDIT_TOOLS:
             followup_text += _deadline_corrective(step)
         if use_messages:

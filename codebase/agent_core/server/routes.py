@@ -9,7 +9,7 @@ from fastapi import Depends, HTTPException
 from agent_core.server import app
 from agent_core.server.auth import require_auth
 from agent_core.server.audit import build_tree
-from agent_core.config import EXCLUDE_DIRS, resolve_active_tool_packs
+from agent_core.config import EXCLUDE_DIRS, SHOW_TOOL_TOKEN_USAGE, resolve_active_tool_packs
 import agent_core.server as _srv
 
 
@@ -29,6 +29,8 @@ async def get_status():
         "total_cost": _srv.orchestrator.total_cost,
         "total_retries": getattr(_srv.orchestrator, "total_retries", 0),
         "sessions": len(_srv.msg_store.get_all_sessions()),
+        "show_tool_token_usage": SHOW_TOOL_TOKEN_USAGE,
+        "context_window": getattr(_srv, "active_context_window", 0),
     }
 
 
@@ -66,11 +68,13 @@ async def switch_provider(data: dict, user: dict = Depends(require_auth)):
         raise HTTPException(status_code=400, detail=result["error"])
     _srv.active_provider = provider
     _srv.active_model = model
+    _srv.active_context_window = _srv.resolve_context_window(provider, model)
     _srv.log_output(f"[Server] Switched to {provider}/{model}")
     return {
         "status": "ok",
         "provider": provider,
         "model": model,
+        "context_window": _srv.active_context_window,
         "active": {"provider": _srv.active_provider, "model": _srv.active_model},
     }
 

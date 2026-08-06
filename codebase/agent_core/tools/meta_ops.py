@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json, os, re
 
-from agent_core.workspace import resolve, WORKSPACE_ROOT, PathEscapeError, to_relative, root_basename_hint
+from agent_core.workspace import resolve, resolve_for_tool, WORKSPACE_ROOT, PathEscapeError, to_relative, root_basename_hint
 from agent_core.config import EXCLUDE_DIRS
 from agent_core.tools.types import ToolResult, _parse_arg
 
@@ -93,9 +93,10 @@ def read_section_tool(params: dict) -> ToolResult:
     context_lines = params.get("context_lines", 10)
     ignore_case = params.get("ignore_case", False)
     try:
-        full = resolve(path)
-        if not os.path.isfile(full):
-            return ToolResult(ok=False, message=f"file not found: {path}")
+        res = resolve_for_tool(path, expect="file")
+        if not res.ok:
+            return ToolResult(ok=False, message=res.message)
+        full = res.full
         flags = re.IGNORECASE if ignore_case else 0
         compiled = re.compile(pattern, flags)
         with open(full, "r", encoding="utf-8", errors="replace") as f:
@@ -169,7 +170,8 @@ def cross_file_edit(input_data) -> ToolResult:
         verify_lines = []
         for path in applied_py_paths:
             try:
-                v = _verify_python(resolve(path), to_relative(resolve(path)))
+                res = resolve_for_tool(path, expect="file")
+                v = _verify_python(res.full, res.rel) if res.ok else ""
             except Exception:
                 v = ""
             if v:
@@ -231,7 +233,11 @@ def check_before_edit(input_data) -> ToolResult:
                 results.append(f"[edit {i}] ERROR: 'path' and 'old_string' are required")
                 continue
             try:
-                full = resolve(path)
+                res = resolve_for_tool(path, expect="file")
+                if not res.ok:
+                    results.append(f"[edit {i}] ERROR: {res.message}")
+                    continue
+                full = res.full
             except PathEscapeError as err:
                 results.append(f"[edit {i}] ERROR: {err}")
                 continue

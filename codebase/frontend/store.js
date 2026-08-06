@@ -1,5 +1,15 @@
 const CHAT_HISTORY_MAX = 50
 
+function formatTokens(n) {
+  const v = Number(n) || 0
+  if (v < 1000) return String(v)
+  if (v < 1000000) {
+    const k = v / 1000
+    return (k >= 100 ? k.toFixed(0) : k.toFixed(2)) + 'k'
+  }
+  return (v / 1000000).toFixed(2) + 'm'
+}
+
 const AgentStore = Vue.reactive({
   connected: false,
   messages: [],
@@ -12,6 +22,9 @@ const AgentStore = Vue.reactive({
   chatHistory: [],
   historyIndex: -1,
   savedDraft: '',
+  showToolTokenUsage: false,
+  sessionTokens: 0,
+  contextWindow: 0,
 })
 
 AgentStore.saveToChatHistory = (text) => {
@@ -37,13 +50,15 @@ AgentStore.handleMessage = (msg) => {
   switch (msg.type) {
     case 'connected':
       AgentStore.connected = true
+      AgentStore.showToolTokenUsage = !!msg.show_tool_token_usage
+      AgentStore.contextWindow = msg.context_window || 0
       break
     case 'status':
       const last = lastAssistant()
       if (last) last.isThinking = msg.status === 'thinking'
       break
     case 'tool_call':
-      AgentStore.currentToolCall = { tool: msg.tool, input: msg.input, step: msg.step }
+      AgentStore.currentToolCall = { tool: msg.tool, input: msg.input, step: msg.step, usage: msg.usage || null }
       AgentStore.pendingToolCount++
       const tc = lastAssistant()
       if (tc) {
@@ -51,7 +66,7 @@ AgentStore.handleMessage = (msg) => {
         const callId = msg.call_id || `${msg.step}_${msg.tool}`
         const exist = tc.toolCalls.find(t => t.callId === callId)
         if (!exist) {
-          const entry = { ...AgentStore.currentToolCall, callId, ok: true, result: null }
+          const entry = { ...AgentStore.currentToolCall, callId, ok: true, result: null, usage: msg.usage || null }
           const sameStep = tc.toolCalls.filter(t => t.step === msg.step)
           if (sameStep.length > 0) {
             entry.parallel = true
@@ -71,6 +86,7 @@ AgentStore.handleMessage = (msg) => {
         if (hit) {
           hit.result = msg.result
           hit.ok = msg.ok !== false
+          if (msg.usage) hit.usage = msg.usage
         }
       }
       break
@@ -105,7 +121,14 @@ AgentStore.handleMessage = (msg) => {
       if (msg.status === 'end') {
         const last = lastAssistant()
         if (last) {
-          if (msg.usage) last.usage = msg.usage
+          if (msg.usage) {
+            last.usage = last.usage || {}
+            last.usage.total_tokens = (last.usage.total_tokens || 0) + (msg.usage.total_tokens || 0)
+            last.usage.prompt_tokens = (last.usage.prompt_tokens || 0) + (msg.usage.prompt_tokens || 0)
+            last.usage.completion_tokens = (last.usage.completion_tokens || 0) + (msg.usage.completion_tokens || 0)
+            last.usage.estimated_cost = (last.usage.estimated_cost || 0) + (msg.usage.estimated_cost || 0)
+            AgentStore.sessionTokens += msg.usage.total_tokens || 0
+          }
           if (msg.latency_seconds != null) last.latency = msg.latency_seconds
           if (msg.retries) last.retries = msg.retries
         }
@@ -130,6 +153,7 @@ AgentStore.handleMessage = (msg) => {
       AgentStore.pendingToolCount = 0
       AgentStore.pendingQuestions = null
       AgentStore.error = null
+      AgentStore.sessionTokens = 0
       break
   }
 }

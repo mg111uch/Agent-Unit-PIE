@@ -32,6 +32,7 @@ AgentComponents.AgentHeader = {
         if (!res.ok) { const d = await res.json(); throw new Error(d.detail) }
         const data = await res.json()
         catalog.value.active = data.active
+        if (data.context_window) store.contextWindow = data.context_window
         open.value = false
       } catch (e) { switchError.value = e.message }
     }

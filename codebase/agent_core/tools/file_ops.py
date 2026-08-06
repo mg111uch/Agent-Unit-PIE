@@ -4,7 +4,7 @@ import os
 import subprocess
 import sys
 
-from agent_core.workspace import resolve, PathEscapeError, to_relative, not_found_message
+from agent_core.workspace import resolve, resolve_for_tool, PathEscapeError, to_relative, not_found_message
 from agent_core.tools.undo_ops import save_checkpoint
 from agent_core.config import EXCLUDE_DIRS, CODEBASE_ROOT, POST_EDIT_IMPORT_CHECK
 from agent_core.tools.types import ToolResult, _parse_arg
@@ -94,8 +94,11 @@ def _read_single(path, offset=0, limit=None, line_numbers=True) -> ToolResult:
         offset = int(offset or 0)
         if isinstance(line_numbers, str):
             line_numbers = line_numbers.lower() in ("true", "1", "yes")
-        full = resolve(path)
-        rel = to_relative(full)
+        res = resolve_for_tool(path, expect="file")
+        if not res.ok:
+            return ToolResult(ok=False, message=res.message)
+        full = res.full
+        rel = res.rel
         _record_file_access(rel, "read")
         if not os.path.exists(full):
             return ToolResult(ok=False, message=not_found_message(path, full, rel))
@@ -169,48 +172,38 @@ def read_file(path: str = "", **kwargs) -> ToolResult:
 
 def list_files(path: str = ".", **kwargs) -> ToolResult:
     path = kwargs.get("path") or kwargs.get("directory") or kwargs.get("dir") or kwargs.get("input") or path
-    recursive = kwargs.get("recursive", False)
-    if isinstance(recursive, str):
-        recursive = recursive.lower() in ("true", "1", "yes")
     if not path:
         path = "."
     try:
-        full = resolve(path)
+        res = resolve_for_tool(path, expect="any")
+        if not res.ok:
+            return ToolResult(ok=False, message=res.message)
+        full = res.full
+        if os.path.isfile(full):
+            parent = os.path.dirname(full) or full
+            full = parent
         if not os.path.isdir(full):
             return ToolResult(ok=False, message=f"not a directory: {path}")
-        rel = to_relative(full)
-        from agent_core.loop.session_state import get_session_state
-        st = get_session_state()
-        if st is not None and rel in st.dir_cache:
-            st.cache_hits += 1
-            return ToolResult(ok=True, data=f"[cached listing]\n{st.dir_cache[rel]}")
+        names = [n for n in sorted(os.listdir(full)) if n not in _exclude_set]
+        dir_names = [n for n in names if os.path.isdir(os.path.join(full, n))]
         lines = []
-        if recursive:
-            for root, dirs, files in os.walk(full):
-                dirs[:] = [d for d in sorted(dirs) if d not in _exclude_set]
-                depth = os.path.relpath(root, full).count(os.sep)
-                if root != full and depth > 3:
-                    dirs[:] = []
-                    continue
-                rel_root = to_relative(root)
-                indent = "  " * (0 if rel_root == "." else rel_root.count(os.sep) + 1)
-                if rel_root != ".":
-                    lines.append(f"{indent}{os.path.basename(root)}/")
-                for fname in sorted(files):
-                    lines.append(f"{indent}  {fname}")
-        else:
-            names = sorted(os.listdir(full))
-            for name in names:
-                child = os.path.join(full, name)
-                if os.path.isdir(child):
-                    if name not in _exclude_set:
-                        lines.append(f"  {name}/")
-                else:
-                    lines.append(f"  {name}")
+        for name in names:
+            if name not in dir_names:
+                lines.append(f"  {name}")
+        for name in dir_names:
+            lines.append(f"  {name}/")
+            children = [c for c in sorted(os.listdir(os.path.join(full, name))) if c not in _exclude_set]
+            for c in children[:5]:
+                cpath = os.path.join(full, name, c)
+                lines.append(f"    {c}/" if os.path.isdir(cpath) else f"    {c}")
+            extra = len(children) - 5
+            if extra > 0:
+                lines.append(f"    ... {extra} more entries")
+        total = len(lines)
+        if total > 50:
+            lines = lines[:50]
+            lines.append(f"... {total - 50} more entries")
         data = "\n".join(lines) if lines else "(empty directory)"
-        if st is not None:
-            st.dir_cache[rel] = data
-            st.cache_misses += 1
         return ToolResult(ok=True, data=data)
     except PathEscapeError as e:
         return ToolResult(ok=False, message=str(e))
@@ -241,11 +234,14 @@ def write_to_file(input_data) -> ToolResult:
         if not path or not mode:
             return ToolResult(ok=False, message="'path' and 'mode' are required")
 
-        full_path = resolve(path)
-        _record_file_access(to_relative(full_path), mode)
+        res = resolve_for_tool(path, expect="target" if mode == "create" else "file")
+        if not res.ok:
+            return ToolResult(ok=False, message=res.message)
+        full_path = res.full
+        _record_file_access(res.rel, mode)
         exists = os.path.exists(full_path)
 
-        rel = to_relative(full_path)
+        rel = res.rel
         from agent_core.loop.session_state import get_session_state
         st = get_session_state()
 
@@ -264,7 +260,7 @@ def write_to_file(input_data) -> ToolResult:
                                           + (f"\n{verify}" if verify else ""))
 
         elif mode == "overwrite":
-            ckpt_saved = save_checkpoint(path) if not dry_run else None
+            ckpt_saved = save_checkpoint(full_path) if not dry_run else None
             _ensure_dir(full_path)
             if not dry_run:
                 with open(full_path, "w") as f:
@@ -300,8 +296,11 @@ def write_to_file(input_data) -> ToolResult:
 
 def _apply_single_edit(path, old, new, replace_all=False) -> ToolResult:
     try:
-        full = resolve(path)
-        rel = to_relative(full)
+        res = resolve_for_tool(path, expect="file")
+        if not res.ok:
+            return ToolResult(ok=False, message=res.message)
+        full = res.full
+        rel = res.rel
         _record_file_access(rel, "edit")
         if not os.path.exists(full):
             return ToolResult(ok=False, message=not_found_message(path, full, rel))
@@ -320,7 +319,7 @@ def _apply_single_edit(path, old, new, replace_all=False) -> ToolResult:
                 f"old_string is not unique ({count} matches). "
                 "Include more surrounding lines so the match is unambiguous, or set replace_all=true."
             ))
-        ckpt_saved = save_checkpoint(path)
+        ckpt_saved = save_checkpoint(full)
         replacement_count = count if replace_all else 1
         updated = content.replace(old, new, replacement_count)
         with open(full, "w", encoding="utf-8") as f:
@@ -392,8 +391,9 @@ def edit_file(input_data) -> ToolResult:
             result = _apply_single_edit(path, old, new, replace_all=replace_all)
         if result.ok and path:
             try:
-                full = resolve(path)
-                verify = _verify_python(full, to_relative(full))
+                res = resolve_for_tool(path, expect="file")
+                if res.ok:
+                    verify = _verify_python(res.full, res.rel)
             except Exception:
                 verify = ""
             if verify:

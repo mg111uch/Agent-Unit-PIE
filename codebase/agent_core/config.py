@@ -27,9 +27,10 @@ PROVIDER_DEFAULTS: dict[str, str] = {
 CLI_STEP_DELAY = 5.0
 SERVER_STEP_DELAY = 2.0
 
+# Single source of truth for the sandbox allowlist is config.json
+# (agent_core/tools/exec_ops.py enforces it at runtime).
 ALLOWED_COMMANDS: list[str] = _CONFIG.get("allowed_commands", [
-    "ls", "cat", "pwd", "echo", "python", "python3", "pytest",
-    "pip", "pip3", "node", "npm", "npx", "git",
+    "ls", "cat", "mkdir", "cd", "pwd", "python", "python3", "pytest",
 ])
 
 TOOL_MODES: dict[str, set[str]] = {
@@ -69,13 +70,69 @@ WORKFLOW_LEARN_MIN_SAVINGS_TOKENS: int = int(_WF.get("min_savings_tokens", 0))
 COMPACTION_TRIGGER_CHARS: int = int(_CONFIG.get("compaction_trigger_chars", 48_000))
 CONTEXT_DIGEST_ENABLED: bool = bool(_CONFIG.get("context_digest_enabled", True))
 
+# Gemini stateful chains retain the whole conversation server-side, so each
+# chained call is billed against the accumulated context. When the estimated
+# billed tokens pass this threshold, the chain is restarted with the compacted
+# client history as a fresh first message to bound per-call cost.
+GEMINI_CHAIN_RESTART_TOKENS: int = int(_CONFIG.get("gemini_chain_restart_tokens", 40_000))
+
+# Deterministic, single-purpose tools whose successful result fully answers
+# the request. When such a tool succeeds as the FIRST step of a turn, the loop
+# emits a synthesized final instead of making a second LLM call. Empty = off.
+DIRECT_FINAL_TOOLS: set[str] = set(_CONFIG.get("direct_final_tools", []) or [])
+
 # Loop guard: nudge the LLM to wrap up only after this many tool calls per step
 # without a final answer. Low values truncate legitimate long tool sequences.
 TOOL_NUDGE_THRESHOLD: int = int(_CONFIG.get("tool_nudge_threshold", 12))
 
+# Frontend: display per-step token usage in each tool box header when true.
+SHOW_TOOL_TOKEN_USAGE: bool = bool(_CONFIG.get("show_tool_token_usage", True))
+
 # Gemini stateful turns: skip re-sending an unchanged tool schema on chained
 # calls (schema persists server-side) to cut per-step token cost.
 GEMINI_SKIP_TOOLS_ON_CHAIN: bool = bool(_CONFIG.get("gemini_skip_tools_on_chain", True))
+
+# When true, Gemini uses store=False stateless calls: the full (client-compacted)
+# history is sent on every call and the per-call cost is bounded deterministically
+# by our compaction, instead of growing with Gemini's server-side chain retention.
+GEMINI_STATELESS: bool = bool(_CONFIG.get("gemini_stateless", False))
+
+# Stateless generateContent: explicitly cache the static prefix (system + tools)
+# and reference it on later calls so the re-sent fixed overhead is billed at the
+# discounted cached-input rate. Degrades to inline payloads on any failure.
+GEMINI_STATELESS_CACHE: bool = bool(_CONFIG.get("gemini_stateless_cache", True))
+
+# Stateless chained turns: skip re-sending the tool schemas and let the model
+# answer from the data it has already gathered. If it still emits a real tool
+# call, the provider retries once WITH schemas available.
+GEMINI_STATELESS_SKIP_SCHEMAS: bool = bool(_CONFIG.get("gemini_stateless_skip_schemas", False))
+
+# Stateless chained turns: instead of re-sending the full tool schema on every
+# tool-call follow-up, send only the tools already used this turn plus a small
+# base set (read/list/grep/glob/edit/write/execute) — the Gemini analog of
+# OPENROUTER_PRUNE_TOOLS_ON_CHAIN (Issues2.md: dynamic tool exposure).
+GEMINI_PRUNE_TOOLS_ON_CHAIN: bool = bool(_CONFIG.get("gemini_prune_tools_on_chain", True))
+
+# OpenRouter chained turns: skip re-sending the tool schemas so the model
+# answers from gathered data. OpenAI-compatible models generally won't emit
+# tool calls without the schema in the request, so enabling this can end
+# multi-tool chains prematurely — keep OFF unless the chained step is known to
+# be a final-answer step.
+OPENROUTER_SKIP_TOOLS_ON_CHAIN: bool = bool(_CONFIG.get("openrouter_skip_tools_on_chain", False))
+
+# OpenRouter chained turns: instead of re-sending the full tool schema on every
+# tool-call follow-up, send only the tools already used this turn plus a small
+# base set (read/list/grep/glob/edit/write/execute). This implements Issues2.md's
+# "dynamic tool exposure": the per-call schema drops from ~1.6k tokens to a few
+# hundred while keeping the model able to continue its chain.
+OPENROUTER_PRUNE_TOOLS_ON_CHAIN: bool = bool(_CONFIG.get("openrouter_prune_tools_on_chain", True))
+
+# When a chained turn deliberately skipped tools, retry once WITH tools only if
+# the reply looks like a tool attempt (JSON action envelope / XML tool_call) —
+# never on a plain final answer. Without this condition, a skipped chained turn
+# ALWAYS retries (OpenAI-compatible models can't emit tool_calls sans schema),
+# doubling every chained step and cancelling the token saving entirely.
+OPENROUTER_RETRY_SKIPPED_CHAIN: bool = bool(_CONFIG.get("openrouter_retry_skipped_chain", True))
 
 _raw_atlas_dir = _CONFIG.get("codebase_atlas_dir", "")
 CODEBASE_ATLAS_DIR: str = os.path.abspath(os.path.join(CODEBASE_ROOT, _raw_atlas_dir)) if _raw_atlas_dir else ""
@@ -123,3 +180,34 @@ def resolve_active_tool_names() -> set[str]:
 
 def resolve_active_provider() -> str:
     return os.getenv("AGENT_PROVIDER", _CONFIG.get("default_provider", "gemini"))
+
+
+# Approximate model context windows (tokens), used to scale the session token
+# usage bar. Prefix-matched per provider so newer model names still resolve.
+MODEL_CONTEXT_WINDOWS: dict[str, dict[str, int]] = {
+    "gemini": {
+        "gemini": 1_000_000,
+        "gemma": 8_192,
+    },
+    "openrouter": {
+        "openai": 200_000,
+        "google/": 1_000_000,
+        "gpt-oss": 200_000,
+        "nc-oss": 131_072,
+        "nemotron": 131_072,
+    },
+    "mock": {
+        "mock": 8_192,
+    },
+}
+
+DEFAULT_CONTEXT_WINDOW: int = 200_000
+
+
+def resolve_context_window(provider: str, model: str) -> int:
+    table = MODEL_CONTEXT_WINDOWS.get((provider or "").lower(), {})
+    for prefix, window in table.items():
+        if (model or "").startswith(prefix.lower()):
+            return window
+    config_specific = (load_config().get("context_windows") or {}).get(provider, {}).get(model)
+    return config_specific or DEFAULT_CONTEXT_WINDOW

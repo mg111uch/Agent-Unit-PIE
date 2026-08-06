@@ -197,6 +197,11 @@ AgentComponents.AgentInput = {
       Vue.nextTick(() => { if (taRef.value) { taRef.value.style.height = 'auto' }; taRef.value?.focus() })
     }
 
-    return { store, input, taRef, slashOpen, atOpen, slashIndex, fileIndex, filteredFiles, slashCommands, onInput, onKeydown, selectSlash, insertFile, submit, highlightInput, syncScroll }
+    const tokenLinePct = Vue.computed(() => {
+      if (!store.contextWindow) return '0%'
+      return Math.min(100, (store.sessionTokens / store.contextWindow) * 100).toLocaleString('en-US', { maximumFractionDigits: 2 }) + '%'
+    })
+
+    return { store, input, taRef, slashOpen, atOpen, slashIndex, fileIndex, filteredFiles, slashCommands, onInput, onKeydown, selectSlash, insertFile, submit, highlightInput, syncScroll, formatTokens, tokenLinePct }
   }
 }

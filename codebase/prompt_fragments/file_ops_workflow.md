@@ -7,7 +7,7 @@
 - When `read_file` or `list_files` fails: error lists nearby files. Use the **exact filename** from that list. If still not found, `glob_search("**/<filename>")` before concluding it doesn't exist.
 - **Verify directory paths with `list_files` before reading** — When uncertain about a file's location or the directory structure, call `list_files` on the suspected parent directory first. Guessing paths wastes a round trip on a file-not-found error.
 - Use `read_file` with `offset` and `limit` for portions of a large file (e.g. first 50 lines, lines 100-150); `offset` is 1-based; omit to start from line 1; `limit` is max lines to return; omit for rest of file.
-- **Existence/location checks only — do not read contents.** If the user asks whether a file exists, stop after `check_path_exists` or `list_files` confirms it. Do not call `read_file` or include file contents in your answer unless the user explicitly asked about the content.**
+- **Existence/location checks only — do not read contents.** If the user asks whether a file exists, stop after `list_files` or `glob_search` confirms it. Do not call `read_file` or include file contents in your answer unless the user explicitly asked about the content.**
 <!-- /read_only -->
 
 - **Delegate open-ended research to `subagent_task`** — When a task requires exploring unfamiliar code with multiple rounds of search/read/grep, use `subagent_task` so the sub-agent's exploration doesn't pollute your context. Only read the files the sub-agent identifies as needing edits.
@@ -18,4 +18,4 @@
 - On `edit_file` failure (old_string not found / not unique): re-read the file, copy exact text with surrounding lines. Do not repeat the identical failed call.
 - `edit_file` returns a diff — treat it as verification. Re-read only if 3+ edits, unexpected diff, or tests needed. Do not re-read solely to confirm.
 - `edit_file` `old_string` must match exactly (whitespace-sensitive) and appear exactly once.
-- `check_path_exists` errors list matching files elsewhere — use that hint instead of retrying with guessed prefixes.
+- `glob_search` results list matching files elsewhere — use that hint instead of retrying with guessed prefixes.
