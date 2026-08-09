@@ -15,6 +15,8 @@ import logging
 from datetime import datetime, timezone
 from typing import Dict, Any, Optional, List, Generator
 
+from agent_core.context_budget import build_budget, format_budget
+
 logger = logging.getLogger(__name__)
 
 DEFAULT_MAX_RETRIES = 3
@@ -45,6 +47,7 @@ class LLMOrchestrator:
         self.total_retries = 0
         self.max_retries = DEFAULT_MAX_RETRIES
         self.timeout = DEFAULT_TIMEOUT
+        self.profile_records: list[dict[str, Any]] = []
 
     def generate(
         self,
@@ -93,6 +96,20 @@ class LLMOrchestrator:
                 if provider_client is None:
                     raise ValueError(f"Provider not found: {provider_name}")
 
+                profile = build_budget(
+                    system_prompt=system_prompt,
+                    prompt=prompt,
+                    tools=tools,
+                    messages=messages,
+                )
+
+                # Stable session identity for provider-side prompt-cache routing
+                # (OpenRouter sticky sessions) — never optional on a chain.
+                provider_extra: Dict[str, Any] = {}
+                sess = (metadata or {}).get("session_id")
+                if sess:
+                    provider_extra["session_id"] = sess
+
                 result = provider_client.generate(
                     prompt=prompt,
                     model=model_name,
@@ -104,9 +121,18 @@ class LLMOrchestrator:
                     metadata=metadata or {},
                     tools=tools,
                     messages=messages,
+                    **provider_extra,
                 )
 
                 usage = result.get("usage", {})
+                profile.apply_usage(usage)
+                self.profile_records.append({
+                    "call_num": call_num,
+                    "provider": provider_name,
+                    "model": model_name,
+                    "attempt": attempt,
+                    **profile.to_dict(),
+                })
                 self.total_tokens += int(usage.get("total_tokens", 0))
                 self.total_cost += float(usage.get("estimated_cost", 0.0))
                 self.total_retries += attempt
@@ -147,6 +173,36 @@ class LLMOrchestrator:
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "retries": self.max_retries,
         }
+
+    def profile_summary(
+        self,
+        *,
+        latest_only: bool = False,
+        include_total: bool = True,
+    ) -> list[str]:
+        """Human-readable token breakdown of recorded LLM calls."""
+        recs = self.profile_records[-1:] if latest_only else self.profile_records
+        if not recs:
+            return ["No LLM calls profiled yet."]
+
+        def _to_budget(r: dict):
+            return type("_B", (), {k: int(v or 0) for k, v in r.items()
+                                   if k not in ("call_num", "provider", "model",
+                                                "attempt", "provider_source")})()
+
+        lines = []
+        for r in recs:
+            lines.append(format_budget(
+                _to_budget(r),
+                label=f"call #{r.get('call_num')} {r.get('provider')}/{r.get('model')}",
+            ))
+        if include_total and len(recs) > 1:
+            keys = ("system_tokens", "tool_schema_tokens", "history_tokens",
+                    "tool_result_tokens", "user_tokens", "digest_tokens",
+                    "fresh_input_tokens", "output_tokens", "billable_tokens")
+            totals = {k: sum(int(r.get(k, 0) or 0) for r in recs) for k in keys}
+            lines.append(f"TOTAL over {len(recs)} calls: {totals}")
+        return lines
 
     def register_provider(self, provider_name: str, provider_client: Any) -> None:
         self.providers[provider_name] = provider_client

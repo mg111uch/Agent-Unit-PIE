@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Astro Chart</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div id="header">
+        <h1>Astro Chart</h1>
+        <span>Planetary positions (geocentric)</span>
+    </div>
+    <div id="panel">
+        <label>Sector <select id="sel-sector"></select></label>
+        <label>Band <select id="sel-band"></select></label>
+        <input type="color" id="sel-color" value="#e63946">
+        <button id="btn-fill">Fill</button>
+        <button id="btn-reset">Reset</button>
+        <span id="panel-status"></span>
+        <label><input type="checkbox" id="chk-kundali" checked> Kundali</label>
+        <label><input type="checkbox" id="chk-nakshatra" checked> Nakshatra names</label>
+        <label><input type="checkbox" id="chk-drag"> Drag mode</label>
+    </div>
+    <div id="chart-wrap">
+        <canvas id="chart"></canvas>
+        <div id="tooltip" hidden></div>
+    </div>
+    <div id="readout">Hover a planet</div>
+    <script src="https://cdn.jsdelivr.net/npm/astronomy-engine@2.1.19/astronomy.browser.js"></script>
+    <script src="/static/chart.js"></script>
+</body>
+</html>

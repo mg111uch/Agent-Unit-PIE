@@ -17,8 +17,11 @@ import os
 import argparse
 import json
 
-# Directory to store encoding files locally (using tiktoken's cache)
-ENCODING_CACHE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "encoding_cache")
+# Directory to store encoding files locally (using tiktoken's cache).
+# Shared cache lives at the codebase root: codebase/encoding_cache
+ENCODING_CACHE_DIR = os.path.normpath(
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "encoding_cache")
+)
 
 # Set tiktoken's cache directory BEFORE importing tiktoken
 os.environ["TIKTOKEN_CACHE_DIR"] = ENCODING_CACHE_DIR

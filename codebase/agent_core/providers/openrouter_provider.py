@@ -40,14 +40,6 @@ def _is_chained_turn(messages: List[Dict[str, Any]]) -> bool:
     return False
 
 
-# Tools always re-sent on chained turns. Everything else is pruned from the
-# request so the per-call schema stays small (Issues2.md: dynamic tool loading).
-_CHAIN_BASE_TOOLS = {
-    "read_file", "list_files", "grep_search", "glob_search",
-    "execute_command", "edit_file", "write_to_file",
-}
-
-
 def _tool_schema_name(tool: Dict[str, Any]) -> str:
     """Extract a tool's name from either OpenAI-style or flat registry dicts."""
     if not isinstance(tool, dict):
@@ -72,13 +64,15 @@ def _tools_used_this_turn(messages: List[Dict[str, Any]]) -> set[str]:
 
 
 def _prune_tools_for_chain(tools: List[Dict[str, Any]], messages: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    """Dynamic tool exposure: on chained turns send only the base set plus the
-    tools already used this turn, instead of re-sending the full schema each step.
+    """Keep the turn's active tool set stable across the whole chain.
 
-    Non-chained turns always get the full set. Returns the original list when
-    nothing is pruned so callers can distinguish 'no-op' from 'reduced'.
+    The engine routes the user request to a small active group (tool_groups.py)
+    once at the start of the turn; every chained step keeps THAT set and never
+    widens back to a base set (PlanFixes2 #3/#4/#5). Tools already used this
+    turn are additionally preserved. Returns the original list when nothing is
+    pruned so callers can distinguish 'no-op' from 'reduced'.
     """
-    keep = _CHAIN_BASE_TOOLS | _tools_used_this_turn(messages)
+    keep = {_tool_schema_name(t) for t in tools if _tool_schema_name(t)} | _tools_used_this_turn(messages)
     pruned = [t for t in tools if _tool_schema_name(t) in keep]
     if len(pruned) < len(tools):
         return pruned
@@ -268,6 +262,11 @@ class OpenRouterProvider(BaseLLMProvider):
             temperature=temperature,
             max_tokens=max_tokens,
         )
+        # OpenRouter: stable session identity maximizes sticky-routing prompt
+        # cache locality across multi-turn agentic workflows (PlanFixes2 §12).
+        session_id = kwargs.get("session_id") or getattr(self, "_session_id", None)
+        if session_id:
+            api_kwargs["session_id"] = session_id
         chained = _is_chained_turn(messages or [])
         tools_skipped = bool(tools) and OPENROUTER_SKIP_TOOLS_ON_CHAIN and chained
         if tools:

@@ -61,8 +61,6 @@ def _dump_capped(v: Any, limit: int = 8000) -> str:
 
 _QUESTION_TOOLS = {"ask_user_question", "debate_step"}
 
-_DEFAULT_TOOL_CATEGORIES = None
-
 
 def _truncate_result(result: str, max_chars: int = 2000) -> str:
     if len(result) <= max_chars:

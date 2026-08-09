@@ -30,7 +30,8 @@ grok --resume 019fc7b4-a7a3-7a20-86f1-6feab4f594bc
 - grep search rules or tools for tui_output search - When analyzing a conversation log file (e.g. `tui_output.txt`), grep for structural markers like `[FINAL]`, `[NEW TURN]`, `total_tokens`, `"ok": false`, `latency_seconds`, or `"kind": "final"` rather than generic keywords like `Error` or `fail` which may match irrelevant instructions in the file's header.
 
 - Add Todo dismiss
-- ask me 3 questions on indian history
+- ask me 3 questions on indian history 
+- outside the square box  bounding the circle. Draw corner symbols as ABCD starting from upper left corner clockwise, than label mid points of sides 
 
 # Tips
 - Close mcp server connection before git add commit push

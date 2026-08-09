@@ -35,6 +35,16 @@ FRAGMENT_ORDER: List[tuple[str, Optional[List[str]], Optional[List[str]], Option
     ("response_contract.md",  None,         None,   None),
 ]
 
+# Immutable core: genuinely essential rules that a coding agent always needs to
+# answer correctly (identity, workspace rules, the JSON/format contract). This is
+# the fixed prefix kept byte-identical for caching; the playbooks above are the
+# optional, capability-dependent instructions (PlanFixes2 #14).
+CORE_FRAGMENT_ORDER: List[tuple[str, Optional[List[str]], Optional[List[str]], Optional[List[str]]]] = [
+    ("base_persona.md",         None, None, None),
+    ("efficiency_rules.md",     None, None, None),
+    ("response_contract.md",    None, None, None),
+]
+
 
 def load_agents_md() -> str:
     if not AGENTS_MD_ENABLED:
@@ -92,9 +102,10 @@ def _filter_mode_block(content: str, mode: str) -> str:
     return "\n".join(out).strip()
 
 
-def _fragments_mtime(fragments_dir: str, active_packs: List[str], mode: str) -> float:
+def _fragments_mtime(fragments_dir: str, active_packs: List[str], mode: str,
+                     order: List = FRAGMENT_ORDER) -> float:
     total = 0.0
-    for filename, requires, blocks, modes in FRAGMENT_ORDER:
+    for filename, requires, blocks, modes in order:
         if not _include_fragment(requires, blocks, modes, active_packs, mode):
             continue
         fpath = os.path.join(fragments_dir, filename)
@@ -109,6 +120,7 @@ def load_system_prompt(
     path: Optional[str] = None,
     active_packs: Optional[List[str]] = None,
     mode: Optional[str] = None,
+    core_only: bool = False,
 ) -> str:
     if active_packs is None:
         active_packs = [CAT_FILE, CAT_KERNEL, CAT_SIM, CAT_META, CAT_GIT, CAT_DEBATE, CAT_OBSERVER, CAT_CODE_RAG]
@@ -116,15 +128,16 @@ def load_system_prompt(
         mode = resolve_active_tool_mode()
 
     fragments_dir = path if path else PROMPT_FRAGMENTS_DIR
-    cache_key = f"{fragments_dir}:{','.join(sorted(active_packs))}:{mode}"
-    mtime = _fragments_mtime(fragments_dir, active_packs, mode)
+    order = CORE_FRAGMENT_ORDER if core_only else FRAGMENT_ORDER
+    cache_key = f"{fragments_dir}:{','.join(sorted(active_packs))}:{mode}:core={core_only}"
+    mtime = _fragments_mtime(fragments_dir, active_packs, mode, order)
 
     cached = _cache.get(cache_key)
     if cached is not None and cached[0] == mtime:
         return cached[1]
 
     parts: List[str] = []
-    for filename, requires, blocks, modes in FRAGMENT_ORDER:
+    for filename, requires, blocks, modes in order:
         if not _include_fragment(requires, blocks, modes, active_packs, mode):
             continue
         fragment_path = os.path.join(fragments_dir, filename)

@@ -20,10 +20,17 @@ from typing import Any, Optional, Tuple
 
 
 class GeminiContextCache:
-    def __init__(self, client: Any, model: str, ttl: str = "600s"):
+    def __init__(self, client: Any, model: str, ttl: str = "600s",
+                 stable_prefix_hash: Optional[str] = None):
         self._client = client
         self._model = model
         self._ttl = ttl
+        # Hash of the STABLE part (model + system + base tool catalog version).
+        # Dynamic tool pruning on chained turns must NOT invalidate the cached
+        # prefix (PlanFixes2 §5): the cache key never includes per-step tool
+        # variants, so a pruned request still hits the stable cache boundary.
+        self._stable = stable_prefix_hash or ""
+        self._system: Optional[str] = None
         self._full: Optional[Tuple[str, Optional[str]]] = None
         self._sys_only: Optional[Tuple[str, Optional[str]]] = None
 
@@ -31,6 +38,11 @@ class GeminiContextCache:
     def _key(model: str, system: str, tools: Any) -> str:
         raw = json.dumps(tools, sort_keys=True, default=str) if tools else ""
         return hashlib.sha256(f"{model}|{system}|{raw}".encode("utf-8")).hexdigest()
+
+    def _stable_key(self) -> str:
+        if self._stable:
+            return self._stable
+        return self._key(self._model, self._system if self._system else "", None)
 
     def _create(self, system: str, tools: Any, sys_only: bool) -> str:
         config: dict[str, Any] = {"display_name": "pie-agent-cache", "ttl": self._ttl}
@@ -47,10 +59,12 @@ class GeminiContextCache:
     def ensure(self, system: str, tools: Any, sys_only: bool) -> Optional[str]:
         """Return a cache name for the key, or None when unavailable.
 
-        A previously failed create for the same key is remembered (slot name is
-        None) so we don't hammer caches.create on every call.
+        The cache key is the stable prefix hash (system + static catalog), so
+        dynamic per-turn tool pruning never creates a new cache variant.
+        Degrades to inline payloads (None) on any failure.
         """
-        key = self._key(self._model, system, tools if not sys_only else None)
+        self._system = system
+        key = self._stable_key()
         slot = self._sys_only if sys_only else self._full
         if slot and slot[0] == key:
             return slot[1]
@@ -66,7 +80,8 @@ class GeminiContextCache:
 
     def existing(self, system: str, tools: Any, sys_only: bool = False) -> Optional[str]:
         """Return a previously created cache name for the key, without creating."""
-        key = self._key(self._model, system, tools if not sys_only else None)
+        self._system = system
+        key = self._stable_key()
         slot = self._sys_only if sys_only else self._full
         if slot and slot[0] == key:
             return slot[1]

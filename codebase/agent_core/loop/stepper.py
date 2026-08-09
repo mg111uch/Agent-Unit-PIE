@@ -21,6 +21,8 @@ from agent_core.loop._helpers import (
 from agent_core.loop.messages import (
     tool_followup,
     short_followup,
+    failed_tool_followup,
+    short_failed_followup,
     serialize_tool_input,
     build_tool_calls_msg,
     build_tool_results_msg,
@@ -30,6 +32,7 @@ from agent_core.loop.streaming import stream_final
 from agent_core.loop.executor import execute_tool_calls
 from agent_core.loop.session_state import SessionState
 from agent_core.config import DIRECT_FINAL_TOOLS
+from agent_core.tools.tool_groups import SIDE_EFFECT_TOOLS
 
 _EDIT_TOOLS = ("edit_file", "write_to_file")
 
@@ -52,6 +55,9 @@ class StepState:
     consecutive_failures: int = 0
     consecutive_raw_failures: int = 0
     tool_call_history: list = field(default_factory=list)
+    last_tool_status: str = "idle"
+    side_effect_succeeded: bool = False
+    request_is_side_effect: bool = False
 
 
 def dispatch_step(
@@ -64,6 +70,7 @@ def dispatch_step(
     session_id: str | None,
     cancel_event: Any,
     tools: dict,
+    active_tool_names: set[str] | None = None,
     local_planner: Any,
     state: SessionState,
     use_messages: bool,
@@ -84,7 +91,7 @@ def dispatch_step(
         corrective = (
             f"Your response must be valid JSON only with "
             f"'action'/'input' or 'final'. No free text or markdown. "
-            f"Valid tools: {', '.join(sorted(tools.keys()))}."
+            f"Valid tools: {', '.join(sorted(active_tool_names or tools.keys()))}."
         )
         yield {
             "type": "tool_result",
@@ -117,27 +124,51 @@ def dispatch_step(
             }
             followup_text = tool_followup("parse", "", corrective)
             if use_messages:
-                step_state.current_messages.append({"role": "user", "content": followup_text})
+                # Avoid duplicating corrective text as raw tool chatter in the
+                # message transcript — the tool message already carries it.
+                step_state.current_messages.append({"role": "user", "content": short_followup()})
             else:
                 step_state.current_input += "\n\n" + followup_text
             return False
         _debug_dump("FINAL", step=step, response=parsed.content or "")
+
+        content = parsed.content or ""
+        if (
+            step_state.request_is_side_effect
+            and not step_state.side_effect_succeeded
+        ):
+            step_state.last_tool_status = "failed"
+            corrective = (
+                f"The user's request asked for an action that changes state "
+                f"(create/write/delete), but no tool succeeded on it, so you "
+                f"cannot claim the action was completed. Report what actually "
+                f"happened or which tool failed. Do not claim success.\n"
+                f"Your last answer: {content}"
+            )
+            if use_messages:
+                step_state.current_messages.append(
+                    {"role": "user", "content": corrective}
+                )
+            else:
+                step_state.current_input += "\n\n" + corrective
+            return False
+
         if use_messages:
             msg_store.add_message(
-                session_id=session_id, role="assistant", content=parsed.content or "",
+                session_id=session_id, role="assistant", content=content,
             )
         yield {
             "type": "summary", "step": step, "total_steps": step,
             "cache_hits": state.cache_hits, "cache_misses": state.cache_misses,
         }
         yield from stream_final(
-            parsed.content or "", step=step, conversation_id=conv_id, cancel_event=cancel_event,
+            content, step=step, conversation_id=conv_id, cancel_event=cancel_event,
         )
         return True
 
     # --- invalid_tool ---
     if parsed.kind == "invalid_tool":
-        valid_tools = ", ".join(sorted(tools.keys()))
+        valid_tools = ", ".join(sorted(active_tool_names or tools.keys()))
         corrective = (
             f"Unknown tool: '{parsed.tool}'. "
             f"Valid tools are: {valid_tools}. Respond with a valid tool."
@@ -146,13 +177,14 @@ def dispatch_step(
             "type": "tool_result",
             "tool": parsed.tool or "unknown", "input": "", "result": corrective, "ok": False, "step": step,
         }
-        followup_text = tool_followup(parsed.tool or "unknown", "", corrective)
+        followup_text = failed_tool_followup(parsed.tool or "unknown", "", corrective)
         if use_messages:
             _compact_corrective_exchange(step_state.current_messages)
+        step_state.last_tool_status = "failed"
         step_state.current_input = _handle_corrective_bookkeeping(
             use_messages, step_state.current_messages, step_state.current_input,
             msg_store, session_id, parsed.tool or "unknown", corrective,
-            short_followup() if use_messages else followup_text,
+            short_failed_followup() if use_messages else followup_text,
         )
         if local_step and local_planner:
             local_planner.record_fallback()
@@ -255,6 +287,8 @@ def dispatch_step(
 
         if not all_ok:
             failed = [r for r in results if not r.get("ok", True)]
+            step_state.last_tool_status = "failed"
+            step_state.side_effect_succeeded = False
             if len(failed) >= 3:
                 corrective = (
                     f"\n\n[CORRECTIVE] Multiple tools failed. "
@@ -264,6 +298,10 @@ def dispatch_step(
                     step_state.current_messages.append({"role": "user", "content": corrective})
                 else:
                     step_state.current_input += corrective
+        else:
+            step_state.last_tool_status = "ok"
+            if any(r.get("tool") in SIDE_EFFECT_TOOLS for r in results):
+                step_state.side_effect_succeeded = True
 
         if step >= nudge_threshold:
             all_editing = all(r.get("tool") in _EDIT_TOOLS for r in results)
@@ -356,13 +394,15 @@ def dispatch_step(
                 step_state.consecutive_failures = 1
             step_state.last_tool = tool
             step_state.last_result = result_str
+            step_state.last_tool_status = "failed"
+            step_state.side_effect_succeeded = False
             if step_state.consecutive_failures >= 3:
                 corrective = (
                     f"\n\n[CORRECTIVE] The same tool ({tool}) failed {step_state.consecutive_failures} times "
                     f"in a row with the same error. STOP repeating it. Re-read state using "
                     f"get_workspace_info / list_files / read_file, then adjust your approach."
                 )
-                followup_text = (short_followup() if use_messages else tool_followup(tool, tool_input, result_str)) + corrective
+                followup_text = (short_failed_followup() if use_messages else tool_followup(tool, tool_input, result_str)) + corrective
                 if use_messages:
                     step_state.current_messages.append({"role": "user", "content": followup_text})
                 else:
@@ -373,12 +413,18 @@ def dispatch_step(
             step_state.consecutive_failures = 0
             step_state.last_tool = None
             step_state.last_result = None
+            step_state.last_tool_status = "ok"
+            if tool in SIDE_EFFECT_TOOLS:
+                step_state.side_effect_succeeded = True
 
-        # Determinstic single-purpose tools can answer directly when they
+        # Deterministic single-purpose tools can answer directly when they
         # succeed as the first step — skip the extra "confirm" LLM round-trip.
+        # Terminality is tool metadata (registry.is_terminal); the config list
+        # is a fallback for tools whose successful result self-answers.
+        is_terminal = registry.is_terminal(tool) or tool in DIRECT_FINAL_TOOLS
         if (
             ok
-            and tool in DIRECT_FINAL_TOOLS
+            and is_terminal
             and step == 1
             and step_state.consecutive_failures == 0
             and tool not in _QUESTION_TOOLS

@@ -5,8 +5,13 @@ from __future__ import annotations
 import threading
 from typing import Any, Callable, Dict, List, Optional
 
+from agent_core.config import MODEL_TOOL_RESULT_MAX_CHARS
 from agent_core.response_parse import ParsedToolCall
 from agent_core.tools import registry, ToolResult
+
+# Bound every model-facing tool result (PlanFixes2 §8). The full raw output is
+# never what the LLM needs; targeted follow-ups can refetch verbatim on demand.
+_MODEL_RESULT_MAX = MODEL_TOOL_RESULT_MAX_CHARS
 
 # Tools historically took a single string; native FC sends an object.
 _STRING_ARG_KEYS: Dict[str, tuple[str, ...]] = {
@@ -74,10 +79,10 @@ def execute_tool_calls(
                 result_obj = _tools["get_symbol"](merged_args)
                 if isinstance(result_obj, ToolResult):
                     ok = result_obj.ok
-                    result_val = result_obj.to_string()[:10000]
+                    result_val = result_obj.to_string()[:_MODEL_RESULT_MAX]
                 else:
                     result_str = str(result_obj)
-                    result_val = result_str[:10000]
+                    result_val = result_str[:_MODEL_RESULT_MAX]
                     ok = not result_str.startswith("Error")
             except Exception as e:
                 result_val = f"Error: {e}"
@@ -102,7 +107,7 @@ def execute_tool_calls(
                         is_ok = not result_str.startswith("Error")
                     results.append({
                         "tool": tc.name,
-                        "result": result_str[:10000],
+                        "result": result_str[:_MODEL_RESULT_MAX],
                         "ok": is_ok,
                         "call_id": tc.call_id or "",
                     })
@@ -128,7 +133,7 @@ def execute_tool_calls(
                 is_ok = not result_str.startswith("Error")
             results.append({
                 "tool": tc.name,
-                "result": result_str[:10000],
+                "result": result_str[:_MODEL_RESULT_MAX],
                 "ok": is_ok,
                 "call_id": tc.call_id or "",
             })

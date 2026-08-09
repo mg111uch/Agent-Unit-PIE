@@ -16,14 +16,21 @@ class BaseLLMProvider:
         total_tokens: int = 0,
         prompt_tokens: int = 0,
         completion_tokens: int = 0,
+        cached_tokens: int = 0,
+        extra: Optional[Dict[str, int]] = None,
     ) -> Dict[str, Any]:
         if not prompt_tokens and not completion_tokens:
             prompt_tokens = int(total_tokens) - int(completion_tokens)
+        fresh_tokens = max(0, int(prompt_tokens) - int(cached_tokens))
         return {
             "total_tokens": int(total_tokens),
             "prompt_tokens": int(prompt_tokens),
             "completion_tokens": int(completion_tokens),
+            "cached_tokens": int(cached_tokens),
+            "fresh_input_tokens": fresh_tokens,
+            "billable_tokens": fresh_tokens + int(completion_tokens),
             "estimated_cost": 0.0,
+            **(extra or {}),
         }
 
     @staticmethod

@@ -28,6 +28,32 @@ def short_followup() -> str:
     )
 
 
+def failed_tool_followup(tool: str, tool_input: Any, tool_result: Any) -> str:
+    """Followup after a failed/invalid tool call. Never nudges toward a final
+    answer; instructs the model to retry with a valid tool or report the
+    failure honestly instead of claiming success.
+    """
+    return (
+        f"The previous tool call ({tool}) failed and the requested action was "
+        f"NOT completed.\n"
+        f"Input: {tool_input}\n"
+        f"Error: {tool_result or '(no result)'}\n"
+        f"Choose a valid available tool to retry, or explain that the action "
+        f"could not be completed. Do not claim the action succeeded."
+    )
+
+
+def short_failed_followup() -> str:
+    """Like failed_followup() but for messages-based loops where the tool
+    result already lives in a preceding tool message.
+    """
+    return (
+        "The previous tool call failed and the requested action was NOT "
+        "completed.\nChoose a valid available tool to retry, or explain that "
+        "the action could not be completed. Do not claim the action succeeded."
+    )
+
+
 def serialize_tool_input(tool_input: Any) -> str:
     if isinstance(tool_input, str):
         return tool_input

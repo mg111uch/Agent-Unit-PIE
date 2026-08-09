@@ -121,6 +121,7 @@ class ToolRegistry:
         self._meta: Dict[str, Dict[str, str]] = {}
         self._categories: Dict[str, str] = {}
         self._risk_levels: Dict[str, str] = {}
+        self._terminal: set[str] = set()
         self._default_category: str | None = None
         self._middleware: List[Callable] = []
         self._lazy_loaders: Dict[str, Callable[[], None]] = {}
@@ -162,6 +163,7 @@ class ToolRegistry:
         meta: Optional[Dict[str, str]] = None,
         category: Optional[str] = None,
         risk_level: str = "low",
+        terminal: bool = False,
     ):
         if category is None:
             category = self._default_category or "file"
@@ -183,6 +185,8 @@ class ToolRegistry:
 
         self._categories[name] = category
         self._risk_levels[name] = risk_level
+        if terminal:
+            self._terminal.add(name)
 
     def register_lazy(self, category: str, loader: Callable[[], None]):
         """Register a loader that registers a category's tools on first access."""
@@ -197,6 +201,7 @@ class ToolRegistry:
         self._meta.pop(name, None)
         self._categories.pop(name, None)
         self._risk_levels.pop(name, None)
+        self._terminal.discard(name)
         return True
 
     def _materialize(self, categories: Optional[List[str]] = None):
@@ -283,6 +288,12 @@ class ToolRegistry:
     def get_category(self, name: str) -> str:
         self._materialize()
         return self._categories.get(name, "file")
+
+    def is_terminal(self, name: str) -> bool:
+        """True when a successful result from this tool fully answers the
+        request (no follow-up LLM interpretation needed) — PlanFixes2 §25."""
+        self._materialize()
+        return name in self._terminal
 
     def has_tool(self, name: str) -> bool:
         self._materialize()

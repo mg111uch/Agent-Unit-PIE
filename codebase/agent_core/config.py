@@ -67,8 +67,30 @@ WORKFLOW_LEARN_STALE_AFTER_DAYS: int = int(_WF.get("stale_after_days", 14))
 WORKFLOW_LEARN_MIN_SAVINGS_TOKENS: int = int(_WF.get("min_savings_tokens", 0))
 
 # Efficiency / context management
-COMPACTION_TRIGGER_CHARS: int = int(_CONFIG.get("compaction_trigger_chars", 48_000))
+# Token-aware compaction trigger (Phase 7): compact the model-visible history
+# once ESTIMATED INPUT TOKENS reach this many. Previously this was a raw
+# character count; token math is more faithful to how models bill context.
+COMPACTION_TRIGGER_TOKENS: int = int(_CONFIG.get("compaction_trigger_tokens", 8_000))
 CONTEXT_DIGEST_ENABLED: bool = bool(_CONFIG.get("context_digest_enabled", True))
+
+# Reserves carved out of the effective context window before a model call
+# (Phase 7 §reserve): output budget, reasoning budget, and tool-result
+# headroom. Compaction targets the visible-input budget that remains.
+MODEL_OUTPUT_TOKEN_BUDGET: int = int(_CONFIG.get("model_output_token_budget", 1_200))
+MODEL_REASONING_TOKEN_BUDGET: int = int(_CONFIG.get("model_reasoning_token_budget", 800))
+MODEL_TOOL_RESULT_HEADROOM: int = int(_CONFIG.get("model_tool_result_headroom", 2_500))
+MODEL_CONTEXT_WINDOW_TOKENS: int = int(_CONFIG.get("model_context_window_tokens", 131_072))
+
+
+def compaction_budget_tokens() -> int:
+    """Model-visible input budget after reserving output + reasoning + tool
+    results, the trigger for token-aware compaction (Phase 7)."""
+    reserved = (
+        MODEL_OUTPUT_TOKEN_BUDGET
+        + MODEL_REASONING_TOKEN_BUDGET
+        + MODEL_TOOL_RESULT_HEADROOM
+    )
+    return max(1, min(COMPACTION_TRIGGER_TOKENS, MODEL_CONTEXT_WINDOW_TOKENS - reserved))
 
 # Gemini stateful chains retain the whole conversation server-side, so each
 # chained call is billed against the accumulated context. When the estimated
@@ -81,9 +103,30 @@ GEMINI_CHAIN_RESTART_TOKENS: int = int(_CONFIG.get("gemini_chain_restart_tokens"
 # emits a synthesized final instead of making a second LLM call. Empty = off.
 DIRECT_FINAL_TOOLS: set[str] = set(_CONFIG.get("direct_final_tools", []) or [])
 
+# First-step dynamic tool exposure: route the initial request to a small
+# deterministic tool group (tool_groups.py) instead of exposing every active
+# tool schema. Chained steps keep their own pruning. Off = current behavior.
+TOOL_GROUP_ROUTING: bool = bool(_CONFIG.get("tool_group_routing", False))
+
+# Max characters of a tool result sent to the model (model-facing context),
+# separate from the larger bound kept for storage/replay (Agent 2).
+MODEL_TOOL_RESULT_MAX_CHARS: int = int(_CONFIG.get("model_tool_result_max_chars", 2500))
+
 # Loop guard: nudge the LLM to wrap up only after this many tool calls per step
 # without a final answer. Low values truncate legitimate long tool sequences.
 TOOL_NUDGE_THRESHOLD: int = int(_CONFIG.get("tool_nudge_threshold", 12))
+
+# Step-aware output budgets (PlanFixes2 #13): a tool-decision call only needs a
+# small JSON envelope; a final answer gets room to explain.
+MODEL_TOOL_DECISION_MAX_TOKENS: int = int(_CONFIG.get("tool_decision_max_tokens", 512))
+MODEL_FINAL_MAX_TOKENS: int = int(_CONFIG.get("final_answer_max_tokens", 1024))
+MODEL_COMPLEX_MAX_TOKENS: int = int(_CONFIG.get("complex_reasoning_max_tokens", 2048))
+
+# System prompt split (PlanFixes2 #14): when true, the assembled system prompt
+# is only the immutable core fragments (identity + workspace rules + response
+# contract), dropping the optional capability playbooks and AGENTS.md, so the
+# model-facing prefix stays ~700-1000 tokens.
+SYSTEM_PROMPT_CORE_ONLY: bool = bool(_CONFIG.get("system_prompt_core_only", False))
 
 # Frontend: display per-step token usage in each tool box header when true.
 SHOW_TOOL_TOKEN_USAGE: bool = bool(_CONFIG.get("show_tool_token_usage", True))
@@ -97,10 +140,17 @@ GEMINI_SKIP_TOOLS_ON_CHAIN: bool = bool(_CONFIG.get("gemini_skip_tools_on_chain"
 # by our compaction, instead of growing with Gemini's server-side chain retention.
 GEMINI_STATELESS: bool = bool(_CONFIG.get("gemini_stateless", False))
 
+# Stateless generateContent: rely on Gemini's IMPLICIT caching (2.5+/3.x auto
+# cache a stable repeated request prefix) by preserving a byte-identical
+# system_instruction prefix on every call. When false, fall back to the legacy
+# explicit caches.create path (contributed ~zero in live tests, Phase 3).
+GEMINI_IMPLICIT_CACHE: bool = bool(_CONFIG.get("gemini_implicit_cache", True))
+
 # Stateless generateContent: explicitly cache the static prefix (system + tools)
 # and reference it on later calls so the re-sent fixed overhead is billed at the
 # discounted cached-input rate. Degrades to inline payloads on any failure.
-GEMINI_STATELESS_CACHE: bool = bool(_CONFIG.get("gemini_stateless_cache", True))
+# Only used when GEMINI_IMPLICIT_CACHE is off.
+GEMINI_STATELESS_CACHE: bool = bool(_CONFIG.get("gemini_stateless_cache", False))
 
 # Stateless chained turns: skip re-sending the tool schemas and let the model
 # answer from the data it has already gathered. If it still emits a real tool

@@ -18,9 +18,15 @@ Transformations (all reversible/inspectable, nothing silently dropped):
   * [TOOL SCHEMAS] replace the JSON dump with a char-count marker.
   * [LLM RESPONSE] per step: write each tool call as `name{args}`; write the
     Full Result as `status=..., conversation_id=…<last8>`; drop the duplicated
-    raw_response JSON and the growing Messages Sent array.
+    raw_response JSON and the growing Messages array. If the LLM call itself
+    errored, `status=ERROR` is shown; if the step issued tool call(s) it
+    shows `status=CALL` and the execution outcome follows in `[TOOL RESULTS]`.
   * [TOOL RESULTS (multi)] collapse `Calls`/`Results` arrays to one-line
     `ok=.. result=..` records.
+  * [TOOL FAILED] emitted for every tool call a step requested but never
+    produced a result block for — i.e. the tool was rejected or never ran.
+    This prevents a rejected tool call (e.g. an unknown tool name) from
+    being mistaken for a success.
   * [FINAL] keep step + response verbatim.
 
 Usage:
@@ -77,6 +83,14 @@ def field(body, label):
         rf"^\s*{re.escape(label)}:\s*\n(?P<v>.*?)(?=\n\n[A-Z][^*\n]*:|\Z)",
         body, re.M | re.S)
     return m.group("v").strip() if m else None
+
+
+def _int(v):
+    """Parse an int from a field value, or None."""
+    try:
+        return int(str(v).strip())
+    except (TypeError, ValueError):
+        return None
 
 
 def _find_matching_brace(s, open_idx):
@@ -209,12 +223,15 @@ def cond_usage(body):
 
 def cond_llm_response(body, prev_usage=""):
     parts = [prev_usage]
+    step = field(body, "Step")
     calls = _json_after_label(body, "Tool Calls Raw")
+    names = []
     if calls and isinstance(calls, list):
         for c in calls:
             if not isinstance(c, dict):
                 continue
             name = c.get("name")
+            names.append(name or "?")
             args = c.get("arguments")
             if isinstance(args, dict):
                 parts.append(f"[{name}]: {json.dumps(args)}")
@@ -222,11 +239,33 @@ def cond_llm_response(body, prev_usage=""):
     if fr:
         status = fr.get("status")
         conv = fr.get("conversation_id") or ""
-        line = f"status={status}"
-        if conv:
-            line += f", conversation_id=…{conv[-8:]}(last 8 chars only)"
-        parts.append(line)
-    return "\n".join(p for p in parts if p) + "\n"
+        if status == "error":
+            parts.append(f"status=ERROR: {fr.get('error') or 'LLM call failed'}")
+        elif names:
+            line = "status=CALL (LLM issued tool call)"
+            if conv:
+                line += f", conversation_id=…{conv[-8:]}(last 8 chars only)"
+            parts.append(line)
+        else:
+            line = f"status={status}"
+            if conv:
+                line += f", conversation_id=…{conv[-8:]}(last 8 chars only)"
+            parts.append(line)
+    return _int(step), names, "\n".join(p for p in parts if p) + "\n"
+
+
+def _cond_tool_err_lines(pending):
+    """Emit an error block for tool calls that never produced a result."""
+    lines = []
+    for step in sorted(pending):
+        for name in pending[step]:
+            lines.append(
+                f"=====[TOOL FAILED] step={step}=====\n"
+                f"[{name}] was rejected/not executed — no tool result recorded. "
+                f"Do not treat as success.\n"
+            )
+    pending.clear()
+    return lines
 
 
 def cond_tool_results(body):
@@ -261,23 +300,36 @@ def cond_final(body):
 def condense(text, *, no_sysprompt=False, no_tool_schemas=False):
     out = []
     usage = ""
+    pending = {}
     for kind, body in split_blocks(text):
         if kind is None:
             continue
         if kind == "NEW TURN":
+            out.extend(_cond_tool_err_lines(pending))
             out.append(cond_new_turn(body))
         elif kind == "TOOL SCHEMAS":
             out.append(cond_schemas(body))
         elif kind == "LLM USAGE":
-            step = cond_usage(body)
-            usage = step
+            usage = cond_usage(body)
+            st = _int(field(body, "Step"))
+            other = [s for s in pending if s != st]
+            for s in other:
+                out.extend(_cond_tool_err_lines({s: pending.pop(s)}))
         elif kind == "LLM RESPONSE":
-            out.append(cond_llm_response(body, usage))
+            step, names, text = cond_llm_response(body, usage)
+            if step is not None and names:
+                pending[step] = names
+            out.append(text)
             usage = ""
-        elif kind.startswith("TOOL RESULTS"):
+        elif kind.startswith("TOOL RESULT"):
             out.append(cond_tool_results(body))
+            st = _int(field(body, "Step"))
+            if st in pending:
+                del pending[st]
         elif kind == "FINAL":
+            out.extend(_cond_tool_err_lines(pending))
             out.append(cond_final(body))
+    out.extend(_cond_tool_err_lines(pending))
     return "".join(out)
 
 

@@ -8,23 +8,24 @@ import traceback
 from typing import Any, Generator, List, Optional
 
 from agent_core.config import (
-    COMPACTION_TRIGGER_CHARS,
-    CONTEXT_DIGEST_ENABLED,
     TOOL_NUDGE_THRESHOLD,
-    WORKFLOW_LEARN_CONTEXT_HINTS,
     GEMINI_CHAIN_RESTART_TOKENS,
     GEMINI_STATELESS,
+    TOOL_GROUP_ROUTING,
+    MODEL_TOOL_DECISION_MAX_TOKENS,
+    MODEL_FINAL_MAX_TOKENS,
     resolve_active_tool_names,
     resolve_active_tool_packs,
 )
 from agent_core.context import retrieve_kernel_context
+from agent_core.context_budget import build_budget, format_budget
+from agent_core.context_manager import build_active_context, build_session_state
 from agent_core.response_parse import parse_provider_response
 from agent_core.tools import registry, log_output
 from agent_core.loop.session_state import (
     SessionState,
     set_session_state,
     reset_session_state,
-    compact_messages,
 )
 from agent_core.loop._helpers import (
     _generate_with_cancel,
@@ -33,6 +34,29 @@ from agent_core.loop._helpers import (
 from agent_core.loop.stepper import StepState, dispatch_step
 
 _schema_dumped = False
+
+
+def _name_of(schema: dict) -> str:
+    """Extract a tool name from gemini/openai flat schema dict."""
+    fn = schema.get("function")
+    if isinstance(fn, dict):
+        return fn.get("name", "")
+    return schema.get("name", "")
+
+
+def _step_max_tokens(messages: list) -> int:
+    """Step-aware output budget (PlanFixes2 #13): chained tool-follow-up steps
+    only need a small JSON envelope; a first/answer-bearing step gets more room.
+    """
+    if not messages:
+        return MODEL_FINAL_MAX_TOKENS
+    last = messages[-1]
+    role = last.get("role")
+    if role == "tool" and last.get("tool_results"):
+        return MODEL_TOOL_DECISION_MAX_TOKENS
+    if role == "assistant" and last.get("tool_calls"):
+        return MODEL_TOOL_DECISION_MAX_TOKENS
+    return MODEL_FINAL_MAX_TOKENS
 
 
 def iter_agent_events(
@@ -65,23 +89,10 @@ def iter_agent_events(
 
     use_messages = msg_store is not None and session_id is not None
 
-    # Digest + workflow hints are ephemeral per-turn context. They are computed
-    # once, appended to the in-memory user message only, and never persisted to
-    # msg_store (which would replay stale snapshots on every later turn).
-    digest = ""
-    if CONTEXT_DIGEST_ENABLED and state.turn_count > 0:
-        # Only inject a digest that carries useful info; skip the pure header
-        # so an empty snapshot isn't billed every turn.
-        if state.workspace_root or state.file_cache or state.todo_plan or state.edits_log:
-            digest = state.build_digest()
-
-    session_hints = ""
-    if WORKFLOW_LEARN_CONTEXT_HINTS:
-        try:
-            from agent_core.tools.chain.graph_evolver import graph_evolver
-            session_hints = graph_evolver.workflow_hints()
-        except Exception:
-            pass  # hints must never break the turn
+    # Ephemeral per-turn context (kernel retrieval + digest + workflow hints) —
+    # computed once by the context manager, appended to the in-memory user
+    # message only, and never persisted to msg_store.
+    session_ctx = build_session_state(state, context_info=context_info)
 
     # Stateless mode needs no server-side chain: every call already carries the
     # compacted client history, so the id is meaningless and would only linger.
@@ -96,7 +107,6 @@ def iter_agent_events(
         conversation_id = None
 
     conv_id = conversation_id
-    _interaction_id = conversation_id
 
     _tools = tools_override if tools_override is not None else registry.get_tools(categories=tool_categories)
 
@@ -104,15 +114,12 @@ def iter_agent_events(
         yield from _iter_agent_events_body(
             user_input=user_input,
             orchestrator=orchestrator,
-            conversation_id=conversation_id,
             provider=provider,
             model=model,
             system_prompt=system_prompt,
             max_steps=max_steps,
             step_delay=step_delay,
-            context_info=context_info,
-            digest=digest,
-            session_hints=session_hints,
+            session_ctx=session_ctx,
             msg_store=msg_store,
             session_id=session_id,
             cancel_event=cancel_event,
@@ -122,7 +129,6 @@ def iter_agent_events(
             use_messages=use_messages,
             _tools=_tools,
             conv_id=conv_id,
-            _interaction_id=_interaction_id,
         )
     finally:
         reset_session_state(_state_token)
@@ -150,15 +156,12 @@ def _iter_agent_events_body(
     *,
     user_input: str,
     orchestrator: Any,
-    conversation_id: Optional[str],
     provider: Optional[str],
     model: Optional[str],
     system_prompt: Optional[str],
     max_steps: int,
     step_delay: float,
-    context_info: str,
-    digest: str,
-    session_hints: str,
+    session_ctx: Any,
     msg_store: Any,
     session_id: Optional[str],
     cancel_event: Optional[threading.Event],
@@ -168,52 +171,66 @@ def _iter_agent_events_body(
     use_messages: bool,
     _tools: dict,
     conv_id: Optional[str],
-    _interaction_id: Optional[str],
 ) -> Generator[dict[str, Any], None, None]:
     if use_messages:
-        current_messages = list(msg_store.get_messages(session_id))
-        current_messages = compact_messages(
-            current_messages, state, trigger_chars=COMPACTION_TRIGGER_CHARS
+        current_messages, current_input = build_active_context(
+            state, user_input=user_input, session=session_ctx,
+            msg_store=msg_store, session_id=session_id, use_messages=True,
         )
-        extra = "\n\n".join(p for p in (context_info, digest, session_hints) if p)
-        full_input = user_input + (("\n\n" + extra) if extra else "")
-        if not current_messages or not (
-            current_messages[-1].get("role") == "user"
-            and current_messages[-1].get("content") == full_input
-        ):
-            # full_input carries ephemeral per-turn context (digest/hints) and is
-            # appended to the in-memory list ONLY — never persisted to msg_store.
-            current_messages.append({
-                "role": "user",
-                "content": full_input,
-            })
-        current_input = ""
     else:
-        extra = "\n\n".join(p for p in (context_info, digest, session_hints) if p)
-        current_input = user_input + (("\n\n" + extra) if extra else "")
-        current_messages = []
+        current_messages, current_input = build_active_context(
+            state, user_input=user_input, session=session_ctx, use_messages=False,
+        )
 
     step_state = StepState(
         current_messages=current_messages,
         current_input=current_input,
     )
 
-    _cached_schemas = registry.get_schemas(
+    tool_catalog = registry.get_schemas(
         provider_name=provider,
         categories=tool_categories,
         names=resolve_active_tool_names() or None,
+    )
+    routed_group: set[str] | None = None
+    if tool_catalog and TOOL_GROUP_ROUTING:
+        from agent_core.tools.tool_groups import select_tools_for_request
+        selected = select_tools_for_request(user_input)
+        routed_group = set(selected)
+        _schemas = []
+        for _s in tool_catalog:
+            _sg = _s.get("function_declarations") if provider == "gemini" else [_s]
+            _kept = [d for d in _sg if _name_of(d) in selected]
+            if _kept:
+                _schemas.append(
+                    {"function_declarations": _kept}
+                    if provider == "gemini"
+                    else _kept[0]
+                )
+        if _schemas:
+            tool_catalog = _schemas
+
+    active_tool_names = {
+        _name_of(d)
+        for s in tool_catalog
+        for d in (s.get("function_declarations", []) if provider == "gemini" else [s])
+    }
+    from agent_core.tools.tool_groups import SIDE_EFFECT_TOOLS
+    step_state.request_is_side_effect = bool(
+        routed_group and (routed_group & SIDE_EFFECT_TOOLS)
     )
     _debug_dump("NEW TURN",
         provider=provider,
         model=model,
         system_prompt=system_prompt or "(none)",
         user_input=user_input,
-        context_info=context_info or "(none)",
-        session_digest=digest or "(none)",
+        context_info=session_ctx.context_info or "(none)",
+        session_digest=session_ctx.digest or "(none)",
         cache_hits=state.cache_hits,
         cache_misses=state.cache_misses,
         messages=current_messages if use_messages else [],
         plain_prompt=current_input if not use_messages else "",
+        routed_tool_count=len(tool_catalog),
     )
 
     step = 0
@@ -265,12 +282,15 @@ def _iter_agent_events_body(
                 global _schema_dumped
                 if not _schema_dumped:
                     _schema_dumped = True
-                    _debug_dump("TOOL SCHEMAS", schemas=_cached_schemas)
+                    _debug_dump("TOOL SCHEMAS", schemas=tool_catalog)
                 gen_kwargs = dict(
                     orchestrator=orchestrator, cancel_event=cancel_event,
                     system_prompt=system_prompt, provider=provider, model=model,
-                    conversation_id=_interaction_id, tools=_cached_schemas,
+                    conversation_id=conv_id, tools=tool_catalog,
+                    max_tokens=_step_max_tokens(step_state.current_messages),
                 )
+                if session_id:
+                    gen_kwargs["metadata"] = {"session_id": session_id}
                 if use_messages:
                     gen_kwargs["prompt"] = ""
                     gen_kwargs["messages"] = step_state.current_messages
@@ -288,7 +308,8 @@ def _iter_agent_events_body(
                 return
             yield {"type": "llm_call", "status": "end", "step": step, "usage": result.get("usage", {}), "latency_seconds": result.get("latency_seconds"), "retries": result.get("retries", 0)}
 
-            state.note_usage(result.get("usage", {}))
+            step_usage = result.get("usage", {})
+            state.note_usage(step_usage)
 
             _debug_dump("LLM USAGE",
                 step=step,
@@ -318,7 +339,7 @@ def _iter_agent_events_body(
                 }
                 return
 
-            _interaction_id = result.get("conversation_id") or _interaction_id
+            conv_id = result.get("conversation_id") or conv_id
             reply = result.get("response") or ""
             tool_calls_raw = result.get("tool_calls")
             if tool_calls_raw is None:
@@ -328,7 +349,6 @@ def _iter_agent_events_body(
 
             parsed = parse_provider_response(reply, tool_calls_raw, _tools)
 
-            step_usage = result.get("usage", {})
             should_exit = yield from dispatch_step(
                 parsed, step_state,
                 step=step,
@@ -337,10 +357,11 @@ def _iter_agent_events_body(
                 session_id=session_id,
                 cancel_event=cancel_event,
                 tools=_tools,
+                active_tool_names=active_tool_names,
                 local_planner=local_planner,
                 state=state,
                 use_messages=use_messages,
-                conv_id=_interaction_id,
+                conv_id=conv_id,
                 local_step=_local_step,
                 reply=reply,
                 nudge_threshold=TOOL_NUDGE_THRESHOLD,
@@ -357,7 +378,7 @@ def _iter_agent_events_body(
                 "message": (
                     f"Exception in step {step}: {str(e)}\n{traceback.format_exc()}"
                 ),
-                "conversation_id": _interaction_id,
+                "conversation_id": conv_id,
             }
             return
 

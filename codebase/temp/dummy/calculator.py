@@ -1,4 +1,13 @@
 # Define functions for basic arithmetic operations
+def mul(
+    return x*y
+
+def mul(
+    return x*y
+
+def mul(
+    return x*y
+
 def add(a, b):
     return n1 + n2
 

@@ -9,8 +9,6 @@ from contextvars import ContextVar
 from dataclasses import dataclass, field
 from typing import Any, Optional
 
-from agent_core.config import COMPACTION_TRIGGER_CHARS
-
 KEEP_RAW_TAIL = 4  # keep last N messages verbatim after compaction
 
 _current: ContextVar[Optional["SessionState"]] = ContextVar("session_state", default=None)
@@ -139,19 +137,26 @@ class SessionState:
         )
 
 
-def estimate_message_chars(messages: list[dict]) -> int:
+def estimate_message_tokens(messages: list[dict]) -> int:
+    """Estimated model-visible tokens for a message list (Phase 7).
+
+    Token math replaces the old char-count heuristic so compaction and the
+    trigger budget agree on the same unit the model actually bills.
+    """
+    from agent_core.tokenizer import count_tokens
+
     n = 0
     for m in messages:
         c = m.get("content")
-        if isinstance(c, str):
-            n += len(c)
+        if c:
+            n += count_tokens(c)
         tr = m.get("tool_results")
         if tr:
             for r in tr:
-                n += len(str(r.get("result", "")))
+                n += count_tokens(r.get("result", ""))
         tc = m.get("tool_calls")
         if tc:
-            n += len(str(tc))
+            n += count_tokens(tc)
     return n
 
 
@@ -184,16 +189,26 @@ def _collapse_redundancies(messages: list[dict]) -> list[dict]:
 def compact_messages(
     messages: list[dict],
     state: Optional[SessionState] = None,
-    trigger_chars: int = COMPACTION_TRIGGER_CHARS,
+    trigger_tokens: Optional[int] = None,
     keep_tail: int = KEEP_RAW_TAIL,
 ) -> list[dict]:
-    """Rule-based compaction: shrink old tool results when history grows large."""
+    """Token-aware rule-based compaction (Phase 7).
+
+    Triggers when the estimated model-visible tokens cross a budget. By
+    default that budget is the effective input budget (config): model output
+    + reasoning + tool-result headroom are reserved before the model call.
+    """
     if not messages:
         return messages
 
     messages = _collapse_redundancies(messages)
 
-    if estimate_message_chars(messages) < trigger_chars:
+    if trigger_tokens is None:
+        from agent_core.config import compaction_budget_tokens
+
+        trigger_tokens = compaction_budget_tokens()
+
+    if estimate_message_tokens(messages) < trigger_tokens:
         return messages
 
     if len(messages) <= keep_tail + 2:

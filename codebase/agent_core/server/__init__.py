@@ -31,6 +31,7 @@ from agent_core.config import (
     resolve_active_tool_names,
     resolve_default_model,
     resolve_context_window,
+    SYSTEM_PROMPT_CORE_ONLY,
     RATE_LIMIT_LLM_CALLS,
     RATE_LIMIT_TOOL_WRITES,
     load_config,
@@ -103,6 +104,7 @@ log_output(
 SYSTEM_PROMPT = load_system_prompt(
     active_packs=resolve_active_tool_packs(),
     mode=resolve_active_tool_mode(),
+    core_only=SYSTEM_PROMPT_CORE_ONLY,
 )
 workspace_root = WORKSPACE_ROOT
 conversations: dict[str, Optional[str]] = {}
