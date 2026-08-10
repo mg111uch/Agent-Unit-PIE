@@ -132,9 +132,23 @@ def _read_single(path, offset=0, limit=None, line_numbers=True) -> ToolResult:
         return ToolResult(ok=False, message=f"reading {path}: {e}")
 
 
+def _read_or_list(path, offset=0, limit=None, line_numbers=True) -> ToolResult:
+    """Read one path. Directories route to the list_files listing; files read."""
+    try:
+        res = resolve_for_tool(path, expect="any")
+        if res.ok and os.path.isdir(res.full):
+            return list_files(res.rel)
+    except PathEscapeError:
+        return _read_single(path, offset=offset, limit=limit, line_numbers=line_numbers)
+    except Exception:
+        pass
+    return _read_single(path, offset=offset, limit=limit, line_numbers=line_numbers)
+
+
 def _read_many(paths, offset=0, limit=None, line_numbers=True) -> ToolResult:
     """Batch read. Each entry is a path string or {path, offset?, limit?, line_numbers?}.
-    Top-level offset/limit/line_numbers act as defaults for entries that omit them."""
+    Top-level offset/limit/line_numbers act as defaults for entries that omit them.
+    Directory entries route to the list_files listing."""
     if not paths or not isinstance(paths, list):
         return ToolResult(ok=False, message="'paths' (list) parameter is required.")
     blocks = []
@@ -149,7 +163,7 @@ def _read_many(paths, offset=0, limit=None, line_numbers=True) -> ToolResult:
             stats["errors"] += 1
             blocks.append("--- (missing path) ---\nERROR: 'path' is required for each entry")
             continue
-        res = _read_single(p, offset=off, limit=lim, line_numbers=ln)
+        res = _read_or_list(p, offset=off, limit=lim, line_numbers=ln)
         if res.ok:
             stats["ok"] += 1
             blocks.append(res.data)
@@ -159,7 +173,7 @@ def _read_many(paths, offset=0, limit=None, line_numbers=True) -> ToolResult:
     return ToolResult(ok=stats["ok"] > 0, data="\n\n".join(blocks))
 
 
-def read_file(path: str = "", **kwargs) -> ToolResult:
+def Read(path: str = "", **kwargs) -> ToolResult:
     path = kwargs.get("path") or kwargs.get("input") or kwargs.get("file") or path
     paths = kwargs.get("paths")
     offset = kwargs.get("offset", 0)
@@ -167,7 +181,7 @@ def read_file(path: str = "", **kwargs) -> ToolResult:
     line_numbers = kwargs.get("line_numbers", True)
     if paths:
         return _read_many(paths, offset=offset, limit=limit, line_numbers=line_numbers)
-    return _read_single(path, offset=offset, limit=limit, line_numbers=line_numbers)
+    return _read_or_list(path, offset=offset, limit=limit, line_numbers=line_numbers)
 
 
 def list_files(path: str = ".", **kwargs) -> ToolResult:
@@ -211,7 +225,7 @@ def list_files(path: str = ".", **kwargs) -> ToolResult:
         return ToolResult(ok=False, message=f"listing {path}: {e}")
 
 
-def write_to_file(input_data) -> ToolResult:
+def Write(input_data) -> ToolResult:
     """Write to file with modes: create, overwrite, append.
 
     input_data = {
@@ -311,7 +325,7 @@ def _apply_single_edit(path, old, new, replace_all=False) -> ToolResult:
         count = content.count(old)
         if count == 0:
             return ToolResult(ok=False, message=(
-                "old_string not found. Re-read the file with read_file "
+                "old_string not found. Re-read the file with Read "
                 "(it shows exact line numbers/whitespace) and copy the text exactly."
             ))
         if count > 1 and not replace_all:

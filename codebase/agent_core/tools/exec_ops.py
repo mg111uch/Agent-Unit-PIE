@@ -52,7 +52,7 @@ def _verify_command_effect(cmd: str, result: subprocess.CompletedProcess) -> str
     """Confirm the effect of a successful command that produced no output.
 
     For mkdir, verify the created directory exists and report it so the LLM
-    doesn't need a separate list_files/read_file call to confirm creation.
+    doesn't need a separate Read call to confirm creation.
     """
     text = _format_subprocess_output(result)
     if result.returncode != 0 or text not in ("", "(No output)"):

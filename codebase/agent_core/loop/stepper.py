@@ -34,7 +34,17 @@ from agent_core.loop.session_state import SessionState
 from agent_core.config import DIRECT_FINAL_TOOLS
 from agent_core.tools.tool_groups import SIDE_EFFECT_TOOLS
 
-_EDIT_TOOLS = ("edit_file", "write_to_file")
+_EDIT_TOOLS = ("edit_file", "Write")
+
+# Canonical signals that a tool/operation failed. Single source of truth: the
+# production honesty gate (final branch below) and the benchmark's
+# false-success detector both use this list so they can never drift apart.
+FAILURE_SIGNALS = (
+    "fail", "failed", "error", "blocked", "not allowed", "denied", "rejected",
+    "not found", "doesn't exist", "does not exist", "no such", "missing",
+    "unable", "cannot", "can't", "nonexistent", "non-existent",
+    "not executed", "uncompleted", "permission",
+)
 
 
 def _deadline_corrective(step: int) -> str:
@@ -58,6 +68,8 @@ class StepState:
     last_tool_status: str = "idle"
     side_effect_succeeded: bool = False
     request_is_side_effect: bool = False
+    saw_tool_failure: bool = False
+    honesty_corrective: int = 0
 
 
 def dispatch_step(
@@ -133,25 +145,34 @@ def dispatch_step(
         _debug_dump("FINAL", step=step, response=parsed.content or "")
 
         content = parsed.content or ""
-        if (
-            step_state.request_is_side_effect
-            and not step_state.side_effect_succeeded
-        ):
-            step_state.last_tool_status = "failed"
-            corrective = (
-                f"The user's request asked for an action that changes state "
-                f"(create/write/delete), but no tool succeeded on it, so you "
-                f"cannot claim the action was completed. Report what actually "
-                f"happened or which tool failed. Do not claim success.\n"
-                f"Your last answer: {content}"
+        tool_issue = (
+            step_state.saw_tool_failure
+            or (
+                step_state.request_is_side_effect
+                and not step_state.side_effect_succeeded
             )
-            if use_messages:
-                step_state.current_messages.append(
-                    {"role": "user", "content": corrective}
+        )
+        # P0 honesty gate (PlanFixes3 #6): a failed tool must never be reported
+        # as success. If any tool failed this turn but the final answer claims
+        # success without a failure signal, push ONE corrective round — then let
+        # the answer through (bounded, so a stubborn model cannot loop forever).
+        if tool_issue and not any(s in content.lower() for s in FAILURE_SIGNALS):
+            step_state.last_tool_status = "failed"
+            if step_state.honesty_corrective < 1:
+                step_state.honesty_corrective += 1
+                corrective = (
+                    f"[HONESTY] A tool failed earlier in this turn, but your "
+                    f"final answer claims success without mentioning it. Report "
+                    f"what actually happened; you cannot claim the operation "
+                    f"completed.\nYour last answer: {content}"
                 )
-            else:
-                step_state.current_input += "\n\n" + corrective
-            return False
+                if use_messages:
+                    step_state.current_messages.append(
+                        {"role": "user", "content": corrective}
+                    )
+                else:
+                    step_state.current_input += "\n\n" + corrective
+                return False
 
         if use_messages:
             msg_store.add_message(
@@ -181,6 +202,7 @@ def dispatch_step(
         if use_messages:
             _compact_corrective_exchange(step_state.current_messages)
         step_state.last_tool_status = "failed"
+        step_state.saw_tool_failure = True
         step_state.current_input = _handle_corrective_bookkeeping(
             use_messages, step_state.current_messages, step_state.current_input,
             msg_store, session_id, parsed.tool or "unknown", corrective,
@@ -289,10 +311,11 @@ def dispatch_step(
             failed = [r for r in results if not r.get("ok", True)]
             step_state.last_tool_status = "failed"
             step_state.side_effect_succeeded = False
+            step_state.saw_tool_failure = True
             if len(failed) >= 3:
                 corrective = (
                     f"\n\n[CORRECTIVE] Multiple tools failed. "
-                    f"Re-read state using get_workspace_info / list_files / read_file."
+                    f"Re-read state using get_workspace_info / Read."
                 )
                 if use_messages:
                     step_state.current_messages.append({"role": "user", "content": corrective})
@@ -396,11 +419,12 @@ def dispatch_step(
             step_state.last_result = result_str
             step_state.last_tool_status = "failed"
             step_state.side_effect_succeeded = False
+            step_state.saw_tool_failure = True
             if step_state.consecutive_failures >= 3:
                 corrective = (
                     f"\n\n[CORRECTIVE] The same tool ({tool}) failed {step_state.consecutive_failures} times "
                     f"in a row with the same error. STOP repeating it. Re-read state using "
-                    f"get_workspace_info / list_files / read_file, then adjust your approach."
+                    f"get_workspace_info / Read, then adjust your approach."
                 )
                 followup_text = (short_failed_followup() if use_messages else tool_followup(tool, tool_input, result_str)) + corrective
                 if use_messages:

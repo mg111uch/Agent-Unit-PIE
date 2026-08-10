@@ -60,7 +60,7 @@ def write_file(file_path: str, content: str, encoding: str = 'utf-8') -> bool:
         raise IOError(f"Failed to write {file_path}: {str(e)}")
 
 
-def read_file(file_path: str, encoding: str = 'utf-8') -> Optional[str]:
+def Read(file_path: str, encoding: str = 'utf-8') -> Optional[str]:
     """
     Read file content with error handling.
     

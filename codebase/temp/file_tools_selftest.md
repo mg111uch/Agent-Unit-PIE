@@ -3,9 +3,9 @@
 Run a sequential self-test of your basic file tools. Do all of it inside a dedicated temporary directory `codebase/temp/tooltest/` so nothing touches real project files. Use the tools in the order below, adapting your choices to whatever each tool actually returns.
 
 1. `todo` — record a short plan titled `file tool self-test` describing what you are testing.
-2. `list_files` — list `codebase/temp/` to find file `Agentic_Unit_PIE/codebase/temp/dummy/fibo/fibonacci.py`.
+2. `Read` — list `codebase/temp/` (a dir path returns its listing) to find file `Agentic_Unit_PIE/codebase/temp/dummy/fibo/fibonacci.py`.
 3. `execute_command` — create the test directory `codebase/temp/tooltest`. 
-4. `write_to_file` — create `codebase/temp/tooltest/fibonacci.py` with same code as in `dummy/fibo/fibonacci.py`.
+4. `Write` — create `codebase/temp/tooltest/fibonacci.py` with same code as in `dummy/fibo/fibonacci.py`.
 5. `edit_file` — modify `codebase/temp/tooltest/fibonacci.py` to instead print `fibonacci(20)`.
 6. `edit_file` — modify docstring `codebase/temp/tooltest/fibonacci.py` to replace word in docstring `Generates` with `Returns` and also modify function name to fib(n).
 7. `glob_search` — find files matching `codebase/temp/tooltest/**/*.py`. Note what matches.

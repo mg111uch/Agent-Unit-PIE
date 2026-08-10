@@ -435,7 +435,7 @@ Total tokens: 434212
 │   ├── [] config.json [148 LOC, 1196 tokens]
 │   ├── [] tool_client.py [203 LOC, 2213 tokens]
 │   ├── [] .env.enc [1 LOC, 222 tokens]
-│   └── [] condensed.txt [58 LOC, 806 tokens]
+│   └── [X] condensed.txt [58 LOC, 806 tokens]
 ├── project_docs/ [6662 LOC, 31927 tokens]
 │   ├── [] MCP_ADAPTERS.md [219 LOC, 1399 tokens]
 │   ├── [] GPT_5-5_Chat.md [4962 LOC, 18724 tokens]
@@ -512,7 +512,7 @@ Total tokens: 434212
 │   │   ├── [] roadmap.md [283 LOC, 4612 tokens]
 │   │   ├── [] status.md [44 LOC, 1366 tokens]
 │   │   └── [] README.md [374 LOC, 6635 tokens]
-│   ├── [] PlanFixes2.md [94 LOC, 1086 tokens]
+│   ├── [X] PlanFixes2.md [94 LOC, 1086 tokens]
 │   ├── [] TODO.md [42 LOC, 1158 tokens]
 │   ├── [] FeatureIdeas.md [148 LOC, 1857 tokens]
 │   └── FixesIssues.md

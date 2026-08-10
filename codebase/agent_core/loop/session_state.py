@@ -291,10 +291,10 @@ def observe_tool_result(state: SessionState, tool: str, arguments: Any, result: 
         root, entries = _parse_workspace_info(result)
         if root:
             state.set_workspace(root, entries or [])
-    elif tool == "read_file":
-        # read_file tool handles its own caching (with mtime) — skip observer double-cache
+    elif tool == "Read":
+        # Read tool handles its own caching (with mtime) — skip observer double-cache
         pass
-    elif tool in ("edit_file", "write_to_file") and path:
+    elif tool in ("edit_file", "Write") and path:
         if ok:
             state.mark_stale(path)
             state.record_edit(path, result.split("\n", 1)[0][:100])

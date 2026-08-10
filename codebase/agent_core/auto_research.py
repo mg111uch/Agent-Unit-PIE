@@ -22,7 +22,7 @@ Your goal is to research a question thoroughly using available tools.
 
 ## WORKFLOW
 1. First, use `kernel_retrieve` to find existing context on the topic.
-2. Use `read_file` / `list_files` / `execute_command` to gather information.
+2. Use `Read` / `glob_search` / `execute_command` to gather information.
 3. Use `kernel_store_context` to store important findings.
 4. When the goal is fully researched, respond with: {"final": "summary of findings"}
 

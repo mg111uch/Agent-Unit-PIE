@@ -13,20 +13,20 @@ from __future__ import annotations
 
 import re
 
-_READ = {"read_file", "list_files"}
-_LIST = {"list_files", "read_file"}
-_FIND = {"glob_search", "list_files", "read_file"}
-_GREP = {"grep_search", "read_file"}
-_WRITE = {"read_file", "edit_file", "write_to_file"}
-_EXEC = {"execute_command", "read_file"}
-_EXISTS = {"check_path_exists", "read_file"}
+_READ = {"Read"}
+_LIST = {"Read"}
+_FIND = {"glob_search", "Read"}
+_GREP = {"grep_search", "Read"}
+_WRITE = {"Read", "edit_file", "Write"}
+_EXEC = {"execute_command", "Read"}
+_EXISTS = {"check_path_exists", "Read"}
 _BASE = {
-    "read_file", "list_files", "grep_search", "glob_search",
-    "execute_command", "edit_file", "write_to_file",
+    "Read", "grep_search", "glob_search",
+    "execute_command", "edit_file", "Write",
 }
 
 SIDE_EFFECT_TOOLS = {
-    "execute_command", "edit_file", "write_to_file",
+    "execute_command", "edit_file", "Write",
     "cross_file_edit", "safe_edit", "git_commit", "undo_last_edit",
 }
 
@@ -66,7 +66,7 @@ def select_tools_for_request(user_input: str) -> set[str]:
     """Deterministically select a minimal tool group for a request.
 
     Single-purpose requests get the smallest group that can answer them
-    (e.g. "list codebase/temp" -> list_files only). Fuzzy or multi-intent
+    (e.g. "list codebase/temp" -> Read only; Read lists directories). Fuzzy or multi-intent
     requests fall back to the base set so the model is never starved.
     """
     text = (user_input or "").strip().lower()
@@ -87,3 +87,71 @@ def select_tools_for_request(user_input: str) -> set[str]:
     if _has(text, _READ_TOKENS):
         return set(_READ)
     return set(_BASE)
+
+
+# ---------------------------------------------------------------------------
+# Phase 4 — deterministic factory fast path (PlanFixes2 #8)
+# ---------------------------------------------------------------------------
+# Maps an unambiguous single-intent request to ONE deterministic tool call so
+# the loop can skip the LLM entirely. Returns {"name": ..., "input": {...}},
+# or None when nothing matches confidently (fall back to the LLM).
+
+_CREATE_DIR_RE = re.compile(
+    r"(?<!\w)(create|make|mkdir|new)(?!\w).{0,20}(?<!\w)(directory|dir|folder)(?!\w)", re.I)
+_EXISTS_RE = re.compile(
+    r"(?<!\w)(does|do|is|are|check|verify)(?!\w).{0,60}(?<!\w)(?:exists?|existed|existing|present)(?!\w)", re.I)
+_FIND_RE = re.compile(
+    r"(?<!\w)(find|locate)(?!\w)|(?<!\w)(where is|which file)(?!\w)", re.I)
+_LIST_RE = re.compile(
+    r"(?<!\w)(list|ls|dir|tree)(?!\w)|contents (of|in)|what'?s? in", re.I)
+_READ_RE = re.compile(
+    r"(?<!\w)(read|cat|print|open|view|show|display)(?!\w)", re.I)
+
+_PATH_RE = re.compile(
+    r"['\"]?([A-Za-z0-9_.+-]+(?:/[A-Za-z0-9_.+-]+)+|\./[A-Za-z0-9_.+-]+"
+    r"(?:/[A-Za-z0-9_.+-]+)*|[A-Za-z0-9_+-]+\.(?:py|js|ts|jsx|tsx|txt|md|json|toml|cfg|yaml|yml))",
+    re.I)
+
+_FACTORY_VERBS = {
+    "create", "make", "mkdir", "new", "list", "ls", "dir", "tree",
+    "read", "cat", "print", "open", "view", "show", "display",
+    "find", "locate", "check", "verify", "does", "do", "is", "are",
+}
+
+
+def _extract_path(text: str) -> str | None:
+    m = _PATH_RE.search(text)
+    if m:
+        return m.group(1).strip("'\"")
+    # Bare single target: "ls temp", "find fibonacci", "read Makefile".
+    tokens = re.findall(r"[A-Za-z0-9_.+-]+", text)
+    if len(tokens) == 2 and tokens[0].lower() in _FACTORY_VERBS:
+        return tokens[1].strip("'\"")
+    return None
+
+
+def try_factory(user_input: str) -> dict | None:
+    """Deterministic single-tool action for an unambiguous request, or None."""
+    text = (user_input or "").strip()
+    if not text or len(text) > 200:
+        return None
+    low = text.lower()
+    if _CREATE_DIR_RE.search(low):
+        path = _extract_path(text)
+        if path:
+            return {"name": "execute_command", "input": {"command": f"mkdir -p {path}"}}
+    if _EXISTS_RE.search(low):
+        path = _extract_path(text)
+        if path:
+            return {"name": "check_path_exists", "input": {"path": path}}
+    if _FIND_RE.search(low):
+        target = _extract_path(text)
+        if target:
+            return {"name": "glob_search", "input": {"pattern": f"**/{target}"}}
+    if _LIST_RE.search(low):
+        return {"name": "Read", "input": {"path": _extract_path(text) or "."}}
+    if _READ_RE.search(low):
+        path = _extract_path(text)
+        if path:
+            return {"name": "Read", "input": {"path": path}}
+    return None

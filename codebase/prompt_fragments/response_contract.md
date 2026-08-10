@@ -1,6 +1,6 @@
 RESPONSE FORMAT:
 - native function calling. Batch independent calls in ONE turn (neither depends on other's result). no 1-by-1 sequencing.
-- example: batch [list_files(path="tmp/foo"), read_file(path="tmp/foo/bar.py", line_numbers=false)].
+- example: batch [Read(path="tmp/foo"), Read(path="tmp/foo/bar.py", line_numbers=false)]. Read lists dirs.
 
 NEVER END EMPTY:
 - every turn ends w/ content. blocked? state done / blocker / next step. empty final reply unacceptable.

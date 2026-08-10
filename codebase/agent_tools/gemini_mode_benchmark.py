@@ -26,6 +26,11 @@ import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
+# Single source of truth for failure wording: the production honesty gate in
+# agent_core/loop/stepper.py. The benchmark's false-success detector stays in
+# lockstep with the loop (PlanFixes3 #6).
+from agent_core.loop.stepper import FAILURE_SIGNALS  # noqa: E402
+
 _TASKS = [
     "check_path_exists temp/dummy/calculator.py",
     "read file temp/dummy/calculator.py",
@@ -85,7 +90,12 @@ def _build_live_orch() -> any:
 
 
 def _print_per_call(recs, label: str) -> None:
-    """Log each individual call's wire-level token accounting (PlanFixes2 §8)."""
+    """Log each individual call's wire-level token accounting (PlanFixes2 §8).
+
+    prov_prompt = provider's own tokenizer (raw prompt account); tool_schema /
+    history = tiktoken(cl100k) estimates. These are different units and are
+    kept labeled so they are never summed into one number (PlanFixes3 #1).
+    """
     print(f"\n  [{label}] per-call detail")
     print(f"  {'call':<6}{'prov_prompt':>12}{'cached':>8}{'fresh':>8}{'out':>6}{'tool_schema':>12}{'history':>9}")
     for r in recs:
@@ -103,6 +113,7 @@ def _print_per_call(recs, label: str) -> None:
             f"{int(r.get('tool_schema_tokens', 0) or 0):>12,}"
             f"{int(r.get('history_tokens', 0) or 0):>9,}"
         )
+    print("  note: prov_prompt/out = provider-measured; tool_schema/history = tiktoken estimates")
 
 
 def _run_tasks(orch, store, tasks, max_steps=8) -> None:
@@ -132,7 +143,7 @@ _P3_CASES = [
       {"response": '{"final": "Found it: temp/dummy/calculator.py"}', "tool_calls": None}]),
     ("B  read file",
      "read file temp/dummy/calculator.py",
-     [{"response": "", "tool_calls": [{"name": "read_file", "arguments": {"path": "temp/dummy/calculator.py"}}]},
+     [{"response": "", "tool_calls": [{"name": "Read", "arguments": {"path": "temp/dummy/calculator.py"}}]},
       {"response": '{"final": "Here is the file."}', "tool_calls": None}]),
     ("C  create directory",
      "create directory temp/toolbench",
@@ -140,7 +151,7 @@ _P3_CASES = [
       {"response": '{"final": "Created directory temp/toolbench."}', "tool_calls": None}]),
     ("D  write file",
      "overwrite the file temp/dummy/bench_write.txt with content hello",
-     [{"response": "", "tool_calls": [{"name": "write_to_file", "arguments": {"path": "temp/dummy/bench_write.txt", "mode": "overwrite", "content": "hello"}}]},
+     [{"response": "", "tool_calls": [{"name": "Write", "arguments": {"path": "temp/dummy/bench_write.txt", "mode": "overwrite", "content": "hello"}}]},
       {"response": '{"final": "Wrote the file."}', "tool_calls": None}]),
     ("E  edit file",
      "add a multiply function to temp/dummy/calculator.py",
@@ -150,22 +161,35 @@ _P3_CASES = [
      "run the python version",
      [{"response": "", "tool_calls": [{"name": "execute_command", "arguments": {"command": "python3 --version"}}]},
       {"response": '{"final": "Python 3.11."}', "tool_calls": None}]),
-    ("G  failed tool",
+("G  failed tool",
      "run the imaginary command predict_the_research_parity",
      [{"response": "", "tool_calls": [{"name": "nonexistent_tool_xyz", "arguments": {}}]},
-      {"response": '{"final": "Done."}', "tool_calls": None}]),
+      {"response": '{"final": "Done."}'},
+      {"response": '{"final": "The command failed: nonexistent_tool_xyz is not available."}'}]),
     ("H  nonexistent file",
      "read file temp/dummy/does_not_exist_xyz.py",
-     [{"response": "", "tool_calls": [{"name": "read_file", "arguments": {"path": "temp/dummy/does_not_exist_xyz.py"}}]},
-      {"response": '{"final": "Read done."}', "tool_calls": None}]),
+     [{"response": "", "tool_calls": [{"name": "Read", "arguments": {"path": "temp/dummy/does_not_exist_xyz.py"}}]},
+      {"response": '{"final": "Read done."}'},
+      {"response": '{"final": "Could not read the file: it does not exist."}'}]),
 ]
 
-_FAIL_TERMS = (
-    "fail", "failed", "error", "blocked", "not allowed", "denied", "rejected",
-    "not found", "doesn't exist", "does not exist", "no such", "missing",
-    "unable", "cannot", "can't", "nonexistent", "non-existent",
-    "not executed", "uncompleted", "permission",
-)
+_FAIL_TERMS = FAILURE_SIGNALS
+
+# Phase 4 deterministic factory cases (PlanFixes2 #10): unambiguous asks that
+# run through try_factory with ZERO LLM calls. The mock provider is a fallback
+# that must never be consumed; when the factory fires, calls/tokens stay 0.
+_FACTORY_CASES = [
+    ("F1  find file",
+     "find fibonacci.py"),
+    ("F2  read file",
+     "read temp/dummy/calculator.py"),
+    ("F3  list dir",
+     "list files in temp/dummy"),
+    ("F4  check exists",
+     "check if codebase/temp/dummy/calculator.py exists"),
+    ("F5  mkdir",
+     "create directory temp/factorybench"),
+]
 
 
 def _detect_false_success(failures: int, final_text: str) -> int:
@@ -233,22 +257,30 @@ def _build_mock(orch, stanzas) -> None:
     orch.register_provider("mock", MockProvider(stanzas=stanzas))
 
 
+def _set_factory(on: bool) -> None:
+    import agent_core.config as cfg
+    cfg.FACTORY_ENABLED = bool(on)
+
+
 def run_p3_benchmark(live: bool) -> None:
-    """Run the 8 PlanFixes §P3 scenarios and print the required per-case rows."""
+    """Run the 8 PlanFixes §P3 scenarios plus Phase 4 factory cases."""
     from agent_core.message_store import MessageStore
     from agent_core.llm_orchestrator import LLMOrchestrator
 
-    rows = []
-    for label, prompt, mock_stanzas in _P3_CASES:
+    def _row(prompt, label, stanzas=None) -> tuple[str, dict]:
         if live:
             orch = _build_live_orch()
         else:
             orch = LLMOrchestrator(default_provider="mock", default_model="mock")
-            _build_mock(orch, mock_stanzas)
+            _build_mock(orch, stanzas or [{"response": '{"final": "fallback"}'}])
         store = MessageStore(":memory:")
         store.create_session("p3")
-        m = _run_p3(orch, store, prompt)
-        rows.append((label, m))
+        return label, _run_p3(orch, store, prompt)
+
+    _set_factory(False)  # A-H keep the pure LLM-path baseline
+    rows = [_row(prompt, label, mock_stanzas) for label, prompt, mock_stanzas in _P3_CASES]
+    _set_factory(True)
+    factory_rows = [_row(prompt, label) for label, prompt in _FACTORY_CASES]
 
     cols = ("initial_prompt_tokens", "tool_schema_tokens", "system_tokens",
             "continuation_tokens", "output_tokens", "total",
@@ -261,8 +293,19 @@ def run_p3_benchmark(live: bool) -> None:
     for label, m in rows:
         vals = "".join(f"{m[c]:>{width+2}}" for c in cols)
         print(f"{label:<24}{vals}  calls={m['calls']}")
+    print(f"\nPhase 4 — deterministic factory (0-LLM fast path)")
+    print(f"{'Scenario':<24}" + "".join(f"{c:>{width+2}}" for c in cols))
+    print("-" * len(header))
+    for label, m in factory_rows:
+        vals = "".join(f"{m[c]:>{width+2}}" for c in cols)
+        print(f"{label:<24}{vals}  calls={m['calls']}")
     print(f"\nPipe: {'live Gemini' if live else 'mock (deterministic stanzas)'} — "
           f"set GEMINI_API_KEY for live runs.")
+    print("Units: all token columns are tiktoken(cl100k) estimates of the wire "
+          "payload sent to the model; provider-measured counts appear only in "
+          "the GEMINI_DIAGNOSE per-call logs (prov_prompt/fresh/cached/output). "
+          "Factory rows with calls=0 are deterministic tool execution with no "
+          "LLM round-trip (see PlanFixes2 #8/#10).")
 
 
 def main() -> None:
@@ -275,6 +318,7 @@ def main() -> None:
     if os.getenv("GEMINI_P3", "").lower() in ("1", "true", "yes"):
         run_p3_benchmark(live=live)
         return
+    _set_factory(False)  # A/B/C mode comparison measures the LLM path only
     diagnose = os.getenv("GEMINI_DIAGNOSE", "").lower() in ("1", "true", "yes")
     tasks = [_DIAGNOSE_TASK] if diagnose else _TASKS
     rows: list[tuple[str, dict, str]] = []

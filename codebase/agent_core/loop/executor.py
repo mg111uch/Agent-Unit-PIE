@@ -15,8 +15,7 @@ _MODEL_RESULT_MAX = MODEL_TOOL_RESULT_MAX_CHARS
 
 # Tools historically took a single string; native FC sends an object.
 _STRING_ARG_KEYS: Dict[str, tuple[str, ...]] = {
-    "read_file": ("path", "input", "file"),
-    "list_files": ("path", "input", "directory", "dir"),
+    "Read": ("path", "input", "file"),
     "execute_command": ("command", "cmd", "input"),
     "glob_search": ("pattern", "glob", "input"),
     "check_path_exists": ("path", "input"),
@@ -38,8 +37,6 @@ def _normalize_tool_arg(name: str, arguments: Any) -> Any:
             return arguments[k]
     if len(arguments) == 1:
         return next(iter(arguments.values()))
-    if name == "list_files" and not arguments:
-        return "."
     return arguments
 
 

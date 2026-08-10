@@ -56,6 +56,7 @@ agent_core/
 | System Prompt | Capability-aware prompt assembled from `prompt_fragments/` based on active tool packs |
 | Native Function Calling | JSON Schema function calling for all providers; text-JSON/XML fallback |
 | Streaming | Real-time token streaming with stop/cancel support |
+| Deterministic Tool factory Fast-path | Unambiguous single-intent prompts (find/read/list/check-exists/create-dir) run one allowlisted tool call directly with 0 LLM calls |
 
 > Verified capability inventory with code citations: `status.md`.
 

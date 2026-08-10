@@ -103,7 +103,7 @@ async def get_workspace_files():
 
 
 @app.get("/api/files/read")
-async def read_file(path: str, user: dict = Depends(require_auth)):
+async def Read(path: str, user: dict = Depends(require_auth)):
     try:
         _srv.set_user_workspace(str(user.get("id")))
         full = _srv.ws_resolve(path)

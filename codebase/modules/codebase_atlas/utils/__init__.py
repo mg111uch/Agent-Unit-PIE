@@ -12,7 +12,7 @@ from .formatting import (
 from .io_helpers import (
     ensure_directory,
     write_file,
-    read_file,
+    Read,
     get_timestamp,
     clean_directory,
 )
@@ -27,7 +27,7 @@ __all__ = [
     # I/O
     'ensure_directory',
     'write_file',
-    'read_file',
+    'Read',
     'get_timestamp',
     'clean_directory',
 

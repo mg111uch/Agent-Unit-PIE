@@ -12,6 +12,7 @@
   "gemini_chain_restart_tokens": 40000,
   "direct_final_tools": ["check_path_exists"],
   "tool_group_routing": true,
+  "factories_enabled": true,
   "model_tool_result_max_chars": 2500,
   "tool_nudge_threshold": 20,
   "show_tool_token_usage": true,

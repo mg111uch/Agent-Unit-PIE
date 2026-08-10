@@ -48,6 +48,11 @@ class ContextBudget:
     total_tokens: int = 0
     billable_tokens: int = 0
 
+    # Provider-reported raw prompt tokens (Gemini tokenizer, not tiktoken).
+    # Kept separate from the tiktoken estimate so the two can never be conflated
+    # (PlanFixes3 #1: "899 vs 1,288" was an estimate-vs-measure mixing).
+    provider_prompt_tokens: int = 0
+
     # Optional real usage from the provider (when available).
     provider_source: str = ""
 
@@ -75,6 +80,10 @@ class ContextBudget:
             self.total_tokens = self.estimate_total()
             self.billable_tokens = self.fresh_input_tokens + completion
             self.provider_source = "measured"
+        raw = int(usage.get("provider_prompt_tokens", 0) or 0)
+        if not raw:
+            raw = prompt
+        self.provider_prompt_tokens = max(0, raw)
         return self
 
     def to_dict(self) -> dict:
@@ -133,24 +142,31 @@ def build_budget(
 
 
 def format_budget(budget: ContextBudget, label: str = "request") -> str:
-    """Human-readable block of a profiled request (PlanFixes2 #28)."""
+    """Human-readable block of a profiled request (PlanFixes2 #28).
+
+    Units are explicit (PlanFixes3 #1): system/tools/history/tool result/user/
+    digest are tiktoken(cl100k) ESTIMATES; provider_prompt_tokens (when the
+    provider reported usage) is the provider's own tokenizer. Never mix them.
+    """
     def row(name: str, tokens: int) -> str:
         return f"{name:<22} {tokens:>7,}"
 
     lines = [f"--- {label} (per-call) ---"]
-    lines.append(row("system", budget.system_tokens))
-    lines.append(row("tool schemas", budget.tool_schema_tokens))
-    lines.append(row("history", budget.history_tokens))
-    lines.append(row("tool result", budget.tool_result_tokens))
-    lines.append(row("user", budget.user_tokens))
-    lines.append(row("digest", budget.digest_tokens))
+    lines.append(row("system (est)", budget.system_tokens))
+    lines.append(row("tool schemas (est)", budget.tool_schema_tokens))
+    lines.append(row("history (est)", budget.history_tokens))
+    lines.append(row("tool result (est)", budget.tool_result_tokens))
+    lines.append(row("user (est)", budget.user_tokens))
+    lines.append(row("digest (est)", budget.digest_tokens))
     total = budget.total_tokens
     lines.append("-" * 32)
-    lines.append(row("input (total)", total))
+    lines.append(row("input (est total)", total))
+    if budget.provider_prompt_tokens:
+        lines.append(row("provider prompt", budget.provider_prompt_tokens))
     if budget.cached_input_tokens or budget.fresh_input_tokens:
-        lines.append(row("cached", budget.cached_input_tokens))
-        lines.append(row("fresh", budget.fresh_input_tokens))
-    lines.append(row("output", budget.output_tokens))
+        lines.append(row("cached (measured)", budget.cached_input_tokens))
+        lines.append(row("fresh (measured)", budget.fresh_input_tokens))
+    lines.append(row("output (measured)", budget.output_tokens))
     lines.append(row("billable", budget.billable_tokens))
     return "\n".join(lines)
 
@@ -178,14 +194,19 @@ def estimate_gemini_request(
 
 
 def format_wire_vs_actual(wire: "ContextBudget", usage: dict) -> str:
-    """Compare the predicted wire request with the provider's prompt account."""
+    """Compare the predicted wire request with the provider's prompt account.
+
+    `predicted_prompt` is a tiktoken(cl100k) ESTIMATE of the wire payload;
+    `provider_prompt` is the provider's own tokenizer count. Different units,
+    so a gap is expected and is NOT a bug to optimize away (PlanFixes3 #1).
+    """
     predicted = int(wire.total_tokens or 0)
     actual = int(usage.get("provider_prompt_tokens", 0) or 0)
     return (
         f"--- WIRE vs ACTUAL ---\n"
-        f"predicted_prompt      {predicted:>8,}\n"
-        f"provider_prompt       {actual:>8,}\n"
-        f"cached                {int(usage.get('provider_cached_tokens', 0) or 0):>8,}\n"
-        f"fresh                 {int(usage.get('fresh_prompt_tokens', 0) or 0):>8,}\n"
-        f"output                {int(usage.get('completion_tokens', 0) or 0):>8,}"
+        f"predicted_prompt (est) {predicted:>8,}\n"
+        f"provider_prompt        {actual:>8,}\n"
+        f"provider_cached        {int(usage.get('provider_cached_tokens', 0) or 0):>8,}\n"
+        f"provider_fresh         {int(usage.get('fresh_prompt_tokens', 0) or 0):>8,}\n"
+        f"output                 {int(usage.get('completion_tokens', 0) or 0):>8,}"
     )

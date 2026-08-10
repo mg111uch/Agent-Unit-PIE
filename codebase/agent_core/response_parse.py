@@ -183,8 +183,8 @@ def _parse_xml_tool_call(text: str, known_tools: dict) -> Optional[ParsedReply]:
         params[pm.group(1)] = pm.group(3).strip()
     for pm in re.finditer(r"<parameter\s+(\w+)>([^<]*)</parameter>", text):
         params[pm.group(1)] = pm.group(2).strip()
-    if not params and tool == "read_file":
-        m2 = re.search(r"<function=read_file[^>]*>([^<]+)", text)
+    if not params and tool == "Read":
+        m2 = re.search(r"<function=Read[^>]*>([^<]+)", text)
         if m2:
             params["input"] = m2.group(1).strip()
     return ParsedReply(

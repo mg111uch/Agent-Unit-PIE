@@ -23,7 +23,7 @@ from agent_core.tools.chain.chains import CHAIN_SPECS
 
 # Tools that mutate state; a chain containing any of these is not auto-promoted.
 WRITE_TOOLS = frozenset({
-    "write_to_file", "edit_file", "execute_command", "todo",
+    "Write", "edit_file", "execute_command", "todo",
     "undo_last_edit", "git_commit", "kernel_store_context",
     "kernel_create_event", "kernel_emit_signal", "cross_file_edit",
     "safe_edit", "extract_symbols_to_file", "minimal_context_dump",

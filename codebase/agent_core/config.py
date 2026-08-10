@@ -34,7 +34,7 @@ ALLOWED_COMMANDS: list[str] = _CONFIG.get("allowed_commands", [
 ])
 
 TOOL_MODES: dict[str, set[str]] = {
-    "read_only": {"read_file", "list_files", "glob_search", "grep_search"},
+    "read_only": {"Read", "glob_search", "grep_search"},
     "shell_only": {"execute_command"},
 }
 
@@ -107,6 +107,22 @@ DIRECT_FINAL_TOOLS: set[str] = set(_CONFIG.get("direct_final_tools", []) or [])
 # deterministic tool group (tool_groups.py) instead of exposing every active
 # tool schema. Chained steps keep their own pruning. Off = current behavior.
 TOOL_GROUP_ROUTING: bool = bool(_CONFIG.get("tool_group_routing", False))
+
+# Phase 4 deterministic factory fast path (PlanFixes2 #8): run
+# try_factory() before the first LLM call. Unambiguous asks (find/read/list/
+# check/create-dir) execute one tool call with ZERO LLM calls. Ambiguous asks
+# return None and fall through to the normal Gemini path.
+FACTORY_ENABLED: bool = bool(_CONFIG.get("factories_enabled", True))
+
+# Phase 6 — local tool router (tier 2 of the three-tier classifier, after the
+# deterministic factory and before the cloud model): when the factory declines
+# an ambiguous request, a small local model (FunctionGemma on Ollama) maps it to
+# one canonical validated action from a fixed vocabulary (planning/local_router.py).
+# Disabled = ambiguous requests go straight to the cloud model.
+LOCAL_ROUTER_ENABLED: bool = bool(_CONFIG.get("local_router", {}).get("enabled", False))
+LOCAL_ROUTER_MODEL: str = str(_CONFIG.get("local_router", {}).get("model", "functiongemma"))
+LOCAL_ROUTER_ENDPOINT: str = str(_CONFIG.get("local_router", {}).get("endpoint", "http://localhost:11434"))
+LOCAL_ROUTER_TIMEOUT: int = int(_CONFIG.get("local_router", {}).get("timeout_s", 10))
 
 # Max characters of a tool result sent to the model (model-facing context),
 # separate from the larger bound kept for storage/replay (Agent 2).

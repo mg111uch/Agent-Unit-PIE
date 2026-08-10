@@ -11,31 +11,31 @@ from agent_core.providers import BaseLLMProvider
 class MockProvider(BaseLLMProvider):
     SCENARIOS: Dict[str, List[dict]] = {
         "read_file_happy": [
-            {"response": "", "tool_calls": [{"name": "read_file", "arguments": {"path": "temp/dummy/calculator.py"}}]},
+            {"response": "", "tool_calls": [{"name": "Read", "arguments": {"path": "temp/dummy/calculator.py"}}]},
             {"response": '{"final": "Here is the calculator code."}', "tool_calls": None},
         ],
         "read_file_not_found": [
-            {"response": "", "tool_calls": [{"name": "read_file", "arguments": {"path": "temp/nonexistent.py"}}]},
+            {"response": "", "tool_calls": [{"name": "Read", "arguments": {"path": "temp/nonexistent.py"}}]},
             {"response": '{"final": "File not found."}', "tool_calls": None},
         ],
         "read_file_text_json": [
-            {"response": '{"action": "read_file", "input": "temp/dummy/calculator.py"}', "tool_calls": None},
+            {"response": '{"action": "Read", "input": "temp/dummy/calculator.py"}', "tool_calls": None},
             {"response": '{"final": "Content retrieved."}', "tool_calls": None},
         ],
         "list_files": [
-            {"response": "", "tool_calls": [{"name": "list_files", "arguments": {"path": "temp/dummy"}}]},
+            {"response": "", "tool_calls": [{"name": "Read", "arguments": {"path": "temp/dummy"}}]},
             {"response": '{"final": "Directory listed."}', "tool_calls": None},
         ],
         "write_file_create": [
-            {"response": "", "tool_calls": [{"name": "write_to_file", "arguments": {"path": "temp/new.txt", "mode": "create", "content": "hello world"}}]},
+            {"response": "", "tool_calls": [{"name": "Write", "arguments": {"path": "temp/new.txt", "mode": "create", "content": "hello world"}}]},
             {"response": '{"final": "File created."}', "tool_calls": None},
         ],
         "write_file_overwrite": [
-            {"response": "", "tool_calls": [{"name": "write_to_file", "arguments": {"path": "temp/dummy/calculator.py", "mode": "overwrite", "content": "print('hello')"}}]},
+            {"response": "", "tool_calls": [{"name": "Write", "arguments": {"path": "temp/dummy/calculator.py", "mode": "overwrite", "content": "print('hello')"}}]},
             {"response": '{"final": "File overwritten."}', "tool_calls": None},
         ],
         "write_file_append": [
-            {"response": "", "tool_calls": [{"name": "write_to_file", "arguments": {"path": "temp/dummy/calculator.py", "mode": "append", "content": "\nprint('done')"}}]},
+            {"response": "", "tool_calls": [{"name": "Write", "arguments": {"path": "temp/dummy/calculator.py", "mode": "append", "content": "\nprint('done')"}}]},
             {"response": '{"final": "Content appended."}', "tool_calls": None},
         ],
         "edit_file": [
@@ -55,7 +55,7 @@ class MockProvider(BaseLLMProvider):
             {"response": '{"final": "Found definitions."}', "tool_calls": None},
         ],
         "batch_read": [
-            {"response": "", "tool_calls": [{"name": "read_file", "arguments": {"paths": ["temp/dummy/calculator.py", "temp/dummy/fabo/fabonacci.py"]}}]},
+            {"response": "", "tool_calls": [{"name": "Read", "arguments": {"paths": ["temp/dummy/calculator.py", "temp/dummy/fabo/fabonacci.py"]}}]},
             {"response": '{"final": "Read both files."}', "tool_calls": None},
         ],
         "read_section": [
@@ -68,22 +68,22 @@ class MockProvider(BaseLLMProvider):
         ],
         "parallel_two": [
             {"response": "", "tool_calls": [
-                {"name": "read_file", "arguments": {"path": "temp/dummy/calculator.py"}},
-                {"name": "list_files", "arguments": {"path": "temp/dummy"}},
+                {"name": "Read", "arguments": {"path": "temp/dummy/calculator.py"}},
+                {"name": "Read", "arguments": {"path": "temp/dummy"}},
             ]},
             {"response": '{"final": "Both operations completed."}', "tool_calls": None},
         ],
         "sequential_list_then_read": [
-            {"response": "", "tool_calls": [{"name": "list_files", "arguments": {"path": "temp/dummy"}}]},
-            {"response": "", "tool_calls": [{"name": "read_file", "arguments": {"path": "temp/dummy/calculator.py"}}]},
+            {"response": "", "tool_calls": [{"name": "Read", "arguments": {"path": "temp/dummy"}}]},
+            {"response": "", "tool_calls": [{"name": "Read", "arguments": {"path": "temp/dummy/calculator.py"}}]},
             {"response": '{"final": "Done."}', "tool_calls": None},
         ],
         "invalid_tool": [
             {"response": "", "tool_calls": [{"name": "nonexistent_tool", "arguments": {}}]},
         ],
         "full_chat": [
-            {"response": "", "tool_calls": [{"name": "list_files", "arguments": {"path": "."}}]},
-            {"response": "", "tool_calls": [{"name": "read_file", "arguments": {"path": "temp/dummy/calculator.py"}}]},
+            {"response": "", "tool_calls": [{"name": "Read", "arguments": {"path": "."}}]},
+            {"response": "", "tool_calls": [{"name": "Read", "arguments": {"path": "temp/dummy/calculator.py"}}]},
             {"response": "", "tool_calls": [{"name": "grep_search", "arguments": {"pattern": "def", "include": "*.py"}}]},
             {"response": '{"final": "Analysis complete. The project contains a calculator module and fibonacci module."}', "tool_calls": None},
         ],

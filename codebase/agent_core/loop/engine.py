@@ -7,6 +7,7 @@ import time
 import traceback
 from typing import Any, Generator, List, Optional
 
+from agent_core import config as _cfg
 from agent_core.config import (
     TOOL_NUDGE_THRESHOLD,
     GEMINI_CHAIN_RESTART_TOKENS,
@@ -21,7 +22,7 @@ from agent_core.context import retrieve_kernel_context
 from agent_core.context_budget import build_budget, format_budget
 from agent_core.context_manager import build_active_context, build_session_state
 from agent_core.response_parse import parse_provider_response
-from agent_core.tools import registry, log_output
+from agent_core.tools import registry, log_output, ToolResult
 from agent_core.loop.session_state import (
     SessionState,
     set_session_state,
@@ -30,10 +31,29 @@ from agent_core.loop.session_state import (
 from agent_core.loop._helpers import (
     _generate_with_cancel,
     _debug_dump,
+    _finish_tool_events,
+    _feed_chain_miner,
 )
+from agent_core.loop.messages import (
+    serialize_tool_input,
+    build_single_tool_result_msg,
+)
+from agent_core.loop.streaming import stream_final
+from agent_core.loop.executor import _call_tool, _normalize_tool_arg
 from agent_core.loop.stepper import StepState, dispatch_step
 
 _schema_dumped = False
+
+_local_router_cache: Any = None
+
+
+def _get_local_router() -> Any:
+    """Lazily-built local router singleton (tier-2 classifier); None when disabled."""
+    global _local_router_cache
+    if _local_router_cache is None:
+        from agent_core.planning.local_router import build_local_router
+        _local_router_cache = build_local_router() or False
+    return _local_router_cache or None
 
 
 def _name_of(schema: dict) -> str:
@@ -255,6 +275,100 @@ def _iter_agent_events_body(
             return
 
         try:
+            # Deterministic factory fast path: an
+            # unambiguous request runs ONE tool call with ZERO LLM calls. Only
+            # the first step of a turn; ambiguous inputs return None and fall
+            # through to the normal LLM path.
+            if _cfg.FACTORY_ENABLED and step == 1 and not step_state.tool_call_history:
+                from agent_core.tools.tool_groups import try_factory, SIDE_EFFECT_TOOLS
+                factory_action = try_factory(user_input)
+                # Tier 2 (Phase 6): the local router maps an AMBIGUOUS request to
+                # one canonical validated action when a small local model is
+                # configured, keeping the cloud call for reasoning-only tasks.
+                if factory_action is None and _get_local_router() is not None:
+                    factory_action = _get_local_router().route(user_input)
+            else:
+                factory_action = None
+
+            if factory_action is not None:
+                factory_tool = factory_action["name"]
+                factory_input = factory_action["input"]
+                factory_input_str = serialize_tool_input(factory_input)
+                step_state.request_is_side_effect = bool(factory_tool in SIDE_EFFECT_TOOLS)
+                yield {
+                    "type": "status", "status": "thinking", "step": step,
+                    "conversation_id": conv_id,
+                }
+                yield {
+                    "type": "tool_call", "tool": factory_tool,
+                    "input": factory_input_str, "step": step,
+                }
+                try:
+                    factory_arg = _normalize_tool_arg(factory_tool, factory_input)
+                    result_obj = _call_tool(factory_tool, _tools[factory_tool], factory_arg)
+                except KeyError:
+                    result_obj = ToolResult(ok=False, message=f"{factory_tool} is not available")
+                except Exception as e:
+                    result_obj = ToolResult(ok=False, message=f"{factory_tool}: {e}")
+                if isinstance(result_obj, ToolResult):
+                    result_str = result_obj.to_string()
+                    factory_ok = result_obj.ok
+                else:
+                    result_str = str(result_obj)
+                    factory_ok = not result_str.startswith("Error")
+                yield {
+                    "type": "tool_result", "tool": factory_tool,
+                    "input": factory_input_str,
+                    "result": result_str[:2000], "ok": factory_ok, "step": step,
+                }
+                if use_messages:
+                    step_state.current_messages.append({
+                        "role": "assistant", "content": "",
+                        "tool_calls": [{"name": factory_tool, "arguments": factory_input}],
+                    })
+                    msg_store.add_message(
+                        session_id=session_id, role="assistant", content="",
+                        tool_calls=[{"name": factory_tool, "arguments": factory_input}],
+                    )
+                    step_state.current_messages.append(
+                        build_single_tool_result_msg(factory_tool, result_str)
+                    )
+                    msg_store.add_message(
+                        session_id=session_id, role="tool", content=None,
+                        tool_results=[{"tool": factory_tool, "result": result_str}],
+                    )
+                _finish_tool_events(step_state, factory_tool)
+                _feed_chain_miner(session_id, factory_tool, factory_input)
+
+                # check_path_exists answers "does it exist" truthfully even when
+                # missing; every other factory tool must succeed to self-answer.
+                if factory_ok or factory_tool == "check_path_exists":
+                    final_text = f"[{factory_tool}] {result_str[:300]}"
+                    yield {
+                        "type": "summary", "step": step, "total_steps": step,
+                        "cache_hits": state.cache_hits, "cache_misses": state.cache_misses,
+                    }
+                    yield from stream_final(
+                        final_text, step=step, conversation_id=conv_id,
+                        cancel_event=cancel_event,
+                    )
+                    return
+                # Deterministic assumption wrong (e.g. missing dir) — record the
+                # failure and fall back to the LLM so it can recover honestly.
+                step_state.saw_tool_failure = True
+                step_state.last_tool_status = "failed"
+                step_state.side_effect_succeeded = False
+                followup_text = (
+                    f"The deterministic call [{factory_tool}] failed. Assess the "
+                    f"result and recover, or adjust your approach: {result_str}"
+                )
+                if use_messages:
+                    step_state.current_messages.append(
+                        {"role": "user", "content": followup_text}
+                    )
+                else:
+                    step_state.current_input += "\n\n" + followup_text
+
             yield {
                 "type": "status",
                 "status": "thinking",

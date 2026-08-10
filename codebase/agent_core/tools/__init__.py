@@ -18,9 +18,8 @@ from agent_core.tools.exec_ops import (
     execute_command_raw,
 )
 from agent_core.tools.file_ops import (
-    read_file,
-    list_files,
-    write_to_file,
+    Read,
+    Write,
     edit_file,
 )
 from agent_core.tools.meta_ops import (
@@ -133,17 +132,14 @@ def _register(specs):
 
 
 _FILE_SPECS = [
-    ("read_file", read_file, CAT_FILE,
-     "Read file. line-numbers on, error lists nearby files. batch: paths(offset/limit/line_numbers top-level apply each).",
+    ("Read", Read, CAT_FILE,
+     "Read file; a directory path returns its listing. line-numbers on, error lists nearby files. batch: paths(offset/limit/line_numbers top-level apply each).",
      {"path": str_p("file path rel workspace", req=True),
       "paths": arr_p("string", "batch read list of paths; top-level offset/limit/line_numbers apply each"),
       "offset": int_p("start line 1-based (default 1)"),
       "limit": int_p("max lines (default 1000; 0 = all)"),
       "line_numbers": bool_p("prefix each line (default true; false saves tokens)")}),
-    ("list_files", list_files, CAT_FILE,
-     "List dir: files first, subdirs with <=5 entry preview. 50 line cap. glob_search for specific file.",
-     {"path": str_p("dir rel workspace; '.' = root")}),
-    ("write_to_file", write_to_file, CAT_FILE,
+    ("Write", Write, CAT_FILE,
      "Create or overwrite file. edit_file for targeted edits.",
      {"path": str_p("file path rel workspace", req=True),
       "mode": str_p("create (fails if exists) | overwrite | append", req=True),
@@ -165,7 +161,7 @@ _FILE_SPECS = [
      "Run shell command. allowed: ls, cat, pwd, echo, python.",
      {"command": str_p("shell command", req=True)}),
     ("glob_search", glob_search, CAT_FILE,
-     "Find files by glob ('**/*.py', 'src/**/*.ts'). Preferred over recursive list_files for unknown dir.",
+     "Find files by glob ('**/*.py', 'src/**/*.ts'). Preferred over recursive dir listing for unknown dir.",
      derive_schema(glob_search, {"pattern": "glob pattern rel workspace root"})),
     ("grep_search", grep_search, CAT_FILE,
      "Regex search file contents across workspace. context_lines=N to get N surrounding lines (default 0).",
@@ -194,7 +190,7 @@ _FILE_SPECS = [
                                      "description": "<=3 choices; string or {label, description}"}},
                          "additionalProperties": False}}}),
     ("check_path_exists", check_path_exists, CAT_FILE,
-     "Check file/dir exists at path (cheap, no read). Use to verify before read_file/list_files.",
+     "Check file/dir exists at path (cheap, no read). Use to verify before Read.",
      derive_schema(check_path_exists, {"path": "path rel workspace root"}),
      True, True),  # wrap, terminal
 ]
@@ -225,7 +221,7 @@ _META_SPECS = [
      "Show diff of uncommitted changes for a file vs checkpoint or git HEAD. Returns ~5 lines — use for lightweight edit verification instead of re-reading the full file.",
      {"path": str_p("File path relative to workspace root", req=True)}),
     ("read_section", read_section_tool, CAT_META,
-     "Read a file section around a regex pattern match. Returns match line + context lines. Use instead of read_file when searching by content pattern.",
+     "Read a file section around a regex pattern match. Returns match line + context lines. Use instead of Read when searching by content pattern.",
      {"path": str_p("File path relative to workspace root", req=True),
       "pattern": str_p("Regex pattern to search for within the file", req=True),
       "context_lines": int_p("Number of context lines before and after each match (default 10)"),

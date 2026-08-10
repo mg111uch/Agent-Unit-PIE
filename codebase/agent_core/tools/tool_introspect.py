@@ -1,7 +1,7 @@
 """tool_anatomy: deterministic registry introspection.
 
 Two modes:
-  tool_anatomy(name="read_file")          -> deep trace: category, registration line,
+  tool_anatomy(name="Read")          -> deep trace: category, registration line,
       implementation line, mcp_expose, enabled_now, schema params, every cross-file
       reference (prompt fragments, mock scenarios, tests, stepper._EDIT_TOOLS,
       audit._WRITE_TOOLS, session_state observers, mcp_server), merge/rename history.

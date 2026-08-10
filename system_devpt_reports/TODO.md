@@ -31,7 +31,6 @@ grok --resume 019fc7b4-a7a3-7a20-86f1-6feab4f594bc
 
 - Add Todo dismiss
 - ask me 3 questions on indian history 
-- outside the square box  bounding the circle. Draw corner symbols as ABCD starting from upper left corner clockwise, than label mid points of sides 
 
 # Tips
 - Close mcp server connection before git add commit push

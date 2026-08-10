@@ -19,7 +19,7 @@ def get_workspace_info(_input=None) -> ToolResult:
             f"[cached workspace info]\n"
             f"Workspace root (use paths relative to this): {st.workspace_root}\n"
             f"Top-level entries: {entries}\n"
-            f"All file paths you pass to read_file / write_to_file / list_files / edit_file "
+            f"All file paths you pass to Read / Write / edit_file "
             f"must be relative to this root (e.g. 'src/main.py', not an absolute OS path)."
         ))
     entries = sorted(os.listdir(WORKSPACE_ROOT))
@@ -29,7 +29,7 @@ def get_workspace_info(_input=None) -> ToolResult:
     return ToolResult(ok=True, data=(
         f"Workspace root (use paths relative to this): {WORKSPACE_ROOT}\n"
         f"Top-level entries: {entries}\n"
-        f"All file paths you pass to read_file / write_to_file / list_files / edit_file "
+        f"All file paths you pass to Read / Write / edit_file "
         f"must be relative to this root (e.g. 'src/main.py', not an absolute OS path)."
     ))
 
