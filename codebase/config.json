@@ -134,6 +134,14 @@
     "max_local_steps": 3,
     "timeout_seconds": 30
   },
+
+  "local_router": {
+    "enabled": false,
+    "model": "funcGemma",
+    "endpoint": "http://localhost:11434",
+    "timeout_s": 20,
+    "keep_alive": "1h"
+  },
   
   "workflow_learn": {
     "enabled": true,

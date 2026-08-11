@@ -153,15 +153,41 @@ needs reasoning.
   * strict `_parse_action` (markdown fences stripped, single JSON object, unknown IDs → None),
   * `_policy` gate before execution: `execute_command` checked against `ALLOWED_COMMANDS` allowlist, `Write` content capped (4,000 chars), required args non-empty.
   * pluggable backend: `OllamaProvider` (live) via `build_local_router()`; `deterministic_router()` stub for the offline benchmark / smoke test.
-* `codebase/agent_core/config.py` — `LOCAL_ROUTER_ENABLED / MODEL / ENDPOINT / TIMEOUT` (config.json `local_router` block; default off, no model needed to ship).
+* `codebase/agent_core/config.py` — `LOCAL_ROUTER_ENABLED / MODEL / ENDPOINT / TIMEOUT / KEEP_ALIVE` (config.json `local_router` block; default off, no model needed to ship).
 * `codebase/agent_core/loop/engine.py` — tier-2 wiring: engine tries `try_factory` on step 1; on None it asks the local router (`_get_local_router()` singleton), and only on a validated action executes the single tool call with zero cloud calls. Router disabled → identical prior behavior (ambiguous requests go straight to cloud).
 * Smoke test: `python -m agent_core.planning.local_router` covers routing, allowlist rejection, unknown-ID and empty-input fallbacks.
 
+## Live status (tier 2 tested end-to-end)
+
+The full local path was verified live against `funcGemma` (FunctionGemma 270M) on Ollama:
+provider → FunctionGemma renderer/parser → native `tool_calls` → router → policy → action,
+with **zero cloud calls**.
+
+* Model rebuilt from raw GGUF via `codebase/utils_files/Modelfile` with `renderer functiongemma`
+  and `parser functiongemma` (Ollama v0.13.5 ships both). FunctionGemma uses a dedicated
+  `<start_function_declaration>/<start_function_call>` wire format, NOT the generic gemma3
+  `<tools>` template — a bare `FROM …gguf` Modelfile (default `TEMPLATE {{ .Prompt }}`) produces
+  no tool rendering and must not be used.
+* `OllamaProvider` fixed: `endpoint` default is now the base `http://localhost:11434`
+  (was `…/api/chat`, double-appended → `/api/chat/api/chat`, 404).
+* Router runs with `num_predict=40`, `keep_alive="1h"`, `temperature=0`, and answers with a
+  native tool call mapped via `_FN_TO_ID` (act_1…act_9); text-JSON `_parse_action` is the fallback.
+* Policy gate works: required-arg and `execute_command` allowlist checks run before any execution.
+
+**Honest result:** the mechanism works, but the 270M model is NOT production-accurate as-is.
+Live route "list the files in /tmp" → `act_1` (Read) with empty args → policy-rejected → `None`
+(correctly degrades to tier 3 cloud). Cold inference is slow (~7s load, ~55s under load, 4-thread
+CPU). Per Google docs, FunctionGemma is a fine-tuning substrate, not a plug-and-play router.
+
 ## Not done / next
 
-* Live Ollama tuning: pick a real model id, keep it resident (`OLLAMA_KEEP_ALIVE`), measure TTFT/latency/CPU on the i3.
-* Benchmark the three approaches from the original plan (A cloud tool-calling, B cloud→FunctionGemma, C deterministic→FunctionGemma fallback). Predict C wins.
-* Wire tier 2 as an execution layer for batched actions issued by a cloudy reasoning step (cloud → N actions → local router → deterministic executor), instead of step-at-a-time routing only.
+* Model quality: fine-tune `funcGemma` on a small single-turn action dataset (the 9-action
+  vocabulary + arg extraction) before trusting live routing, OR swap in a stronger small model
+  (e.g. qwen3 4b / llama3.2 3b) that is accurate without SFT.
+* Benchmark the three approaches from the original plan (A cloud tool-calling, B cloud→FunctionGemma,
+  C deterministic→FunctionGemma fallback). Predict C wins; only meaningful once the local model is accurate.
+* Wire tier 2 as an execution layer for batched actions issued by a cloudy reasoning step
+  (cloud → N actions → local router → deterministic executor), instead of step-at-a-time routing only.
 
 ## Key KPIs to measure (benchmark)
 

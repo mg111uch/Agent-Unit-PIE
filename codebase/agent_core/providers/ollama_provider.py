@@ -10,13 +10,15 @@ from agent_core.providers import BaseLLMProvider
 class OllamaProvider(BaseLLMProvider):
     def __init__(
         self,
-        model: str = "gemma-2-2b-it",
+        model: str = "funcGemma",
         endpoint: str = "http://localhost:11434",
         timeout: int = 30,
+        keep_alive: Optional[str] = None,
     ):
         self.default_model = model
         self.endpoint = endpoint.rstrip("/")
         self.timeout = timeout
+        self.keep_alive = keep_alive
 
     def _call_ollama(self, payload: dict) -> dict:
         url = f"{self.endpoint}/api/chat"
@@ -84,6 +86,8 @@ class OllamaProvider(BaseLLMProvider):
                 "num_predict": max_tokens,
             },
         }
+        if self.keep_alive:
+            payload["keep_alive"] = self.keep_alive
         if tools:
             payload["tools"] = tools
 
@@ -103,12 +107,18 @@ class OllamaProvider(BaseLLMProvider):
         content = message.get("content", "") or ""
         tool_calls = self._parse_tool_calls(message)
 
-        usage_raw = raw.get("prompt_eval_count", 0), raw.get("eval_count", 0)
+        prompt_tokens = raw.get("prompt_eval_count", 0) or 0
+        completion_tokens = raw.get("eval_count", 0) or 0
+        usage = self._build_usage_dict(
+            total_tokens=prompt_tokens + completion_tokens,
+            prompt_tokens=prompt_tokens,
+            completion_tokens=completion_tokens,
+        )
         return {
             "response": content,
             "tool_calls": tool_calls,
             "conversation_id": conversation_id,
-            "usage": self._build_usage_dict(sum(usage_raw)),
+            "usage": usage,
             "latency_seconds": round(time.time() - started, 3),
         }
 

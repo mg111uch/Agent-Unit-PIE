@@ -123,6 +123,7 @@ LOCAL_ROUTER_ENABLED: bool = bool(_CONFIG.get("local_router", {}).get("enabled",
 LOCAL_ROUTER_MODEL: str = str(_CONFIG.get("local_router", {}).get("model", "functiongemma"))
 LOCAL_ROUTER_ENDPOINT: str = str(_CONFIG.get("local_router", {}).get("endpoint", "http://localhost:11434"))
 LOCAL_ROUTER_TIMEOUT: int = int(_CONFIG.get("local_router", {}).get("timeout_s", 10))
+LOCAL_ROUTER_KEEP_ALIVE: str = str(_CONFIG.get("local_router", {}).get("keep_alive", "") or "")
 
 # Max characters of a tool result sent to the model (model-facing context),
 # separate from the larger bound kept for storage/replay (Agent 2).

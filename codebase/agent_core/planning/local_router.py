@@ -22,20 +22,51 @@ from typing import Any, Callable, Optional
 
 from agent_core.config import ALLOWED_COMMANDS
 
-# Fixed action-ID vocabulary (tiny local output). id -> (tool name, arg keys).
-ACTION_IDS: dict[int, tuple[str, tuple[str, ...]]] = {
-    1: ("Read", ("path",)),                          # read file
-    2: ("Read", ("path",)),                          # list directory (Read lists dirs)
-    3: ("Write", ("path", "content")),
-    4: ("edit_file", ("path", "old_string", "new_string")),
-    5: ("execute_command", ("command",)),
-    6: ("glob_search", ("pattern",)),
-    7: ("grep_search", ("pattern", "include")),
-    8: ("check_path_exists", ("path",)),
-    9: ("get_workspace_info", ()),
+# Fixed action-ID vocabulary (tiny local output). id -> (tool name, arg keys,
+# human-readable summary for the function schema).
+ACTION_IDS: dict[int, tuple[str, tuple[str, ...], str]] = {
+    1: ("Read", ("path",), "Read the contents of a file at path"),
+    2: ("Read", ("path",), "List the files and directories inside a directory at path"),
+    3: ("Write", ("path", "content"), "Create or overwrite a file with the given content"),
+    4: ("edit_file", ("path", "old_string", "new_string"), "Edit a file by replacing old_string with new_string"),
+    5: ("execute_command", ("command",), "Run a shell command in the workspace"),
+    6: ("glob_search", ("pattern",), "Find files by glob pattern"),
+    7: ("grep_search", ("pattern", "include"), "Search file contents for a regex pattern"),
+    8: ("check_path_exists", ("path",), "Check whether a path exists"),
+    9: ("get_workspace_info", (), "Show information about the workspace"),
 }
 
 _ID_TOOL = {i: spec[0] for i, spec in ACTION_IDS.items()}
+
+# Unique function names so Ollama's FunctionGemma renderer can disambiguate the
+# two Read actions (read file vs list directory) in a single tool schema set.
+_FN_NAME = {i: f"act_{i}" for i in ACTION_IDS}
+_FN_TO_ID = {fn: i for i, fn in _FN_NAME.items()}
+
+_ARG_TYPES: dict[str, str] = {
+    "path": "string", "content": "string", "command": "string",
+    "pattern": "string", "include": "string",
+    "old_string": "string", "new_string": "string",
+}
+
+
+def _action_schema(i: int) -> dict:
+    tool, keys, desc = ACTION_IDS[i]
+    props = {k: {"type": _ARG_TYPES.get(k, "string"), "description": k} for k in keys}
+    return {
+        "type": "function",
+        "function": {
+            "name": _FN_NAME[i],
+            "description": desc,
+            "parameters": {"type": "object", "properties": props, "required": list(keys)},
+        },
+    }
+
+
+# Tool schemas sent to the local model: one function per fixed action. The model
+# answers with a native tool call (Ollama parses FunctionGemma's format server
+# side); a text-JSON reply is the fallback for non-tool models.
+TOOL_SCHEMAS: list[dict] = [_action_schema(i) for i in ACTION_IDS]
 
 _ROUTER_PROMPT = (
     "You map a user request to exactly one operation from this fixed catalog.\n"
@@ -85,7 +116,7 @@ class LocalRouter:
         provider: Any,
         *,
         enabled: bool = True,
-        max_tokens: int = 80,
+        max_tokens: int = 40,
     ):
         self.provider = provider
         self.enabled = bool(enabled)
@@ -122,12 +153,23 @@ class LocalRouter:
                 system_prompt=_ROUTER_PROMPT,
                 temperature=0.0,
                 max_tokens=self.max_tokens,
+                tools=TOOL_SCHEMAS,
             )
         except Exception:
             return None
         if not raw or raw.get("error"):
             return None
-        parsed = _parse_action(raw.get("response") or "")
+        parsed = None
+        for tc in raw.get("tool_calls") or []:
+            action_id = _FN_TO_ID.get(tc.get("name", ""))
+            if action_id is None:
+                continue
+            args = {k: v for k, v in (tc.get("arguments") or {}).items()
+                    if isinstance(v, (str, bool, int, float))}
+            parsed = {"id": action_id, "args": args}
+            break
+        if parsed is None:
+            parsed = _parse_action(raw.get("response") or "")
         if not parsed:
             return None
         name = _ID_TOOL[parsed["id"]]
@@ -149,6 +191,7 @@ def build_local_router() -> Optional[LocalRouter]:
                 model=cfg.LOCAL_ROUTER_MODEL,
                 endpoint=cfg.LOCAL_ROUTER_ENDPOINT,
                 timeout=cfg.LOCAL_ROUTER_TIMEOUT,
+                keep_alive=getattr(cfg, "LOCAL_ROUTER_KEEP_ALIVE", None) or None,
             ),
             enabled=True,
         )
@@ -173,6 +216,19 @@ def deterministic_router(labels: dict[str, str]) -> LocalRouter:
 
 if __name__ == "__main__":
     # Smoke test — run with: python -m agent_core.planning.local_router
+    class _ToolStub:
+        """Provider-like stub that answers with a native Ollama tool_call."""
+
+        def __init__(self, mapping):
+            self._mapping = mapping
+
+        def generate(self, **kwargs):
+            prompt = (kwargs.get("prompt") or "").lower()
+            for key, fn_name, args in self._mapping:
+                if key in prompt:
+                    return {"response": "", "tool_calls": [{"name": fn_name, "arguments": args}]}
+            return {"response": '{"tool": 0}'}
+
     r = deterministic_router({
         "sum the file": '{"tool": 1, "args": {"path": "x.py"}}',
         "run pytest": '{"tool": 5, "args": {"command": "pytest"}}',
@@ -183,4 +239,15 @@ if __name__ == "__main__":
     assert r.route("rm things") is None      # policy blocks non-allowlisted exec
     assert r.route("blah blah") is None      # unknown action id -> None
     assert LocalRouter(None).route(" x ") is None  # disabled/empty handling
+
+    # Native tool_call path (Ollama FunctionGemma): act_5 -> execute_command.
+    t = LocalRouter(_ToolStub([
+        ("run tests", "act_5", {"command": "pytest"}),
+        ("delete everything", "act_5", {"command": "rm -rf /"}),
+    ]), enabled=True)
+    assert t.route("run tests") == {"name": "execute_command", "input": {"command": "pytest"}}
+    assert t.route("delete everything") is None  # allowlist rejects rm
+    assert t.route("nonsense") is None           # no matching stub -> {"tool": 0}
+
+    assert _FN_TO_ID["act_3"] == 3 and len(TOOL_SCHEMAS) == len(ACTION_IDS)
     print("local_router smoke OK")
