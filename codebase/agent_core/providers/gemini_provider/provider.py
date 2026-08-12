@@ -17,10 +17,15 @@ from agent_core.providers.gemini_provider.streaming import StreamMixin
 
 
 class GeminiProvider(InteractionsMixin, StatelessMixin, StreamMixin, BaseLLMProvider):
-    def __init__(self, api_key: str, model: str = "gemini-3.5-flash"):
+    def __init__(self, api_key: str, model: str = "gemini-3.5-flash", timeout_ms: Optional[int] = None):
         from google import genai
 
-        self.client = genai.Client(api_key=api_key)
+        kwargs: dict[str, Any] = {"api_key": api_key}
+        if timeout_ms is not None:
+            from google.genai import types
+
+            kwargs["http_options"] = types.HttpOptions(timeout=timeout_ms)
+        self.client = genai.Client(**kwargs)
         self.default_model = model
         self._supports_stateful = True
         self._last_tools_fp: Optional[str] = None

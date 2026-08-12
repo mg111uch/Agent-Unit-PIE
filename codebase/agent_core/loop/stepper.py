@@ -83,11 +83,9 @@ def dispatch_step(
     cancel_event: Any,
     tools: dict,
     active_tool_names: set[str] | None = None,
-    local_planner: Any,
     state: SessionState,
     use_messages: bool,
     conv_id: str | None,
-    local_step: bool,
     reply: str,
     nudge_threshold: int = 4,
     step_usage: dict | None = None,
@@ -117,8 +115,6 @@ def dispatch_step(
             msg_store, session_id, "parse", corrective,
             short_followup() if use_messages else corrective_text,
         )
-        if local_step and local_planner:
-            local_planner.record_fallback()
         return False
 
     # A successful structured parse means the raw-failure streak is over.
@@ -208,8 +204,6 @@ def dispatch_step(
             msg_store, session_id, parsed.tool or "unknown", corrective,
             short_failed_followup() if use_messages else followup_text,
         )
-        if local_step and local_planner:
-            local_planner.record_fallback()
         return False
 
     # --- multi tool_calls ---
@@ -286,8 +280,6 @@ def dispatch_step(
             }
             _finish_tool_events(step_state, tc.name)
             _feed_chain_miner(session_id, tc.name, tc.arguments)
-        if local_step and local_planner:
-            local_planner.record_success()
 
         _debug_dump("TOOL RESULTS (multi)",
             step=step,
@@ -388,8 +380,6 @@ def dispatch_step(
 
         _finish_tool_events(step_state, tool)
         _feed_chain_miner(session_id, tool, tool_input)
-        if local_step and local_planner:
-            local_planner.record_success()
 
         _debug_dump("TOOL RESULT (single)",
             step=step, tool=tool, input=parsed.tool_input, result=result_str, ok=ok,

@@ -11,7 +11,7 @@ from agent_core.workspace import WORKSPACE_ROOT, to_relative
 
 def _check_git_enabled() -> str | None:
     if not GIT_TOOLS_ENABLED:
-        return "Git tools are disabled. Set git_tools_enabled: true in config.json to enable."
+        return "Git tools are disabled. Set git_tools_enabled: true in config.md to enable."
     if not os.path.isdir(os.path.join(WORKSPACE_ROOT, ".git")):
         return "Not a git repository (no .git directory found in workspace root)."
     return None

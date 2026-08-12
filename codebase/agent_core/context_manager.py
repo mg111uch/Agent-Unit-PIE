@@ -11,9 +11,15 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, List, Optional
 
-from agent_core.config import CONTEXT_DIGEST_ENABLED, WORKFLOW_LEARN_CONTEXT_HINTS
+from agent_core.config import (
+    CONTEXT_DIGEST_ENABLED,
+    WORKFLOW_LEARN_CONTEXT_HINTS,
+    HISTORY_RELEVANCE_ENABLED,
+    HISTORY_RELEVANCE_KEEP_RECENT,
+    HISTORY_RELEVANCE_MIN_OVERLAP,
+)
 from agent_core.context_budget import ContextBudget, build_budget, estimate_tokens
-from agent_core.loop.session_state import SessionState, compact_messages
+from agent_core.loop.session_state import SessionState, compact_messages, filter_irrelevant_history
 
 
 __all__ = [
@@ -108,6 +114,18 @@ def build_active_context(
     extra = session.extra_text
     if use_messages:
         current_messages = list(msg_store.get_messages(session_id)) if msg_store else []
+        if HISTORY_RELEVANCE_ENABLED:
+            current_messages, dropped = filter_irrelevant_history(
+                current_messages,
+                user_input,
+                keep_recent=HISTORY_RELEVANCE_KEEP_RECENT,
+                min_overlap=HISTORY_RELEVANCE_MIN_OVERLAP,
+            )
+            if dropped > 0:
+                user_input = (
+                    user_input
+                    + f"\n(Note: {dropped} unrelated earlier turn(s) were omitted to save context.)"
+                )
         current_messages = compact(current_messages, state)
         full_input = user_input + (("\n\n" + extra) if extra else "")
         if not current_messages or not (

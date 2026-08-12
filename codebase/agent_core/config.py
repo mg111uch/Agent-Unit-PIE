@@ -4,10 +4,15 @@ from __future__ import annotations
 
 import json
 import os
+import re
 
 # codebase/ (parent of agent_core/)
 CODEBASE_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 
+# config.md is the single user-facing config file: readable Markdown where each
+# setting is a "### dotted.key = value" heading. config.json beside it is the
+# LEGACY fallback, used only when the markdown file is missing or unparseable.
+CONFIG_MD_PATH = os.path.join(CODEBASE_ROOT, "config.md")
 CONFIG_PATH = os.path.join(CODEBASE_ROOT, "config.json")
 
 JWT_SECRET = os.getenv("JWT_SECRET", "your_jwt_secret")
@@ -16,8 +21,51 @@ CORS_ORIGINS = os.getenv("CORS_ORIGINS", "http://localhost:3000,http://localhost
 WORKSPACE_BASE = os.getenv("AGENT_WORKSPACE_BASE",
     os.path.abspath(os.path.join(CODEBASE_ROOT, "..", "data", "workspaces")))
 
-with open(CONFIG_PATH, "r", encoding="utf-8") as _f:
-    _CONFIG = json.load(_f)
+
+def _read_config_md() -> dict:
+    """Parse config.md: each line ``### dotted.key = <json value>`` becomes a
+    nested dict entry; prose and other Markdown are ignored."""
+    cfg: dict = {}
+    with open(CONFIG_MD_PATH, "r", encoding="utf-8") as _f:
+        for line in _f:
+            m = re.match(r"^### ([a-zA-Z_][\w.]*)\s*=\s*(.+)$", line.strip())
+            if not m:
+                continue
+            key, raw = m.group(1), m.group(2).strip()
+            try:
+                val = json.loads(raw)
+            except ValueError:
+                val = raw
+            node = cfg
+            *parts, leaf = key.split(".")
+            for p in parts:
+                node = node.setdefault(p, {})
+            node[leaf] = val
+    return cfg
+
+
+def _write_config_json(cfg: dict) -> None:
+    """Mirror cfg into the legacy config.json so it never goes stale."""
+    with open(CONFIG_PATH, "w", encoding="utf-8") as _f:
+        json.dump(cfg, _f, indent=2)
+        _f.write("\n")
+
+
+def _load_config_file() -> dict:
+    if os.path.exists(CONFIG_MD_PATH):
+        try:
+            cfg = _read_config_md()
+            if cfg:
+                if cfg.get("generate_config_json"):
+                    _write_config_json(cfg)
+                return cfg
+        except Exception:
+            pass  # fall back to legacy config.json below
+    with open(CONFIG_PATH, "r", encoding="utf-8") as _f:
+        return json.load(_f)
+
+
+_CONFIG = _load_config_file()
 
 PROVIDER_DEFAULTS: dict[str, str] = {
     name: data.get("default_model", list(data.get("models", []))[0] if data.get("models") else name)
@@ -27,7 +75,7 @@ PROVIDER_DEFAULTS: dict[str, str] = {
 CLI_STEP_DELAY = 5.0
 SERVER_STEP_DELAY = 2.0
 
-# Single source of truth for the sandbox allowlist is config.json
+# Single source of truth for the sandbox allowlist is config.md
 # (agent_core/tools/exec_ops.py enforces it at runtime).
 ALLOWED_COMMANDS: list[str] = _CONFIG.get("allowed_commands", [
     "ls", "cat", "mkdir", "cd", "pwd", "python", "python3", "pytest",
@@ -81,6 +129,14 @@ MODEL_REASONING_TOKEN_BUDGET: int = int(_CONFIG.get("model_reasoning_token_budge
 MODEL_TOOL_RESULT_HEADROOM: int = int(_CONFIG.get("model_tool_result_headroom", 2_500))
 MODEL_CONTEXT_WINDOW_TOKENS: int = int(_CONFIG.get("model_context_window_tokens", 131_072))
 
+# Irrelevant-history classification (PlanFixes2): drop completed turns with no
+# meaningful overlap with the current request from the model payload, saving
+# tokens in long chats. Conservative by default: the last completed turn is
+# always kept, and only zero-overlap turns are dropped.
+HISTORY_RELEVANCE_ENABLED: bool = bool(_CONFIG.get("history_relevance", {}).get("enabled", False))
+HISTORY_RELEVANCE_KEEP_RECENT: int = int(_CONFIG.get("history_relevance", {}).get("keep_recent", 1))
+HISTORY_RELEVANCE_MIN_OVERLAP: int = int(_CONFIG.get("history_relevance", {}).get("min_overlap", 1))
+
 
 def compaction_budget_tokens() -> int:
     """Model-visible input budget after reserving output + reasoning + tool
@@ -114,16 +170,17 @@ TOOL_GROUP_ROUTING: bool = bool(_CONFIG.get("tool_group_routing", False))
 # return None and fall through to the normal Gemini path.
 FACTORY_ENABLED: bool = bool(_CONFIG.get("factories_enabled", True))
 
-# Phase 6 — local tool router (tier 2 of the three-tier classifier, after the
+# Phase 6 — tier-2 model router (tier 2 of the three-tier classifier, after the
 # deterministic factory and before the cloud model): when the factory declines
-# an ambiguous request, a small local model (FunctionGemma on Ollama) maps it to
-# one canonical validated action from a fixed vocabulary (planning/local_router.py).
-# Disabled = ambiguous requests go straight to the cloud model.
-LOCAL_ROUTER_ENABLED: bool = bool(_CONFIG.get("local_router", {}).get("enabled", False))
-LOCAL_ROUTER_MODEL: str = str(_CONFIG.get("local_router", {}).get("model", "functiongemma"))
-LOCAL_ROUTER_ENDPOINT: str = str(_CONFIG.get("local_router", {}).get("endpoint", "http://localhost:11434"))
-LOCAL_ROUTER_TIMEOUT: int = int(_CONFIG.get("local_router", {}).get("timeout_s", 10))
-LOCAL_ROUTER_KEEP_ALIVE: str = str(_CONFIG.get("local_router", {}).get("keep_alive", "") or "")
+# an ambiguous request, a small model (config-driven backend: "gemini" /
+# "openrouter" for cloud routing, "ollama" for a local model) maps it to
+# one canonical validated action from a fixed vocabulary
+# (planning/tier2_model_router.py). Disabled = ambiguous requests go straight
+# to the cloud model.
+TIER2_MODEL_ROUTER_ENABLED: bool = bool(_CONFIG.get("tier2_model_router", {}).get("enabled", False))
+TIER2_MODEL_ROUTER_BACKEND: str = str(_CONFIG.get("tier2_model_router", {}).get("backend", "ollama"))
+TIER2_MODEL_ROUTER_MODEL: str = str(_CONFIG.get("tier2_model_router", {}).get("model", "functiongemma"))
+TIER2_MODEL_ROUTER_TIMEOUT: int = int(_CONFIG.get("tier2_model_router", {}).get("timeout_s", 60))
 
 # Max characters of a tool result sent to the model (model-facing context),
 # separate from the larger bound kept for storage/replay (Agent 2).

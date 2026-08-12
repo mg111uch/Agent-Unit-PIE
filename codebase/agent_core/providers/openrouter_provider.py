@@ -187,11 +187,12 @@ def _convert_messages_to_openai(
 
 
 class OpenRouterProvider(BaseLLMProvider):
-    def __init__(self, api_key: str, model: str = "openai/gpt-oss-20b:free"):
+    def __init__(self, api_key: str, model: str = "openai/gpt-oss-20b:free", timeout: float = 600.0):
         from openai import OpenAI
         self.client = OpenAI(
             base_url="https://openrouter.ai/api/v1",
             api_key=api_key,
+            timeout=timeout,
         )
         self.default_model = model
 

@@ -1,31 +1,22 @@
 {
+  "generate_config_json": true,
   "compaction_trigger_tokens": 8000,
   "model_output_token_budget": 1200,
   "model_reasoning_token_budget": 800,
   "model_tool_result_headroom": 2500,
   "model_context_window_tokens": 131072,
+  "model_tool_result_max_chars": 2500,
   "tool_decision_max_tokens": 512,
   "final_answer_max_tokens": 1024,
   "complex_reasoning_max_tokens": 2048,
-  "system_prompt_core_only": false,
-  "context_digest_enabled": true,
   "gemini_chain_restart_tokens": 40000,
-  "direct_final_tools": ["check_path_exists"],
-  "tool_group_routing": true,
-  "factories_enabled": true,
-  "model_tool_result_max_chars": 2500,
-  "tool_nudge_threshold": 20,
+  "context_digest_enabled": true,
   "show_tool_token_usage": true,
-  "gemini_skip_tools_on_chain": true,
-  "gemini_stateless": false,
-  "gemini_implicit_cache": true,
-  "gemini_stateless_cache": false,
-  "gemini_stateless_skip_schemas": false,
-  "gemini_prune_tools_on_chain": true,
-  "openrouter_skip_tools_on_chain": false,
-  "openrouter_prune_tools_on_chain": true,
-  "openrouter_retry_skipped_chain": true,
-
+  "history_relevance": {
+    "enabled": true,
+    "keep_recent": 1,
+    "min_overlap": 1
+  },
   "default_provider": "gemini",
   "default_model": "gemini-3.1-flash-lite",
   "providers": {
@@ -45,15 +36,17 @@
       "default_model": "openai/gpt-oss-20b:free",
       "models": [
         "google/gemma-4-26b-a4b-it:free",
-        "openai/gpt-oss-120b:free",
         "openai/gpt-oss-20b:free",
         "nvidia/nemotron-3-ultra-550b-a55b:free",
         "nvidia/nemotron-3-super-120b-a12b:free",
         "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
         "nvidia/nemotron-3-nano-30b-a3b:free",
+        "nvidia/nemotron-3.5-lightning:free",
+        "nvidia/nemotron-3-embed-1b:free",
         "poolside/laguna-s-2.1:free",
         "poolside/laguna-xs-2.1:free",
         "inclusionai/ling-3.0-flash:free",
+        "inclusionai/ling-3.0-tiny:free",
         "bytedance-seed/seedream-4.5"
       ]
     },
@@ -64,31 +57,26 @@
       ]
     }
   },
-  "rate_limits": {
-    "llm_calls_per_minute": 10,
-    "tool_writes_per_minute": 30
+  "gemini_skip_tools_on_chain": true,
+  "gemini_stateless": false,
+  "gemini_implicit_cache": true,
+  "gemini_stateless_cache": false,
+  "gemini_stateless_skip_schemas": false,
+  "gemini_prune_tools_on_chain": true,
+  "openrouter_skip_tools_on_chain": false,
+  "openrouter_prune_tools_on_chain": true,
+  "openrouter_retry_skipped_chain": true,
+  "factories_enabled": false,
+  "direct_final_tools": [
+    "check_path_exists"
+  ],
+  "tool_group_routing": true,
+  "tier2_model_router": {
+    "enabled": true,
+    "backend": "openrouter",
+    "model": "inclusionai/ling-3.0-tiny:free",
+    "timeout_s": 60
   },
-
-  
-  "enable_checkpoints": true,
-  "max_checkpoints": 50,
-  "agents_md_enabled": true,
-  "sandbox_enabled": false,
-  "post_edit_import_check": true,
-  "codebase_atlas_dir": "../atlas_output",
-  "debug_dump_append_mode": true,
-  "debug_dump_enabled": true,
-
-  "exclude_dirs": [
-    ".git",
-    ".agent_checkpoints",
-    ".pytest_cache",
-    ".adk",
-    "node_modules",
-    "__pycache__",
-    ".venv",
-    "children"
-  ], 
   "allowed_commands": [
     "ls",
     "cat",
@@ -98,17 +86,7 @@
     "python",
     "python3",
     "pytest"
-  ], 
-  "secrets_patterns": [
-    "sk-[A-Za-z0-9]{15,}",
-    "gh[pousrx]_[A-Za-z0-9]{15,}",
-    "xox[bpsa]-[A-Za-z0-9]{10,}",
-    "AKIA[0-9A-Z]{16}",
-    "-----BEGIN (RSA |EC |OPENSSH )PRIVATE KEY-----"
   ],
-
-  "git_tools_enabled": false,
-  "subagent_task_enabled": false,
   "tool_mode": "all",
   "tool_packs": {
     "file": true,
@@ -120,29 +98,39 @@
     "code_rag": false,
     "chain": false
   },
-
-  "local_model": {
-    "enabled": false,
-    "provider": "ollama",
-    "model": "gemma-2-2b-it",
-    "endpoint": "http://localhost:11434",
-    "local_categories": [
-      "file",
-      "meta"
-    ],
-    "fallback_to_cloud": true,
-    "max_local_steps": 3,
-    "timeout_seconds": 30
+  "git_tools_enabled": false,
+  "subagent_task_enabled": false,
+  "post_edit_import_check": true,
+  "tool_nudge_threshold": 20,
+  "enable_checkpoints": true,
+  "max_checkpoints": 50,
+  "agents_md_enabled": true,
+  "sandbox_enabled": false,
+  "exclude_dirs": [
+    ".git",
+    ".agent_checkpoints",
+    ".pytest_cache",
+    ".adk",
+    "node_modules",
+    "__pycache__",
+    ".venv",
+    "children"
+  ],
+  "secrets_patterns": [
+    "sk-[A-Za-z0-9]{15,}",
+    "gh[pousrx]_[A-Za-z0-9]{15,}",
+    "xox[bpsa]-[A-Za-z0-9]{10,}",
+    "AKIA[0-9A-Z]{16}",
+    "-----BEGIN (RSA |EC |OPENSSH )PRIVATE KEY-----"
+  ],
+  "debug_dump_enabled": true,
+  "debug_dump_append_mode": true,
+  "codebase_atlas_dir": "../atlas_output",
+  "rate_limits": {
+    "llm_calls_per_minute": 10,
+    "tool_writes_per_minute": 30
   },
-
-  "local_router": {
-    "enabled": false,
-    "model": "funcGemma",
-    "endpoint": "http://localhost:11434",
-    "timeout_s": 20,
-    "keep_alive": "1h"
-  },
-  
+  "system_prompt_core_only": false,
   "workflow_learn": {
     "enabled": true,
     "min_occurrences": 2,

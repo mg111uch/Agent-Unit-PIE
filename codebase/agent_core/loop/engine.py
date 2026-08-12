@@ -44,16 +44,16 @@ from agent_core.loop.stepper import StepState, dispatch_step
 
 _schema_dumped = False
 
-_local_router_cache: Any = None
+_tier2_router_cache: Any = None
 
 
-def _get_local_router() -> Any:
-    """Lazily-built local router singleton (tier-2 classifier); None when disabled."""
-    global _local_router_cache
-    if _local_router_cache is None:
-        from agent_core.planning.local_router import build_local_router
-        _local_router_cache = build_local_router() or False
-    return _local_router_cache or None
+def _get_tier2_router() -> Any:
+    """Lazily-built tier-2 model router singleton; None when disabled."""
+    global _tier2_router_cache
+    if _tier2_router_cache is None:
+        from agent_core.planning.tier2_model_router import build_tier2_model_router
+        _tier2_router_cache = build_tier2_model_router() or False
+    return _tier2_router_cache or None
 
 
 def _name_of(schema: dict) -> str:
@@ -97,7 +97,6 @@ def iter_agent_events(
     tools_override: Optional[dict] = None,
     tool_categories: Optional[List[str]] = None,
     session_state: Optional[SessionState] = None,
-    local_planner: Any = None,
 ) -> Generator[dict[str, Any], None, None]:
     context_info = ""
     if retrieve_context:
@@ -144,7 +143,6 @@ def iter_agent_events(
             session_id=session_id,
             cancel_event=cancel_event,
             tool_categories=tool_categories,
-            local_planner=local_planner,
             state=state,
             use_messages=use_messages,
             _tools=_tools,
@@ -186,7 +184,6 @@ def _iter_agent_events_body(
     session_id: Optional[str],
     cancel_event: Optional[threading.Event],
     tool_categories: Optional[List[str]],
-    local_planner: Any,
     state: SessionState,
     use_messages: bool,
     _tools: dict,
@@ -285,8 +282,8 @@ def _iter_agent_events_body(
                 # Tier 2 (Phase 6): the local router maps an AMBIGUOUS request to
                 # one canonical validated action when a small local model is
                 # configured, keeping the cloud call for reasoning-only tasks.
-                if factory_action is None and _get_local_router() is not None:
-                    factory_action = _get_local_router().route(user_input)
+                if factory_action is None and _get_tier2_router() is not None:
+                    factory_action = _get_tier2_router().route(user_input)
             else:
                 factory_action = None
 
@@ -377,40 +374,24 @@ def _iter_agent_events_body(
             }
 
             yield {"type": "llm_call", "status": "start", "step": step}
-            _local_step = False
-            if local_planner and local_planner.should_route_local(
-                step, step_state.tool_call_history,
-                step_state.current_input if not use_messages else "",
-            ):
-                _local_result = local_planner.generate_local(
-                    messages=step_state.current_messages if use_messages else None,
-                    system_prompt=system_prompt,
-                    cancel_event=cancel_event,
-                )
-                if _local_result and not _local_result.get("error"):
-                    result = _local_result
-                    _local_step = True
-                else:
-                    result = None
-            if not _local_step:
-                global _schema_dumped
-                if not _schema_dumped:
-                    _schema_dumped = True
-                    _debug_dump("TOOL SCHEMAS", schemas=tool_catalog)
-                gen_kwargs = dict(
-                    orchestrator=orchestrator, cancel_event=cancel_event,
-                    system_prompt=system_prompt, provider=provider, model=model,
-                    conversation_id=conv_id, tools=tool_catalog,
-                    max_tokens=_step_max_tokens(step_state.current_messages),
-                )
-                if session_id:
-                    gen_kwargs["metadata"] = {"session_id": session_id}
-                if use_messages:
-                    gen_kwargs["prompt"] = ""
-                    gen_kwargs["messages"] = step_state.current_messages
-                else:
-                    gen_kwargs["prompt"] = step_state.current_input
-                result = _generate_with_cancel(**gen_kwargs)
+            global _schema_dumped
+            if not _schema_dumped:
+                _schema_dumped = True
+                _debug_dump("TOOL SCHEMAS", schemas=tool_catalog)
+            gen_kwargs = dict(
+                orchestrator=orchestrator, cancel_event=cancel_event,
+                system_prompt=system_prompt, provider=provider, model=model,
+                conversation_id=conv_id, tools=tool_catalog,
+                max_tokens=_step_max_tokens(step_state.current_messages),
+            )
+            if session_id:
+                gen_kwargs["metadata"] = {"session_id": session_id}
+            if use_messages:
+                gen_kwargs["prompt"] = ""
+                gen_kwargs["messages"] = step_state.current_messages
+            else:
+                gen_kwargs["prompt"] = step_state.current_input
+            result = _generate_with_cancel(**gen_kwargs)
             if result is None:
                 yield {
                     "type": "final",
@@ -472,11 +453,9 @@ def _iter_agent_events_body(
                 cancel_event=cancel_event,
                 tools=_tools,
                 active_tool_names=active_tool_names,
-                local_planner=local_planner,
                 state=state,
                 use_messages=use_messages,
                 conv_id=conv_id,
-                local_step=_local_step,
                 reply=reply,
                 nudge_threshold=TOOL_NUDGE_THRESHOLD,
                 step_usage=step_usage,

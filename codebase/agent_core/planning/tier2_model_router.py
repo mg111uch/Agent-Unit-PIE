@@ -1,17 +1,19 @@
-"""Phase 6 — local tool router (PlanRecommend3 three-tier, tier 2).
+"""Phase 6 — tier-2 model router (three-tier classifier, tier 2).
 
 Tier 1 is the deterministic factory (`tool_groups.try_factory`). When it
-declines (ambiguous request) tier 2 asks a tiny local model — FunctionGemma
-or similar on Ollama — to map the plain-language request to ONE canonical
-action, using a fixed action-ID vocabulary (PlanRecommend3 §5/§6) so the
-output is tiny and the cloud model never sees tool schemas.
+declines (ambiguous request) tier 2 asks a small model — a cloud routing model
+("gemini" / "openrouter" backend) or a local FunctionGemma-style model on Ollama
+("ollama" backend) — to map the plain-language request to ONE canonical action,
+using a fixed action-ID vocabulary so the output is tiny and the tier-3 cloud
+reasoning model never sees tool schemas.
 
-Validator/policy before execution (PlanRecommend3 §7): unknown tool IDs are
-rejected, `execute_command` is allowlist-checked, payloads are capped. Any
-failure returns None → tier 3 (cloud Gemini) recovery.
+Validator/policy before execution: unknown tool IDs are rejected,
+`execute_command` is allowlist-checked, payloads are capped. Any failure
+returns None → tier 3 (cloud Gemini) recovery.
 
-Backend is pluggable: `OllamaProvider` for live, a deterministic stub for the
-offline benchmark (proves wiring with 0 cloud calls, no local model needed).
+Backend is pluggable and config-driven (`tier2_model_router.backend`):
+"gemini" / "openrouter" use a small cloud routing model, "ollama" keeps the
+local model path, and a deterministic stub covers the offline benchmark.
 """
 
 from __future__ import annotations
@@ -22,7 +24,7 @@ from typing import Any, Callable, Optional
 
 from agent_core.config import ALLOWED_COMMANDS
 
-# Fixed action-ID vocabulary (tiny local output). id -> (tool name, arg keys,
+# Fixed action-ID vocabulary (tiny router output). id -> (tool name, arg keys,
 # human-readable summary for the function schema).
 ACTION_IDS: dict[int, tuple[str, tuple[str, ...], str]] = {
     1: ("Read", ("path",), "Read the contents of a file at path"),
@@ -63,9 +65,8 @@ def _action_schema(i: int) -> dict:
     }
 
 
-# Tool schemas sent to the local model: one function per fixed action. The model
-# answers with a native tool call (Ollama parses FunctionGemma's format server
-# side); a text-JSON reply is the fallback for non-tool models.
+# Tool schemas sent to the router model: one function per fixed action. The
+# model answers with a native tool call; a text-JSON reply is the fallback.
 TOOL_SCHEMAS: list[dict] = [_action_schema(i) for i in ACTION_IDS]
 
 _ROUTER_PROMPT = (
@@ -108,8 +109,8 @@ def _parse_action(text: str) -> Optional[dict]:
     return {"id": tool_id, "args": data.get("args") if isinstance(data.get("args"), dict) else {}}
 
 
-class LocalRouter:
-    """Maps an ambiguous request to a validated tool action via a local model."""
+class Tier2ModelRouter:
+    """Maps an ambiguous request to a validated tool action via a router model."""
 
     def __init__(
         self,
@@ -179,27 +180,45 @@ class LocalRouter:
         return {"name": name, "input": args}
 
 
-def build_local_router() -> Optional[LocalRouter]:
-    """Wire the router from config (LOCAL_ROUTER_ENABLED); None when disabled."""
+def build_tier2_model_router() -> Optional[Tier2ModelRouter]:
+    """Wire the router from config (TIER2_MODEL_ROUTER_ENABLED); None when disabled.
+
+    Backend is config-driven (`tier2_model_router.backend`): "gemini" /
+    "openrouter" use a small cloud routing model, "ollama" keeps the local
+    model path. Any construction failure returns None so tier-3 (cloud Gemini)
+    recovers.
+    """
+    import os
     import agent_core.config as cfg
-    if not cfg.LOCAL_ROUTER_ENABLED:
+    if not cfg.TIER2_MODEL_ROUTER_ENABLED:
         return None
+    backend = (cfg.TIER2_MODEL_ROUTER_BACKEND or "ollama").lower()
+    model = cfg.TIER2_MODEL_ROUTER_MODEL
+    timeout_s = cfg.TIER2_MODEL_ROUTER_TIMEOUT
     try:
-        from agent_core.providers.ollama_provider import OllamaProvider
-        return LocalRouter(
-            OllamaProvider(
-                model=cfg.LOCAL_ROUTER_MODEL,
-                endpoint=cfg.LOCAL_ROUTER_ENDPOINT,
-                timeout=cfg.LOCAL_ROUTER_TIMEOUT,
-                keep_alive=getattr(cfg, "LOCAL_ROUTER_KEEP_ALIVE", None) or None,
-            ),
-            enabled=True,
-        )
+        if backend == "gemini":
+            from agent_core.providers.gemini_provider import GeminiProvider
+            provider = GeminiProvider(
+                api_key=os.getenv("GEMINI_API_KEY", ""),
+                model=model,
+                timeout_ms=int(timeout_s * 1000),
+            )
+        elif backend == "openrouter":
+            from agent_core.providers.openrouter_provider import OpenRouterProvider
+            provider = OpenRouterProvider(
+                api_key=os.getenv("OPENROUTER_API_KEY", ""),
+                model=model,
+                timeout=timeout_s,
+            )
+        else:
+            from agent_core.providers.ollama_provider import OllamaProvider
+            provider = OllamaProvider(model=model, timeout=timeout_s)
+        return Tier2ModelRouter(provider, enabled=True)
     except Exception:
         return None
 
 
-def deterministic_router(labels: dict[str, str]) -> LocalRouter:
+def deterministic_router(labels: dict[str, str]) -> Tier2ModelRouter:
     """Benchmark/testing stub: canned JSON per prompt substring, provider-like."""
     class _Stub:
         def __init__(self, mapping):
@@ -211,13 +230,13 @@ def deterministic_router(labels: dict[str, str]) -> LocalRouter:
                 if key in prompt:
                     return {"response": resp}
             return {"response": '{"tool": 0}'}
-    return LocalRouter(_Stub(labels), enabled=True)
+    return Tier2ModelRouter(_Stub(labels), enabled=True)
 
 
 if __name__ == "__main__":
-    # Smoke test — run with: python -m agent_core.planning.local_router
+    # Smoke test — run with: python -m agent_core.planning.tier2_model_router
     class _ToolStub:
-        """Provider-like stub that answers with a native Ollama tool_call."""
+        """Provider-like stub that answers with a native tool_call."""
 
         def __init__(self, mapping):
             self._mapping = mapping
@@ -238,10 +257,10 @@ if __name__ == "__main__":
     assert r.route("run pytest") == {"name": "execute_command", "input": {"command": "pytest"}}
     assert r.route("rm things") is None      # policy blocks non-allowlisted exec
     assert r.route("blah blah") is None      # unknown action id -> None
-    assert LocalRouter(None).route(" x ") is None  # disabled/empty handling
+    assert Tier2ModelRouter(None).route(" x ") is None  # disabled/empty handling
 
-    # Native tool_call path (Ollama FunctionGemma): act_5 -> execute_command.
-    t = LocalRouter(_ToolStub([
+    # Native tool_call path: act_5 -> execute_command.
+    t = Tier2ModelRouter(_ToolStub([
         ("run tests", "act_5", {"command": "pytest"}),
         ("delete everything", "act_5", {"command": "rm -rf /"}),
     ]), enabled=True)
@@ -250,4 +269,4 @@ if __name__ == "__main__":
     assert t.route("nonsense") is None           # no matching stub -> {"tool": 0}
 
     assert _FN_TO_ID["act_3"] == 3 and len(TOOL_SCHEMAS) == len(ACTION_IDS)
-    print("local_router smoke OK")
+    print("tier2_model_router smoke OK")

@@ -34,7 +34,6 @@ from agent_core.config import (
     SYSTEM_PROMPT_CORE_ONLY,
     RATE_LIMIT_LLM_CALLS,
     RATE_LIMIT_TOOL_WRITES,
-    load_config,
 )
 from agent_core.secrets_redactor import redact
 from agent_core.rate_limiter import RateLimiter
@@ -54,7 +53,6 @@ from agent_core.providers_setup import build_orchestrator, switch_active
 from agent_core.loop import iter_agent_events as _iter_agent_events_base
 from agent_core.auto_research import run_auto_research
 from agent_core.message_store import MessageStore
-from agent_core.planning.local_planner import LocalPlanner
 
 if DEBUG_DUMP_ENABLED:
     open(os.path.join(CODEBASE_ROOT, "tui_output.txt"), "w").close()
@@ -130,21 +128,8 @@ def get_or_create_session(user_key: str) -> str:
 def reset_session(user_key: str) -> None:
     user_sessions.pop(user_key, None)
 
-local_planner = None
-_local_cfg = load_config().get("local_model", {})
-if _local_cfg.get("enabled"):
-    from agent_core.providers.ollama_provider import OllamaProvider
-    _ollama = OllamaProvider(
-        model=_local_cfg.get("model", "gemma-2-2b-it"),
-        endpoint=_local_cfg.get("endpoint", "http://localhost:11434"),
-        timeout=_local_cfg.get("timeout_seconds", 30),
-    )
-    local_planner = LocalPlanner(_ollama, _local_cfg)
-    log_output(f"[Server] Local model enabled: {_local_cfg.get('model')} @ {_local_cfg.get('endpoint')}")
 
-def iter_agent_events(*args, **kwargs):
-    kwargs.setdefault("local_planner", local_planner)
-    return _iter_agent_events_base(*args, **kwargs)
+iter_agent_events = _iter_agent_events_base
 
 app = FastAPI(title="Agentic Unit PIE Server")
 app.add_middleware(

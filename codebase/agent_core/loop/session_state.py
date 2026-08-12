@@ -361,3 +361,140 @@ def _parse_todo(arguments: Any) -> Optional[list[str]]:
     if isinstance(items, list):
         return [str(i) for i in items]
     return None
+
+
+# Irrelevant-history filter (FixesIssues.md): drop completed turns with no
+# overlap against the current request to save model-visible tokens in long
+# chats. Conservative: current turn + newest keep_recent turns always survive.
+_HISTORY_STOPLIST = frozenset(
+    "a an the and or if then else for in on of to with is are was were be been "
+    "it this that these those i you we they me us my your our their at by from "
+    "as do does did not no yes can could will would should have has had what "
+    "which who when where why how up down about there here than into over so "
+    "just but".split()
+)
+
+
+def _significant_tokens(text: str) -> set[str]:
+    """Words minus the stoplist plus path/file-like tokens (e.g. `fib.py`)."""
+    sig: set[str] = set()
+    for tok in re.findall(r"[\w./-]+", text):
+        low = tok.lower()
+        if len(tok) < 2 or low in _HISTORY_STOPLIST or low.isdigit():
+            continue
+        sig.add(low)
+    return sig
+
+
+def _turn_text(messages: list[dict]) -> str:
+    """Searchable text of a turn: user content + serialized tool_calls +
+    path-like tokens scraped from (truncated) tool results."""
+    parts: list[str] = []
+    for m in messages:
+        c = m.get("content")
+        if isinstance(c, str):
+            parts.append(c)
+        tc = m.get("tool_calls")
+        if tc:
+            parts.append(json.dumps(tc, sort_keys=True))
+        tr = m.get("tool_results")
+        if tr:
+            for r in tr:
+                head = str(r.get("result", ""))[:300]
+                parts.extend(re.findall(r"[\w./-]+\.\w+", head))
+    return "\n".join(parts)
+
+
+def filter_irrelevant_history(
+    messages: list[dict],
+    current_input: str,
+    keep_recent: int = 1,
+    min_overlap: int = 1,
+) -> tuple[list[dict], int]:
+    """Drop completed turns with no meaningful overlap with the current
+    request from the returned payload (storage is never mutated).
+
+    The current turn (from the last user message onward) and the newest
+    `keep_recent` completed turns are kept unconditionally; older completed
+    turns survive only when >= `min_overlap` significant tokens of
+    `current_input` appear in the turn's text. Returns (filtered, dropped).
+    """
+    if not messages or not current_input.strip():
+        return list(messages), 0
+
+    n_recent = max(0, int(keep_recent))
+    turns: list[list[dict]] = []
+    cur: list[dict] = []
+    for m in messages:
+        if m.get("role") == "user" and cur:
+            turns.append(cur)
+            cur = []
+        cur.append(m)
+    if cur:
+        turns.append(cur)
+    if len(turns) <= 1 + n_recent:
+        return list(messages), 0
+
+    signals = _significant_tokens(current_input)
+    if not signals:
+        return list(messages), 0
+
+    completed = turns[:-1]
+    older = completed[:-n_recent] if n_recent else completed
+    recent = completed[-n_recent:] if n_recent else []
+
+    kept: list[list[dict]] = []
+    dropped = 0
+    for turn in older:
+        text = _turn_text(turn).lower()
+        overlap = sum(1 for sig in signals if sig in text)
+        if overlap >= min_overlap:
+            kept.append(turn)
+        else:
+            dropped += 1
+
+    out: list[dict] = []
+    for turn in kept + recent + turns[-1:]:
+        out.extend(dict(m) for m in turn)
+    return out, dropped
+
+
+if __name__ == "__main__":
+    # Smoke test — run with: python -m agent_core.loop.session_state
+    t_read = {"role": "tool", "tool_results": [{"tool": "Read", "result": "def add(a,b): ..."}]}
+    cur = [
+        {"role": "user", "content": "read fib.py"},
+        {"role": "assistant", "content": "", "tool_calls": [{"name": "Read", "arguments": {"path": "fib.py"}}]},
+        t_read,
+    ]
+    postgres = [
+        {"role": "user", "content": "install postgres server"},
+        {"role": "assistant", "content": "postgres installed."},
+    ]
+    listing = [
+        {"role": "user", "content": "list files in /tmp"},
+        {"role": "assistant", "content": "done."},
+    ]
+
+    # 1. Unrelated older turn dropped; recency guard + current turn kept.
+    msgs = postgres + listing + cur
+    out, dropped = filter_irrelevant_history(msgs, "sum fib.py by size")
+    assert dropped == 1 and len(out) == len(msgs) - 2
+    assert out[0]["role"] == "user" and "list files" in out[0]["content"]  # recency guard
+    assert out[-1]["role"] == "tool" and out[-1]["tool_results"][0]["tool"] == "Read"  # current intact
+
+    # 2. keep_recent=2 covers all completed turns -> no drops.
+    out2, dropped2 = filter_irrelevant_history(msgs, "sum fib.py by size", keep_recent=2)
+    assert dropped2 == 0
+
+    # 3. Substring/path overlap retains an otherwise-old turn.
+    msgs3 = [{"role": "user", "content": "open fib.py contents"},
+             {"role": "assistant", "content": "opened."}] + postgres + cur
+    out3, dropped3 = filter_irrelevant_history(msgs3, "sum the fib.py file", keep_recent=0)
+    assert dropped3 == 1 and out3[0]["content"] == "open fib.py contents"
+
+    # 4. Stoplist-only input and empty history pass through unchanged.
+    out4, dropped4 = filter_irrelevant_history(msgs, "the and of")
+    assert dropped4 == 0 and out4 == msgs
+    assert filter_irrelevant_history([], "anything") == ([], 0)
+    print("session_state history_relevance smoke OK")

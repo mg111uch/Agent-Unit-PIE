@@ -98,7 +98,7 @@ def undo_last_edit(file_path: str | None = None) -> str:
     input_data = {"path": "optional/path"} — if omitted, returns latest checkpoint info.
     """
     if not ENABLE_CHECKPOINTS:
-        return "Checkpoints are disabled. Set enable_checkpoints: true in config.json."
+        return "Checkpoints are disabled. Set enable_checkpoints: true in config.md."
 
     index = _load_index()
     if not index:
