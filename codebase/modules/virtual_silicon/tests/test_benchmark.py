@@ -1,12 +1,12 @@
-from vse.core import Simulator
-from vse.compute import ComputeArray, ComputeConfig
-from vse.memory import Memory, MemoryConfig
-from vse.benchmark import (
+from vse.core.core import Simulator
+from vse.core.compute import ComputeArray, ComputeConfig
+from vse.core.memory import Memory, MemoryConfig
+from vse.benchmark.benchmark import (
     Benchmark,
     analyze_target,
     batch_decode_analysis,
 )
-from vse.transformer import (
+from vse.models.transformer import (
     TransformerConfig,
     TransformerModel,
 )

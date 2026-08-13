@@ -4,7 +4,7 @@ _Last verified: 2026-08-02_
 > For a user-facing feature overview, see `README.md`.
 
 ## Current Capability
-- Local model routing: FunctionGemma/Ollama handles simple file+meta tool calls, falls back to cloud — `agent_core/planning/local_planner.py:should_route_local()`, `agent_core/loop/engine.py:iter_agent_events()`
+- Local model routing: FunctionGemma/Ollama handles simple file+meta tool calls, falls back to cloud — `agent_core/planning/tier2_model_router.py:route()`, `agent_core/loop/engine.py:iter_agent_events()`
 - Ollama provider compatible with LLMProvider protocol for local inference — `agent_core/providers/ollama_provider.py:generate()`
 - Config-driven local model on/off via `local_model.enabled` in config.json — `agent_core/config.py:load_config()`
 - Agent loop with multi-tool turns, streaming, cancel support — `agent_core/loop/engine.py:iter_agent_events()`
@@ -34,7 +34,7 @@ _Last verified: 2026-08-02_
 - Tool chains: `chain_spec.py`/`chain_engine.py` run composite tools (probe_module, orient_symbols, doc_audit, safe_edit) with $input/$step binding + budget caps — `agent_core/tools/chain/chain_engine.py`
 - MCP exposure policy: CAT_META always, CAT_FILE never, other tool packs only when enabled in config — `agent_core/mcp_server.py:_exposed_categories()`
 - `subagent_task` moved to CAT_FILE, gated by `subagent_task_enabled` config flag (default off) — `agent_core/tools/__init__.py:_register_file_tools()`, `agent_core/config.py:SUBAGENT_TASK_ENABLED`
-- Local model routing: LocalPlanner + OllamaProvider for per-step delegation of file/meta tools to FunctionGemma, with config.json on/off toggle — `agent_core/planning/local_planner.py:should_route_local()`
+- Local model routing: Tier2ModelRouter + OllamaProvider for per-step delegation of file/meta tools to FunctionGemma, with config.json on/off toggle — `agent_core/planning/tier2_model_router.py:route()`
 - Efficiency P1-2: trimmed prompts (removed input-format table, trimmed tool list to behavior rules), added few-shot batching example, updated rule 6 for diff-as-verification — `agent_core/prompts.py:load_system_prompt()`
 - Efficiency P0-1/P0-2/P1-1: SessionState, compaction, diff-based edit verification — `agent_core/loop/session_state.py:compact_messages()`
 - LOW: deleted dead `_collect_blast_radius`; hoisted `_add_section` out of closure; collapsed raw/invalid_tool bookkeeping; added `LLMProvider` Protocol with `supports_stateful` — `agent_core/tools/context_dump.py:minimal_context_dump()`

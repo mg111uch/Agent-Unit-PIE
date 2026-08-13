@@ -29,7 +29,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Callable, Optional
 
-from .core import HardwareComponent, Simulator
+from vse.core.core import HardwareComponent, Simulator
 
 
 # ---------------------------------------------------------------------------

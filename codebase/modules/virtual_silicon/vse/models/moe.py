@@ -23,9 +23,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Optional
 
-from .compute import ComputeArray
-from .memory import Memory
-from .ops import OpCost, combine_costs, linear_cost
+from vse.core.compute import ComputeArray
+from vse.core.memory import Memory
+from vse.models.ops import OpCost, combine_costs, linear_cost
 
 
 # ---------------------------------------------------------------------------
@@ -513,7 +513,7 @@ class MoE:
             return OpCost(
                 name=f"expert_{expert_id}",
                 op_type=__import__(
-                    "vse.ops",
+                    "vse.models.ops",
                     fromlist=["OpType"],
                 ).OpType.CUSTOM,
             )
@@ -552,7 +552,7 @@ class MoE:
         return OpCost(
             name=f"expert_{expert_id}",
             op_type=__import__(
-                "vse.ops",
+                "vse.models.ops",
                 fromlist=["OpType"],
             ).OpType.CUSTOM,
             macs=macs,
@@ -623,7 +623,7 @@ class MoE:
         routing_cost = OpCost(
             name="moe_router",
             op_type=__import__(
-                "vse.ops",
+                "vse.models.ops",
                 fromlist=["OpType"],
             ).OpType.CUSTOM,
             macs=routing_macs,

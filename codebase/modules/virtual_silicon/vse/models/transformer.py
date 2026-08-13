@@ -26,9 +26,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Optional
 
-from .compute import ComputeArray
-from .memory import Memory
-from .ops import (
+from vse.core.compute import ComputeArray
+from vse.core.memory import Memory
+from vse.models.ops import (
     OpCost,
     attention_cost,
     combine_costs,
@@ -547,7 +547,7 @@ class TransformerLayer:
                 "return",
                 object,
             ) and __import__(
-                "vse.ops",
+                "vse.models.ops",
                 fromlist=["OpType"],
             ).OpType.ATTENTION,
             macs=attention_score_macs,
@@ -614,7 +614,7 @@ class TransformerLayer:
         value_cost = OpCost(
             name="decode_attention_value",
             op_type=__import__(
-                "vse.ops",
+                "vse.models.ops",
                 fromlist=["OpType"],
             ).OpType.ATTENTION,
             macs=attention_value_macs,

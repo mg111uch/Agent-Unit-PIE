@@ -24,10 +24,10 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Optional
 
-from .compute import ComputeArray
-from .memory import Memory
-from .moe import MoE, MoECost
-from .transformer import (
+from vse.core.compute import ComputeArray
+from vse.core.memory import Memory
+from vse.models.moe import MoE, MoECost
+from vse.models.transformer import (
     TransformerModel,
     TransformerWorkloadCost,
 )

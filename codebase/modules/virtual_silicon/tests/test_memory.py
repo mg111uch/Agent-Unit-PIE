@@ -1,5 +1,5 @@
-from vse.core import Simulator
-from vse.memory import Memory, MemoryConfig
+from vse.core.core import Simulator
+from vse.core.memory import Memory, MemoryConfig
 
 def make_memory(sim):
     return Memory(

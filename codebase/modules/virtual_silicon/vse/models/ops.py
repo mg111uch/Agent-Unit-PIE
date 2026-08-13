@@ -29,8 +29,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import Enum
 
-from .compute import ComputeArray
-from .memory import Memory
+from vse.core.compute import ComputeArray
+from vse.core.memory import Memory
 
 
 # ---------------------------------------------------------------------------

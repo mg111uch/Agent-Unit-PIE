@@ -1,7 +1,7 @@
-from vse.core import Simulator
-from vse.compute import ComputeArray, ComputeConfig
-from vse.memory import Memory, MemoryConfig
-from vse.moe import MoE, MoEConfig
+from vse.core.core import Simulator
+from vse.core.compute import ComputeArray, ComputeConfig
+from vse.core.memory import Memory, MemoryConfig
+from vse.models.moe import MoE, MoEConfig
 
 
 def make_moe():

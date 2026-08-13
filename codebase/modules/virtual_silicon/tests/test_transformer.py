@@ -1,7 +1,7 @@
-from vse.core import Simulator
-from vse.compute import ComputeArray, ComputeConfig
-from vse.memory import Memory, MemoryConfig
-from vse.transformer import (
+from vse.core.core import Simulator
+from vse.core.compute import ComputeArray, ComputeConfig
+from vse.core.memory import Memory, MemoryConfig
+from vse.models.transformer import (
     KVCache,
     TransformerConfig,
     TransformerLayer,

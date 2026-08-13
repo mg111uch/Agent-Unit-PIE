@@ -1,4 +1,4 @@
-from vse.core import Simulator, PipelineStage
+from vse.core.core import Simulator, PipelineStage
 
 def test_event_timing():
     sim = Simulator(frequency_hz=1e9)

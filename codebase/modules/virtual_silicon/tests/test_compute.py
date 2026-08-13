@@ -1,5 +1,5 @@
-from vse.core import Simulator
-from vse.compute import ComputeArray, ComputeConfig
+from vse.core.core import Simulator
+from vse.core.compute import ComputeArray, ComputeConfig
 
 
 def make_compute(sim):
@@ -60,8 +60,8 @@ def test_peak_throughput():
     )
 
     # 4096 × 2 MACs/cycle × 2 GHz × 2 operations/MAC
-    # = 32 TOPS.
-    assert compute.peak_tops == 32.0
+    # = 32.768 TOPS.
+    assert compute.peak_tops == 32.768
 
 
 def test_report():
@@ -82,7 +82,7 @@ def test_int4_factory():
     sim = Simulator()
 
     compute = __import__(
-        "vse.compute",
+        "vse.core.compute",
         fromlist=["make_int4_array"],
     ).make_int4_array(
         sim,

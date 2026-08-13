@@ -23,7 +23,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Callable, Optional
 
-from .core import HardwareComponent, Simulator
+from vse.core.core import HardwareComponent, Simulator
 
 
 # ---------------------------------------------------------------------------
@@ -161,12 +161,6 @@ class ComputeArray(HardwareComponent):
 
         self._next_operation_id = 0
         self._outstanding: dict[int, ComputeOperation] = {}
-
-        # Maximum MAC throughput per cycle.
-        self.macs_per_cycle = (
-            self.config.num_pes
-            * self.config.macs_per_pe_per_cycle
-        )
 
     # ------------------------------------------------------------------
     # Properties
