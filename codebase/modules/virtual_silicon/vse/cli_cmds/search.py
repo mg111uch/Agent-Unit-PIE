@@ -1,8 +1,8 @@
 """
 VSE - Virtual Silicon Engine
-vse/cli_search.py
+vse/cli_cmds/search.py
 
-Phase 6: `search` subcommand — explore a design space of candidate chips
+`search` subcommand — explore a design space of candidate chips
 for a fixed model, rank by tokens/sec, and report the Pareto frontier.
 
 Kept separate from `vse/cli.py` to stay within the 500-line file limit.

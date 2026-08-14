@@ -1,6 +1,6 @@
 """
 VSE - Virtual Silicon Engine
-vse/cli_args.py
+vse/cli_cmds/args.py
 
 Shared command-line hardware-argument declarations used by the main
 CLI entry points. Kept separate from cli.py to stay under the file

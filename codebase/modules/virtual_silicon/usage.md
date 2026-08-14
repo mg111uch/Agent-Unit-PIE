@@ -159,10 +159,10 @@ Target           : 1,000,000 tok/s
 Reached          : no
 ```
 
-Interpretation (Phase 3):
+Interpretation:
 
 - The MoE layer is now **memory-bound** (`Memory 89.82%`, `Compute 11.23%`).
-- Phase 3 adds **expert weight traffic**: with 64 experts × 1 token each, all
+- **Expert weight traffic**: with 64 experts × 1 token each, all
   5.25 GiB of expert weights stream from HBM (256 B/cycle) because they do not
   fit on-chip (`Weights: streamed (HBM)`).
 - Streaming dominates: ~24.5M cycles vs the ~2.75M cycles compute alone would
@@ -220,7 +220,7 @@ so the decode speeds up ~11%. This is why a large on-chip SRAM matters for
 long-context inference: the KV-cache grows with sequence length and must stay
 on-chip to avoid HBM-bound decode.
 
-### 2.2d Network-on-Chip (Phase 4a/4b)
+### 2.2d Network-on-Chip
 
 The MoE layer can route token activations and expert results across an
 interconnect (`--noc-nodes > 1`): `router → NoC → expert → NoC → combine`.
@@ -295,7 +295,7 @@ charging latency for the farthest destination.
 | `--noc-bw` | `256` | NoC link bandwidth bytes/cycle |
 | `--noc-hop-cycles` | `4` | NoC pipeline latency per hop |
 | `--noc-broadcast` | — | Broadcast tokens to all NoC nodes instead of per-expert sends |
-| `--compile` | — | Compile the model into a fixed graph (Phase 5) |
+| `--compile` | — | Compile the model into a fixed graph |
 | `--weight-bits` | model | Compiled weight precision in bits |
 | `--activation-bits` | model | Compiled activation precision in bits |
 | `--kv-bits` | model | Compiled KV-cache precision in bits |
@@ -307,12 +307,12 @@ charging latency for the farthest destination.
 
 ### 2.4 Parallel execution and `--trace`
 
-Phase 2 replaces the list scheduler with a parallel cycle engine
-(`vse/core/engine.py`). Tasks with explicit `units` run concurrently on
-different PE slices. MoE experts are split across the array, so the
-per-cycle trace shows the array ramping up and draining down. With
-Phase 3 weight streaming, experts start computing as their first weight
-chunks arrive, so the ramp happens in chunked steps:
+The parallel cycle engine (`vse/core/engine.py`) replaces the list
+scheduler. Tasks with explicit `units` run concurrently on different PE
+slices. MoE experts are split across the array, so the per-cycle trace
+shows the array ramping up and draining down. With weight streaming,
+experts start computing as their first weight chunks arrive, so the ramp
+happens in chunked steps:
 
 ```bash
 conda run -n myenv python -m vse.cli moe \
@@ -337,7 +337,7 @@ PEAK CONCURRENCY (max busy units per resource)
 compute                  512
 ```
 
-### 2.5 Model-specific compilation (Phase 5)
+### 2.5 Model-specific compilation
 
 `--compile` compiles the exact model + hardware into a fixed execution
 graph and prints a `COMPILE PLAN` recording every decision (precision,
@@ -389,7 +389,7 @@ far — real chips get the same effect from keeping activations on-chip.
 - `--mode prefill` (transformer only) processes an entire prompt in parallel instead of one token.
 - `--no-gated` disables the gated (SwiGLU) MLP, reducing projections from 3 to 2.
 
-### 2.7 Hardware architecture search (Phase 6)
+### 2.7 Hardware architecture search
 
 `search` compiles and simulates the same fixed model on many candidate
 chips and reports the best by tokens/sec plus the Pareto frontier
@@ -409,7 +409,7 @@ conda run -n myenv python -m vse.cli search --model moe \
 - `--dim NAME=V1,V2,...` (repeatable) expands one search dimension.
   Supported dimensions: `num_pes`, `macs_per_pe`, `freq`, `sram_gb`,
   `hbm_bw`, `sram_bw`, `banks`, `noc_nodes`, `noc_bw`, `weight_bits`,
-  `activation_bits`, `kv_bits`, `fusion`, plus Phase 6/7 dimensions:
+  `activation_bits`, `kv_bits`, `fusion`, plus the silicon dimensions:
   - `pipeline` — pipelined stage execution depth.
   - `double_buffer` — weight stream chunks (overlaps compute with
     streaming).
@@ -453,11 +453,11 @@ PARETO FRONTIER (tokens/sec vs die area)
 ```
 
 - The **top table** ranks every candidate by tokens/sec. `area(mm²)` is
-  the Phase-7 die-area estimate, `W` the simulated average power,
+  the die-area estimate, `W` the simulated average power,
   `cmp`/`mem` are compute and memory utilization.
 - A **`*`** marks candidates on the Pareto frontier: no other candidate is
   both cheaper (area) and faster (tokens/sec). The **frontier table**
-  lists exactly those — the designs worth keeping for Phase 8+.
+  lists exactly those — the designs worth keeping.
 - If all candidates are Pareto-optimal the report says so — that means
   the objectives did not trade off within the space (e.g. adding SRAM
   changed nothing because the workload was already HBM-bound).
@@ -468,6 +468,174 @@ PARETO FRONTIER (tokens/sec vs die area)
 Area and power are analytical estimates from `ProcessTechnology`
 (defaults ~7 nm); the frontier is a relative ranking, not a silicon
 guarantee.
+
+### 2.8 FPGA prototype
+
+`fpga` runs the first step of the hardware-pipeline —
+`Python VSE → Hardware specification → RTL → FPGA` — entirely in pure
+Python (no Verilator/Icarus needed). It turns the chip config into an
+`FPGASpec`, emits plain SystemVerilog RTL, and validates the six
+assumptions the VSE scheduler relies on on a small PE array with a
+cycle-accurate RTL simulator.
+
+```bash
+conda run -n myenv python -m vse.cli fpga --num-pes 8 --macs-per-pe 2 \
+    --pipeline 3 --rtl
+```
+
+```text
+VSE FPGA PROTOTYPE VALIDATION
+============================================================
+Architecture  : 8PE x2MAC w4b a16b 4 banks ring/4 nodes
+MACs          : 256
+Frequency     : 100 MHz
+
+CONCERN             STATUS   EXPECTED      MEASURED
+------------------------------------------------------------
+scheduler           PASS     19             19
+datapath            PASS     8              8
+memory              PASS     {'parallel_cycles < conflict_cycles': True, 'peak_banks': 4} {'parallel_cycles': 8, 'conflict_cycles': 32, 'peak_banks': 4}
+routing             PASS     {'hops': 2, 'latency_cycles': 8} {'hops': 2, 'latency_cycles': 8}
+quantization        PASS     {'bounded': True, 'monotonic': True} {'values': [-256, -128, 0, 125, 128, 131, 256], 'bounded': True, 'monotonic': True}
+pipeline            PASS     {'fill': 3, 'throughput_after_fill': 16} {'fill_cycles': 3, 'steady_throughput': 16, 'cycles': 259}
+
+OVERALL: all assumptions validated on the RTL simulator
+```
+
+Each concern is a pass/fail with **expected vs measured** numbers:
+
+- **scheduler** — the RTL-simulated cycles (occupancy + pipeline drain)
+  equal the `CycleEngine`'s own `cycles_for_units` + latency for the
+  same work. This is the core check: the analytical scheduler and the
+  cycle-stepped hardware agree.
+- **datapath** — a tiny quantized matmul retires exactly M·N·K MACs.
+- **memory** — `sram_banks` distinct banks run concurrently while
+  same-bank accesses serialize (bank conflicts).
+- **routing** — RTL router hop counts match `vse/core/noc.py` for ring
+  and mesh.
+- **quantization** — round-to-nearest fixed-point stays in range
+  (saturating) and preserves order.
+- **pipeline** — steady-state throughput equals the PE-array MAC rate
+  after the fill latency.
+
+Flags: `--num-pes`, `--macs-per-pe`, `--pipeline`, `--freq`,
+`--weight-bits`, `--activation-bits`, `--frac-bits`, `--macs`,
+`--banks`, `--noc-nodes`, `--noc-topology`. `--rtl` prints the generated
+SystemVerilog; `--json` prints the machine-readable report (plus the RTL
+when combined with `--rtl`).
+
+The prototype starts small (a few PEs, a handful of banks, a handful of
+NoC nodes) and scales conceptually to the full architecture — the FPGA
+never needs to implement the giant model itself.
+
+---
+
+### 2.9 Full RTL generation
+
+`vse/rtl.py` turns the virtual architecture into a complete, plain
+SystemVerilog file — no HDL toolchain or library required to generate or
+inspect it. It covers the whole chip, not just the prototype array:
+
+```text
+vse_pe              fixed-point MAC with pipelined accumulation
+vse_pe_array        systolic-style array with a generate loop
+vse_sram_ctrl       banked on-chip memory (NUM_BANKS x WORDS)
+vse_noc_router      hop-based routing with explicit hop latency
+vse_dma             double-buffered bulk transfers to/from HBM
+vse_expert_dispatch top-k routing of tokens to experts
+vse_accumulator     combines partial products from multiple ports
+vse_activation      quantized activation (saturation + rounding)
+vse_asic_top        SoC top level wiring everything to AXI-like ports
+```
+
+Everything is parameterized from an `FPGASpec` (precision, PE count,
+banks, NoC size, pipeline depth), so the same generator can emit RTL for
+a 4-PE test chip or a 4096-PE full-scale design:
+
+```python
+from vse.fpga.spec import FPGASpec
+from vse.rtl import generate_rtl
+
+sv = generate_rtl(
+    FPGASpec(num_pes=16, weight_bits=8, activation_bits=12,
+             frac_bits=6, pipeline_depth=4)
+)
+open("asic_top.sv", "w").write(sv)
+```
+
+The generator is deterministic — identical specs produce byte-identical
+RTL. A future toolchain (Verilator for lint/sim, Yosys for synthesis)
+can consume this output directly.
+
+---
+
+### 2.10 ASIC exploration & the closed loop
+
+`asic` combines RTL generation and physical exploration in one command:
+it simulates the compiled model, generates the RTL, estimates the
+physical cost of that RTL, and — if the requested clock does **not**
+close timing — updates the architecture and re-simulates, until the
+reported tokens/sec is physically plausible:
+
+```text
+Architecture → Simulation → RTL → Physical estimation → Updated architecture → Simulation
+```
+
+```bash
+conda run -n myenv python -m vse.cli asic --model transformer \
+    --hidden-dim 128 --heads 4 --layers 2 --intermediate 256 \
+    --sequence 16 --num-pes 256 --freq 5e9
+```
+
+```text
+VSE ASIC EXPLORATION (closed loop)
+============================================================
+
+Step 1: 256PE x1MAC 5.0GHz 0MB 256B/cy wmb
+------------------------------------------------------------
+Tokens/sec     : 3,006,614.552
+Cycles         : 1,663
+RTL lines      : 365
+Gates          : 34,918
+Die area       : 5.238 mm²
+Critical path  : 0.493 ns (wire 0.093 ns)
+Achievable f   : 2,027 MHz
+Requested f    : 5,000 MHz
+Timing         : open (slack -293 ps)
+→ timing open: deepened pipeline
+
+...
+Step 4: 256PE x1MAC 5.0GHz 0MB 256B/cy wmb
+------------------------------------------------------------
+Timing         : CLOSED (slack +7 ps)
+
+RESULT: physically plausible silicon after 4 iteration(s)
+```
+
+How the loop fixes an open design:
+
+- **deepen the pipeline** — each pipeline register splits the critical
+  path, so `achievable freq` rises; this is tried first (it preserves
+  throughput) up to `--max-iters`.
+- **slow the clock** — when pipelines are exhausted the requested
+  frequency is dropped to 0.95× the achievable frequency.
+
+The physical model (`vse/asic/physical.py`, default ~7 nm) computes:
+
+- **gates** — MACs (8 gates each), PE overhead, SRAM bits (2 gates/bit),
+  NoC routers (400 gates/node);
+- **die area** — gates × `gates_per_mm2` (node²-scaled), with the SRAM
+  dominating;
+- **critical path** — logic depth × gate delay plus die-edge wire delay
+  (the wire delay is constant: pipeline registers do not shrink wires);
+- **achievable frequency** = 1 / critical path, and **timing closure**
+  against the requested clock (positive slack = CLOSED).
+
+Flags (subset): `--model`, `--freq` (requested clock, the loop must
+close timing at it), `--pipeline` (starting depth), `--sram-gb`,
+`--node-nm`, `--max-iters`, `--rtl` (print the full SystemVerilog),
+`--json` (machine-readable report). The loop keeps the architecture
+object that closed timing in `result.final_spec`.
 
 ---
 
@@ -579,7 +747,7 @@ candidates for large spaces.
 
 A saturated resource reports ~100% utilization. Values like `Memory 100%` with `Compute 10%` indicate the memory subsystem is the bottleneck and adding PEs will not help.
 
-### 4.1 Power and area (Phase 7)
+### 4.1 Power and area
 
 Every end-to-end result now also carries physical estimates in the
 `ENERGY & POWER` and `AREA` sections of the report:
@@ -590,7 +758,7 @@ Every end-to-end result now also carries physical estimates in the
 | `Energy/token` (µJ) | Total energy ÷ tokens — the fixed-model silicon cost per token |
 | `Power` (W) | Energy ÷ measured latency — true average power from the *simulated* schedule, not a roofline |
 | `static` (W) | Leakage = die area × `leakage_density_mw_per_mm²`; for large SRAMs leakage dominates (1 GiB SRAM ≈ 25 W) |
-| `Tokens/Watt` | `tokens_per_second ÷ power` — the Phase-7 objective (`tokens/sec / power`) |
+| `Tokens/Watt` | `tokens_per_second ÷ power` — the search objective (`tokens/sec / power`) |
 | `Thermal density` (W/mm²) | Power ÷ area, checked against `thermal_limit_w_per_mm²`; `Thermally fit: no` flags a design that exceeds the cooling budget |
 | `Total` (mm²) | Die area = PE array + SRAM + NoC routers × routing overhead |
 | `Compute` / `SRAM` / `NoC` (mm²) | Area breakdown |
@@ -621,17 +789,17 @@ thermal density are only computed when a chip (`ArchitectureSpec` /
 reported.
 
 Note: the `--json` output of the `search` command still includes the old
-Phase-6 `area_proxy`/`power_proxy` for compatibility, but the displayed
+`area_proxy`/`power_proxy` for compatibility, but the displayed
 ranking and the Pareto frontier use the real `area_mm2` and `power_watts`.
 
 ---
 
-## 5. Findings (Phases 1–5)
+## 5. Findings
 
 Key conclusions from the virtual-chip experiments:
 
-1. **Memory movement, not compute, is the dominant limitation** (Phase 3
-   hypothesis confirmed). Both flagship workloads are memory-bound on a
+1. **Memory movement, not compute, is the dominant limitation.** Both
+   flagship workloads are memory-bound on a
    4096-PE chip at 256 B/cycle off-chip bandwidth.
 
 2. **Transformer decode is KV-cache-bound.** One token at 4096 context needs

@@ -10,9 +10,9 @@ Command-line interface for end-to-end VSE simulation.
     python -m vse.cli moe --hidden-dim 4096 --intermediate 14336 \
         --experts 128 --top-k 2 --tokens 32
 
-Common hardware options are shared across both commands; the `search`
-command lives in vse/cli_search.py. Use --json for machine-readable
-output.
+Common hardware options are shared across both commands; the `search`,
+`fpga`, and `asic` subcommands live in vse/cli_cmds/. Use --json for
+machine-readable output.
 """
 
 from __future__ import annotations
@@ -36,8 +36,16 @@ from vse.compiler.compiler import (
     compile_transformer,
     execute,
 )
-from vse.cli_args import _add_common_hardware
-from vse.cli_search import (
+from vse.cli_cmds.args import _add_common_hardware
+from vse.cli_cmds.asic import (
+    add_asic_subcommand,
+    run_asic_command,
+)
+from vse.cli_cmds.fpga import (
+    add_fpga_subcommand,
+    run_fpga_command,
+)
+from vse.cli_cmds.search import (
     add_search_subcommand,
     run_search_command,
 )
@@ -175,6 +183,10 @@ def build_parser() -> argparse.ArgumentParser:
     _add_common_hardware(moe)
 
     add_search_subcommand(subparsers)
+
+    add_fpga_subcommand(subparsers)
+
+    add_asic_subcommand(subparsers)
 
     return parser
 
@@ -323,6 +335,12 @@ def main(argv: Optional[list[str]] = None) -> int:
 
     if args.command == "search":
         return run_search_command(args)
+
+    if args.command == "fpga":
+        return run_fpga_command(args)
+
+    if args.command == "asic":
+        return run_asic_command(args)
 
     parser.error(
         f"unknown command: {args.command}"
