@@ -55,6 +55,13 @@ EVENT_TYPES = {
         "storage_sync",
     },
 
+    # DEVELOPMENT
+
+    "development": {
+        "dev_change",
+        "dev_session_started",
+    },
+
     # OBSERVATION
 
     "observation": {

@@ -356,10 +356,25 @@ def report_inventory_tool(params: dict) -> str:
     return json.dumps({"reports": entries, "count": len(entries)}, separators=(",", ":"))
 
 
+def _section_text(text: str, title: str) -> str:
+    """Text inside the given '## ' section."""
+    lines = text.splitlines()
+    out = []
+    in_section = False
+    for line in lines:
+        stripped = line.strip()
+        if stripped.startswith("## "):
+            in_section = title in stripped
+            continue
+        if in_section:
+            out.append(line)
+    return "\n".join(out)
+
+
 def report_schema_check_tool(params: dict) -> str:
     date_re = re.compile(r'_Last verified:\s*(\d{4}-\d{2}-\d{2})_')
     citation_re = re.compile(r'`([\w./-]+\.py:\w+\(\))`')
-    roadmap_lang = re.compile(r'phase|completed|planned|roadmap|not implemented', re.I)
+    roadmap_lang = re.compile(r'\b(roadmap|planned|not implemented|future work|todo)\b', re.I)
     results = []
     for md_file, rel, text in _iter_reports("*/status.md"):
         issues = []
@@ -371,11 +386,12 @@ def report_schema_check_tool(params: dict) -> str:
             issues.append("missing ## Known Gaps")
         if "## Recent Changes" not in text:
             issues.append("missing ## Recent Changes")
-        bullets = [l for l in text.splitlines() if l.strip().startswith("- ")]
+        cap_section = _section_text(text, "Current Capability")
+        bullets = [l for l in cap_section.splitlines() if l.strip().startswith("- ")]
         nc = sum(1 for b in bullets if not citation_re.search(b))
         if nc:
-            issues.append(f"{nc} bullet(s) without citation")
-        if roadmap_lang.search(text) and "## Current Capability" in text:
+            issues.append(f"{nc} capability bullet(s) without citation")
+        if roadmap_lang.search(cap_section):
             issues.append("possible roadmap language in status")
         results.append({"file": str(rel), "issues": issues, "clean": len(issues) == 0})
     return json.dumps({"reports": results}, separators=(",", ":"))
@@ -391,8 +407,10 @@ def list_capabilities_tool(params: dict) -> str:
         _sys2.path.insert(0, str(_project_root() / "scripts"))
         from kernel.hypothesis.hypothesis_engine import hypothesis_engine
         from scripts.seed_hypotheses import seed_all
+        from scripts.validate_capabilities import validate_capabilities
         if not hypothesis_engine.hypotheses:
             seed_all(hypothesis_engine)
+        validate_capabilities(hypothesis_engine)
     except Exception as e:
         return json.dumps({"error": f"HypothesisEngine not available: {e}"})
     htype = params.get("type", "")

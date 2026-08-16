@@ -32,7 +32,6 @@ prose is for you.
 | Tooling behavior | Command allowlist, tool packs, tool mode, edit self-checks |
 | Checkpoints and safety | Undo snapshots, sandbox, excluded dirs, secret redaction, debug dumps |
 | System prompt and learning | Core-only prompt, self-evolving chains and workflow graph |
-| Config regeneration | Keep the legacy `config.json` in sync with this file |
 
 ---
 
@@ -41,8 +40,7 @@ prose is for you.
 ### generate_config_json = true
 
 When true, every load regenerates the legacy `config.json` beside this file
-from the headings in this file, so `config.json` never falls out of date. The
-Markdown file remains the source of truth; `config.json` is only a mirror.
+from the headings in this file. The Markdown file remains the source of truth; `config.json` is only a mirror.
 
 ---
 
@@ -131,11 +129,11 @@ as `fib.py`).
 
 ## Models and providers
 
-### default_provider = "gemini"
+### default_provider = "mock"
 
 Provider used by default. Override per-launch with `AGENT_PROVIDER`.
 
-### default_model = "gemini-3.1-flash-lite"
+### default_model = "mock"
 
 Fallback model when nothing more specific is chosen. `AGENT_MODEL` or a
 provider's `default_model` wins over this.
@@ -144,7 +142,7 @@ provider's `default_model` wins over this.
 
 Default Gemini model used when no explicit model is chosen.
 
-### providers.gemini.models = ["gemini-3.5-flash-lite", "gemini-3.1-flash-lite", "gemini-3.6-flash", "gemini-3.5-flash", "gemini-3.1-pro-preview", "gemma-4-31b-it", "gemma-4-26b-a4b-it"]
+### providers.gemini.models = ["gemini-3.5-flash-lite", "gemini-3.7-flash", "gemma-4-26b-a4b-it"]
 
 Model list offered for Gemini in the UI.
 
@@ -229,7 +227,7 @@ answer instead of a second model call. Empty list turns this off.
 Show the reasoning model only a small, request-matched subset of tools on the
 first step, instead of every active tool schema.
 
-### tier2_model_router.enabled = true
+### tier2_model_router.enabled = false
 
 Tier-2 routing model on/off. When disabled, ambiguous requests go straight to
 the cloud reasoning model.
@@ -370,7 +368,14 @@ Send only the immutable core system prompt (identity + workspace rules +
 response contract). `false` also includes capability playbooks and AGENTS.md
 (~1,288 tokens); core-only is ~831 tokens.
 
-### workflow_learn.enabled = true
+### system_prompt_devpt_fragments = false
+
+Include the dev-report fragments (`onboarding.md` + `sys_devpt_reports.md`) in
+the assembled system prompt. They point agents at `project_history`, capability
+hypotheses (`list_capabilities`) and the report maintenance protocol. Set
+`false` to drop this guidance while keeping the core fragments.
+
+### workflow_learn.enabled = false
 
 Master switch for self-evolving tool chains and the workflow graph: mining
 repeated patterns into reusable chains and rebuilding the graph.

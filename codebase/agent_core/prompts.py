@@ -6,13 +6,17 @@ import os
 import re
 from typing import List, Optional
 
-from agent_core.config import CODEBASE_ROOT, AGENTS_MD_ENABLED, ALLOWED_COMMANDS, resolve_active_tool_mode
+from agent_core.config import (CODEBASE_ROOT, AGENTS_MD_ENABLED, ALLOWED_COMMANDS,
+                               SYSTEM_PROMPT_DEVPT_FRAGMENTS, resolve_active_tool_mode)
 from agent_core.workspace import WORKSPACE_ROOT
 from agent_core.tools import log_output
 from agent_core.tools.registry import CAT_FILE, CAT_KERNEL, CAT_SIM, CAT_META, CAT_CODE_RAG, CAT_DEBATE, CAT_GIT, CAT_OBSERVER
 
 DEFAULT_SYSTEM_PROMPT = "You are a helpful assistant."
 PROMPT_FRAGMENTS_DIR = os.path.join(CODEBASE_ROOT, "prompt_fragments")
+
+# Dev-report guidance gated by `system_prompt_devpt_fragments` in config.md.
+_DEVPT_FRAGMENTS = frozenset({"onboarding.md", "sys_devpt_reports.md"})
 
 _cache: dict[str, tuple[float, str]] = {}  # cache_key → (mtime_sum, prompt)
 
@@ -22,6 +26,8 @@ _GATE_CLOSE_RE = re.compile(r"^\s*<!--\s*/read_only\s*-->\s*$")
 # (filename, requires_categories, blocks_categories, modes)
 FRAGMENT_ORDER: List[tuple[str, Optional[List[str]], Optional[List[str]], Optional[List[str]]]] = [
     ("base_persona.md",       None,         None,   None),
+    ("onboarding.md",         None,         None,   None),
+    ("sys_devpt_reports.md",  None,         None,   None),
     ("efficiency_rules.md",   None,         None,   None),
     ("implementation_guardrails.md", None,  None,   None),
     ("file_ops_workflow.md",  [CAT_FILE],   None,   ["all", "read_only"]),
@@ -80,6 +86,10 @@ def _include_fragment(
     return True
 
 
+def _include_devpt_fragment(filename: str) -> bool:
+    return filename not in _DEVPT_FRAGMENTS or SYSTEM_PROMPT_DEVPT_FRAGMENTS
+
+
 def _filter_mode_block(content: str, mode: str) -> str:
     lines = content.split("\n")
     if mode == "all":
@@ -107,6 +117,8 @@ def _fragments_mtime(fragments_dir: str, active_packs: List[str], mode: str,
     total = 0.0
     for filename, requires, blocks, modes in order:
         if not _include_fragment(requires, blocks, modes, active_packs, mode):
+            continue
+        if not _include_devpt_fragment(filename):
             continue
         fpath = os.path.join(fragments_dir, filename)
         try:
@@ -139,6 +151,8 @@ def load_system_prompt(
     parts: List[str] = []
     for filename, requires, blocks, modes in order:
         if not _include_fragment(requires, blocks, modes, active_packs, mode):
+            continue
+        if not _include_devpt_fragment(filename):
             continue
         fragment_path = os.path.join(fragments_dir, filename)
         try:

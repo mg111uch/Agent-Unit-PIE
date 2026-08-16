@@ -182,21 +182,3 @@ S: Helper to format legacy IDs (no callers, no tests, last touched 2024-08)
 Given what you've already built (LOD, culling, expand/collapse, risk coloring), the highest-leverage next additions are probably: **local/neighborhood view** (Obsidian) and **god-node/centrality highlighting** (Graphify) — both are cheap given your existing edge maps and metadata, and both directly address the "5,000-node graph is overwhelming" problem better than more filtering UI would. **Node-grounded Q&A** (NotebookLM-style) is the most novel/high-ceiling one given you're already inside an AI-coding-assistant context, but it's a bigger scope item — happy to turn any of these into a concrete implementation plan like we did for expand/collapse.
 
 ---
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-If you want, I can help scope any one of these into a concrete implementation plan the way we did for the expand/collapse feature — happy to start with whichever feels highest-value for how this tool actually gets used.

@@ -321,7 +321,7 @@ class HypothesisEngine:
             node_id=
             hypothesis.hypothesis_id,
             node_type=
-            "hypothesis",
+            hypothesis.hypothesis_type,
             title=
             hypothesis.title,
             content=
@@ -338,6 +338,10 @@ class HypothesisEngine:
             confidence=
             hypothesis.plausibility,
             metadata={
+                "status":
+                hypothesis.status,
+                "hypothesis_id":
+                hypothesis.hypothesis_id,
                 "predictions":
                 hypothesis.predictions,
                 "related_patterns":

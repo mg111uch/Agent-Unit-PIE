@@ -46,6 +46,7 @@ from agent_core.tools.kernel_ops import (
     kernel_store_context,
     kernel_get_memory,
     kernel_create_event,
+    kernel_emit_dev_change,
 )
 from agent_core.tools.code_rag import (
     get_symbol_tool,
@@ -410,6 +411,7 @@ def _register_stored_chains():
 
 def _register_kernel_tools():
     from agent_core.tools.kernel_ops import kernel_reload
+    from agent_core.tools.kernel_ops import kernel_emit_dev_change
     from kernel.signals.belief_signal_handler import register_handlers
     register_handlers()
     _register([
@@ -450,6 +452,12 @@ def _register_kernel_tools():
         ("kernel_reload", kernel_reload, CAT_KERNEL,
          "Reload tool modules from disk to pick up code changes without restart",
          {"modules": arr_p("string", "Optional list of module names to reload (default: all hot modules)")}),
+        ("kernel_emit_dev_change", kernel_emit_dev_change, CAT_KERNEL,
+         "Emit a dev_change event recording an intentional session end with changed paths + summary",
+         {"summary": str_p("Summary of what changed this session", req=True),
+          "paths": arr_p("string", "Changed file paths"),
+          "module": str_p("Optional module label (default: general)"),
+          "importance": float_p("Importance 0-1 (default 0.6)")}),
     ])
 
 

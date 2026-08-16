@@ -49,9 +49,10 @@ def parse_capabilities_from_lines(text):
             continue
         desc_part, _, citation_part = stripped.partition(EM_DASH)
         desc = desc_part.lstrip('- ').strip()
-        citation_text = citation_part.strip().strip('`')
+        citation_raw = citation_part.strip()
+        citation_text = citation_raw.strip('`')
         filepath, funcname = extract_file_func(citation_text)
-        results.append((desc, filepath, funcname))
+        results.append((desc, filepath, funcname, citation_raw))
     return results
 
 

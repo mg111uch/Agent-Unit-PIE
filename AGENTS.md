@@ -25,6 +25,4 @@ cd /home/manigupt/Hello/Agentic_Unit_PIE/codebase/agent_tools/atlas_tools && pyt
 - Max 400–500 lines per file (including tests & comments).
 - Split large files when they exceed 500 LOC.
 - **One persistence path** — SQLite only now; don't let a future module invent a second.
-
-
-
+- Do not `Read` `atlas_output/children/` for routine work — check real code or use code_rag tools instead.

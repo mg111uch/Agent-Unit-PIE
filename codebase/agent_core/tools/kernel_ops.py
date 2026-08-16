@@ -1,4 +1,6 @@
 import json
+import sys
+from pathlib import Path
 
 try:
     from kernel.retrieval.retrieval_engine import retrieval_engine
@@ -216,6 +218,44 @@ def kernel_create_event(input_data) -> str:
 
     except Exception as e:
         return f"Error in kernel_create_event: {str(e)}"
+
+
+def kernel_emit_dev_change(input_data) -> str:
+    """Emit a dev_change event for an intentional session end (paths + summary)."""
+    if not KERNEL_AVAILABLE or event_engine is None:
+        return "Error: Kernel modules not available. Check kernel installation."
+
+    try:
+        if isinstance(input_data, str):
+            input_data = json.loads(input_data)
+
+        summary = input_data.get("summary", "")
+        paths = input_data.get("paths", [])
+        module = input_data.get("module", "general")
+        importance = input_data.get("importance", 0.6)
+
+        if not summary:
+            return "Error: 'summary' is required"
+
+        sys_path = sys.path
+        root = Path(__file__).resolve().parents[3]
+        if str(root) not in sys_path:
+            sys_path.insert(0, str(root))
+        if str(root / "codebase") not in sys_path:
+            sys_path.insert(0, str(root / "codebase"))
+        from scripts.emit_dev_change import emit_dev_change
+
+        event = emit_dev_change(summary, paths, module, importance)
+        return json.dumps({
+            "status": "created",
+            "event_id": event.event_id,
+            "event_type": event.event_type,
+            "title": event.title,
+            "paths": list(paths),
+        }, separators=(",", ":"))
+
+    except Exception as e:
+        return f"Error in kernel_emit_dev_change: {str(e)}"
 
 
 def kernel_reload(input_data) -> str:

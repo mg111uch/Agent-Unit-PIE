@@ -7,7 +7,7 @@ import time
 
 from kernel.utils.logger import get_child_logger
 
-from kernel.schemas.pattern_schema import PatternSchema
+from kernel.schemas.pattern_schema import PatternSchema, PatternEventRef
 from kernel.schemas.signal_schema import SignalSchema
 from kernel.schemas.event_schema import EventSchema
 
@@ -45,7 +45,12 @@ class PatternEngine:
         ].append(
             pattern.pattern_id
         )
-        for source_id in pattern.source_ids:
+        source_ids = (
+            [e.event_id for e in pattern.events]
+            + [u.unit_id for u in pattern.units]
+            + [s.signal_id for s in pattern.signals]
+        )
+        for source_id in source_ids:
             self.source_index[
                 source_id
             ].append(
@@ -71,7 +76,7 @@ class PatternEngine:
                 ],
                 metadata={
                     "source_count":
-                    len(pattern.source_ids)
+                    len(source_ids)
                 },
                 ttl_seconds=7200,
             )
@@ -215,13 +220,16 @@ class PatternEngine:
                         f"{event_type} occurred "
                         f"{len(event_group)} times"
                     ),
-                    source_ids=[
-                        e.event_id
-                        for e in event_group
-                    ],
                     category="event_pattern",
                     subtype=event_type,
                 )
+                pattern.events = [
+                    PatternEventRef(
+                        event_id=e.event_id,
+                        event_type=e.event_type,
+                    )
+                    for e in event_group
+                ]
                 pattern.metrics.confidence = min(
                     1.0,
                     len(event_group) / 10
@@ -246,7 +254,12 @@ class PatternEngine:
     ) -> List[PatternSchema]:
         source_map = defaultdict(list)
         for pattern in patterns:
-            for source_id in pattern.source_ids:
+            source_ids = (
+                [e.event_id for e in pattern.events]
+                + [u.unit_id for u in pattern.units]
+                + [s.signal_id for s in pattern.signals]
+            )
+            for source_id in source_ids:
                 source_map[
                     source_id
                 ].append(

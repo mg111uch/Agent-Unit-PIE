@@ -23,7 +23,7 @@ Status reports are subject to the same verify-before-trusting rule as code — s
 ## Report maintenance protocol
 
 ### Session start (read path)
-- Call `pie_report_freshness`.
+- Call `report_freshness`.
 - If any status is stale or missing stamp → re-validate before trusting.
 - Prefer `status.md` over `roadmap.md` for "what works."
 

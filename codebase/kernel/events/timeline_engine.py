@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Any
 from collections import defaultdict
+from datetime import datetime, timezone
 import bisect
 import time
 
@@ -90,11 +91,17 @@ class TimelineEngine:
         self,
         event: EventSchema
     ) -> TimelineEntry:
+        ts = datetime.fromisoformat(
+            event.timestamp
+        ).replace(tzinfo=timezone.utc).timestamp()
         entry = TimelineEntry(
             entry_id=event.event_id,
             entry_type="event",
-            timestamp=event.timestamps.created_at_unix,
-            source_id=event.source_unit_id or "",
+            timestamp=ts,
+            source_id=getattr(
+                getattr(event, "source", None),
+                "source_id", ""
+            ) or "",
             title=event.title,
             description=event.description,
             importance=event.metrics.importance,
@@ -104,6 +111,8 @@ class TimelineEngine:
                 event.event_type,
                 "category":
                 event.category,
+                "paths":
+                event.metadata.extra.get("paths", []),
             },
         )
         self.add_entry(entry)

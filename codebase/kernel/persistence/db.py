@@ -129,6 +129,15 @@ CREATE TABLE IF NOT EXISTS daily_read_budget (
     lines_used INTEGER DEFAULT 0,
     budget INTEGER DEFAULT 500
 );
+
+CREATE TABLE IF NOT EXISTS citation_cache (
+    hypothesis_id TEXT PRIMARY KEY,
+    evidence_path TEXT NOT NULL,
+    evidence_symbol TEXT NOT NULL,
+    file_mtime REAL,
+    status TEXT NOT NULL,
+    updated_at REAL NOT NULL
+);
 """
 
 
@@ -534,6 +543,33 @@ class KernelDB:
             (memory_type,),
         ).fetchall()
         return [r["memory_id"] for r in rows]
+
+    # --- CITATION CACHE (C7: skip re-resolution when cited files unchanged) ---
+
+    def save_citation_cache(
+        self,
+        hypothesis_id: str,
+        evidence_path: str,
+        evidence_symbol: str,
+        file_mtime: Optional[float],
+        status: str,
+    ):
+        self.conn.execute(
+            """INSERT OR REPLACE INTO citation_cache
+               (hypothesis_id, evidence_path, evidence_symbol, file_mtime, status, updated_at)
+               VALUES (?, ?, ?, ?, ?, ?)""",
+            (hypothesis_id, evidence_path, evidence_symbol, file_mtime, status, time.time()),
+        )
+        self.conn.commit()
+
+    def load_citation_cache(
+        self,
+        hypothesis_id: str,
+    ) -> Optional[Dict[str, Any]]:
+        row = self.conn.execute(
+            "SELECT * FROM citation_cache WHERE hypothesis_id = ?", (hypothesis_id,)
+        ).fetchone()
+        return dict(row) if row else None
 
     def delete_generic_memory(self, memory_id: str) -> bool:
         cur = self.conn.execute(

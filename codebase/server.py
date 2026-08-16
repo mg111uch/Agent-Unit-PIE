@@ -7,19 +7,19 @@ This stub starts the server via agent_core.server.app.
 
 from __future__ import annotations
 
-import base64
-import getpass
-import json
 import os
 import sys
 
-from agent_tools.encrypt_env import _try_unlock_env
+CODEBASE_DIR = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, CODEBASE_DIR)
+sys.path.insert(0, os.path.join(CODEBASE_DIR, "agent_core", "server"))
 
-ENCRYPTED_ENV_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env.enc")
-print(ENCRYPTED_ENV_FILE)
-_try_unlock_env(ENCRYPTED_ENV_FILE)
+from encrypt_env import setup_or_unlock_env
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+setup_or_unlock_env(
+    env_file=os.path.join(CODEBASE_DIR, ".env"),
+    encrypted_file=os.path.join(CODEBASE_DIR, ".env.enc"),
+)
 
 from agent_core.server import app, AGENT_PORT
 from agent_core.server import log_output

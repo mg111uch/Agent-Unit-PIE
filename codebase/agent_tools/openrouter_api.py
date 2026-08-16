@@ -1,8 +1,10 @@
 import requests
 import json
 import os
+import sys
 from openai import OpenAI
 
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "agent_core", "server"))
 from encrypt_env import _try_unlock_env
 
 ENCRYPTED_ENV_FILE = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), ".env.enc")

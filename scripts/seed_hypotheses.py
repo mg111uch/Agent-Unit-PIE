@@ -36,13 +36,14 @@ def seed_all(engine=None):
         gaps = parse_gaps_from_lines(gaps_text)
 
         cap_prefix = f"cap_{module}"
-        for i, (desc, filepath, funcname) in enumerate(caps, 1):
+        for i, (desc, filepath, funcname, citation_raw) in enumerate(caps, 1):
             hid = f"{cap_prefix}_{i}"
             metadata = {"source_file": str(sf.relative_to(PROJECT_ROOT))}
             if filepath:
                 metadata["evidence_path"] = filepath
             if funcname:
                 metadata["evidence_symbol"] = funcname
+            metadata["evidence_raw"] = citation_raw
             existing = engine.get_hypothesis(hid)
             if existing:
                 existing.title = desc

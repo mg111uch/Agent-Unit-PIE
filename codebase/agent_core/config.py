@@ -202,6 +202,11 @@ MODEL_COMPLEX_MAX_TOKENS: int = int(_CONFIG.get("complex_reasoning_max_tokens", 
 # model-facing prefix stays ~700-1000 tokens.
 SYSTEM_PROMPT_CORE_ONLY: bool = bool(_CONFIG.get("system_prompt_core_only", False))
 
+# Dev-report fragments (onboarding.md + sys_devpt_reports.md) included in the
+# assembled system prompt. When false, agents don't receive the project-history /
+# report-maintenance guidance but the immutable core fragments still load.
+SYSTEM_PROMPT_DEVPT_FRAGMENTS: bool = bool(_CONFIG.get("system_prompt_devpt_fragments", True))
+
 # Frontend: display per-step token usage in each tool box header when true.
 SHOW_TOOL_TOKEN_USAGE: bool = bool(_CONFIG.get("show_tool_token_usage", True))
 
