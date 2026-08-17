@@ -13,6 +13,7 @@ from agent_core.config import (
     GEMINI_CHAIN_RESTART_TOKENS,
     GEMINI_STATELESS,
     TOOL_GROUP_ROUTING,
+    TOOL_SEARCH_ENABLED,
     MODEL_TOOL_DECISION_MAX_TOKENS,
     MODEL_FINAL_MAX_TOKENS,
     resolve_active_tool_names,
@@ -62,6 +63,40 @@ def _name_of(schema: dict) -> str:
     if isinstance(fn, dict):
         return fn.get("name", "")
     return schema.get("name", "")
+
+
+def _widen_catalog_from_step(tool_catalog: list, parsed, provider: Optional[str]) -> None:
+    """After a step calls get_tool_schema(name), append that enabled tool's
+    schema to the catalog for the next chained step (native-FC friendly)."""
+    names: set[str] = set()
+    if parsed.kind == "tool_calls":
+        for tc in parsed.tool_calls:
+            if tc.name == "get_tool_schema":
+                args = tc.arguments if isinstance(tc.arguments, dict) else {}
+                for n in [args.get("name")] + list(args.get("names") or []):
+                    if n:
+                        names.add(str(n))
+    elif parsed.kind == "tool" and parsed.tool == "get_tool_schema":
+        arg = parsed.tool_input
+        if isinstance(arg, dict):
+            for n in [arg.get("name")] + list(arg.get("names") or []):
+                if n:
+                    names.add(str(n))
+    if not names:
+        return
+    from agent_core.tools.tool_catalog import enabled_tool_names
+    names &= enabled_tool_names()
+    existing = {
+        _name_of(d) for s in tool_catalog
+        for d in (s.get("function_declarations", []) if provider == "gemini" else [s])
+    }
+    raw = [s for s in registry.schemas_list if s["name"] in names and s["name"] not in existing]
+    if provider == "gemini":
+        if raw:
+            tool_catalog.append({"function_declarations": raw})
+    else:
+        for s in raw:
+            tool_catalog.append({"type": "function", "function": s})
 
 
 def _step_max_tokens(messages: list) -> int:
@@ -204,28 +239,14 @@ def _iter_agent_events_body(
         current_input=current_input,
     )
 
-    tool_catalog = registry.get_schemas(
-        provider_name=provider,
-        categories=tool_categories,
-        names=resolve_active_tool_names() or None,
+    from agent_core.tools.tool_catalog import build_catalog
+    tool_catalog = build_catalog(
+        provider, user_input, tool_categories, resolve_active_tool_names(),
     )
     routed_group: set[str] | None = None
-    if tool_catalog and TOOL_GROUP_ROUTING:
+    if not TOOL_SEARCH_ENABLED and TOOL_GROUP_ROUTING:
         from agent_core.tools.tool_groups import select_tools_for_request
-        selected = select_tools_for_request(user_input)
-        routed_group = set(selected)
-        _schemas = []
-        for _s in tool_catalog:
-            _sg = _s.get("function_declarations") if provider == "gemini" else [_s]
-            _kept = [d for d in _sg if _name_of(d) in selected]
-            if _kept:
-                _schemas.append(
-                    {"function_declarations": _kept}
-                    if provider == "gemini"
-                    else _kept[0]
-                )
-        if _schemas:
-            tool_catalog = _schemas
+        routed_group = set(select_tools_for_request(user_input))
 
     active_tool_names = {
         _name_of(d)
@@ -460,6 +481,8 @@ def _iter_agent_events_body(
                 nudge_threshold=TOOL_NUDGE_THRESHOLD,
                 step_usage=step_usage,
             )
+            if TOOL_SEARCH_ENABLED:
+                _widen_catalog_from_step(tool_catalog, parsed, provider)
             if should_exit:
                 return
             if step_delay > 0:

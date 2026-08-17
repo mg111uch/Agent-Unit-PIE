@@ -29,6 +29,7 @@ FRAGMENT_ORDER: List[tuple[str, Optional[List[str]], Optional[List[str]], Option
     ("onboarding.md",         None,         None,   None),
     ("sys_devpt_reports.md",  None,         None,   None),
     ("efficiency_rules.md",   None,         None,   None),
+    ("tool_search.md",        None,         None,   None),
     ("implementation_guardrails.md", None,  None,   None),
     ("file_ops_workflow.md",  [CAT_FILE],   None,   ["all", "read_only"]),
     ("meta_playbook.md",      [CAT_META],   None,   None),

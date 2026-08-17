@@ -5,6 +5,7 @@ import json
 import os
 import sqlite3
 import threading
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Optional, List
@@ -73,10 +74,16 @@ class MessageStore:
                 "  content TEXT,"
                 "  tool_calls TEXT,"
                 "  tool_results TEXT,"
-                "  created_at TEXT NOT NULL"
+                "  created_at TEXT NOT NULL,"
+                "  ts REAL"
                 ")"
             )
             self._conn.commit()
+            try:
+                self._conn.execute("ALTER TABLE messages ADD COLUMN ts REAL")
+                self._conn.commit()
+            except sqlite3.OperationalError:
+                pass  # column already exists
 
     def create_session(self, session_id: str) -> dict:
         now = datetime.now(timezone.utc).isoformat()
@@ -104,6 +111,7 @@ class MessageStore:
         tool_results: Optional[List[dict]] = None,
     ) -> int:
         now = datetime.now(timezone.utc).isoformat()
+        ts = time.time()
         if not self.session_exists(session_id):
             self.create_session(session_id)
         bounded_results = None
@@ -120,8 +128,8 @@ class MessageStore:
                 "UPDATE sessions SET updated_at=? WHERE id=?", (now, session_id)
             )
             cursor = self._conn.execute(
-                "INSERT INTO messages (session_id, role, content, tool_calls, tool_results, created_at) "
-                "VALUES (?, ?, ?, ?, ?, ?)",
+                "INSERT INTO messages (session_id, role, content, tool_calls, tool_results, created_at, ts) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?)",
                 (
                     session_id,
                     role,
@@ -129,6 +137,7 @@ class MessageStore:
                     json.dumps(tool_calls) if tool_calls else None,
                     json.dumps(bounded_results) if bounded_results else None,
                     now,
+                    ts,
                 ),
             )
             msg_id = cursor.lastrowid
@@ -138,7 +147,7 @@ class MessageStore:
     def get_messages(self, session_id: str, limit: int = 100) -> List[dict]:
         with self._lock:
             rows = self._conn.execute(
-                "SELECT role, content, tool_calls, tool_results, created_at "
+                "SELECT role, content, tool_calls, tool_results, created_at, ts "
                 "FROM messages WHERE session_id=? ORDER BY id ASC LIMIT ?",
                 (session_id, limit),
             ).fetchall()
@@ -160,8 +169,43 @@ class MessageStore:
                         tr["result"] = redact(tr["result"])
                 msg["tool_results"] = raw
             msg["created_at"] = row[4]
+            msg["ts"] = row[5]
             result.append(msg)
         return result
+
+    def turn_timings(self, session_id: str) -> List[dict]:
+        """Per-turn wall-clock analytics from stored message timestamps.
+
+        Each turn starts at a user message. llm_ms_est = time until the first
+        model output (assistant/tool activity) after the user message;
+        tool_span_ms = first model output -> last tool result. Rows written
+        before the ts column existed have ts=None and are skipped.
+        """
+        rows = self.get_messages(session_id, limit=10000)
+        turns: List[dict] = []
+        cur: Optional[dict] = None
+        for m in rows:
+            if m["role"] == "user":
+                cur = {"user_ts": m["ts"], "llm_ms_est": None,
+                       "first_activity_ts": None, "last_tool_result_ts": None,
+                       "tool_span_ms": None, "steps": 0}
+                turns.append(cur)
+                continue
+            if cur is None or m["ts"] is None:
+                continue
+            if cur["first_activity_ts"] is None:
+                cur["first_activity_ts"] = m["ts"]
+            if m.get("tool_results"):
+                cur["steps"] = max(cur["steps"], len(m["tool_results"]))
+                cur["last_tool_result_ts"] = m["ts"]
+        for t in turns:
+            if t["user_ts"] is not None and t["first_activity_ts"] is not None:
+                t["llm_ms_est"] = (t["first_activity_ts"] - t["user_ts"]) * 1000
+            if t["first_activity_ts"] is not None and t["last_tool_result_ts"] is not None:
+                t["tool_span_ms"] = (t["last_tool_result_ts"] - t["first_activity_ts"]) * 1000
+            for k in ("first_activity_ts", "last_tool_result_ts"):
+                t.pop(k, None)
+        return turns
 
     def delete_session(self, session_id: str):
         with self._lock:

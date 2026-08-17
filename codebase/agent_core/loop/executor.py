@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import threading
+import time
 from typing import Any, Callable, Dict, List, Optional
 
 from agent_core.config import MODEL_TOOL_RESULT_MAX_CHARS
@@ -46,6 +47,16 @@ def _call_tool(name: str, fn: Callable, arguments: Any) -> Any:
     return fn(arguments)
 
 
+def _record_tool_call(name: str, duration_ms: float, is_error: bool, text: str) -> None:
+    """Persist per-tool call stats for the native loop (parity with MCP path).
+    Never breaks tool execution on DB failures."""
+    try:
+        from kernel.persistence.db import kernel_db
+        kernel_db.record_tool_call(name, duration_ms, is_error, len(text))
+    except Exception:
+        pass
+
+
 def execute_tool_calls(
     calls: List[ParsedToolCall],
     step: int,
@@ -54,6 +65,19 @@ def execute_tool_calls(
 ) -> List[dict]:
     results = []
     _tools = tools or registry.tools_dict
+
+    def _run_timed(name: str, fn: Callable, arguments: Any) -> tuple[Any, float, Optional[BaseException]]:
+        t0 = time.perf_counter()
+        try:
+            res = _call_tool(name, fn, arguments)
+            err = None
+        except Exception as e:  # noqa: BLE001
+            res, err = None, e
+        return res, (time.perf_counter() - t0) * 1000, err
+
+    def _missing(name: str) -> dict:
+        _record_tool_call(name, 0.0, True, "tool not available")
+        return {"tool": name, "result": f"Error: tool '{name}' not available.", "ok": False, "call_id": ""}
 
     # Merge parallel get_symbol calls into one batch (fan out same result to all call_ids)
     get_symbol_calls = [tc for tc in calls if tc.name == "get_symbol"]
@@ -72,73 +96,92 @@ def execute_tool_calls(
             merged_args = {"names": merged_names}
             if file_path:
                 merged_args["file_path"] = file_path
-            try:
-                result_obj = _tools["get_symbol"](merged_args)
-                if isinstance(result_obj, ToolResult):
+            fn = _tools.get("get_symbol")
+            if fn is None:
+                for tc in get_symbol_calls:
+                    results.append({**_missing("get_symbol"), "call_id": tc.call_id or ""})
+            else:
+                result_obj, dur, err = _run_timed("get_symbol", fn, merged_args)
+                if err is not None:
+                    result_val = f"Error: {err}"
+                    ok = False
+                elif isinstance(result_obj, ToolResult):
                     ok = result_obj.ok
                     result_val = result_obj.to_string()[:_MODEL_RESULT_MAX]
                 else:
                     result_str = str(result_obj)
                     result_val = result_str[:_MODEL_RESULT_MAX]
                     ok = not result_str.startswith("Error")
-            except Exception as e:
-                result_val = f"Error: {e}"
-                ok = False
-            for tc in get_symbol_calls:
-                results.append({
-                    "tool": "get_symbol",
-                    "result": result_val,
-                    "ok": ok,
-                    "call_id": tc.call_id or "",
-                })
+                _record_tool_call("get_symbol", dur, not ok, result_val)
+                for tc in get_symbol_calls:
+                    results.append({
+                        "tool": "get_symbol",
+                        "result": result_val,
+                        "ok": ok,
+                        "call_id": tc.call_id or "",
+                    })
         else:
             for tc in get_symbol_calls:
                 try:
                     arg = _normalize_tool_arg(tc.name, tc.arguments)
-                    result_obj = _call_tool(tc.name, _tools[tc.name], arg)
-                    if isinstance(result_obj, ToolResult):
-                        result_str = result_obj.to_string()
-                        is_ok = result_obj.ok
-                    else:
-                        result_str = str(result_obj)
-                        is_ok = not result_str.startswith("Error")
+                except Exception as e:  # noqa: BLE001
                     results.append({
-                        "tool": tc.name,
-                        "result": result_str[:_MODEL_RESULT_MAX],
-                        "ok": is_ok,
+                        "tool": tc.name, "result": f"Error: {e}", "ok": False,
                         "call_id": tc.call_id or "",
                     })
-                except Exception as e:
-                    results.append({
-                        "tool": tc.name,
-                        "result": f"Error: {e}",
-                        "ok": False,
-                        "call_id": tc.call_id or "",
-                    })
+                    continue
+                fn = _tools.get(tc.name)
+                if fn is None:
+                    results.append({**_missing(tc.name), "call_id": tc.call_id or ""})
+                    continue
+                result_obj, dur, err = _run_timed(tc.name, fn, arg)
+                if err is not None:
+                    result_str = f"Error: {err}"
+                    is_ok = False
+                elif isinstance(result_obj, ToolResult):
+                    result_str = result_obj.to_string()
+                    is_ok = result_obj.ok
+                else:
+                    result_str = str(result_obj)
+                    is_ok = not result_str.startswith("Error")
+                _record_tool_call(tc.name, dur, not is_ok, result_str)
+                results.append({
+                    "tool": tc.name,
+                    "result": result_str[:_MODEL_RESULT_MAX],
+                    "ok": is_ok,
+                    "call_id": tc.call_id or "",
+                })
 
     for tc in other_calls:
         if cancel_event and cancel_event.is_set():
             break
         try:
             arg = _normalize_tool_arg(tc.name, tc.arguments)
-            result_obj = _call_tool(tc.name, _tools[tc.name], arg)
-            if isinstance(result_obj, ToolResult):
-                result_str = result_obj.to_string()
-                is_ok = result_obj.ok
-            else:
-                result_str = str(result_obj)
-                is_ok = not result_str.startswith("Error")
+        except Exception as e:  # noqa: BLE001
             results.append({
-                "tool": tc.name,
-                "result": result_str[:_MODEL_RESULT_MAX],
-                "ok": is_ok,
+                "tool": tc.name, "result": f"Error: {e}", "ok": False,
                 "call_id": tc.call_id or "",
             })
-        except Exception as e:
-            results.append({
-                "tool": tc.name,
-                "result": f"Error: {e}",
-                "ok": False,
-                "call_id": tc.call_id or "",
-            })
+            continue
+        fn = _tools.get(tc.name)
+        if fn is None:
+            results.append({**_missing(tc.name), "call_id": tc.call_id or ""})
+            continue
+        result_obj, dur, err = _run_timed(tc.name, fn, arg)
+        if err is not None:
+            result_str = f"Error: {err}"
+            is_ok = False
+        elif isinstance(result_obj, ToolResult):
+            result_str = result_obj.to_string()
+            is_ok = result_obj.ok
+        else:
+            result_str = str(result_obj)
+            is_ok = not result_str.startswith("Error")
+        _record_tool_call(tc.name, dur, not is_ok, result_str)
+        results.append({
+            "tool": tc.name,
+            "result": result_str[:_MODEL_RESULT_MAX],
+            "ok": is_ok,
+            "call_id": tc.call_id or "",
+        })
     return results

@@ -33,11 +33,13 @@ agent_core/
 | Provider Switching | Swap LLM provider/model at runtime via API (`/api/switch-provider`); `GET /api/providers` lists available providers |
 | Local Model Routing | Route simple file/meta tool calls to a local model via Ollama; fall back to cloud for complex reasoning — configurable via `local_model` in config.json |
 | Tool Pack Filtering | Enable/disable tool categories via `AGENT_TOOL_PACKS` env or `tool_packs` in config.json; default `file` only |
+| Tool Search | Hybrid dynamic tool exposure: per-turn payload shrunk to an always-on base set + request-ranked top-k; `find_tool`/`get_tool_schema` let the model discover and call any enabled tool on demand — gated by `tool_search.*` in config |
 | Tool Mode | Restrict active tools by preset via `tool_mode`: `all` (no filtering), `read_only`, `shell_only` — enforced on schemas and execution |
-| MCP Integration | Exposes tools over MCP: CAT_META always, CAT_FILE never, other tool packs only when enabled in config |
+| MCP Integration | Exposes tools over MCP: always-on set = CAT_META + CAT_SEARCH (`mcp_always_expose = "meta"`, default) or CAT_SEARCH only (`"search"`), CAT_FILE never, other tool packs only when enabled in config |
+| MCP Playbook Resources | Active-pack tool playbooks exposed as MCP resources (`pie://playbooks/<pack>`) — client fetches once per session; no per-turn sending |
 | Code RAG | SQLite-based symbol search + call graph from codebase atlas output |
 | Hot-Reload | Auto-detect tool module file changes and reload without restart; explicit `kernel_reload` and `hot_reload` tools |
-| Tool Call Stats | Per-tool call count, avg duration, error rate, token estimate — tracked in `kernel.db` |
+| Tool Call Stats | Per-tool call count, avg duration, error rate, token estimate — tracked in `kernel.db`; native loop and MCP both record durations per call |
 | File Access Stats | Per-file read/write/edit count — tracks churn and most-accessed files |
 | User Reading Budget | Daily budget for LLM output lines shown to user; auto-alerts when &lt;20% remaining |
 | Hot-Reload MCP Tool | `hot_reload` re-registers tools + sends `notifications/tools/list_changed` to client — no restart needed |
@@ -88,6 +90,29 @@ Measured programmatically (JSON-serialized with 2-space indent):
 | `git` (4 tools) | 4 | 1,998 | ~499 |
 | `observer` (4 tools) | 4 | 1,747 | ~436 |
 
+### Tool Search (dynamic tool exposure)
+
+When `tool_search.enabled` is on, the loop sends the model only an **always-on
+base set** (configurable via `tool_search.base_tools`; `find_tool` /
+`get_tool_schema` are always included) plus a **lexically-ranked top-k**
+(`tool_search.top_k`) of enabled tools matched against the user request —
+dropping the full catalog from ~10.8k tokens to roughly the base set (~2.8k).
+Tool schemas from `code_rag` (~3.8k), `kernel` (~1.4k), `sim`/`debate`/`git`/
+`observer` (~2.7k) are only sent when actually retrieved.
+
+- `find_tool(query)` — searches the **enabled-only** catalog (respects
+  `tool_packs` + `tool_mode`) by capability keywords; returns name, category,
+  one-line description, and compact `name:type(req/opt)` params.
+- `get_tool_schema(name)` — returns the full JSON schema for a named tool.
+- The model then calls the discovered tool **directly by name**: execution runs
+  against the full registry, so no schema re-injection is needed. After a
+  `get_tool_schema` step, the discovered tool's schema is appended to the
+  catalog for the next chained step (native-FC friendly).
+- Registered under `CAT_SEARCH` (new category). Always exposed over MCP in
+  either `mcp_always_expose` mode (`meta` = CAT_META + CAT_SEARCH, `search` =
+  CAT_SEARCH only); in the loop they are force-included by name
+  (`SEARCH_TOOL_NAMES`) independent of pack config.
+
 ### File Operations
 | Tool | Purpose |
 |------|---------|
@@ -115,6 +140,16 @@ Measured programmatically (JSON-serialized with 2-space indent):
 | `cross_file_edit` | Surgerical edits across files in one call, per-edit status.  |
 | `check_before_edit` |  read-only dry-run: validates each {path, old_string} target matches exactly once before applying. |
 | `tool_anatomy` | Registry introspection: tool_anatomy(name) traces a tool's category, registration/implementation locations, MCP exposure, schema, and all cross-file references; tool_anatomy() lists the full tool surface grouped by category with a stale-reference scan (docs/mocks referencing unregistered names)  |
+| `find_tool` | Lexical search over the enabled tool catalog by capability keywords; returns name, category, one-liner, compact params (`name:type`, req/opt) — used to discover non-base tools |
+| `get_tool_schema` | Full JSON schema (params, types, descriptions, required) for one/many tools by exact name — used after `find_tool` when the precise argument contract is needed |
+
+### Chain Tools (composite `chain` category registered under `CAT_META`)
+| Tool | Purpose |
+|------|---------|
+| `probe_module` | file_skeleton → who_imports → find_impact (optional) — one-call module orientation |
+| `orient_symbols` | get_index_info → file_api → get_symbols_meta → get_symbol — cheap-to-full symbol fetch |
+| `doc_audit` | report_freshness → report_schema_check → report_inventory — doc health in one call |
+| `safe_edit` | check_before_edit → edit_file → file_diff — validate, apply, and verify a single-file edit batch |
 
 ### Code RAG Tools (from codebase atlas, separate `code_rag` category)
 | Tool | Purpose |
@@ -134,14 +169,6 @@ Measured programmatically (JSON-serialized with 2-space indent):
 | `report_freshness` | Scan all `system_devpt_reports/*.md` for stale `_Last verified` stamps and broken citations |
 | `extract_symbols_to_file` | Fetch bodies of named symbols from atlas, write to destination with headers |
 | `minimal_context_dump` | Chains blast radius → symbol source → peripheral API sigs into one capped file |
-
-### Chain Tools (composite `chain` category)
-| Tool | Purpose |
-|------|---------|
-| `probe_module` | file_skeleton → who_imports → find_impact (optional) — one-call module orientation |
-| `orient_symbols` | get_index_info → file_api → get_symbols_meta → get_symbol — cheap-to-full symbol fetch |
-| `doc_audit` | report_freshness → report_schema_check → report_inventory — doc health in one call |
-| `safe_edit` | check_before_edit → edit_file → file_diff — validate, apply, and verify a single-file edit batch |
 
 ### Kernel Tools
 | Tool | Purpose |
@@ -182,5 +209,21 @@ Measured programmatically (JSON-serialized with 2-space indent):
 | `file_stats` | Most accessed files by read/write/edit, grouped by file — flags high-churn candidates |
 | `user_reading_budget` | Track daily LLM output lines read by user. Call with `record_lines=N` to log; warns when &lt;20% budget remains |
 | `hot_reload` | Built-in (handled by `mcp_server.py`). Re-registers all tools + sends `notifications/tools/list_changed` to MCP client |
+
+## Tool workings
+
+### Q1 — In my native agent loop if cat_meta pack is active, then does each llm tool turn sends schema of tool_group of file pack plus full schema of all the cat_meta tools.
+No, not the way you think. Current defaults (`tool_group_routing=true`, tool_search disabled):
+- `tool_categories = resolve_active_tool_packs()` (engine.py:519) → `get_schemas()` first pulls full schemas of all active packs (file + meta).
+- Then `_filter_names(...)` intersects that against the routed group (`_READ`/`_LIST`/`_BASE`/…, tool_groups.py:16-26). Those groups contain **only file tools** (`Read`, `grep_search`, `edit_file`, `Write`, …) — **zero meta tools**.
+- So the meta schemas get **filtered out** — the per-turn payload is just the routed file group. Meta tools aren't sent at all (they stay callable via the registry, but the model gets no schema/description for them).
+Meta schemas only appear per-turn when `tool_group_routing=false` (then full file + full meta).
+
+### Q2 — How does mcp work by sending schema once to the client but my native agent loop has to get tool schema in each tool turn.
+MCP "sends schema once" is a half-truth. The MCP server pushes `tools/list` (name + description + inputSchema) *once to the client*, which caches it. But the client still re-injects those schemas into the LLM request every turn — that's the client's job, not the server's. The server just stops repeating the transfer; context cost per LLM call remains.
+The native loop is the inverse: the loop owns the per-turn payload (`build_catalog` → provider `tools=` each step), so it can *shrink* it per request (routing / tool_search / chained-step pruning). That per-turn rebuild is a deliberate lever for context control, not a limitation — and the schemas are static per session anyway, so rebuilding is cheap (no I/O).
+
+### Q3 — How does an MCP client get the tool playbooks of active packs?
+The server exposes each active-pack playbook as an MCP **resource** (`pie://playbooks/<pack>`, e.g. `pie://playbooks/code_rag`), derived from `prompt_fragments` gating (`FRAGMENT_ORDER`). The client calls `resources/list` once and reads the ones it wants via `resources/read` (resource-aware clients auto-load them into context at session start). MCP has no server→client content-push, so there is **no per-user-message or per-tool-turn sending** — the client pulls once and re-injects as it sees fit. The server advertises `resources` capability with `listChanged`; `hot_reload` emits `notifications/resources/list_changed`. `find_tool`/`get_tool_schema` descriptions point at the resource URIs so the model can discover them.
 
 ----------

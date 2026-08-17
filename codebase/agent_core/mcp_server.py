@@ -19,10 +19,14 @@ from pathlib import Path
 from typing import Any
 
 from mcp.server import Server
+from mcp.server.lowlevel.server import ReadResourceContents
 from mcp.server.models import InitializationOptions
 from mcp.server.stdio import stdio_server
 from mcp.types import (
     CallToolResult,
+    Resource,
+    ResourceListChangedNotification,
+    ResourcesCapability,
     ServerCapabilities,
     ServerNotification,
     TextContent,
@@ -32,22 +36,70 @@ from mcp.types import (
 )
 
 from agent_core.tools import registry
-from agent_core.tools.registry import CAT_FILE, CAT_KERNEL, CAT_SIM, CAT_META, CAT_GIT, CAT_CODE_RAG, CAT_OBSERVER, CAT_DEBATE, CAT_CHAIN
-from agent_core.config import resolve_active_tool_packs
+from agent_core.tools.registry import CAT_FILE, CAT_KERNEL, CAT_SIM, CAT_META, CAT_SEARCH, CAT_GIT, CAT_CODE_RAG, CAT_OBSERVER, CAT_DEBATE, CAT_CHAIN
+from agent_core.config import resolve_active_tool_packs, resolve_mcp_always_expose
 from agent_core.loop.executor import _normalize_tool_arg
+from agent_core.prompts import FRAGMENT_ORDER, PROMPT_FRAGMENTS_DIR, _filter_mode_block
 
 # MCP exposure policy:
 # - CAT_FILE never exposed (redundant with opencode built-ins)
-# - CAT_META always exposed
+# - always-on set config-driven (resolve_mcp_always_expose): 'meta' = CAT_META +
+#   CAT_SEARCH; 'search' = CAT_SEARCH only (find_tool/get_tool_schema)
 # - other packs exposed only when enabled in config (tool_packs)
-_META_ALWAYS_ON = {CAT_META}
 _FILE_NEVER_EXPOSED = CAT_FILE
+
+
+def _always_on_categories() -> set[str]:
+    cats = {CAT_SEARCH}
+    if resolve_mcp_always_expose() == "meta":
+        cats.add(CAT_META)
+    return cats
 
 
 def _exposed_categories() -> list[str]:
     active = set(resolve_active_tool_packs())
     others = {CAT_KERNEL, CAT_SIM, CAT_GIT, CAT_CODE_RAG, CAT_OBSERVER, CAT_DEBATE, CAT_CHAIN} & active
-    return sorted(_META_ALWAYS_ON | others)
+    return sorted(_always_on_categories() | others)
+
+# Active-pack tool playbooks exposed as MCP resources (pie://playbooks/<cat>).
+# Clients fetch once per session (e.g. auto-loaded into context at startup);
+# there is no per-turn sending over MCP. Derived from prompt_fragments gating.
+_PLAYBOOK_URI_PREFIX = "pie://playbooks/"
+_PLAYBOOK_FRAGMENT_BY_CAT = {
+    requires[0]: filename
+    for filename, requires, _blocks, _modes in FRAGMENT_ORDER
+    if requires and len(requires) == 1
+}
+
+
+def _playbook_resources() -> list[Resource]:
+    active = set(resolve_active_tool_packs())
+    return [
+        Resource(
+            uri=_PLAYBOOK_URI_PREFIX + cat,
+            name=f"{cat} tool playbook",
+            description=f"Tool playbook for the {cat} tool pack (from prompt_fragments).",
+            mimeType="text/markdown",
+        )
+        for cat in sorted(_PLAYBOOK_FRAGMENT_BY_CAT)
+        if cat in active
+    ]
+
+
+def _read_playbook(uri: str) -> str:
+    """Return playbook text for a pie://playbooks/<cat> uri, or raise ValueError."""
+    if not uri.startswith(_PLAYBOOK_URI_PREFIX):
+        raise ValueError(f"Unknown resource: {uri}")
+    cat = uri[len(_PLAYBOOK_URI_PREFIX):]
+    filename = _PLAYBOOK_FRAGMENT_BY_CAT.get(cat)
+    if filename is None:
+        raise ValueError(f"Unknown resource: {uri}")
+    fpath = os.path.join(PROMPT_FRAGMENTS_DIR, filename)
+    try:
+        with open(fpath, "r", encoding="utf-8") as f:
+            return _filter_mode_block(f.read(), "all")
+    except OSError as e:
+        raise ValueError(f"Failed to read resource {uri}: {e}")
 
 # Hot-reload support: watches all .py files under agent_core/tools/
 _WATCH_DIR = "agent_core/tools/"
@@ -102,6 +154,17 @@ async def list_mcp_tools() -> list[Tool]:
     return _build_tool_list()
 
 
+@server.list_resources()
+async def list_resources():
+    _reload_if_changed()
+    return _playbook_resources()
+
+
+@server.read_resource()
+async def read_resource(uri):
+    return [ReadResourceContents(content=_read_playbook(str(uri)), mime_type="text/markdown")]
+
+
 @server.call_tool()
 async def call_mcp_tool(name: str, arguments: dict[str, Any] | None) -> CallToolResult:
     _reload_if_changed()
@@ -114,6 +177,9 @@ async def call_mcp_tool(name: str, arguments: dict[str, Any] | None) -> CallTool
         ctx = server.request_context
         await ctx.session.send_notification(
             ServerNotification(ToolListChangedNotification())
+        )
+        await ctx.session.send_notification(
+            ServerNotification(ResourceListChangedNotification())
         )
         return CallToolResult(
             content=[TextContent(type="text", text="Tools reloaded. Client notified — new tools should appear.")]
@@ -187,7 +253,8 @@ async def main():
                 server_name="pie-kernel-sim",
                 server_version="0.1.0",
                 capabilities=ServerCapabilities(
-                    tools=ToolsCapability(listTools=True)
+                    tools=ToolsCapability(listTools=True),
+                    resources=ResourcesCapability(listChanged=True, subscribe=False),
                 ),
             ),
         )

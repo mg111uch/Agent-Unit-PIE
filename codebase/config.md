@@ -227,6 +227,43 @@ answer instead of a second model call. Empty list turns this off.
 Show the reasoning model only a small, request-matched subset of tools on the
 first step, instead of every active tool schema.
 
+### tool_search.enabled = false
+
+Hybrid tool search: each turn, send only an always-on base set plus a
+request-ranked subset of tool schemas, and expose `find_tool` / `get_tool_schema`
+so the model can discover and call any enabled tool on demand (execution runs
+against the full registry, so a discovered tool needs no schema re-injection).
+`true` enables it; when off, behavior is unchanged (`tool_group_routing` / full
+catalog).
+
+### tool_search.base_tools = ["Read", "grep_search", "glob_search", "execute_command", "edit_file", "Write", "ask_user_question", "get_workspace_info"]
+
+Tool names always sent to the model each turn (intersected with active packs and
+`tool_mode`). `find_tool` / `get_tool_schema` are always included regardless of
+this list.
+
+### tool_search.top_k = 10
+
+How many additional request-ranked tools (beyond the base set) to include per turn.
+
+### tool_search.fallback = "base"
+
+When no tool ranks above zero: `base` keeps only the base set, `full` falls
+back to every enabled tool.
+
+### mcp_always_expose = "meta"
+
+Which category is always exposed over MCP (`find_tool` / `get_tool_schema`
+are always exposed in either mode):
+- `meta` — all CAT_META tools (workspace, diff, edit/undo, introspection) plus
+  the two search tools.
+- `search` — only `find_tool` / `get_tool_schema`. CAT_META tools (e.g.
+  `get_workspace_info`, `tool_anatomy`, `undo_last_edit`, `cross_file_edit`)
+  become unlisted and un-callable over MCP (they remain available in the native
+  agent loop). Other tool packs are still exposed when enabled in `tool_packs`.
+
+Overridable via the `AGENT_MCP_ALWAYS_EXPOSE` env var.
+
 ### tier2_model_router.enabled = false
 
 Tier-2 routing model on/off. When disabled, ambiguous requests go straight to
@@ -257,7 +294,7 @@ runtime — keep it minimal.
 ### tool_mode = "all"
 
 Which tools are active: `all` (everything allowed by `tool_packs`), or a
-read-only / shell-only subset.
+`read-only` / `shell-only` subset.
 
 ### tool_packs.file = true
 
@@ -411,3 +448,9 @@ Retire learned chains unused for this many days.
 ### workflow_learn.min_savings_tokens = 0
 
 Do not promote a recipe unless it saves at least this many tokens per use.
+
+### workflow_learn.min_savings_ms = 0
+
+Do not promote a recipe unless it saves at least this many milliseconds per use.
+Promotion uses token OR time bar (whichever threshold is met). Default 0 (time
+bar off) keeps the token-only behavior.

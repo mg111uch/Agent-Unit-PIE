@@ -42,6 +42,7 @@ CREATE TABLE IF NOT EXISTS chain_candidates (
     tool_seq_json TEXT NOT NULL,
     occurrences INTEGER NOT NULL DEFAULT 1,
     savings_est INTEGER NOT NULL DEFAULT 0,
+    duration_saved_ms INTEGER NOT NULL DEFAULT 0,
     first_seen REAL NOT NULL,
     last_seen REAL NOT NULL
 );
@@ -137,6 +138,10 @@ class ChainStore:
             conn.execute("ALTER TABLE chain_candidates ADD COLUMN savings_est INTEGER DEFAULT 0")
         except Exception:
             pass  # column already present
+        try:
+            conn.execute("ALTER TABLE chain_candidates ADD COLUMN duration_saved_ms INTEGER DEFAULT 0")
+        except Exception:
+            pass  # column already present
         conn.commit()
 
     # --- spec persistence ---
@@ -210,16 +215,19 @@ class ChainStore:
 
     # --- mining candidates ---
 
-    def upsert_candidate(self, signature: str, tool_seq: List[str], savings_est: int = 0) -> int:
+    def upsert_candidate(self, signature: str, tool_seq: List[str], savings_est: int = 0,
+                         duration_saved_ms: int = 0) -> int:
         conn = _db()
         now = time.time()
         conn.execute(
-            """INSERT INTO chain_candidates (signature, tool_seq_json, occurrences, savings_est, first_seen, last_seen)
-               VALUES (?, ?, 1, ?, ?, ?)
+            """INSERT INTO chain_candidates (signature, tool_seq_json, occurrences, savings_est,
+                                            duration_saved_ms, first_seen, last_seen)
+               VALUES (?, ?, 1, ?, ?, ?, ?)
                ON CONFLICT(signature) DO UPDATE SET
                    occurrences=occurrences+1, savings_est=excluded.savings_est,
+                   duration_saved_ms=excluded.duration_saved_ms,
                    last_seen=excluded.last_seen""",
-            (signature, json.dumps(tool_seq), savings_est, now, now),
+            (signature, json.dumps(tool_seq), savings_est, duration_saved_ms, now, now),
         )
         conn.commit()
         row = conn.execute(

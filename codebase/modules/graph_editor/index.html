@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Graph Editor</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <aside id="toolbox">
+        <h1>Graph Editor</h1>
+        <p class="sub">Manually draw arbitrary graphs &amp; loops</p>
+
+        <section>
+            <h2>Tools</h2>
+            <div id="tools">
+                <button data-tool="select" class="tool active" title="Select / Move (V)">◉ Select</button>
+                <button data-tool="pan" class="tool" title="Pan / drag canvas (H)">✋ Pan</button>
+                <button data-tool="rect" class="tool" title="Place square node (R)">▢ Square</button>
+                <button data-tool="diamond" class="tool" title="Place diamond node (D)">◇ Diamond</button>
+                <button data-tool="ellipse" class="tool" title="Place oval node (O)">◯ Oval</button>
+                <button data-tool="edge" class="tool" title="Click a start node, click waypoints, click end node (E)">→ Edge</button>
+            </div>
+        </section>
+
+        <section>
+            <h2>Fill color</h2>
+            <div id="swatches"></div>
+            <div class="row">
+                <input type="color" id="fill-input" value="#ffffff" title="Custom fill color">
+                <span class="hint">for new nodes</span>
+            </div>
+        </section>
+
+        <section>
+            <h2>Actions</h2>
+            <div id="actions">
+                <button id="btn-undo" title="Undo (Ctrl+Z)">↶ Undo</button>
+                <button id="btn-redo" title="Redo (Ctrl+Y)">↷ Redo</button>
+                <button id="btn-del" title="Delete selected (Del)">🗑 Delete</button>
+                <button id="btn-export" title="Export graph JSON">⬇ Export</button>
+                <button id="btn-import" title="Load JSON from file">⬆ Import</button>
+                <button id="btn-paste" title="Paste JSON from clipboard">⌨ Paste</button>
+                <button id="btn-new" title="Clear canvas">✕ New</button>
+            </div>
+        </section>
+
+        <section>
+            <h2>Zoom</h2>
+            <div class="row">
+                <button id="zoom-out">−</button>
+                <button id="zoom-in">＋</button>
+                <button id="zoom-fit">Fit</button>
+            </div>
+        </section>
+
+        <div id="status">Ready</div>
+    </aside>
+
+    <main id="canvas-wrap">
+        <svg id="canvas">
+            <defs>
+                <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5"
+                        markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+                    <path d="M0,0 L10,5 L0,10 z" fill="context-stroke"/>
+                </marker>
+            </defs>
+            <g id="viewport">
+                <g id="edges"></g>
+                <g id="nodes"></g>
+                <g id="overlay"></g>
+            </g>
+        </svg>
+        <textarea id="label-editor" placeholder="Node / edge text (Shift+Enter = new line)"></textarea>
+        <div id="hint">V select · H pan · R/D/O shapes · E edge · dbl-click node/edge = text · wheel = zoom · middle-drag = pan</div>
+    </main>
+
+    <div id="modal" hidden>
+        <div id="modal-box">
+            <h2 id="modal-title">Export JSON</h2>
+            <textarea id="modal-text" spellcheck="false"></textarea>
+            <div class="row end">
+                <button id="modal-copy">Copy</button>
+                <button id="modal-download">Download</button>
+                <button id="modal-import">Import</button>
+                <button id="modal-close">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <input type="file" id="file-input" accept=".json,application/json" hidden>
+    <script src="/static/graph_editor.js"></script>
+</body>
+</html>

@@ -79,7 +79,7 @@ from agent_core.tools.chain.chains import CHAIN_SPECS
 from agent_core.tools.chain.chain_admin import chain_admin
 from agent_core.tools.chain.workflow_status import workflow_status_tool
 from agent_core.tools.registry import (
-    ToolRegistry, CAT_FILE, CAT_KERNEL, CAT_SIM, CAT_META, CAT_GIT, CAT_OBSERVER, CAT_CODE_RAG, CAT_DEBATE,
+    ToolRegistry, CAT_FILE, CAT_KERNEL, CAT_SIM, CAT_META, CAT_SEARCH, CAT_GIT, CAT_OBSERVER, CAT_CODE_RAG, CAT_DEBATE,
     CAT_CHAIN, str_p, int_p, float_p, bool_p, arr_p, obj_p, derive_schema,
 )
 from agent_core.tools.observer_ops import tool_stats, file_stats, user_reading_budget
@@ -110,6 +110,11 @@ def tool_call(fn: Callable) -> Callable:
 
 _existing_registry = globals().get("registry")
 registry = _existing_registry if hasattr(_existing_registry, "register") else ToolRegistry()
+
+# Imported after the registry instance exists: the search modules bind
+# `from agent_core.tools import registry` and would otherwise capture the
+# submodule mid-init (import-order-sensitive circular import).
+from agent_core.tools.tool_search import find_tool, get_tool_schema
 
 
 # =========================== Table-driven registration ===========================
@@ -357,6 +362,18 @@ _CODE_RAG_SPECS = [
      {"citations": arr_p("string", "List of citations like ['file.py:func()', 'path/to/module.py:ClassName()']", req=True)}),
 ]
 
+_SEARCH_SPECS = [
+    ("find_tool", find_tool, CAT_SEARCH,
+     "Search the enabled tool catalog by capability keywords. Returns matching tool names with category, one-line description, and compact params (name:type, req/opt). Use to discover tools not in the always-on base set, then call them directly by name. Active-pack playbooks are available as MCP resources: pie://playbooks/<pack>.",
+     {"query": str_p("Free-text keywords describing the capability (e.g. 'callers', 'simulation', 'impact')"),
+      "queries": arr_p("string", "Multiple queries searched and merged (deduplicated)"),
+      "max_results": int_p("Max matches to return (default 8)")}),
+    ("get_tool_schema", get_tool_schema, CAT_SEARCH,
+     "Return the full JSON schema (params, types, descriptions, required) for one or more tools by exact name. Use after find_tool when you need the precise argument contract.",
+     {"name": str_p("Exact tool name"),
+      "names": arr_p("string", "Batch: exact tool names to fetch schemas for")}),
+]
+
 _OBSERVER_SPECS = [
     ("tool_stats", tool_stats, CAT_OBSERVER,
      "Show tool call statistics — counts, avg duration, error rate per tool. Most called first.",
@@ -522,6 +539,7 @@ def _register_all():
     _register(_FILE_SPECS)
     _register(_AST_SPECS)
     _register(_META_SPECS)
+    _register(_SEARCH_SPECS)
     _register(_GIT_SPECS)
     _register_kernel_tools()
     _register(_CODE_RAG_SPECS)

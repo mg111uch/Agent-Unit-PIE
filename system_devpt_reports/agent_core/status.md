@@ -10,7 +10,7 @@ _Last verified: 2026-08-02_
 - Config-driven local model on/off via `local_model.enabled` in config.json — `agent_core/config.py:load_config()`
 - Agent loop with multi-tool turns, streaming, cancel support — `agent_core/loop/engine.py:iter_agent_events()`
 - Tool registry with category filtering, middleware, MCP export — `agent_core/tools/__init__.py:_register_all()`
-- MCP stdio server exposure policy: CAT_META always, CAT_FILE never, other packs per config — `agent_core/mcp_server.py:_exposed_categories()`
+- MCP stdio server exposure policy: always-on set per `mcp_always_expose` (CAT_META+CAT_SEARCH or CAT_SEARCH only), CAT_FILE never, other packs per config — `agent_core/mcp_server.py:_exposed_categories()`
 - LLM orchestration with provider abstraction — `agent_core/providers_setup.py:build_orchestrator()`
 - File operations with sandbox and path resolution — `agent_core/tools/file_ops.py:read_file()`
 - Code RAG tools for atlas queries — `agent_core/tools/context_dump.py:minimal_context_dump()`
@@ -34,5 +34,5 @@ _Last verified: 2026-08-02_
 - `workflow_status` tool (observer): summary | full | candidates | evolve — `agent_core/tools/chain/workflow_status.py`
 - Self-evolving chains: `chain_miner.py` mines repeated tool sequences (in-loop + session-end), auto-promotes read-only, `pending` for writes; `chain_store.py` persists chain_specs/chain_candidates; `_register_stored_chains` reloads approved mined chains at startup — `agent_core/tools/chain/`
 - Tool chains: `chain_spec.py`/`chain_engine.py` run composite tools (probe_module, orient_symbols, doc_audit, safe_edit) with $input/$step binding + budget caps — `agent_core/tools/chain/chain_engine.py`
-- MCP exposure policy: CAT_META always, CAT_FILE never, other tool packs only when enabled in config — `agent_core/mcp_server.py:_exposed_categories()`
+- MCP exposure policy: always-on set = CAT_META + CAT_SEARCH (`mcp_always_expose = "meta"`, default) or CAT_SEARCH only (`"search"`), CAT_FILE never, other packs only when enabled in config — `agent_core/mcp_server.py:_exposed_categories()`, `agent_core/config.py:resolve_mcp_always_expose()`
 - `subagent_task` moved to CAT_FILE, gated by `subagent_task_enabled` config flag (default off) — `agent_core/tools/__init__.py:_register_file_tools()`, `agent_core/config.py:SUBAGENT_TASK_ENABLED`

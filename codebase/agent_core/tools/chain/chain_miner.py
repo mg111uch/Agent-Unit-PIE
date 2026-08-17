@@ -16,6 +16,7 @@ from agent_core.config import (
     WORKFLOW_LEARN_MIN_OCCURRENCES,
     WORKFLOW_LEARN_MAX_SEQUENCE,
     WORKFLOW_LEARN_MIN_SAVINGS_TOKENS,
+    WORKFLOW_LEARN_MIN_SAVINGS_MS,
 )
 from agent_core.tools.chain.chain_spec import ChainSpec, Step
 from agent_core.tools.chain.chain_store import chain_store
@@ -150,6 +151,34 @@ def estimate_savings(gram: Tuple[str, ...], occurrences: int,
     return max(0, per_call * max(occurrences, 1))
 
 
+_DEFAULT_TOOL_MS = 150.0
+
+
+def _avg_duration_map() -> Dict[str, float]:
+    """Per-tool avg duration ms from tool_stats (empty -> {} on any failure)."""
+    try:
+        from kernel.persistence.db import kernel_db
+        return {r["tool_name"]: float(r.get("avg_duration_ms") or 0) for r in kernel_db.get_tool_stats()}
+    except Exception:
+        return {}
+
+
+def estimate_time_savings(gram: Tuple[str, ...], occurrences: int,
+                          avg_duration: Optional[Dict[str, float]] = None) -> int:
+    """Estimated ms saved by replacing the repeated sequence with one chain call.
+
+    Mirror of estimate_savings: per-call ≈ sum of step durations − the largest
+    step (one chain call ≈ its dominant step), × occurrences. Uses real avg
+    durations from tool_stats; falls back to a constant for unseen tools.
+    """
+    avg = avg_duration if avg_duration is not None else _avg_duration_map()
+    step_ms = [avg.get(t, _DEFAULT_TOOL_MS) for t in gram]
+    if not step_ms:
+        return 0
+    per_call = sum(step_ms) - max(step_ms)
+    return max(0, int(per_call * max(occurrences, 1)))
+
+
 class ChainMiner:
     def __init__(self, store=None):
         self._store = store or chain_store
@@ -189,18 +218,20 @@ class ChainMiner:
     def scan_and_promote(self, sequence: List[Tuple[str, Any]]):
         names = [t for t, _ in sequence]
         avg = _avg_tokens_map()
+        avg_dur = _avg_duration_map()
         for gram, count in self._repeated_grams(names):
             savings = estimate_savings(gram, count, avg)
+            time_saved = estimate_time_savings(gram, count, avg_dur)
             if gram in self._promoted:
                 # already live this process — refresh evidence + demote supersets
                 self._demote_overlapping(gram, count)
-                self._store.upsert_candidate(signature_of(list(gram)), list(gram), savings)
+                self._store.upsert_candidate(signature_of(list(gram)), list(gram), savings, time_saved)
                 continue
             indices = [i for i in range(len(names) - len(gram) + 1)
                        if tuple(names[i:i + len(gram)]) == gram]
             spec = self._build_spec(gram, sequence, indices)
             if spec is not None:
-                self._promote(spec, count, savings)
+                self._promote(spec, count, savings, time_saved)
 
     def _repeated_grams(self, names: List[str]) -> List[Tuple[Tuple[str, ...], int]]:
         max_len = min(WORKFLOW_LEARN_MAX_SEQUENCE, len(names))
@@ -279,13 +310,24 @@ class ChainMiner:
 
     # --- promotion ---
 
-    def _promote(self, spec: ChainSpec, count: int = 1, savings: int = 0):
+    @staticmethod
+    def _savings_bar_met(savings: int, time_saved: int) -> bool:
+        """Auto-promote when a configured savings bar is met (token OR time).
+        With no bar configured (both thresholds 0), read-only chains auto-promote."""
+        bars = []
+        if WORKFLOW_LEARN_MIN_SAVINGS_TOKENS > 0:
+            bars.append(savings >= WORKFLOW_LEARN_MIN_SAVINGS_TOKENS)
+        if WORKFLOW_LEARN_MIN_SAVINGS_MS > 0:
+            bars.append(time_saved >= WORKFLOW_LEARN_MIN_SAVINGS_MS)
+        return bool(bars) and any(bars) or not bars
+
+    def _promote(self, spec: ChainSpec, count: int = 1, savings: int = 0, time_saved: int = 0):
         gram = tuple(s.tool for s in spec.steps)
-        self._store.upsert_candidate(signature_of(list(gram)), list(gram), savings)
+        self._store.upsert_candidate(signature_of(list(gram)), list(gram), savings, time_saved)
         read_only = is_read_only(list(gram))
         if not read_only:
             status = "pending"
-        elif WORKFLOW_LEARN_MIN_SAVINGS_TOKENS > 0 and savings < WORKFLOW_LEARN_MIN_SAVINGS_TOKENS:
+        elif not self._savings_bar_met(savings, time_saved):
             status = "pending"  # below savings bar — hold for approval
         else:
             status = "approved"
@@ -340,11 +382,12 @@ class ChainMiner:
     def _promote_batch(self, spec: ChainSpec) -> bool:
         gram = tuple(s.tool for s in spec.steps)
         savings = estimate_savings(gram, 2)
-        self._store.upsert_candidate(signature_of(list(gram)), list(gram), savings)
+        time_saved = estimate_time_savings(gram, 2)
+        self._store.upsert_candidate(signature_of(list(gram)), list(gram), savings, time_saved)
         read_only = is_read_only(list(gram))
         if not read_only:
             status = "pending"
-        elif WORKFLOW_LEARN_MIN_SAVINGS_TOKENS > 0 and savings < WORKFLOW_LEARN_MIN_SAVINGS_TOKENS:
+        elif not self._savings_bar_met(savings, time_saved):
             status = "pending"
         else:
             status = "approved"

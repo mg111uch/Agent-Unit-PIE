@@ -113,6 +113,7 @@ WORKFLOW_LEARN_GRAPH_EVOLVE: bool = bool(_WF.get("graph_evolve", True))
 WORKFLOW_LEARN_CONTEXT_HINTS: bool = bool(_WF.get("context_hints", True))
 WORKFLOW_LEARN_STALE_AFTER_DAYS: int = int(_WF.get("stale_after_days", 14))
 WORKFLOW_LEARN_MIN_SAVINGS_TOKENS: int = int(_WF.get("min_savings_tokens", 0))
+WORKFLOW_LEARN_MIN_SAVINGS_MS: int = int(_WF.get("min_savings_ms", 0))
 
 # Efficiency / context management
 # Token-aware compaction trigger (Phase 7): compact the model-visible history
@@ -163,6 +164,19 @@ DIRECT_FINAL_TOOLS: set[str] = set(_CONFIG.get("direct_final_tools", []) or [])
 # deterministic tool group (tool_groups.py) instead of exposing every active
 # tool schema. Chained steps keep their own pruning. Off = current behavior.
 TOOL_GROUP_ROUTING: bool = bool(_CONFIG.get("tool_group_routing", False))
+
+# Hybrid tool search (dynamic tool exposure): shrink the per-turn schema
+# payload to an always-on base set plus a lexically-ranked top-k of enabled
+# tools, and expose find_tool/get_tool_schema so the model can discover and
+# call any enabled tool on demand. Off = current behavior.
+_TS = _CONFIG.get("tool_search", {})
+TOOL_SEARCH_ENABLED: bool = bool(_TS.get("enabled", False))
+TOOL_SEARCH_BASE_TOOLS: list[str] = list(_TS.get("base_tools", [
+    "Read", "grep_search", "glob_search", "execute_command",
+    "edit_file", "Write", "ask_user_question", "get_workspace_info",
+]))
+TOOL_SEARCH_TOP_K: int = int(_TS.get("top_k", 10))
+TOOL_SEARCH_FALLBACK: str = str(_TS.get("fallback", "base"))
 
 # Phase 4 deterministic factory fast path (PlanFixes2 #8): run
 # try_factory() before the first LLM call. Unambiguous asks (find/read/list/
@@ -298,6 +312,13 @@ def resolve_active_tool_packs() -> list[str]:
 
 def resolve_active_tool_mode() -> str:
     return os.getenv("AGENT_TOOL_MODE", _CONFIG.get("tool_mode", "all"))
+
+
+def resolve_mcp_always_expose() -> str:
+    """MCP always-on category: 'meta' (all CAT_META + search tools) or
+    'search' (only find_tool/get_tool_schema). Unknown values fall back to meta."""
+    v = os.getenv("AGENT_MCP_ALWAYS_EXPOSE") or str(_CONFIG.get("mcp_always_expose", "meta"))
+    return v if v in ("meta", "search") else "meta"
 
 
 def resolve_active_tool_names() -> set[str]:

@@ -17,18 +17,14 @@
     "keep_recent": 1,
     "min_overlap": 1
   },
-  "default_provider": "gemini",
-  "default_model": "gemini-3.1-flash-lite",
+  "default_provider": "mock",
+  "default_model": "mock",
   "providers": {
     "gemini": {
       "default_model": "gemini-3.5-flash-lite",
       "models": [
         "gemini-3.5-flash-lite",
-        "gemini-3.1-flash-lite",
-        "gemini-3.6-flash",
-        "gemini-3.5-flash",
-        "gemini-3.1-pro-preview",
-        "gemma-4-31b-it",
+        "gemini-3.7-flash",
         "gemma-4-26b-a4b-it"
       ]
     },
@@ -71,8 +67,24 @@
     "check_path_exists"
   ],
   "tool_group_routing": true,
+  "tool_search": {
+    "enabled": false,
+    "base_tools": [
+      "Read",
+      "grep_search",
+      "glob_search",
+      "execute_command",
+      "edit_file",
+      "Write",
+      "ask_user_question",
+      "get_workspace_info"
+    ],
+    "top_k": 10,
+    "fallback": "base"
+  },
+  "mcp_always_expose": "meta",
   "tier2_model_router": {
-    "enabled": true,
+    "enabled": false,
     "backend": "openrouter",
     "model": "inclusionai/ling-3.0-tiny:free",
     "timeout_s": 60
@@ -131,8 +143,9 @@
     "tool_writes_per_minute": 30
   },
   "system_prompt_core_only": false,
+  "system_prompt_devpt_fragments": false,
   "workflow_learn": {
-    "enabled": true,
+    "enabled": false,
     "min_occurrences": 2,
     "max_sequence_len": 4,
     "in_loop": true,
@@ -140,6 +153,7 @@
     "graph_evolve": true,
     "context_hints": true,
     "stale_after_days": 14,
-    "min_savings_tokens": 0
+    "min_savings_tokens": 0,
+    "min_savings_ms": 0
   }
 }

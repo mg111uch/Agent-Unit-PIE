@@ -19,24 +19,25 @@ import re
 from pathlib import Path
 
 from agent_core.tools.registry import (
-    CAT_FILE, CAT_KERNEL, CAT_SIM, CAT_META, CAT_GIT, CAT_CODE_RAG, CAT_OBSERVER, CAT_DEBATE,
+    CAT_FILE, CAT_KERNEL, CAT_SIM, CAT_META, CAT_SEARCH, CAT_GIT, CAT_CODE_RAG, CAT_OBSERVER, CAT_DEBATE,
 )
 from agent_core.config import (
     CODEBASE_ROOT,
     resolve_active_tool_packs,
     resolve_active_tool_mode,
     resolve_active_tool_names,
+    resolve_mcp_always_expose,
 )
 
 _CATEGORY_LABELS = {
     CAT_FILE: "CAT_FILE", CAT_KERNEL: "CAT_KERNEL", CAT_SIM: "CAT_SIM",
-    CAT_META: "CAT_META", CAT_GIT: "CAT_GIT", CAT_CODE_RAG: "CAT_CODE_RAG",
-    CAT_OBSERVER: "CAT_OBSERVER", CAT_DEBATE: "CAT_DEBATE",
+    CAT_META: "CAT_META", CAT_SEARCH: "CAT_SEARCH", CAT_GIT: "CAT_GIT",
+    CAT_CODE_RAG: "CAT_CODE_RAG", CAT_OBSERVER: "CAT_OBSERVER", CAT_DEBATE: "CAT_DEBATE",
 }
 
-_MCP_ALWAYS = {CAT_META}
+_MCP_ALWAYS = {CAT_SEARCH} | ({CAT_META} if resolve_mcp_always_expose() == "meta" else set())
 _MCP_NEVER = {CAT_FILE}
-_CAT_ORDER = [CAT_FILE, CAT_META, CAT_KERNEL, CAT_GIT, CAT_CODE_RAG, CAT_OBSERVER, CAT_SIM, CAT_DEBATE]
+_CAT_ORDER = [CAT_FILE, CAT_META, CAT_SEARCH, CAT_KERNEL, CAT_GIT, CAT_CODE_RAG, CAT_OBSERVER, CAT_SIM, CAT_DEBATE]
 
 _GROUP_CAPS = {
     "prompt_fragments": 8, "mock_scenarios": 4, "tests": 4, "stepper": 4,
@@ -173,7 +174,7 @@ def _render_params(properties, required) -> list:
 def _mcp_expose(category: str) -> str:
     active = set(resolve_active_tool_packs())
     if category in _MCP_ALWAYS:
-        return "yes (CAT_META always exposed)"
+        return f"yes (always-on: {', '.join(sorted(_MCP_ALWAYS))})"
     if category in _MCP_NEVER:
         return "no (CAT_FILE never exposed)"
     if category in active:
@@ -260,7 +261,7 @@ def _config_header() -> str:
     mode = resolve_active_tool_mode()
     return (
         f"active packs: {', '.join(packs) if packs else '(none)'} | tool_mode: {mode} | "
-        f"tools: {registry.tool_count} | mcp policy: CAT_META always, CAT_FILE never, others if pack on"
+        f"tools: {registry.tool_count} | mcp policy: always={','.join(sorted(_MCP_ALWAYS))}, CAT_FILE never, others if pack on"
     )
 
 
