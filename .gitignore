@@ -8,4 +8,4 @@ encoding_cache
 .adk
 .agent_checkpoints
 cache
-atlas_output
+atlas_output/
