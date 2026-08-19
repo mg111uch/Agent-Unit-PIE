@@ -18,7 +18,7 @@
 - **Make directory:** 
 `cd <atlas_path>/tools && conda run -n <conda_env> python make_directree.py --reverse --base_path <project_path> --md_file <project_path>/code_atlas.md --start_marker '### FILE_MAP Tree' --end_marker '### End Tree'`
 
-- **Copy Content:** `cd <atlas_path>/tools && conda run -n <conda_env> python copyContent.py --mode dump --md_file <project_path>/code_atlas.md --base_path <project_path> --output_file <project_path>/code_dump.txt --start_marker '### FILE_MAP Tree' --end_marker '### End Tree'`
+- **Copy Content:** `cd <atlas_path>/tools && conda run -n <conda_env> python copyContent.py --mode dump --md_file <project_path>/code_atlas.md --base_path <project_path> --output_file <project_path>/generated_reports/code_dump.txt --start_marker '### FILE_MAP Tree' --end_marker '### End Tree'`
 
 - **Count Tokens in file:** `cd <atlas_path>/tools && conda run -n <conda_env> python token_count.py <project_path>/agent_harness.md`
 

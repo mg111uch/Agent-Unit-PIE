@@ -14,4 +14,4 @@
 | Agent Onboarding | `codebase/prompt_fragments/onboarding.md` (in `FRAGMENT_ORDER`) points agents at `project_history` + `list_capabilities`/`report_inventory` instead of full-report reads |
 | Capability Regression Signal | `validate_capabilities` detects regressions (previously-`supported` caps now FAIL, via citation_cache) and emits a `capability_regression` kernel signal |
 | Tool-Bypass Detection | `scripts/detect_tool_bypass.py` surfaces repeated raw Reads on atlas-indexed files via `pattern_engine.detect_repeated_events` |
-| Project Health Index | `scripts/render_index.py` writes a project-root `INDEX.md` health badge from report inventory + schema check + capability validation |
+| Project Health Index | `scripts/render_index.py` writes a `generated_reports/INDEX.md` health badge from report inventory + schema check + capability validation |

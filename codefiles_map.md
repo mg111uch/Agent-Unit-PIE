@@ -1,7 +1,7 @@
 ## Codebase size
-Total files processed: 326
-Total lines of code: 59640
-Total tokens: 434212
+Total files processed: 388
+Total lines of code: 71086
+Total tokens: 529371
 ## End Codebase size
 
 ## Directory Structure 
@@ -17,7 +17,7 @@ Total tokens: 434212
 │   ├── [] session6.md [76 LOC, 1208 tokens]
 │   ├── [] session7.md [43 LOC, 1038 tokens]
 │   └── [] session8.md [22 LOC, 550 tokens]
-├── scripts/ [1436 LOC, 11754 tokens]
+├── scripts/ [1437 LOC, 11771 tokens]
 │   ├── lib/ [120 LOC, 816 tokens]
 │   │   ├── __init__.py
 │   │   └── [] citations.py [120 LOC, 816 tokens]
@@ -27,13 +27,13 @@ Total tokens: 434212
 │   ├── [] render_recent_changes.py [115 LOC, 974 tokens]
 │   ├── [] render_status.py [133 LOC, 1033 tokens]
 │   ├── [] link_gap_blockers.py [124 LOC, 1165 tokens]
-│   ├── [] render_index.py [99 LOC, 909 tokens]
+│   ├── [] render_index.py [100 LOC, 926 tokens]
 │   ├── [] record_removal.py [111 LOC, 915 tokens]
 │   ├── [] emit_dev_change.py [78 LOC, 562 tokens]
 │   ├── [] rename_tools.py [101 LOC, 703 tokens]
 │   ├── [] detect_tool_bypass.py [109 LOC, 915 tokens]
 │   └── [] validate_capabilities.py [210 LOC, 1948 tokens]
-├── codebase/ [81603 LOC, 535337 tokens]
+├── codebase/ [82561 LOC, 543913 tokens]
 │   ├── storage/ [808 LOC, 3826 tokens]
 │   │   ├── raw_observation_storage.py
 │   │   ├── [] unit_storage.py [432 LOC, 2036 tokens]
@@ -47,14 +47,14 @@ Total tokens: 434212
 │   │   ├── summarizer_agent.py
 │   │   ├── simulation_agent.py
 │   │   └── pattern_agent.py
-│   ├── agent_tools/ [4229 LOC, 35397 tokens]
-│   │   ├── atlas_tools/ [2130 LOC, 17710 tokens]
+│   ├── agent_tools/ [5182 LOC, 43913 tokens]
+│   │   ├── atlas_tools/ [2130 LOC, 17714 tokens]
 │   │   │   ├── [] make_directree.py [221 LOC, 2084 tokens]
 │   │   │   ├── [] token_count.py [174 LOC, 1332 tokens]
 │   │   │   ├── [] run_cmds.py [271 LOC, 1875 tokens]
 │   │   │   ├── [] add_markers.py [148 LOC, 1061 tokens]
-│   │   │   ├── [] gen_tools_file.py [99 LOC, 1080 tokens]
-│   │   │   ├── [] copyContent.py [152 LOC, 1423 tokens]
+│   │   │   ├── [] gen_tools_file.py [99 LOC, 1082 tokens]
+│   │   │   ├── [] copyContent.py [152 LOC, 1425 tokens]
 │   │   │   ├── [] path_file_exists.py [42 LOC, 245 tokens]
 │   │   │   ├── [] init_harness.py [290 LOC, 2378 tokens]
 │   │   │   ├── [] mini_code_map.py [100 LOC, 834 tokens]
@@ -66,18 +66,22 @@ Total tokens: 434212
 │   │   ├── [] record_browser.py [66 LOC, 506 tokens]
 │   │   ├── [] gemini_mode_benchmark.py [356 LOC, 4118 tokens]
 │   │   ├── [] ask_gemini.py [216 LOC, 1530 tokens]
+│   │   ├── [] tool_benchmark.py [277 LOC, 2313 tokens]
 │   │   ├── [] openrouter_api.py [29 LOC, 191 tokens]
+│   │   ├── [] dead_code_detector.py [367 LOC, 3348 tokens]
 │   │   ├── [] token_benchmark.py [133 LOC, 1401 tokens]
 │   │   ├── [] run_process.py [210 LOC, 1407 tokens]
 │   │   ├── [] run_and_record.py [170 LOC, 1177 tokens]
 │   │   ├── [] system_prompt_report.py [57 LOC, 522 tokens]
+│   │   ├── [] duplicate_detector.py [269 LOC, 2577 tokens]
 │   │   ├── [] inference_api_hf.py [25 LOC, 176 tokens]
 │   │   ├── [] swapFiles.py [53 LOC, 434 tokens]
-│   │   ├── [] condense_transcript.py [368 LOC, 2983 tokens]
+│   │   ├── [] condense_transcript.py [368 LOC, 2987 tokens]
 │   │   ├── [] gemini_api_state.json [1 LOC, 14 tokens]
 │   │   ├── [] ollama_local.py [29 LOC, 185 tokens]
 │   │   ├── [] play_sound.py [13 LOC, 114 tokens]
 │   │   ├── [] screenRecord.py [144 LOC, 971 tokens]
+│   │   ├── [] llama_cpp.py [40 LOC, 270 tokens]
 │   │   └── [] gemini_doc_clean.py [86 LOC, 622 tokens]
 │   ├── prompt_fragments/ [179 LOC, 2686 tokens]
 │   │   ├── [] meta_playbook.md [5 LOC, 108 tokens]
@@ -419,7 +423,7 @@ Total tokens: 434212
 │   │   ├── [] store.js [165 LOC, 1420 tokens]
 │   │   ├── [] app.js [32 LOC, 177 tokens]
 │   │   └── [] index.html [248 LOC, 4699 tokens]
-│   ├── agent_core/ [14772 LOC, 131452 tokens]
+│   ├── agent_core/ [14777 LOC, 131512 tokens]
 │   │   ├── server/ [1025 LOC, 7945 tokens]
 │   │   │   ├── [] ws_handler.py [412 LOC, 3213 tokens]
 │   │   │   ├── [] routes.py [128 LOC, 1079 tokens]
@@ -500,7 +504,7 @@ Total tokens: 434212
 │   │   ├── [] mcp_server.py [264 LOC, 1950 tokens]
 │   │   ├── [] auto_research.py [93 LOC, 679 tokens]
 │   │   ├── [] prompts.py [178 LOC, 1677 tokens]
-│   │   ├── [] config.py [363 LOC, 4402 tokens]
+│   │   ├── [] config.py [368 LOC, 4462 tokens]
 │   │   ├── [] audit_log.py [77 LOC, 556 tokens]
 │   │   ├── [] agent_loop.py [8 LOC, 53 tokens]
 │   │   ├── [] llm_orchestrator.py [271 LOC, 2051 tokens]
@@ -520,14 +524,14 @@ Total tokens: 434212
 │   ├── tui_output.txt
 │   ├── [] config.json [159 LOC, 1299 tokens]
 │   ├── [] tool_client.py [203 LOC, 2213 tokens]
-│   ├── [] .env.enc [1 LOC, 222 tokens]
-│   └── condensed.txt
-├── project_docs/ [6585 LOC, 31216 tokens]
+│   └── [] .env.enc [1 LOC, 222 tokens]
+├── project_docs/ [6616 LOC, 32018 tokens]
 │   ├── [] MCP_ADAPTERS.md [219 LOC, 1399 tokens]
 │   ├── [] GPT_5-5_Chat.md [4962 LOC, 18724 tokens]
 │   ├── [] backupPlans.md [175 LOC, 3709 tokens]
 │   ├── [] Devpt_phases.md [333 LOC, 2918 tokens]
-│   └── [] README.md [896 LOC, 4466 tokens]
+│   ├── [] README.md [896 LOC, 4466 tokens]
+│   └── [] file_tools_selftest.md [31 LOC, 802 tokens]
 ├── data/ [1461 LOC, 18283 tokens]
 │   ├── chroma_db/
 │   ├── workflows/ [827 LOC, 12266 tokens]
@@ -577,7 +581,7 @@ Total tokens: 434212
 │           ├── body/
 │           ├── profile/
 │           └── system_summery.md
-├── system_devpt_reports/ [2306 LOC, 31430 tokens]
+├── system_devpt_reports/ [2642 LOC, 34980 tokens]
 │   ├── debate_argu/ [336 LOC, 3437 tokens]
 │   │   ├── [] roadmap.md [24 LOC, 224 tokens]
 │   │   ├── [] status.md [28 LOC, 692 tokens]
@@ -590,13 +594,14 @@ Total tokens: 434212
 │   │   ├── [] roadmap.md [21 LOC, 128 tokens]
 │   │   ├── [] status.md [15 LOC, 155 tokens]
 │   │   └── [] README.md [240 LOC, 1493 tokens]
-│   ├── kernel/ [108 LOC, 2330 tokens]
+│   ├── kernel/ [108 LOC, 2331 tokens]
 │   │   ├── [] roadmap.md [66 LOC, 1205 tokens]
 │   │   ├── [] status.md [25 LOC, 503 tokens]
-│   │   └── [] README.md [17 LOC, 622 tokens]
-│   ├── agent_core/ [982 LOC, 14810 tokens]
+│   │   └── [] README.md [17 LOC, 623 tokens]
+│   ├── agent_core/ [1318 LOC, 18359 tokens]
 │   │   ├── [] roadmap.md [283 LOC, 4612 tokens]
 │   │   ├── [] status.md [38 LOC, 1143 tokens]
+│   │   ├── [] local_benchmark.md [336 LOC, 3549 tokens]
 │   │   ├── [] gemini_benchmark.md [166 LOC, 1924 tokens]
 │   │   ├── [] workflow_graphs.md [75 LOC, 786 tokens]
 │   │   ├── [] tool_chaining.md [83 LOC, 880 tokens]
@@ -606,13 +611,20 @@ Total tokens: 434212
 │   ├── [] TODO.md [41 LOC, 1128 tokens]
 │   ├── FeatureIdeas.md
 │   └── FixesIssues.md
+├── generated_reports/ [45531 LOC, 359784 tokens]
+│   ├── context_dump.txt
+│   ├── [] dead_code_detector_report.txt [947 LOC, 14072 tokens]
+│   ├── [] duplicate_detector_report.json [20105 LOC, 116310 tokens]
+│   ├── [] duplicate_detector_report.txt [20819 LOC, 202604 tokens]
+│   ├── code_dump.txt
+│   ├── [] config.json [159 LOC, 1299 tokens]
+│   ├── [] dead_code_detector_report.json [3479 LOC, 25278 tokens]
+│   ├── [] INDEX.md [22 LOC, 221 tokens]
+│   └── condensed.txt
 ├── [] opencode.json [16 LOC, 163 tokens]
-├── context_dump.txt
 ├── [] AGENTS.md [28 LOC, 406 tokens]
-├── code_dump.txt
-├── [] codefiles_map.md [613 LOC, 11332 tokens]
-├── [] .gitignore [11 LOC, 37 tokens]
+├── [] codefiles_map.md [618 LOC, 11411 tokens]
+├── [] .gitignore [12 LOC, 40 tokens]
 ├── [] README.md [137 LOC, 922 tokens]
-├── [] project_tools.md [28 LOC, 1031 tokens]
-└── [] INDEX.md [22 LOC, 225 tokens]
+└── [] project_tools.md [32 LOC, 1180 tokens]
 ### End Tree

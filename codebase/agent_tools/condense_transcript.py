@@ -30,7 +30,7 @@ Transformations (all reversible/inspectable, nothing silently dropped):
   * [FINAL] keep step + response verbatim.
 
 Usage:
-    python condense_transcript.py input.txt -o condensed.txt --stats
+    python condense_transcript.py input.txt -o generated_reports/condensed.txt --stats
     python condense_transcript.py input.txt --no-sysprompt --no-tool-schemas
     python condense_transcript.py input.txt            # writes to stdout
 """

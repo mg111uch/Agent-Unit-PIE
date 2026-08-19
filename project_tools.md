@@ -7,11 +7,11 @@
 
 - **Load saved atlas and serve** `python -m codebase_atlas.main --output-dir /home/manigupt/Hello/Agentic_Unit_PIE/atlas_output --load`
 
-- **Condense log:** `cd /home/manigupt/Hello/Agentic_Unit_PIE/codebase/agent_tools python condense_transcript.py /home/manigupt/Hello/Agentic_Unit_PIE/codebase/tui_output.txt -o /home/manigupt/Hello/Agentic_Unit_PIE/codebase/condensed.txt --stats --no-sysprompt --no-tool-schemas`
+- **Condense log:** `cd /home/manigupt/Hello/Agentic_Unit_PIE/codebase/agent_tools python condense_transcript.py /home/manigupt/Hello/Agentic_Unit_PIE/codebase/tui_output.txt -o /home/manigupt/Hello/Agentic_Unit_PIE/generated_reports/condensed.txt --stats --no-sysprompt --no-tool-schemas`
 
-- **Condense log working** `cd codebase python agent_tools/condense_transcript.py tui_output.txt -o condensed.txt --stats  --no-sysprompt --no-tool-schemas`
+- **Condense log working** `cd codebase python agent_tools/condense_transcript.py tui_output.txt -o ../generated_reports/condensed.txt --stats  --no-sysprompt --no-tool-schemas`
 
-- **Copy Content:** `cd /home/manigupt/Hello/Agentic_Unit_PIE/codebase/agent_tools/atlas_tools && conda run -n myenv python copyContent.py --mode dump --md_file /home/manigupt/Hello/Agentic_Unit_PIE/codefiles_map.md --base_path /home/manigupt/Hello/Agentic_Unit_PIE --output_file /home/manigupt/Hello/Agentic_Unit_PIE/code_dump.txt --start_marker '### FILE_MAP Tree' --end_marker '### End Tree'`
+- **Copy Content:** `cd /home/manigupt/Hello/Agentic_Unit_PIE/codebase/agent_tools/atlas_tools && conda run -n myenv python copyContent.py --mode dump --md_file /home/manigupt/Hello/Agentic_Unit_PIE/codefiles_map.md --base_path /home/manigupt/Hello/Agentic_Unit_PIE --output_file /home/manigupt/Hello/Agentic_Unit_PIE/generated_reports/code_dump.txt --start_marker '### FILE_MAP Tree' --end_marker '### End Tree'`
 
 - **Codebase size:** `cd /home/manigupt/Hello/Agentic_Unit_PIE/codebase/agent_tools/atlas_tools && conda run -n myenv python codebase_size.py --directory /home/manigupt/Hello/Agentic_Unit_PIE/codebase --extensions .py .js .html --output-file /home/manigupt/Hello/Agentic_Unit_PIE/codefiles_map.md --start-marker "## Codebase size" --end-marker "## End Codebase size"`
 
@@ -24,5 +24,9 @@
 - **Generate project tools:** `python gen_tools_file.py --atlas_path /home/manigupt/Hello/Agentic_Unit_PIE/codebase/atlas_output --conda_env myenv --project_path /path/to/project`
 
 - **Init project harness:** `python init_harness.py --atlas_path /home/manigupt/Hello/Agentic_Unit_PIE/codebase/atlas_output --conda_env myenv --project_path /path/to/project`
+
+- **Duplicate detector** `cd /home/manigupt/Hello/Agentic_Unit_PIE && conda run --no-capture-output -n myenv python codebase/agent_tools/duplicate_detector.py --root codebase --output generated_reports/duplicate_detector_report.json > generated_reports/duplicate_detector_report.txt 2>&1`
+
+- **Dead code detector** `cd /home/manigupt/Hello/Agentic_Unit_PIE && conda run --no-capture-output -n myenv python codebase/agent_tools/dead_code_detector.py --root codebase --output generated_reports/dead_code_detector_report.json > generated_reports/dead_code_detector_report.txt 2>&1`
 
 - **Execute in order:** `cd /home/manigupt/Hello/Agentic_Unit_PIE/codebase/agent_tools/atlas_tools && python run_cmds.py /home/manigupt/Hello/Agentic_Unit_PIE/project_tools.md "Make directory" "Codebase size" "Count Tokens in file" "Make Codebase_atlas" "Add markers"`

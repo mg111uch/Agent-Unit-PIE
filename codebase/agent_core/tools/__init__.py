@@ -341,7 +341,7 @@ _CODE_RAG_SPECS = [
      {"problem_description": str_p("The problem or question that needs external LLM context", req=True),
       "symbol_names": arr_p("string", "Starting function/class names to investigate (blast radius is auto-resolved)", req=True),
       "file_paths": arr_p("string", "Optional peripheral file paths for API-surface-only inclusion"),
-      "output_path": str_p("Optional output path (default: project_root/context_dump.txt)"),
+      "output_path": str_p("Optional output path (default: generated_reports/context_dump.txt)"),
       "max_tokens": int_p("Optional token budget cap (default: 8000)")}),
     ("extract_symbols_to_file", extract_symbols_to_file_tool, CAT_CODE_RAG,
      "Extract full source code of named symbols from the atlas into a single file. Fetches bodies only for the given symbols (not entire files), writes them to destination with headers. Use this instead of manually copying symbol source into a new file during refactoring.",

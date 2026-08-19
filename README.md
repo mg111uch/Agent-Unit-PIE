@@ -29,20 +29,8 @@ AGENT_SKIP_AUTH=true python codebase/server.py
 ```
 
 #### Environment Variables
-- `GEMINI_API_KEY`
-- `OPENROUTER_API_KEY`
 - `AGENT_WORKSPACE_ROOT` — override workspace root (default: process CWD)
-- `JWT_SECRET` — JWT signing secret (default: auto-generated random hex)
-- `CORS_ORIGINS` — comma-separated allowed origins (default: `http://localhost:3000,http://localhost:8001`)
-- `AGENT_PORT` — server port (default: 8001)
 - `CODEBASE_ATLAS_DIR` — path to atlas output dir with `graphdata.json` (default: `<workspace>/atlas_output/`)
-
-#### Config File (`config.json`)
-- `allowed_commands` — list of allowed shell commands for `execute_command`
-- `git_tools_enabled` — enable/disable git tools (default: true)
-- `enable_checkpoints` — enable/disable checkpoint system (default: true)
-- `max_checkpoints` — max checkpoint files to keep (default: 50)
-- `agents_md_enabled` — enable/disable AGENTS.md bootstrap (default: true)
 
 ---
 
@@ -103,35 +91,3 @@ The project aims to build persistent evolving world models and digital twins for
 * improves itself recursively
 
 ---
-
-### OpenCode tool list (Native + MCP-Metatools)
-
-**File / codebase tools**
-- `read` / `write` / `edit` — read, write, edit files
-- `glob` — find files by pattern
-- `grep` — content search with regex
-- `pie_file_skeleton` — AST structural map of a file
-- `pie_read_section` — read a file section around a regex match
-- `pie_file_diff` — show uncommitted changes diff
-- `pie_check_path_exists` — check file/dir existence
-
-**Cross-file edit / validation**
-- `pie_check_before_edit` — dry-run verify edit targets match
-- `pie_cross_file_edit` — apply edits across multiple files in one call
-- `pie_undo_last_edit` — restore last checkpoint
-- `pie_checkpoint_info` — list available checkpoints
-
-**Code intelligence**
-- `pie_who_imports` — module import graph / blast radius
-- `pie_get_workspace_info` — workspace root + top-level entries
-
-**Execution / agents**
-- `bash` — run terminal commands
-- `task` — spawn subagents (explore, general)
-- `skill` — load a skill
-- `todowrite` — track tasks
-- `question` — ask the user questions
-
-**Web**
-- `webfetch` — fetch a URL
-- `websearch` — real-time web search

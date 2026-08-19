@@ -280,6 +280,11 @@ OPENROUTER_RETRY_SKIPPED_CHAIN: bool = bool(_CONFIG.get("openrouter_retry_skippe
 _raw_atlas_dir = _CONFIG.get("codebase_atlas_dir", "")
 CODEBASE_ATLAS_DIR: str = os.path.abspath(os.path.join(CODEBASE_ROOT, _raw_atlas_dir)) if _raw_atlas_dir else ""
 
+# Directory for generated analysis artifacts (code_dump, context_dump, condensed,
+# detector reports). Deliberately separate from atlas_output so atlas
+# regeneration never wipes them.
+GENERATED_REPORTS_DIR: str = os.path.abspath(os.path.join(CODEBASE_ROOT, "..", "generated_reports"))
+
 
 def load_config() -> dict:
     return _CONFIG

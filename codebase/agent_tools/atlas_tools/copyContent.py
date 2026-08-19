@@ -69,7 +69,7 @@ def copy_contents(input_file, output_file, start_marker=None, end_marker=None):
     except Exception as e:
         print(f"Error: {str(e)}")
 
-def dump_checked_files(md_file, start_marker, end_marker, base_path, output_file="code_dump.txt"):
+def dump_checked_files(md_file, start_marker, end_marker, base_path, output_file="generated_reports/code_dump.txt"):
     try:
         structure_lines = []
         with open(md_file, "r") as f:

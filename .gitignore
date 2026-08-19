@@ -9,3 +9,4 @@ encoding_cache
 .agent_checkpoints
 cache
 atlas_output/
+generated_reports/

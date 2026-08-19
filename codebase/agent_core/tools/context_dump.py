@@ -3,11 +3,11 @@ import json
 from pathlib import Path
 from typing import Optional, List, Dict, Any
 
-from agent_core.config import CODEBASE_ROOT
+from agent_core.config import GENERATED_REPORTS_DIR
 from agent_core.tools.code_rag.engine import _get_rag, _resolve_path
 
 DEFAULT_TOKEN_BUDGET = 20000
-DEFAULT_OUTPUT = os.path.join(os.path.dirname(CODEBASE_ROOT), "context_dump.txt")
+DEFAULT_OUTPUT = os.path.join(GENERATED_REPORTS_DIR, "context_dump.txt")
 
 
 def _add_section(header: str, body: str, sections: list, max_tokens: int, used_tokens: int) -> int:
