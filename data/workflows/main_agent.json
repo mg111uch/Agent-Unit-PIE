@@ -1,0 +1,67 @@
+{
+  "nodes": [
+    [
+      "n10",
+      "Sub graph here",
+      "rect",
+      "#d4f0c0",
+      503,
+      319,
+      150,
+      70,
+      "agent_sub_graph.json"
+    ],
+    [
+      "n13",
+      "Session START",
+      "ellipse",
+      "#9cc9ff",
+      374,
+      46,
+      150,
+      70
+    ],
+    [
+      "n1",
+      "Session STOP",
+      "ellipse",
+      "#f0c0c0",
+      381,
+      584,
+      150,
+      70
+    ],
+    [
+      "n2",
+      "md section",
+      "diamond",
+      "#ffd866",
+      210,
+      319,
+      120,
+      80,
+      "",
+      "node_sections.md#rectangle-task"
+    ]
+  ],
+  "edges": [
+    [
+      "n13",
+      "n10",
+      "",
+      []
+    ],
+    [
+      "n10",
+      "n1",
+      "",
+      []
+    ],
+    [
+      "n2",
+      "n10",
+      "",
+      []
+    ]
+  ]
+}

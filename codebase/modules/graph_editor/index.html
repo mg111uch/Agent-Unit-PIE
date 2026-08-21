@@ -8,9 +8,6 @@
 </head>
 <body>
     <aside id="toolbox">
-        <h1>Graph Editor</h1>
-        <p class="sub">Manually draw arbitrary graphs &amp; loops</p>
-
         <section>
             <h2>Tools</h2>
             <div id="tools">
@@ -26,9 +23,30 @@
         <section>
             <h2>Fill color</h2>
             <div id="swatches"></div>
+        </section>
+
+        <section>
+            <h2>Subgraph</h2>
+            <select id="node-ref" title="Link this node to another graph JSON file (9th tuple element). Select a node first.">
+                <option value="">— none —</option>
+            </select>
             <div class="row">
-                <input type="color" id="fill-input" value="#ffffff" title="Custom fill color">
-                <span class="hint">for new nodes</span>
+                <button id="btn-open-ref" title="Load the linked graph into the editor">↳ Open</button>
+                <button id="btn-nav-back" title="Go back to the parent graph">↑ Back</button>
+            </div>
+        </section>
+
+        <section>
+            <h2>Docs</h2>
+            <select id="node-md-file" title="Link this node to a markdown file">
+                <option value="">— file —</option>
+            </select>
+            <select id="node-md-section" title="Link to a markdown section (10th tuple element = file#slug). Select a node first.">
+                <option value="">— section —</option>
+            </select>
+            <div class="row">
+                <button id="btn-open-md" title="Preview linked markdown section">📄 Open</button>
+                <button id="btn-clear-md" title="Clear docs link">✕ Clear</button>
             </div>
         </section>
 
@@ -41,6 +59,7 @@
                 <button id="btn-export" title="Export graph JSON">⬇ Export</button>
                 <button id="btn-import" title="Load JSON from file">⬆ Import</button>
                 <button id="btn-paste" title="Paste JSON from clipboard">⌨ Paste</button>
+                <button id="btn-save" title="Save to imported file">💾 Save<span id="save-dirty" class="dirty-dot" hidden></span></button>
                 <button id="btn-new" title="Clear canvas">✕ New</button>
             </div>
         </section>
@@ -89,6 +108,6 @@
     </div>
 
     <input type="file" id="file-input" accept=".json,application/json" hidden>
-    <script src="/static/graph_editor.js"></script>
+    <script type="module" src="/static/script/main.js?v=3"></script>
 </body>
 </html>

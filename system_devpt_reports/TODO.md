@@ -23,6 +23,8 @@ Also give suggestions for this workflow optimization, patterns which could be av
 
 - But most of the fixes you suggested are project specific. I want project agnostic fixes so that model does not dirft. Look for the instructions you followed in your system prompt to implement this same task earlier. Suggest those
 
+> **Update rule for next agent:** When adding content, preserve all existing entries that are not exact duplicates. Append new items, don't replace sections wholesale. If a section already has 6 entries and you add 3, the result should be 9 — not 3. Only replace an entry if it says the *same thing* about the *same pattern*.
+
 # Questions
 grok --resume 019fc7b4-a7a3-7a20-86f1-6feab4f594bc
 

@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8"/>
+<title>Workflow Graphs</title>
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<script src="https://dagrejs.github.io/project/dagre-d3/latest/dagre-d3.js"></script>
+<style>
+  html, body { margin:0; height:100%; font-family:sans-serif; background:#2a2a2a; color:#fff; overflow:hidden; }
+  svg { display:block; width:100vw; height:100vh; background:#2a2a2a; }
+  .node rect, .node ellipse, .node polygon { stroke:#ccc; stroke-width:1.5; }
+  .label { font-size:12px; pointer-events:none; fill:#000; }
+  .edgePath path { stroke:#ccc; stroke-width:1.5; fill:none; }
+  .edgeLabel { font-size:10px; fill:#fff; background:#2a2a2a; }
+
+  #toolbar {
+    position:fixed; top:12px; left:12px; z-index:100;
+    display:flex; align-items:center; gap:10px;
+    background:rgba(40,40,40,0.92); border:1px solid #666;
+    border-radius:6px; padding:8px 12px; font-size:13px;
+    box-shadow:0 4px 20px rgba(0,0,0,0.6);
+  }
+  #toolbar select {
+    background:#333; color:#fff; border:1px solid #888;
+    border-radius:4px; padding:4px 8px; font-size:13px; font-family:sans-serif;
+  }
+  #toolbar button {
+    background:#555; color:#fff; border:1px solid #888;
+    border-radius:4px; padding:4px 10px; cursor:pointer; font-size:13px; font-family:sans-serif;
+  }
+  #toolbar button:hover { background:#777; }
+  #toolbar button:disabled { opacity:0.4; cursor:not-allowed; }
+  #wf-title { font-size:14px; color:#ffd866; font-weight:bold; white-space:nowrap; }
+  #crumb { font-size:12px; color:#8b949e; white-space:nowrap; max-width:40vw; overflow:hidden; text-overflow:ellipsis; }
+
+  .node.has-ref .ref-ring { fill:none; stroke:#2ea043; stroke-width:2; stroke-dasharray:5 3; pointer-events:none; }
+  .node.has-ref .ref-caption { font-size:9px; fill:#2ea043; font-style:italic; }
+</style>
+</head>
+<body>
+<div id="toolbar">
+  <button id="btn-back" disabled>‹ Back</button>
+  <select id="wf-select"></select>
+  <span id="wf-title"></span>
+  <button id="btn-reload">⟳ Reload</button>
+</div>
+<div id="crumb"></div>
+<svg id="graph"></svg>
+
+<script>
+(function () {
+  const WORKFLOWS = [
+    { file: 'implement_fix.json', title: 'Fix Implementation Workflow' },
+    { file: 'Agent_graph.json', title: 'AGENTS.md Workflow' },
+    { file: 'minimal_context.json', title: 'Context Generation Workflow' },
+  ];
+
+  const selectEl = document.getElementById('wf-select');
+  const titleEl = document.getElementById('wf-title');
+  const crumbEl = document.getElementById('crumb');
+  const btnBack = document.getElementById('btn-back');
+  const navStack = [];
+  let currentFile = null;
+  let currentTitle = '';
+  let inner = null;
+
+  function toDagre(data) {
+    return {
+      nodes: (data.nodes || []).map((n) => {
+        const ref = n[8];
+        const label = ref ? ((n[1] ? n[1] + '\n' : '') + ref) : n[1];
+        return [n[0], label, n[2], n[3]];
+      }),
+      edges: (data.edges || []).map(([from, to, label]) => [from, to, label]),
+    };
+  }
+
+  function buildGraph(data) {
+    const g = new dagreD3.graphlib.Graph().setGraph({
+      rankdir: 'TB', splines: 'ortho', nodesep: 15, ranksep: 25,
+    });
+    data.nodes.forEach(([id, label, shape, color]) => {
+      const a = { label, style: `fill:${color}` };
+      if (shape === 'ellipse') a.shape = 'ellipse';
+      else if (shape === 'diamond') a.shape = 'diamond';
+      else a.shape = 'rect';
+      g.setNode(id, a);
+    });
+    data.edges.forEach(([from, to, label]) => {
+      g.setEdge(from, to, { label, curve: d3.curveBasis });
+    });
+    return g;
+  }
+
+  function render(g) {
+    d3.select('#graph').selectAll('*').remove();
+    const svg = d3.select('#graph');
+    const zoomG = svg.append('g');
+    inner = zoomG.append('g');
+    new dagreD3.render()(inner, g);
+    inner.selectAll('.edgeLabel text').attr('fill', '#fff');
+    const pad = 30;
+    const gw = g.graph().width;
+    const gh = g.graph().height;
+    const s = Math.max(gw, gh) + pad * 2;
+    const cx = (s - gw) / 2;
+    const cy = pad;
+    svg.attr('viewBox', `0 0 ${s} ${s}`).attr('preserveAspectRatio', 'xMidYMid meet');
+    inner.attr('transform', `translate(${cx},${cy})`);
+    svg.call(d3.zoom().on('zoom', (e) => zoomG.attr('transform', e.transform)));
+  }
+
+  function markRefNodes(data) {
+    const refs = {};
+    (data.nodes || []).forEach((n) => { if (n[8]) refs[n[0]] = n[8]; });
+    if (!inner || !Object.keys(refs).length) return;
+    inner.selectAll('g.node').each(function () {
+      const ref = refs[this.id];
+      if (!ref) return;
+      this.classList.add('has-ref');
+      this.style.cursor = 'pointer';
+      const b = this.getBBox();
+      const ns = 'http://www.w3.org/2000/svg';
+      const ring = document.createElementNS(ns, 'rect');
+      ring.setAttribute('class', 'ref-ring');
+      ring.setAttribute('x', b.x + 3); ring.setAttribute('y', b.y + 3);
+      ring.setAttribute('width', b.width - 6); ring.setAttribute('height', b.height - 6);
+      ring.setAttribute('rx', 4);
+      this.appendChild(ring);
+      const tspans = this.querySelectorAll('text tspan');
+      if (tspans.length) tspans[tspans.length - 1].setAttribute('class', 'ref-caption');
+      this.addEventListener('click', () => {
+        if (ref === currentFile) return;
+        navigateTo(ref, ref);
+      });
+    });
+  }
+
+  function updateCrumb() {
+    const trail = navStack.map((p) => p.title || p.file).concat([currentTitle || currentFile || '']);
+    crumbEl.textContent = trail.join(' › ');
+    btnBack.disabled = !navStack.length;
+  }
+
+  function loadGraph(file, title) {
+    currentFile = file;
+    currentTitle = title || file;
+    document.querySelectorAll('.render-error').forEach((e) => e.remove());
+    fetch(file)
+      .then((r) => {
+        if (!r.ok) throw new Error('HTTP ' + r.status + ' for ' + file);
+        return r.json();
+      })
+      .then((data) => {
+        render(buildGraph(toDagre(data)));
+        markRefNodes(data);
+        const known = WORKFLOWS.find((w) => w.file === file);
+        if (known) selectEl.value = file;
+        titleEl.textContent = currentTitle || (known ? known.title : file);
+        updateCrumb();
+      })
+      .catch((err) => {
+        const msg = document.createElement('div');
+        msg.className = 'render-error';
+        msg.style.cssText = 'position:fixed;top:60px;left:12px;z-index:200;background:#a33;color:#fff;padding:8px 14px;border-radius:4px;font-family:sans-serif;font-size:13px;';
+        msg.textContent = 'Graph render error: ' + err.message;
+        document.body.appendChild(msg);
+      });
+  }
+
+  function navigateTo(file, title) {
+    if (file === currentFile) return;
+    navStack.push({ file: currentFile, title: currentTitle });
+    loadGraph(file, title);
+  }
+
+  function goBack() {
+    const prev = navStack.pop();
+    if (!prev) return;
+    loadGraph(prev.file, prev.title);
+  }
+
+  WORKFLOWS.forEach((w) => {
+    const opt = document.createElement('option');
+    opt.value = w.file;
+    opt.textContent = w.title;
+    selectEl.appendChild(opt);
+  });
+
+  function applySelection() {
+    navStack.length = 0;
+    const file = selectEl.value;
+    const wf = WORKFLOWS.find((w) => w.file === file);
+    loadGraph(file, wf ? wf.title : file);
+  }
+
+  selectEl.addEventListener('change', applySelection);
+  document.getElementById('btn-reload').addEventListener('click', () => loadGraph(currentFile, currentTitle));
+  btnBack.addEventListener('click', goBack);
+
+  const q = new URLSearchParams(location.search).get('graph');
+  if (q && WORKFLOWS.some((w) => w.file === q)) selectEl.value = q;
+  applySelection();
+})();
+</script>
+</body>
+</html>

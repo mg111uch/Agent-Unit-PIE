@@ -1,7 +1,7 @@
 ## Codebase size
-Total files processed: 388
-Total lines of code: 71086
-Total tokens: 529371
+Total files processed: 396
+Total lines of code: 71310
+Total tokens: 532002
 ## End Codebase size
 
 ## Directory Structure 
@@ -33,7 +33,7 @@ Total tokens: 529371
 │   ├── [] rename_tools.py [101 LOC, 703 tokens]
 │   ├── [] detect_tool_bypass.py [109 LOC, 915 tokens]
 │   └── [] validate_capabilities.py [210 LOC, 1948 tokens]
-├── codebase/ [82561 LOC, 543913 tokens]
+├── codebase/ [82672 LOC, 545415 tokens]
 │   ├── storage/ [808 LOC, 3826 tokens]
 │   │   ├── raw_observation_storage.py
 │   │   ├── [] unit_storage.py [432 LOC, 2036 tokens]
@@ -184,7 +184,7 @@ Total tokens: 529371
 │   │       ├── city_signal_mapper.py
 │   │       ├── city_pattern_detector.py
 │   │       └── [] city_initializer.py [339 LOC, 1677 tokens]
-│   ├── modules/ [43711 LOC, 260129 tokens]
+│   ├── modules/ [43981 LOC, 262930 tokens]
 │   │   ├── astro_chart/ [731 LOC, 7612 tokens]
 │   │   │   ├── [] style.css [108 LOC, 638 tokens]
 │   │   │   ├── [] main.py [59 LOC, 390 tokens]
@@ -385,11 +385,20 @@ Total tokens: 529371
 │   │   │   │   ├── [] behavior_registry.py [133 LOC, 739 tokens]
 │   │   │   │   └── [] SimDvptPhases.md [365 LOC, 4425 tokens]
 │   │   │   └── [] simulation_connector.py [321 LOC, 2431 tokens]
-│   │   ├── graph_editor/ [1045 LOC, 9854 tokens]
-│   │   │   ├── [] style.css [242 LOC, 1716 tokens]
-│   │   │   ├── [] main.py [23 LOC, 145 tokens]
-│   │   │   ├── [] index.html [94 LOC, 999 tokens]
-│   │   │   └── [] graph_editor.js [686 LOC, 6994 tokens]
+│   │   ├── graph_editor/ [1315 LOC, 12655 tokens]
+│   │   │   ├── script/ [834 LOC, 8696 tokens]
+│   │   │   │   ├── [] geometry.js [100 LOC, 1190 tokens]
+│   │   │   │   ├── [] mutations.js [94 LOC, 699 tokens]
+│   │   │   │   ├── [] render.js [71 LOC, 1109 tokens]
+│   │   │   │   ├── [] main.js [18 LOC, 139 tokens]
+│   │   │   │   ├── [] selection.js [44 LOC, 414 tokens]
+│   │   │   │   ├── [] interactions.js [253 LOC, 2645 tokens]
+│   │   │   │   ├── [] subgraph.js [67 LOC, 617 tokens]
+│   │   │   │   ├── [] io.js [110 LOC, 1188 tokens]
+│   │   │   │   └── [] core.js [77 LOC, 695 tokens]
+│   │   │   ├── [] style.css [267 LOC, 1886 tokens]
+│   │   │   ├── [] main.py [115 LOC, 984 tokens]
+│   │   │   └── [] index.html [99 LOC, 1089 tokens]
 │   │   ├── argu_god/ [1285 LOC, 9913 tokens]
 │   │   │   ├── engine/ [813 LOC, 5964 tokens]
 │   │   │   │   ├── [] debate.py [378 LOC, 3029 tokens]
@@ -522,22 +531,26 @@ Total tokens: 529371
 │   ├── [] render_graph.py [256 LOC, 2711 tokens]
 │   ├── __init__.py
 │   ├── tui_output.txt
-│   ├── [] config.json [159 LOC, 1299 tokens]
 │   ├── [] tool_client.py [203 LOC, 2213 tokens]
 │   └── [] .env.enc [1 LOC, 222 tokens]
-├── project_docs/ [6616 LOC, 32018 tokens]
+├── project_docs/ [6585 LOC, 31216 tokens]
 │   ├── [] MCP_ADAPTERS.md [219 LOC, 1399 tokens]
 │   ├── [] GPT_5-5_Chat.md [4962 LOC, 18724 tokens]
 │   ├── [] backupPlans.md [175 LOC, 3709 tokens]
 │   ├── [] Devpt_phases.md [333 LOC, 2918 tokens]
-│   ├── [] README.md [896 LOC, 4466 tokens]
-│   └── [] file_tools_selftest.md [31 LOC, 802 tokens]
-├── data/ [1461 LOC, 18283 tokens]
+│   └── [] README.md [896 LOC, 4466 tokens]
+├── data/ [1240 LOC, 16069 tokens]
 │   ├── chroma_db/
-│   ├── workflows/ [827 LOC, 12266 tokens]
-│   │   ├── [] Agent_graph.html [196 LOC, 3066 tokens]
-│   │   ├── [] minimal_context.html [278 LOC, 3765 tokens]
-│   │   └── [] implement_fix.html [353 LOC, 5435 tokens]
+│   ├── workflows/ [606 LOC, 10052 tokens]
+│   │   ├── [] implement_fix.json [48 LOC, 1329 tokens]
+│   │   ├── [] workflow_graph.html [207 LOC, 2148 tokens]
+│   │   ├── [] main_agent.json [49 LOC, 189 tokens]
+│   │   ├── [] Agent_graph.json [66 LOC, 1368 tokens]
+│   │   ├── [] minimal_context.md [40 LOC, 933 tokens]
+│   │   ├── [] minimal_context.json [44 LOC, 1121 tokens]
+│   │   ├── [] implement_fix.md [68 LOC, 2163 tokens]
+│   │   ├── [] Agent_graph.md [36 LOC, 627 tokens]
+│   │   └── [] agent_sub_graph.json [48 LOC, 174 tokens]
 │   ├── memory/
 │   │   ├── semantic/
 │   │   ├── working/
@@ -623,8 +636,8 @@ Total tokens: 529371
 │   └── condensed.txt
 ├── [] opencode.json [16 LOC, 163 tokens]
 ├── [] AGENTS.md [28 LOC, 406 tokens]
-├── [] codefiles_map.md [618 LOC, 11411 tokens]
+├── [] codefiles_map.md [630 LOC, 11627 tokens]
 ├── [] .gitignore [12 LOC, 40 tokens]
-├── [] README.md [137 LOC, 922 tokens]
+├── [] README.md [93 LOC, 458 tokens]
 └── [] project_tools.md [32 LOC, 1180 tokens]
 ### End Tree

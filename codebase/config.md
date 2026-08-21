@@ -37,7 +37,7 @@ prose is for you.
 
 ## Config regeneration
 
-### generate_config_json = true
+### generate_config_json = false
 
 When true, every load regenerates the legacy `config.json` beside this file
 from the headings in this file. The Markdown file remains the source of truth; `config.json` is only a mirror.
