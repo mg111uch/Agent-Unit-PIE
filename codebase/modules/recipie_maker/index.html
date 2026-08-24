@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Recipe Planner - 14 Day Rolling Fridge (Dark)</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <div>
+    <h1>Recipe Planner — 14 Days · 42 Recipes</h1>
+    <div class="sub">Each meal has <b>Fresh</b> (today) + <b>Fridge</b> (last 5 cyclic meals before this slot). Day 1 now uses cyclic tail (Day14/Day13... = Day15 cycle). Drag Fresh cards or use ⇄ to swap — Fridge auto-updates to last 5 of new location.</div>
+    <div class="legend"><span><i class="dot fresh"></i> Fresh (draggable)</span><span><i class="dot fridge"></i> Fridge (last 5)</span><span id="countInfo" class="sub"></span></div>
+  </div>
+  <div class="actions">
+    <button id="saveBtn" class="primary">Download store.json</button>
+    <label style="font-size:12px;border:1px solid #2a3242;padding:6px 10px;border-radius:8px;background:#1e242f;color:#e6e8eb;cursor:pointer">Import JSON <input id="importFile" type="file" accept=".json" style="display:none"></label>
+    <button id="printBtn">Print</button>
+    <button id="resetBtn">Reset Swaps & Fridge</button>
+  </div>
+</header>
+<div class="wrap">
+  <div class="table-wrap">
+    <table id="planner">
+      <thead>
+        <tr>
+          <th class="day-col">Day</th>
+          <th>Brunch <span style="font-weight:400;text-transform:none">Fresh | Fridge (last 5)</span></th>
+          <th>Lunch <span style="font-weight:400;text-transform:none">Fresh | Fridge (last 5)</span></th>
+          <th>Dinner <span style="font-weight:400;text-transform:none">Fresh | Fridge (last 5)</span></th>
+        </tr>
+      </thead>
+      <tbody id="tbody"></tbody>
+    </table>
+  </div>
+  <div class="foot">Notes: <span id="notes"></span> · Click recipe to edit tags. For <i>Tue Dinner Fridge</i> = 3 prev-day + 2 same-day (last 5 cyclic). Swapping Fresh relocates recipe and fridge recomputes last 5 of new location (cyclic wrap). Persist via <code>store.json</code>.</div>
+</div>
+
+<dialog id="dlg">
+  <div class="dh"><h3 id="dlgTitle">Ingredients</h3><button id="closeDlg" style="border:none;background:none;font-size:18px;cursor:pointer;color:#e6e8eb">×</button></div>
+  <div class="db">
+    <div class="sub">Free tags — e.g. "potato 2pc". Press Enter to add.</div>
+    <div id="chips" class="chips"></div>
+    <div class="input-row"><input id="tagInput" placeholder="Add ingredient tag and press Enter"><button id="addTag" class="primary">Add</button></div>
+  </div>
+  <div class="df"><button id="doneDlg" class="primary">Done</button></div>
+</dialog>
+
+<dialog id="swapDlg">
+  <div class="dh"><h3>Swap Fresh Location</h3><button id="closeSwap" style="border:none;background:none;font-size:18px;cursor:pointer;color:#e6e8eb">×</button></div>
+  <div class="db">
+    <div class="sub" id="swapInfo"></div>
+    <div class="swap-panel"><label class="sub">Swap with:</label><select id="swapSelect"></select><button id="doSwap" class="primary" style="margin-top:8px;width:100%">Swap</button></div>
+  </div>
+</dialog>
+
+<script src="data.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

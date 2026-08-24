@@ -318,6 +318,18 @@ endmodule
 """
 
 
+def generate_cim_cell() -> str:
+    """CIM cell: SRAM+MAC fused (weight never leaves array)."""
+    return _header("vse_cim_cell") + """\
+module vse_cim_cell #(parameter int DW=4,AW=16,ACCW=24,ROWS=256)(
+ input logic clk,rst_n,en,logic [$clog2(ROWS)-1:0] addr,
+ input logic signed [AW-1:0] a_in,output logic signed [ACCW-1:0] acc_out,output logic valid_out);
+ logic signed [DW-1:0] w_mem[ROWS];logic signed [ACCW-1:0] acc;
+ always_ff @(posedge clk or negedge rst_n) begin if(!rst_n)acc<='0;else if(en)acc<=acc+$signed(a_in)*$signed(w_mem[addr]);end
+ assign acc_out=acc;assign valid_out=en;endmodule
+"""
+
+
 def generate_activation() -> str:
     """Activation unit: optional nonlinearity + output quantization."""
 
@@ -427,24 +439,17 @@ endmodule
 """
 
 
-def generate_rtl(spec: FPGASpec) -> str:
+def generate_rtl(spec: FPGASpec, arch_family: str = "scalar") -> str:
     """Emit the complete Phase-9 RTL file for `spec`."""
-
-    return "\n".join(
-        [
-            "`timescale 1ns / 1ps",
-            "",
-            generate_pe(),
-            generate_pe_array(),
-            generate_sram_ctrl(),
-            generate_noc_router(),
-            generate_dma(),
-            generate_expert_dispatch(),
-            generate_accumulator(),
-            generate_activation(),
-            generate_top(spec),
-        ]
-    )
+    def _is_cim(f) -> bool:
+        try: return str(f).lower() in ("cim","near_memory","near-memory")
+        except Exception: return False
+    fam = getattr(spec,"arch_family",getattr(spec,"family",arch_family))
+    inc = _is_cim(fam) or _is_cim(arch_family)
+    parts=["`timescale 1ns / 1ps","",generate_pe(),generate_pe_array(),generate_sram_ctrl(),generate_noc_router(),generate_dma(),generate_expert_dispatch(),generate_accumulator(),generate_activation()]
+    if inc: parts.append(generate_cim_cell())
+    parts.append(generate_top(spec))
+    return "\n".join(parts)
 
 
 __all__ = [
@@ -456,6 +461,7 @@ __all__ = [
     "generate_expert_dispatch",
     "generate_accumulator",
     "generate_activation",
+    "generate_cim_cell",
     "generate_top",
     "generate_rtl",
 ]

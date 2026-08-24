@@ -47,9 +47,10 @@ class LoopIteration:
     physical: object
     updated: bool
     note: str = ""
+    gate: object = None
 
     def report(self) -> dict:
-        return {
+        out = {
             "step": self.step,
             "arch": self.spec.label(),
             "tokens_per_second": self.result.tokens_per_second,
@@ -59,6 +60,32 @@ class LoopIteration:
             "updated": self.updated,
             "note": self.note,
         }
+        if self.gate is not None:
+            try:
+                out["physics"] = {
+                    "plausible": bool(getattr(self.gate, "plausible", getattr(self.gate, "overall_pass", True))),
+                    "overall_pass": bool(getattr(self.gate, "overall_pass", getattr(self.gate, "plausible", True))),
+                    "checks": [
+                        {
+                            "name": getattr(c, "name", "?"),
+                            "passed": bool(getattr(c, "passed", False)),
+                            "expected": getattr(c, "expected", None),
+                            "measured": getattr(c, "measured", None),
+                            "unit": getattr(c, "unit", ""),
+                        }
+                        for c in getattr(self.gate, "checks", [])
+                    ],
+                }
+            except Exception:
+                out["physics"] = {"plausible": True, "overall_pass": True, "checks": []}
+            # also attach to result dict
+            try:
+                res_phys = self.result.report().get("physics") if hasattr(self.result, "report") else None
+                if res_phys:
+                    out["result_physics"] = res_phys
+            except Exception:
+                pass
+        return out
 
 
 @dataclass
@@ -71,9 +98,14 @@ class DesignLoopResult:
 
     @property
     def converged(self) -> bool:
-        return bool(self.iterations) and (
-            self.iterations[-1].physical.timing_closed
-        )
+        if not self.iterations:
+            return False
+        last = self.iterations[-1]
+        if not last.physical.timing_closed:
+            return False
+        if last.gate is not None:
+            return bool(getattr(last.gate, "plausible", getattr(last.gate, "overall_pass", True)))
+        return True
 
     @property
     def final_spec(self) -> Optional[ArchitectureSpec]:
@@ -90,7 +122,7 @@ class DesignLoopResult:
         return self.iterations[-1].result
 
     def report(self) -> dict:
-        return {
+        out = {
             "converged": self.converged,
             "iterations": [
                 item.report()
@@ -102,6 +134,37 @@ class DesignLoopResult:
                 else None
             ),
         }
+        # top-level physics summary from final iteration
+        if self.iterations:
+            last = self.iterations[-1]
+            if last.gate is not None:
+                try:
+                    out["physics"] = {
+                        "plausible": bool(getattr(last.gate, "plausible", getattr(last.gate, "overall_pass", True))),
+                        "overall_pass": bool(getattr(last.gate, "overall_pass", getattr(last.gate, "plausible", True))),
+                        "checks": [
+                            {
+                                "name": getattr(c, "name", "?"),
+                                "passed": bool(getattr(c, "passed", False)),
+                                "expected": getattr(c, "expected", None),
+                                "measured": getattr(c, "measured", None),
+                                "unit": getattr(c, "unit", ""),
+                            }
+                            for c in getattr(last.gate, "checks", [])
+                        ],
+                    }
+                except Exception:
+                    pass
+            # also include final result physics if gates attached to result
+            try:
+                fr = self.final_result
+                if fr is not None and hasattr(fr, "_gate_dict"):
+                    gd = fr._gate_dict()
+                    if gd and "physics" not in out:
+                        out["physics"] = gd
+            except Exception:
+                pass
+        return out
 
 
 def _update_for_timing(
@@ -144,14 +207,19 @@ def run_design_loop(
     tech: ProcessTechnology = DEFAULT,
     max_iterations: int = 6,
     max_pipeline: int = 16,
+    physics: str = "off",
 ) -> DesignLoopResult:
     """
     Close the design loop for one model.
 
     `build_program(spec) -> CompiledProgram` mirrors the search API and
     owns the model + workload.
+    physics: off|warn|fail — also gate by PhysicsGate; sram_bw fail
+        doubles banks up to 64 before pipeline/clock fallback.
     """
 
+    if physics not in ("off", "warn", "fail"):
+        raise ValueError(f"physics must be off/warn/fail, got {physics}")
     from vse.compiler.compiler import execute
 
     result = DesignLoopResult()
@@ -177,7 +245,34 @@ def run_design_loop(
             tech=tech,
         )
 
-        if physical.timing_closed:
+        # physics gate (lazy)
+        gate = None
+        plausible = True
+        sram_bw_failed = False
+        if physics != "off":
+            try:
+                from vse.physics.gate import PhysicsGate  # lazy
+
+                gate = PhysicsGate.check(outcome, spec)
+                plausible = bool(getattr(gate, "plausible", getattr(gate, "overall_pass", True)))
+                try:
+                    outcome.gate = gate  # type: ignore
+                    outcome.gate_result = gate  # type: ignore
+                except Exception:
+                    pass
+                for c in getattr(gate, "checks", []):
+                    if getattr(c, "name", "") == "sram_bw" and not getattr(c, "passed", True):
+                        sram_bw_failed = True
+                        break
+            except Exception:
+                gate = None
+                plausible = True
+                sram_bw_failed = False
+
+        if physical.timing_closed and (physics == "off" or plausible):
+            note = "timing closed"
+            if physics != "off" and plausible:
+                note += " + gate plausible"
             result.iterations.append(
                 LoopIteration(
                     step=step,
@@ -186,16 +281,26 @@ def run_design_loop(
                     rtl_lines=rtl_lines,
                     physical=physical,
                     updated=False,
-                    note="timing closed",
+                    note=note,
+                    gate=gate,
                 )
             )
             break
 
-        updated, note = _update_for_timing(
-            spec,
-            physical,
-            max_pipeline,
-        )
+        # choose update: sram_bw widen first
+        if physics != "off" and sram_bw_failed and spec.banks < 64:
+            new_banks = min(64, spec.banks * 2)
+            updated = replace(spec, banks=new_banks)
+            note = f"physics gate sram_bw fail: increased banks to {new_banks}"
+        else:
+            updated, note = _update_for_timing(
+                spec,
+                physical,
+                max_pipeline,
+            )
+            if physics != "off" and not plausible and gate is not None:
+                failed_names = ",".join(c.name for c in gate.checks if not c.passed)
+                note = f"{note} (gate failed: {failed_names})" if failed_names else note
 
         result.iterations.append(
             LoopIteration(
@@ -206,6 +311,7 @@ def run_design_loop(
                 physical=physical,
                 updated=True,
                 note=note,
+                gate=gate,
             )
         )
 

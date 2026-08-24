@@ -59,6 +59,19 @@ class ArchitectureSpec:
     expert_placement: str = "round_robin"
     batch_tokens: Optional[int] = None
     node_nm: Optional[float] = None
+    precision_map: Optional[dict] = None
+    # distributed tiles
+    num_tiles: int = 1
+    sram_per_tile_bytes: Optional[int] = None
+    pes_per_tile: Optional[int] = None
+    tile_sram_banks: Optional[int] = None
+    tile_sram_ports: Optional[int] = None
+    tile_sram_bits: Optional[int] = None
+    arch_family: str = "scalar"
+    vector_width: int = 1
+    systolic_dim: int = 0
+    simd_lanes: int = 1
+    dataflow: str = "weight_stationary"
 
     def to_hardware_config(self) -> HardwareConfig:
         return HardwareConfig(
@@ -75,10 +88,21 @@ class ArchitectureSpec:
             noc_topology=self.noc_topology,
             noc_nodes=self.noc_nodes,
             noc_link_bw=self.noc_link_bw,
+            num_tiles=self.num_tiles,
+            sram_per_tile_bytes=self.sram_per_tile_bytes,
+            pes_per_tile=self.pes_per_tile,
+            tile_sram_banks=self.tile_sram_banks,
+            tile_sram_ports=self.tile_sram_ports,
+            tile_sram_bits=self.tile_sram_bits,
+            arch_family=self.arch_family,
+            vector_width=self.vector_width,
+            systolic_dim=self.systolic_dim,
+            simd_lanes=self.simd_lanes,
+            dataflow=self.dataflow,
         )
 
     def to_compile_options(self) -> CompileOptions:
-        return CompileOptions(
+        kwargs: dict = dict(
             weight_bits=self.weight_bits,
             activation_bits=self.activation_bits,
             kv_bits=self.kv_bits,
@@ -86,6 +110,18 @@ class ArchitectureSpec:
             expert_placement=self.expert_placement,
             replicas=self.expert_replicas,
         )
+        # Forward precision_map if CompileOptions supports it.
+        if self.precision_map is not None:
+            try:
+                if "precision_map" in CompileOptions.__dataclass_fields__:
+                    kwargs["precision_map"] = self.precision_map
+            except Exception:
+                pass
+        opts = CompileOptions(**kwargs)
+        # Best-effort attach for search consumers even if field missing.
+        if self.precision_map is not None and not hasattr(opts, "precision_map"):
+            object.__setattr__(opts, "precision_map", self.precision_map)
+        return opts
 
     @property
     def technology(self) -> "ProcessTechnology":
@@ -124,13 +160,26 @@ class ArchitectureSpec:
         return compute + memory + noc
 
     def label(self) -> str:
-        return (
+        base = (
             f"{self.num_pes}PE x{self.macs_per_pe}MAC "
             f"{self.frequency_hz / 1e9:.1f}GHz "
             f"{self.sram_bytes // 1024**2}MB "
             f"{self.hbm_bytes_per_cycle}B/cy "
             f"w{self.weight_bits or 'm'}b"
         )
+        if self.num_tiles > 1:
+            base += f" {self.num_tiles}tiles"
+        if self.arch_family != "scalar":
+            base += f" {self.arch_family}"
+            if self.arch_family == "vector" and self.vector_width != 1:
+                base += f" vw{self.vector_width}"
+            elif self.arch_family == "simd" and self.simd_lanes != 1:
+                base += f" x{self.simd_lanes}"
+            elif self.arch_family in ("systolic", "weight_stationary", "output_stationary") and self.systolic_dim:
+                base += f" {self.systolic_dim}x{self.systolic_dim}"
+            if self.dataflow != "weight_stationary":
+                base += f" {self.dataflow}"
+        return base
 
 
 # ---------------------------------------------------------------------------
@@ -162,6 +211,20 @@ DIM_FIELDS: dict[str, tuple[str, callable]] = {
     "placement": ("expert_placement", str),
     "tokens": ("batch_tokens", int),
     "node_nm": ("node_nm", float),
+    "num_tiles": ("num_tiles", int),
+    "sram_per_tile": ("sram_per_tile_bytes", _sram_gb_to_bytes),
+    "sram_per_tile_gb": ("sram_per_tile_bytes", _sram_gb_to_bytes),
+    "pes_per_tile": ("pes_per_tile", int),
+    "tile_banks": ("tile_sram_banks", int),
+    "tile_ports": ("tile_sram_ports", int),
+    "tile_bits": ("tile_sram_bits", int),
+    "tile_sram_ports": ("tile_sram_ports", int),
+    "tile_sram_bits": ("tile_sram_bits", int),
+    "arch_family": ("arch_family", str),
+    "vector_width": ("vector_width", int),
+    "systolic_dim": ("systolic_dim", int),
+    "simd_lanes": ("simd_lanes", int),
+    "dataflow": ("dataflow", str),
 }
 
 
@@ -267,8 +330,19 @@ class SearchSpace:
         return candidates
 
 
+def accuracy_for_spec(spec, precision_map=None):  # type: ignore[no-untyped-def]
+    """Helper for search: score a spec under precision_map (lazy import)."""
+    try:
+        from vse.models.accuracy import accuracy_for_spec as _af  # noqa: WPS433
+
+        return _af(spec, precision_map)
+    except Exception:
+        return None
+
+
 __all__ = [
     "ArchitectureSpec",
     "DIM_FIELDS",
     "SearchSpace",
+    "accuracy_for_spec",
 ]

@@ -25,9 +25,13 @@ finished schedule.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional
+from typing import TYPE_CHECKING, Dict, List, Optional
 
 from vse.core.types import Resource, ResourceType, ScheduleResult
+
+if TYPE_CHECKING:
+    from vse.silicon.process import ProcessTechnology
+    from vse.silicon.sram.sram_array import SRAMArray
 
 
 # ---------------------------------------------------------------------------
@@ -49,6 +53,10 @@ class MemoryLevel:
     banks:
         Independent banks; concurrent tasks touching more banks than
         this must wait.
+    sram_array:
+        Physical SRAMArray when sram_model=="physical", else None.
+    ports, bits_per_access:
+        Physical port/count per access for SRAMArray bandwidth calc.
     """
 
     name: str
@@ -58,27 +66,23 @@ class MemoryLevel:
     write_bw_bytes_per_cycle: int = 0
 
     banks: int = 1
+    sram_array: Optional["SRAMArray"] = None
+    ports: int = 1
+    bits_per_access: int = 32
 
     def __post_init__(self) -> None:
         if self.capacity_bytes < 0:
-            raise ValueError(
-                "capacity_bytes must be >= 0"
-            )
-
+            raise ValueError("capacity_bytes must be >= 0")
         if self.read_bw_bytes_per_cycle < 0:
-            raise ValueError(
-                "read_bw_bytes_per_cycle must be >= 0"
-            )
-
+            raise ValueError("read_bw_bytes_per_cycle must be >= 0")
         if self.write_bw_bytes_per_cycle < 0:
-            raise ValueError(
-                "write_bw_bytes_per_cycle must be >= 0"
-            )
-
+            raise ValueError("write_bw_bytes_per_cycle must be >= 0")
         if self.banks <= 0:
-            raise ValueError(
-                "banks must be > 0"
-            )
+            raise ValueError("banks must be > 0")
+        if self.ports <= 0 or self.ports > 4:
+            raise ValueError("ports must be 1..4")
+        if self.bits_per_access < 8 or self.bits_per_access > 512:
+            raise ValueError("bits_per_access must be 8..512")
 
 
 # ---------------------------------------------------------------------------
@@ -117,24 +121,45 @@ class MemoryHierarchy:
         sram_bw_bytes_per_cycle: int = 0,
         hbm_bw_bytes_per_cycle: int = 0,
         banks: int = 1,
+        sram_model: str = "analytical",
+        sram_ports: int = 1,
+        sram_bits_per_access: int = 32,
+        frequency_hz: float = 1e9,
+        tech: Optional["ProcessTechnology"] = None,
     ) -> MemoryHierarchy:
         """
         Two-level hierarchy: on-chip SRAM over unbounded HBM.
 
         A zero bandwidth value inherits memory_bytes_per_cycle.
+        When sram_model=="physical" and sram_bytes>0, bandwidth is
+        derived from SRAMArray(banks, ports, bits, capacity, freq, tech).
         """
+        if sram_model not in ("analytical", "physical"):
+            raise ValueError("sram_model must be 'analytical' or 'physical'")
+        if not 1 <= sram_ports <= 4:
+            raise ValueError("sram_ports must be 1..4")
+        if not 8 <= sram_bits_per_access <= 512:
+            raise ValueError("sram_bits_per_access must be 8..512")
 
-        sram_bw = (
-            sram_bw_bytes_per_cycle
-            or memory_bytes_per_cycle
-        )
+        requested_sram_bw = sram_bw_bytes_per_cycle or memory_bytes_per_cycle
+        sram_bw = requested_sram_bw
+        hbm_bw = hbm_bw_bytes_per_cycle or memory_bytes_per_cycle
 
-        hbm_bw = (
-            hbm_bw_bytes_per_cycle
-            or memory_bytes_per_cycle
-        )
+        sram_array = None
+        if sram_model == "physical" and sram_bytes > 0:
+            from vse.silicon.sram.sram_array import SRAMArray
 
-        return cls(
+            sram_array = SRAMArray(
+                banks=banks,
+                ports_per_bank=sram_ports,
+                bits_per_access=sram_bits_per_access,
+                capacity_bytes_total=sram_bytes,
+                frequency_hz=frequency_hz,
+                tech=tech,
+            )
+            sram_bw = int(sram_array.bandwidth_bytes_per_cycle())
+
+        hierarchy = cls(
             [
                 MemoryLevel(
                     name="sram",
@@ -142,6 +167,9 @@ class MemoryHierarchy:
                     read_bw_bytes_per_cycle=sram_bw,
                     write_bw_bytes_per_cycle=sram_bw,
                     banks=banks,
+                    sram_array=sram_array,
+                    ports=sram_ports,
+                    bits_per_access=sram_bits_per_access,
                 ),
                 MemoryLevel(
                     name="hbm",
@@ -152,6 +180,51 @@ class MemoryHierarchy:
                 ),
             ]
         )
+        # stash for physical reports
+        hierarchy._sram_model = sram_model  # type: ignore
+        hierarchy._requested_sram_bw = requested_sram_bw  # type: ignore
+        hierarchy._frequency_hz = frequency_hz  # type: ignore
+        hierarchy._tech = tech  # type: ignore
+        hierarchy._sram_ports = sram_ports  # type: ignore
+        hierarchy._sram_bits = sram_bits_per_access  # type: ignore
+        return hierarchy
+
+    def physical_bandwidth_report(self) -> dict:
+        sram = self.levels.get("sram")
+        requested = getattr(self, "_requested_sram_bw", None)
+        if requested is None and sram is not None:
+            requested = sram.read_bw_bytes_per_cycle
+        if sram is not None and sram.sram_array is not None:
+            derived = int(sram.sram_array.bandwidth_bytes_per_cycle())
+            return {
+                "sram_model": getattr(self, "_sram_model", "physical"),
+                "requested_bw_bytes_per_cycle": requested,
+                "derived_bw_bytes_per_cycle": derived,
+                "physical_bw_bytes_per_cycle": derived,
+                "achievable": derived >= (requested or 0),
+                "ports": sram.ports,
+                "bits_per_access": sram.bits_per_access,
+                "banks": sram.banks,
+                "frequency_hz": getattr(self, "_frequency_hz", 1e9),
+            }
+        return {
+            "sram_model": getattr(self, "_sram_model", "analytical"),
+            "requested_bw_bytes_per_cycle": requested,
+            "derived_bw_bytes_per_cycle": requested,
+            "physical_bw_bytes_per_cycle": None,
+            "achievable": True,
+            "ports": getattr(sram, "ports", 1) if sram else 1,
+            "bits_per_access": getattr(sram, "bits_per_access", 32) if sram else 32,
+            "banks": sram.banks if sram else 1,
+            "frequency_hz": getattr(self, "_frequency_hz", 1e9),
+        }
+
+    def validate_physical(self) -> bool:
+        sram = self.levels.get("sram")
+        if sram is None or sram.sram_array is None:
+            return True
+        report = self.physical_bandwidth_report()
+        return bool(report.get("achievable", True))
 
     # ------------------------------------------------------------------
     # Resource wiring
@@ -202,18 +275,19 @@ class MemoryHierarchy:
     # Residency
     # ------------------------------------------------------------------
 
+    def _total_sram_capacity(self) -> int:
+        if "sram" in self.levels:
+            return self.levels["sram"].capacity_bytes
+        return sum(l.capacity_bytes for n, l in self.levels.items() if n.endswith("_sram"))
+
     def on_chip_level(
         self,
         bytes: int,
     ) -> str:
-        """
-        The level a working set of `bytes` is served from: "sram"
-        when it fits on-chip, else "hbm".
-        """
-
-        if 0 < bytes <= self.levels["sram"].capacity_bytes:
+        """Level for bytes: sram if fits on-chip else hbm (supports tiling)."""
+        cap = self._total_sram_capacity()
+        if 0 < bytes <= cap:
             return "sram"
-
         return "hbm"
 
     def weights_resident(
@@ -326,24 +400,20 @@ class MemoryHierarchy:
         """
 
         traffic = self.traffic(result)
-
+        # tiled: aggregate tile*_sram into sram for backward compat
+        if "sram" not in traffic:
+            sram_r = sum(v["read_bytes"] for k, v in traffic.items() if k.endswith("_sram"))
+            sram_w = sum(v["write_bytes"] for k, v in traffic.items() if k.endswith("_sram"))
+        else:
+            sram_r = traffic["sram"]["read_bytes"]
+            sram_w = traffic["sram"]["write_bytes"]
         return {
             "traffic": traffic,
-            "weight_residency": (
-                self.residency_report(weight_bytes)
-            ),
-            "hbm_read_bytes": (
-                traffic["hbm"]["read_bytes"]
-            ),
-            "hbm_write_bytes": (
-                traffic["hbm"]["write_bytes"]
-            ),
-            "sram_read_bytes": (
-                traffic["sram"]["read_bytes"]
-            ),
-            "sram_write_bytes": (
-                traffic["sram"]["write_bytes"]
-            ),
+            "weight_residency": self.residency_report(weight_bytes),
+            "hbm_read_bytes": traffic.get("hbm", {}).get("read_bytes", 0),
+            "hbm_write_bytes": traffic.get("hbm", {}).get("write_bytes", 0),
+            "sram_read_bytes": sram_r,
+            "sram_write_bytes": sram_w,
         }
 
 

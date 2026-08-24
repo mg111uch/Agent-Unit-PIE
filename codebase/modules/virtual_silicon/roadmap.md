@@ -1,207 +1,72 @@
 # VSE — Future Roadmap
 
-Work still ahead. Everything already built — the end-to-end simulator,
-cycle engine, memory hierarchy, network-on-chip, model-specific
-compilation, architecture search, power/area modeling, FPGA prototyping,
-RTL generation, and ASIC physical exploration — is documented in
-[README.md](README.md) and [usage.md](usage.md). This file only describes
-what is left to do.
+Work that remains after Phases 0–F are done. For what was built and measured see `Findings.md` (detailed numbers) and `usage.md §5` (short summary). Before Phase 0 the stack already had the end-to-end simulator, cycle engine, memory hierarchy, NoC, compilation, search, power/area, FPGA/RTL/ASIC. Phases 0–F added the physics limit: splits `<500 LOC`, physical SRAM `BW=banks×ports×bits/8×freq`, per-tensor `Q2/Q3/Q4` + VSE-S1, distributed tiles, families/CIM, co-search, and a 14-check fail-closed gate. This file now keeps only where the project should evolve next.
 
 ---
 
-## Near-term future phases
+## What is already done (Phases 0–F)
 
-### Phase 11 — Real HDL toolchain integration
+All of the near-term phases that were open at writing are now implemented (see `Findings.md §4` for numbers, `IssuesFix.md` for the unified remaining plan):
 
-The generated SystemVerilog is plain and toolchain-ready, but nothing has
-synthesized it yet. Wire the RTL into real open-source tools to confirm it
-is correct and calibrate the physical estimates:
+- **Phase 0–A** — splits `<500 LOC`, physical SRAM `SRAMArray` `BW=banks×ports×bits/8×freq` with area/wire/latency/energy, `off/warn/fail`.
+- **Phase B** — per-tensor `Q2/Q3/Q4` (`Q2Block` 2b+8b/32), VSE-S1 presets `490M/701M/1.01B`, heuristic accuracy, `--precision-map`.
+- **Phase C** — distributed tiles `TiledHierarchy` `tile{i}_sram`, per-tile `SRAMArray`/`NoC`, `--num-tiles` (shared HBM still limits).
+- **Phase D** — families `scalar/simd/vector/systolic/cim/near_memory` (`PEFamilyConfig` effective MACs/latency) and CIM fused `vse_cim_cell` (`HBM→0`).
+- **Phase E** — `ModelArchSpec` + `run_co_search` + `DistillEngine` + `codesign` multi-objective `tok/s vs area vs accuracy`.
+- **Phase F** — 14-check gate `compute/sram_bw/latency/banks/noc_bw/latency/wire/clock/power/leakage/thermal/area/capacity/timing` → `off/warn/fail` + JSON.
 
-```text
-Verilator / Icarus    — lint + cycle simulation of the emitted RTL
-Yosys                 — logic synthesis into a standard-cell / FPGA netlist
-OpenROAD / OpenLane   — place-and-route with realistic PDK timing/area
+Remaining work is now **Phase G** and the further-out packaging/frontend.
+
+---
+
+## Remaining — Phase G and beyond (do next)
+
+### G1 — PDK calibration (new `vse/physics/pdk.py`)
+Pluggable `ProcessTechnology` fed by Yosys/Verilator/OpenROAD synthesis/P&R vs `for_node`. Without this, area/timing/power stay analytical. Add `--toolchain` CLI that lints, synthesizes, and imports measured `mm²/ns/W` to re-calibrate.
+
+### G2 — Per-tile HBM
+Tiles already shard SRAM/PEs but share one HBM port → replication stays BW-neutral. Add per-tile `HBM BW = tiles × link_bw` and `expert-aware placement` so `replicas` truly parallelize weight streams.
+
+### G3 — Cycle-accurate vs analytical
+Keep analytical fast path for `search --sample 10k`, add slow accurate path for verification:
 ```
-
-Goals:
-- prove the RTL is lint-clean and synthesizes as-is;
-- feed measured synthesis area/timing back into the physical estimator
-  (currently analytical) to close the accuracy gap;
-- add a `--toolchain` mode to the CLI that drives an external flow and
-  imports its results.
-
-No toolchain is installed today; this phase is optional and
-environment-dependent.
-
----
-
-### Phase 12 — PE architecture space
-
-The compute array models uniform scalar PEs (`num_pes × macs_per_pe`).
-Explore the PE design space so throughput, area, and timing trade-offs are
-first-class search dimensions:
-
-```text
-SIMD width             — multiple lanes per PE
-vector PEs             — per-PE vector datapaths
-systolic variants      — register-level dataflow
-multi-level pipelines  — deeper per-MAC pipelining
-dataflow               — weight-stationary vs output-stationary
+analytical schedule → cycle-accurate pipeline (fill/drain, accumulator deps)
+analytical memory   → bank-conflict/latency cycle model
+analytical NoC      → flit-level routing
 ```
+`fpga/sim.py` is the reference.
 
-Each variant changes MAC density, gate count, and critical path — the
-search and the physical estimator must model the difference.
+### G4 — General model frontend (Phase 18)
+ONNX or small graph IR beyond hand-built Transformer/MoE, so any fixed network can be compiled.
 
----
+### G5 — Packaging (Phases 14,17)
+Add only when it becomes the limiter: torus/tree/crossbar for NoC; 2.5D/3D, chiplets, HBM stacks, interposer routing, per-die power/thermal coupling.
 
-### Phase 13 — Data layout & tiling
-
-Add compile-time data layout so memory traffic drops:
-
-```text
-blocked layout / tiling — keep tiles resident, minimize re-fetch
-layout-aware scheduling — order tasks by physical data placement
-weight-stationary tiles — feed arrays without re-streaming weights
-```
+### G6 — Joint physical co-optim (Phase 19) + Silicon validation (Phase 20)
+Search precision+layout+pipeline+floorplan together (not sequential) so every reported `tok/s` is timing-closed. Keep `tests/regression/test_golden_numbers.py` and calibrate estimators against a real PDK/tape-out library.
 
 ---
 
-### Phase 14 — Additional NoC topologies
+## Research directions (updated)
 
-Only if the topology becomes a limiting factor:
+### Extreme-throughput physics — now checked by the gate
 
-```text
-torus                  — short average hop distance
-tree / fat-tree        — broadcast-friendly expert routing
-crossbar               — low latency at small scale
-```
+For `T` tok/s and `M` MACs/token: `compute = T×M`, `bandwidth = T×bytes/token`. The 14-check gate now enforces `compute, sram_bw/latency/banks, noc_bw/latency, wire, clock, power, leakage, thermal, area, capacity, timing` together. A `10M tok/s` claim is `PHYSICALLY PLAUSIBLE` only if all pass (`--physics warn` shows `✓/✗`).
 
-Include topology-aware routing and expert placement in the search.
+### Fixed-model silicon — now the co-search objective
 
----
+`remove unused ops/precision, hard-wire routing/placement, fuse, pre-place weights, static schedule, dedicated datapaths` are now compile-time decisions (`precision_map`, `placement`, `fusion`). The gate distinguishes algorithmic vs physical savings; the next step is to keep the model and silicon evolving together (`codesign`) rather than optimizing hardware for a frozen model.
 
-### Phase 15 — Distributed memory
+### What is still missing (before trusting 100K+ tok/s)
 
-Give each NoC node its own HBM/SRAM bandwidth so expert replication and
-NoC locality actually pay off (expert replication is currently
-bandwidth-neutral because all nodes share one HBM port):
+Most items are now modeled (PE utilization via families, bank conflicts via `peak_banks`, wire via `SRAMArray`, leakage/thermal via `ProcessTechnology`), but these remain analytical:
 
-```text
-per-node bandwidth     — bandwidth scales with the node count
-expert-aware placement — co-locate an expert's weights with its compute
-multi-die SRAM         — distributed on-chip capacity and banks
-```
+- **PDK-measured** area/timing/power vs `for_node` estimates.
+- **Per-tile HBM** BW (tiles still share one port).
+- **Cycle-accurate** flit-level NoC and bank-conflict latency vs analytical `throughput`.
+- **Clock distribution** beyond `pipeline+wire`.
 
----
-
-## Further-out future phases
-
-### Phase 16 — Cycle-accurate simulation
-
-Replace the analytical models with cycle-accurate datapath, memory, and
-NoC models, validated against the RTL simulator:
-
-```text
-analytical schedule  →  cycle-accurate pipeline model
-analytical memory    →  bank / conflict / latency cycle model
-analytical NoC       →  flit-level routing model
-```
-
-The RTL simulator is the reference for equivalence checks, keeping the
-fast analytical path for search and the slow accurate path for
-verification.
-
----
-
-### Phase 17 — Advanced packaging & multi-chip
-
-Extend the physical model beyond a single die:
-
-```text
-2.5D / 3D stacking     — die-to-die bandwidth, thermal coupling
-chiplets / multi-die   — interposer routing, per-die power budgets
-HBM stacks             — realistic DRAM bandwidth/capacity per package
-```
-
----
-
-### Phase 18 — General model frontend
-
-Beyond the hand-built Transformer/MoE cost models, accept arbitrary fixed
-networks via a standard intermediate representation (ONNX or a small graph
-IR) so VSE can compile and simulate any model, not just the built-ins.
-
----
-
-### Phase 19 — Physical-aware co-optimization
-
-Search precision, layout, pipeline, floorplan, and physical implementation
-jointly — one closed loop instead of sequential passes — so the reported
-tokens/sec is always timing-closed at the physical level.
-
----
-
-### Phase 20 — Validation against real silicon
-
-Calibrate the power/area/timing estimators against measured results from a
-real tape-out or a commercial PDK library, and keep a regression set of
-known-good workloads so model changes never silently break the numbers.
-
----
-
-## Research directions
-
-### Extreme-throughput physics
-
-For a target `T` tokens/sec and a workload of `M` MACs/token:
-
-```text
-required compute  = T × M            (MAC/s)
-required bandwidth = T × bytes/token (bytes/s)
-```
-
-Therefore a 1M tok/s target should never be accepted merely because the
-virtual compute array appears large enough. VSE must verify compute,
-memory, NoC, SRAM, router, pipeline, and power **simultaneously**.
-
-### Fixed-model silicon
-
-The core research direction: instead of a general accelerator that runs
-any model, investigate one fixed model on dedicated hardware. Potential
-optimizations:
-
-```text
-remove unused operations
-remove unused precision
-hard-wire routing
-hard-wire expert placement
-fuse operations
-pre-place weights
-eliminate general instruction overhead
-static schedule
-dedicated datapaths
-```
-
-VSE must distinguish **algorithmic savings** from **actual physical
-silicon savings**, and never assume that hard-wiring a model automatically
-produces unlimited speed.
-
-### Important missing physics
-
-Before trusting extreme-throughput results, VSE must model:
-
-- **Compute** — PE utilization, pipeline bubbles, accumulator
-  dependencies, precision conversion.
-- **Memory** — SRAM/HBM bandwidth, bank conflicts, latency, weight
-  movement.
-- **Communication** — NoC bandwidth, routing congestion, synchronization.
-- **Power** — switching activity, memory/NoC energy, leakage, thermal
-  constraints.
-- **Physical implementation** — wire delay, clock distribution, SRAM area,
-  achievable frequency.
-
-Without these, a simulated `10M tok/s` is a **theoretical workload
-number**, not a physically achievable silicon result.
+Without PDK calibration they remain theoretical workload numbers.
 
 ---
 
@@ -222,16 +87,14 @@ the flagship Transformer-decode and MoE numbers documented in `usage.md`.
 
 ---
 
-## Recommended next files
-
-Development should proceed approximately in this order (remaining work):
+## Recommended next files (remaining)
 
 ```text
-1. Phase 11      ← drive the generated RTL through Verilator/Icarus + Yosys
-2. Phase 12      ← PE SIMD/vector dimension in the search space
-3. Phase 13      ← data layout & tiling
-4. Phase 15      ← per-node distributed memory
-5. Phase 16      ← cycle-accurate models against the RTL simulator
+1. vse/physics/pdk.py          ← PDK calibration (G1)
+2. vse/core/memory_hierarchy.py ← per-tile HBM (G2)
+3. vse/core/noc.py, vse/core/tile.py ← flit-level, packaging (G3/G5)
+4. vse/graphs/                  ← ONNX IR frontend (G4)
+5. vse/asic/physical.py, vse/silicon/process.py ← gate-calibrated (G1/G6)
 ```
 
 ---

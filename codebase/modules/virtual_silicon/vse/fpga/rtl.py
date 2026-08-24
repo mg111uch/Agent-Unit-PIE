@@ -131,6 +131,39 @@ def generate_sram(spec: FPGASpec) -> str:
     return "\n".join(lines)
 
 
+def generate_cim_cell(spec: FPGASpec | None = None) -> str:
+    """CIM cell: SRAM+MAC fused (weight never leaves array)."""
+
+    lines = _header("vse_cim_cell")
+    lines += [
+        "module vse_cim_cell #(",
+        "    parameter int DW = 4,",
+        "    parameter int AW = 16,",
+        "    parameter int ACCW = 24",
+        ") (",
+        "    input  logic clk,",
+        "    input  logic rst_n,",
+        "    input  logic en,",
+        "    input  logic [$clog2(256)-1:0] addr,",
+        "    input  logic signed [AW-1:0]   a_in,",
+        "    output logic signed [ACCW-1:0] acc_out,",
+        "    output logic                  valid_out",
+        ");",
+        "    // Fused SRAM + MAC: weight stored in-cell, MAC on wordline.",
+        "    logic signed [DW-1:0] w_mem [256];",
+        "    logic signed [ACCW-1:0] acc_reg;",
+        "    always_ff @(posedge clk or negedge rst_n) begin",
+        "        if (!rst_n) acc_reg <= '0;",
+        "        else if (en) acc_reg <= acc_reg + $signed(a_in) * $signed(w_mem[addr]);",
+        "    end",
+        "    assign acc_out = acc_reg;",
+        "    assign valid_out = en;",
+        "endmodule",
+        "",
+    ]
+    return "\n".join(lines)
+
+
 def generate_router(spec: FPGASpec) -> str:
     """Ring/mesh NoC router: dimension-ordered hop forwarding."""
 
@@ -232,8 +265,19 @@ def generate_top(spec: FPGASpec) -> str:
     return "\n".join(lines)
 
 
-def generate_rtl(spec: FPGASpec) -> str:
+def generate_rtl(spec: FPGASpec, arch_family: str = "scalar") -> str:
     """Emit the complete prototype RTL file for `spec`."""
+
+    # lazy CIM detection: include fused cell when family is cim/near_memory
+    def _is_cim_family(f) -> bool:
+        try:
+            return str(f).lower() in ("cim", "near_memory", "near-memory")
+        except Exception:
+            return False
+
+    # also check spec attributes
+    fam = getattr(spec, "arch_family", getattr(spec, "family", arch_family))
+    include_cim = _is_cim_family(fam) or _is_cim_family(arch_family)
 
     parts: list[str] = [
         *_header("vse_fpga_prototype"),
@@ -243,8 +287,10 @@ def generate_rtl(spec: FPGASpec) -> str:
         generate_pe(spec),
         generate_sram(spec),
         generate_router(spec),
-        generate_top(spec),
     ]
+    if include_cim:
+        parts.append(generate_cim_cell(spec))
+    parts.append(generate_top(spec))
 
     return "\n".join(parts)
 
@@ -252,6 +298,7 @@ def generate_rtl(spec: FPGASpec) -> str:
 __all__ = [
     "generate_pe",
     "generate_sram",
+    "generate_cim_cell",
     "generate_router",
     "generate_top",
     "generate_rtl",

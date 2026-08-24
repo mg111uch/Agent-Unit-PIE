@@ -130,6 +130,13 @@ def add_asic_subcommand(
         help="Print machine-readable JSON.",
     )
 
+    asic.add_argument(
+        "--physics",
+        choices=["off", "warn", "fail"],
+        default="off",
+        help="Physics gate mode: off/warn/fail (default off).",
+    )
+
     return asic
 
 
@@ -152,6 +159,7 @@ def run_asic_command(args) -> Optional[int]:
         build,
         base,
         max_iterations=args.max_iters,
+        physics=getattr(args, "physics", "off") or "off",
     )
 
     if args.json:

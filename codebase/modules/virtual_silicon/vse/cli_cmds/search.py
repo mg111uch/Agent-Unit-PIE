@@ -75,6 +75,13 @@ def add_search_subcommand(
     )
 
     search.add_argument(
+        "--physics",
+        choices=["off", "warn", "fail"],
+        default="off",
+        help="Physics gate mode: off/warn/fail (default off).",
+    )
+
+    search.add_argument(
         "--dim",
         action="append",
         default=[],
@@ -300,6 +307,7 @@ def run_search_command(args) -> Optional[int]:
     else:
         build_program = _build_moe_program(args)
 
+    physics = getattr(args, "physics", "off") or "off"
     if args.sample > 0:
         results = run_random_search(
             space,
@@ -307,9 +315,10 @@ def run_search_command(args) -> Optional[int]:
             args.sample,
             base=base,
             seed=args.seed,
+            physics=physics,
         )
     else:
-        results = run_search(space, build_program, base=base)
+        results = run_search(space, build_program, base=base, physics=physics)
 
     frontier = pareto_frontier(results)
 
@@ -318,6 +327,7 @@ def run_search_command(args) -> Optional[int]:
             json.dumps(
                 {
                     "model": args.model,
+                    "physics": physics,
                     "candidates": [
                         item.report()
                         for item in results
@@ -337,6 +347,7 @@ def run_search_command(args) -> Optional[int]:
                 space=space,
                 frontier=frontier,
                 top_n=args.top_n,
+                physics=physics,
             )
         )
 

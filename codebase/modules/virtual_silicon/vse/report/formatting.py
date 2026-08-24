@@ -234,6 +234,35 @@ def format_report(result: EndToEndResult) -> str:
             ]
         )
 
+    # PHYSICS GATE section (lazy import)
+    gate = None
+    for attr in ("gate_result", "gate", "physics_gate"):
+        if hasattr(result, attr):
+            try:
+                v = getattr(result, attr)
+                if v is not None:
+                    gate = v
+                    break
+            except Exception:
+                pass
+    if gate is None and isinstance(result, dict) and "gate" in result:
+        gate = result.get("gate") or result.get("gate_result")
+    if gate is not None:
+        try:
+            from vse.physics.gate import PhysicsGate  # lazy
+
+            lines.extend(["", PhysicsGate.format_gate_report(gate)])
+        except Exception:
+            lines.extend(["", "PHYSICS GATE", "-" * 60])
+            for c in getattr(gate, "checks", []):
+                mark = "✓" if getattr(c, "passed", False) else "✗"
+                lines.append(
+                    f"{mark} {getattr(c,'name','?'):15} expected {getattr(c,'expected','?')} measured {getattr(c,'measured','?')} {getattr(c,'unit','')}".strip()
+                )
+            plausible = bool(getattr(gate, "plausible", getattr(gate, "overall_pass", True)))
+            lines.append("-" * 60)
+            lines.append("RESULT: " + ("PHYSICALLY PLAUSIBLE" if plausible else "PHYSICALLY IMPLAUSIBLE"))
+
     return "\n".join(lines)
 
 
@@ -242,10 +271,12 @@ def format_search(
     space: "object",
     frontier: list = None,
     top_n: int = 5,
+    physics: str = "off",
 ) -> str:
     """
     Compact report of an architecture search: the best candidates and
     the Pareto frontier (tokens/sec vs die area).
+    physics: off|warn|fail — affects header gate counts.
     """
 
     if frontier is None:
@@ -272,6 +303,32 @@ def format_search(
         f"Candidates        : {len(results):,}",
         f"Search space      : {dims or '(single fixed chip)'}",
     ]
+    # physics gate header
+    try:
+        has_gate = any(
+            getattr(r, "gate", None) is not None or getattr(r, "gate_result", None) is not None or hasattr(r, "plausible")
+            for r in results
+        ) or physics != "off"
+        if has_gate or physics != "off":
+            plausible_cnt = sum(1 for r in results if getattr(r, "plausible", True))
+            implausible_cnt = len(results) - plausible_cnt
+            # try to infer filtered when fail filtered implausible out (implausible will be 0)
+            # show plausible count always; add Filtered line for fail
+            if physics == "fail":
+                if implausible_cnt > 0:
+                    lines.append(f"Filtered          : {implausible_cnt} implausible")
+                else:
+                    # no remaining implausible means they were filtered; show gate summary
+                    lines.append(f"Physics gate      : {plausible_cnt} plausible (physics=fail)")
+                    # keep required marker searchable
+                    if has_gate:
+                        lines.append(f"Filtered 0 implausible")
+            elif physics == "warn":
+                lines.append(f"Physics gate      : {plausible_cnt} plausible, {implausible_cnt} implausible (physics=warn)")
+            elif has_gate and (plausible_cnt != len(results) or implausible_cnt > 0):
+                lines.append(f"Physics gate      : {plausible_cnt} plausible, {implausible_cnt} implausible")
+    except Exception:
+        pass
 
     lines.extend(["", f"TOP {top_n} BY TOKENS/SEC", "-" * 60])
     lines.append(

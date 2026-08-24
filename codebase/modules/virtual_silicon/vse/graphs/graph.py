@@ -17,15 +17,65 @@ from vse.models.transformer import TransformerLayerCost
 from vse.core.noc import NoC
 
 
+def _is_cim(cim: bool = False, arch_family: str = "scalar") -> bool:
+    """Check if CIM / near-memory mode is requested."""
+    if cim:
+        return True
+    if arch_family is None:
+        return False
+    try:
+        fam = str(arch_family).lower()
+    except Exception:
+        return False
+    # lazy import for enum values
+    try:
+        from vse.core.pe_families import ArchFamily  # noqa: WPS433
+
+        if isinstance(arch_family, ArchFamily):
+            return arch_family in (ArchFamily.cim, ArchFamily.near_memory)
+    except Exception:
+        pass
+    return fam in ("cim", "near_memory", "near-memory")
+
+
 def op_stage(
     op: OpCost,
     prefix: str,
+    cim: bool = False,
+    arch_family: str = "scalar",
 ) -> list[Task]:
     """
     Build compute/read/write tasks for one OpCost.
 
     Compute, read, and write run in parallel within a stage.
+    When cim=True or arch_family in (cim, near_memory), collapse
+    weight read + compute into a single CIM task (weight never leaves
+    array). Activation write is kept. Metadata marks cim.
     """
+
+    if _is_cim(cim, arch_family):
+        stage: list[Task] = []
+        if op.macs > 0:
+            stage.append(
+                Task(
+                    task_id=f"{prefix}_cim",
+                    name=op.name,
+                    resource_type=ResourceType.COMPUTE,
+                    work=op.macs,
+                    metadata={"kind": "cim", "arch_family": "cim"},
+                )
+            )
+        if op.output_bytes > 0:
+            stage.append(
+                Task(
+                    task_id=f"{prefix}_write",
+                    name=f"{op.name} write",
+                    resource_type=ResourceType.MEMORY_WRITE,
+                    work=op.output_bytes,
+                    metadata={"kind": "write", "arch_family": "cim"},
+                )
+            )
+        return stage
 
     stage: list[Task] = []
 
@@ -94,6 +144,8 @@ def build_transformer_tasks(
     layers: int,
     kv_level: str = "sram",
     fusion: bool = False,
+    cim: bool = False,
+    arch_family: str = "scalar",
 ) -> list[Task]:
     """
     Build the execution graph for a complete Transformer model.
@@ -113,6 +165,8 @@ def build_transformer_tasks(
             op_stage(
                 layer_cost.attention,
                 f"{prefix}_attention",
+                cim=cim,
+                arch_family=arch_family,
             )
         )
 
@@ -120,6 +174,8 @@ def build_transformer_tasks(
             op_stage(
                 layer_cost.mlp,
                 f"{prefix}_mlp",
+                cim=cim,
+                arch_family=arch_family,
             )
         )
 

@@ -93,73 +93,39 @@ model → operation costs → compile-time plan → task graph → cycle schedul
 
 ## Current status
 
-All roadmap stages are complete and working together. Each added a layer of fidelity to the same end-to-end pipeline:
+All roadmap stages are complete and working together:
 
-- **End-to-end pipeline.** Model → operation costs → scheduler task graph → cycle schedule → benchmark report (`vse/models/*`, `vse/graphs/graph.py`, `vse/workload.py`, `vse/cli.py`).
-- **Cycle-level parallel engine.** True parallel execution on capacity units, dependencies, pipeline latency, per-cycle trace, peak concurrency (`vse/core/engine.py`).
-- **Memory hierarchy.** SRAM/HBM levels, bandwidth contention, bank conflicts, weight residency, KV-cache routing, activation movement, DMA, double buffering (`vse/core/memory_hierarchy.py`).
-- **Network-on-Chip.** Ring/mesh topologies, hop-distance routing, link bandwidth, multicast/broadcast, congestion, deadlock (`vse/core/noc.py`).
-- **Model-specific hardware compilation.** Fixed execution graphs with an explicit compile plan: precision, PE allocation, expert placement, memory placement, routing, fusion (`vse/compiler/compiler.py`).
-- **Hardware architecture search.** Declarative candidate chips (`vse/search/architecture.py`) that compile and simulate through the existing pipeline, with an explicit `SearchSpace` grid plus random sampling (`vse/search/search.py`) and a Pareto frontier on **real** die area and power (not a proxy). Search dimensions: PE count, frequency, SRAM size, HBM/SRAM bandwidth, banks, precision (weight/activation/kv bits), fusion, NoC topology (ring/mesh), pipeline depth, double buffering, batch size, expert replication/placement (round-robin/contiguous), and process node (`node_nm`). Objective: **maximize tokens/sec ÷ power** subject to die area, power, memory, bandwidth, and thermal limits (W/mm²). CLI `vse search` supports `--dim NAME=V1,V2,...` and `--sample N` (random, with `--seed`) for 10,000-candidate searches.
-- **Power and area.** Die-area (PE + SRAM + NoC, mm²) and energy/power models from `ProcessTechnology` constants (default ~7 nm): dynamic energy (compute/memory/NoC per bit), static/leakage (`leakage_density_mw_per_mm²` — dominates on large SRAMs), average power from the simulated schedule, thermal-density feasibility, energy/token, and tokens/Watt. Node scaling via `ProcessTechnology.for_node` (energy ∝ node, area ∝ node²). Metrics (`tokens/Joule`, `tokens/mm²`) and the `ENERGY & POWER` / `AREA` report sections are detailed in `usage.md §4.1`; the search frontier ranks on these real estimates.
-- **FPGA prototype (pure-Python).** The first step of `Python VSE → Hardware specification → RTL → FPGA`: an `FPGASpec` derived from `HardwareConfig` + precision (`vse/fpga/spec.py`), a SystemVerilog RTL code generator (`vse/fpga/rtl.py`), and a cycle-accurate RTL simulator (`vse/fpga/sim.py`) that validates scheduler assumptions, datapath, memory architecture, routing, quantization, and pipeline behavior on a small PE array (`vse/fpga/validate.py`, CLI `vse fpga`). See `usage.md §2.8`.
-- **RTL generation.** `vse/rtl.py` emits the complete parameterized SystemVerilog for the architecture: `vse_pe`, `vse_pe_array`, `vse_sram_ctrl`, `vse_noc_router`, `vse_dma`, `vse_expert_dispatch`, `vse_accumulator`, `vse_activation`, and the `vse_asic_top` SoC — a concrete, synthesizable description driven by an `FPGASpec`. See `usage.md §2.9`.
-- **ASIC exploration (closed loop).** `vse/asic/physical.py` estimates gates, die area, critical path (logic + wire), achievable frequency, and timing closure from the generated RTL; `vse/asic/loop.py` runs `Architecture → Simulation → RTL → Physical estimation → Updated architecture → Simulation`, deepening pipelines or slowing the clock until the requested frequency closes timing, so the reported tokens/sec is physically plausible (CLI `vse asic`). See `usage.md §2.10`.
+- **End-to-end pipeline** — model → costs → task graph → cycle schedule → benchmark report.
+- **Cycle-level parallel engine** — concurrent execution with pipeline latency, trace, and peak concurrency.
+- **Memory hierarchy** — SRAM/HBM with bandwidth, banks, residency, and distributed tiles (`--num-tiles`).
+- **Network-on-Chip** — ring/mesh, hop latency, link contention, and multicast/broadcast.
+- **Model-specific compilation** — fixed graphs with auditable `COMPILE PLAN` including per-tensor precision.
+- **Architecture search** — grid/random search over PEs, SRAM, bandwidth, precision, topology, etc., with Pareto frontier on real area/power.
+- **Power, area and timing** — `~7 nm` estimates from activity (dynamic + leakage, thermal density) and RTL-based critical path.
+- **Physics gate** — 14 checks (compute, SRAM BW/latency/banks, NoC, wire, clock, power, leakage, thermal, area, capacity, timing) with `--physics off/warn/fail`, `PHYSICALLY PLAUSIBLE` report and JSON `physics`.
+- **FPGA prototype, RTL and ASIC loop** — pure-Python spec/RTL/sim/validation and closed-loop timing closure.
+
+See `usage.md` for CLI, API and detailed findings.
 
 ### Implemented components
 
 ```text
 vse/
-├── scheduler.py         public scheduler facade
-├── workload.py          end-to-end simulation entry points
-├── cli.py               command-line interface (transformer / moe)
-├── cli_cmds/            subcommand implementations
-│   ├── args.py          shared hardware CLI argument declarations
-│   ├── search.py        architecture search subcommand
-│   ├── fpga.py          fpga prototype subcommand
-│   └── asic.py          asic exploration subcommand
-├── core/                simulation primitives + hardware resources
-│   ├── core.py          virtual clock, components
-│   ├── types.py         shared datatypes (Task, Resource, ScheduleResult)
-│   ├── engine.py        parallel cycle engine
-│   ├── builders.py      scheduler task-graph helpers
-│   ├── compute.py       compute-array model (PEs, MACs/cycle)
-│   ├── memory.py        baseline memory model (benchmark support)
-│   ├── memory_hierarchy.py SRAM/HBM levels, banks, residency
-│   └── noc.py           interconnect: ring/mesh, multicast, congestion
-├── models/              workload cost models
-│   ├── ops.py           operation cost models (matmul, attention, routing…)
-│   ├── transformer.py   Transformer cost model
-│   └── moe.py           MoE cost model (experts, top-k)
-├── graphs/              task-graph construction
-│   ├── graph.py         task-graph builders + fusion transform
-│   └── graph_moe.py     MoE graph builder (replication/placement)
-├── silicon/             physical estimation
-│   ├── process.py       process technology constants (~7 nm)
-│   ├── area.py          die-area estimation, mm²
-│   └── power.py         energy/power estimation
-├── compiler/            model-specific compilation
-│   └── compiler.py
-├── search/              architecture search
-│   ├── architecture.py  candidate chip descriptions + search space
-│   └── search.py        architecture search + Pareto frontier
-├── report/
-│   ├── result.py        EndToEndResult
-│   └── formatting.py    report / trace formatting
-├── benchmark/           analytical roofline estimates + target checks
-│   └── benchmark.py
-├── fpga/                FPGA prototype (pure-Python)
-│   ├── spec.py          hardware specification (FPGASpec)
-│   ├── rtl.py           SystemVerilog RTL code generator
-│   ├── sim.py           cycle-accurate RTL simulator
-│   └── validate.py      scheduler-assumption validation harness
-├── rtl.py               full-architecture SystemVerilog generator
-└── asic/                ASIC exploration (closed loop)
-    ├── physical.py      gates / area / critical path / timing closure
-    └── loop.py          simulate → RTL → physical → updated architecture
+├── workload.py, cli.py, cli_cmds/   end-to-end run, CLI and subcommands
+├── core/          core, types, engine, compute, memory, memory_hierarchy, noc, tile
+├── models/        ops, transformer, moe, vse_s1   cost models
+├── graphs/        graph, graph_moe               task graphs
+├── silicon/       process, area, power, sram     physical estimation
+├── compiler/      compiler, precision            compilation
+├── search/        architecture, search           design-space search
+├── physics/       gate                           feasibility gate
+├── report/        result, formatting             reporting
+├── benchmark/     roofline, target               roofline analysis
+├── fpga/          spec, rtl, sim, validate       FPGA prototype
+├── rtl.py, asic/  physical, loop                RTL and ASIC loop
 ```
 
-The architecture is intentionally modular so individual components can later be replaced by more accurate hardware models without disturbing the rest.
+The architecture is intentionally modular so individual components can be replaced by more accurate models without disturbing the rest.
 
 ### Quick start
 
@@ -186,16 +152,11 @@ See **[usage.md](usage.md)** for the full CLI reference, every flag, expected ou
 
 ## Key findings so far
 
-The full write-up lives in [usage.md §5 — Findings](usage.md). In short:
+The full story is in [usage.md §5 — Findings](usage.md). The simulator keeps rediscovering the same lesson: moving data costs more than computing.
 
-- **Memory movement, not compute, is the dominant limitation.** Both flagship workloads are memory-bound on a 4096-PE chip at 256 B/cycle.
-- **Transformer decode is KV-cache-bound** (~237 tok/s on-HBM); on-chip KV raises it ~11% — long-context inference demands large SRAM.
-- **MoE sparsity hides a weight-streaming cost**: 64 experts × top-2 × 32 tokens stream 5.25 GiB of weights → ~24.5M cycles.
-- **Fusion is the strongest single optimization**: keeping activations on-chip cuts the 8-layer decode 4.2M → 1.16M cycles (~3.6×).
-- **Precision is a first-class lever**: doubling weight bits doubles HBM traffic and latency 1:1.
-- **Energy follows memory traffic**: HBM streaming dominates dynamic energy (~95%+) on weight-streamed workloads, so energy/token improves with the same residency/precision levers as latency.
-- **Area is an SRAM problem**: 1 GiB of SRAM (~430 mm²) dwarfs the PE array — a real constraint on how much KV/weight residency a die can afford.
-- **The levers that matter**: HBM bandwidth, SRAM capacity, banks — not PE count.
+Transformer decode at 4096 context is KV-cache bound, and the MoE layer is weight-streaming bound — both are memory-bound rather than compute-bound. Keeping data on-chip is what actually moves throughput: on-chip KV adds ~11%, and fusing activations to stay on-chip gives the largest single gain at ~3.6×. Precision tracks memory traffic directly, so halving bits halves HBM bytes and latency. That same traffic dominates energy, while die area is dominated by SRAM — large on-chip residency is physically expensive. In practice, HBM bandwidth, SRAM capacity and banking matter far more than adding PEs. When bandwidth is modeled physically, unrealistic `TB/s` requests are exposed immediately — honest bandwidth must be built from banks, ports and access width.
+
+See `usage.md §5` for the current quantitative findings.
 
 ---
 
@@ -239,21 +200,13 @@ Current conceptual pipeline:
 
 ### Components at a glance
 
-- **`vse/core/`** — simulation primitives and hardware resources:
-  - **`core.py` / `types.py` / `scheduler.py`** — simulation primitives, shared datatypes, and the public scheduling facade.
-  - **`engine.py`** — the parallel cycle engine: greedy per-cycle dispatch, dependency gating on result-ready cycles, resource capacity units, pipeline latency, activity trace, peak concurrency, cycle detection.
-  - **`compute.py` / `memory.py` / `memory_hierarchy.py`** — compute-array, baseline memory, and per-level (SRAM/HBM) read/write resources with bandwidth and bank counts; weight residency decisions; per-level traffic reporting.
-  - **`noc.py`** — hop-distance routing for ring/mesh, point-to-point/multicast/broadcast transfers, link contention, congestion metrics, deadlock check.
-- **`vse/models/`** — analytical cost models: **`ops.py`** (MACs, bytes by precision), **`transformer.py`**, **`moe.py`** (KV-cache traffic, expert token distribution).
-- **`vse/graphs/`** — task-graph builders for Transformer and MoE, including the NoC flow, expert replication/placement, and the fusion transform.
-- **`vse/compiler/compiler.py`** — model-specific compilation: precision overrides, PE/expert placement, memory plan, fusion, and the `COMPILE PLAN`.
-- **`vse/silicon/`** — physical estimation: **`process.py`** technology constants, **`area.py`** die-area, **`power.py`** energy/power.
-- **`vse/search/`** — architecture search: **`architecture.py`** candidate chips, **`search.py`** grid/random search + Pareto frontier.
-- **`vse/workload.py` / `vse/report/`** — end-to-end orchestration, result datatypes (`result.py`), and text/JSON report rendering (`formatting.py`).
-- **`vse/cli.py`** — the command-line interface (see `usage.md`).
-- **`vse/fpga/`** — FPGA prototype: `spec.py` hardware spec, `rtl.py` RTL generator, `sim.py` cycle-accurate RTL simulator, `validate.py` assumption checks.
-- **`vse/rtl.py`** — full-architecture SystemVerilog generator (PE array, SRAM ctrl, NoC, DMA, expert dispatch, accumulators, activation, top).
-- **`vse/asic/`** — physical estimation (`physical.py`) and closed-loop exploration (`loop.py`).
+- **`vse/core/`** — clock, scheduler, compute array, memory hierarchy and NoC.
+- **`vse/models/`** — Transformer, MoE and VSE-S1 cost models.
+- **`vse/graphs/`, `vse/compiler/`** — task graphs and model-specific compilation with auditable plan.
+- **`vse/silicon/`, `vse/physics/`** — process, area, power and physical feasibility.
+- **`vse/search/`** — architecture space and Pareto search.
+- **`vse/workload.py`, `vse/report/`, `vse/benchmark/`** — orchestration, reporting and roofline.
+- **`vse/cli.py`, `vse/fpga/`, `vse/rtl.py`, `vse/asic/`** — CLI, FPGA validation, RTL and ASIC loop.
 
 ---
 
@@ -333,7 +286,9 @@ pytest tests/
 ## Documentation map
 
 - **`README.md`** (this file) — project vision, what VSE does, current status.
-- **[`usage.md`](usage.md)** — how to run the CLI, expected results and what they mean, flags, Python API, and findings.
+- **[`usage.md`](usage.md)** — how to run the CLI, expected results and what they mean, flags, Python API, and summary findings.
+- **[`Findings.md`](Findings.md)** — detailed quantitative findings and implementation status (external agent can understand project from this file alone, <500 lines).
+- **[`IssuesFix.md`](IssuesFix.md)** — unified remaining plan (was `IMPLEMENTATION_PLAN.md` + strategic report; `IMPLEMENTATION_PLAN.md` removed).
 - **[`roadmap.md`](roadmap.md)** — the work that remains: HDL toolchain integration, PE architecture space, data layout, distributed memory, cycle-accurate modeling, packaging, and more.
 
 ---

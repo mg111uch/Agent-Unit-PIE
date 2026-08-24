@@ -174,6 +174,140 @@ def _add_common_hardware(
     )
 
     parser.add_argument(
+        "--sram-model",
+        type=str,
+        default="analytical",
+        choices=["analytical", "physical"],
+        help="SRAM bandwidth model",
+    )
+
+    parser.add_argument(
+        "--sram-ports",
+        type=int,
+        default=1,
+        help="SRAM ports per bank (1..4, physical model).",
+    )
+
+    parser.add_argument(
+        "--sram-bits-per-access",
+        type=int,
+        default=32,
+        help="SRAM bits per access (8..512, physical model).",
+    )
+
+    # Distributed tiles (idempotent)
+    _existing = {a.dest for a in parser._actions}
+    if "num_tiles" not in _existing:
+        parser.add_argument(
+            "--num-tiles",
+            type=int,
+            default=1,
+            help="Distributed tiles (1=single, 1..64).",
+        )
+    if "tile_sram_banks" not in _existing:
+        parser.add_argument(
+            "--tile-banks",
+            dest="tile_sram_banks",
+            type=int,
+            default=None,
+            help="Banks per tile (None inherits --banks).",
+        )
+    if "tile_sram_ports" not in _existing:
+        parser.add_argument(
+            "--tile-sram-ports",
+            dest="tile_sram_ports",
+            type=int,
+            default=None,
+            help="Ports per tile (1..4).",
+        )
+        # alias --tile-ports
+        try:
+            parser.add_argument(
+                "--tile-ports",
+                dest="tile_sram_ports",
+                type=int,
+                default=None,
+                help="Alias for --tile-sram-ports.",
+            )
+        except Exception:
+            pass
+    if "tile_sram_bits" not in _existing:
+        parser.add_argument(
+            "--tile-sram-bits",
+            dest="tile_sram_bits",
+            type=int,
+            default=None,
+            help="Bits per tile SRAM access (8..512).",
+        )
+        try:
+            parser.add_argument(
+                "--tile-bits",
+                dest="tile_sram_bits",
+                type=int,
+                default=None,
+                help="Alias for --tile-sram-bits.",
+            )
+        except Exception:
+            pass
+    if "sram_per_tile_gb" not in _existing:
+        # store GB as float, convert later; dest holds GB float
+        parser.add_argument(
+            "--sram-per-tile-gb",
+            dest="sram_per_tile_gb",
+            type=float,
+            default=None,
+            help="SRAM per tile in GiB.",
+        )
+    if "pes_per_tile" not in _existing:
+        parser.add_argument(
+            "--pes-per-tile",
+            type=int,
+            default=None,
+            help="PEs per tile (None=even split).",
+        )
+
+    # Arch family / dataflow (idempotent)
+    _arch_existing = {a.dest for a in parser._actions}
+    if "arch_family" not in _arch_existing:
+        parser.add_argument(
+            "--arch-family",
+            dest="arch_family",
+            type=str,
+            default="scalar",
+            choices=["scalar", "simd", "vector", "systolic", "weight_stationary", "output_stationary", "cim", "near_memory"],
+            help="PE architecture family.",
+        )
+    if "vector_width" not in _arch_existing:
+        parser.add_argument(
+            "--vector-width",
+            type=int,
+            default=1,
+            help="Vector width (1..16).",
+        )
+    if "systolic_dim" not in _arch_existing:
+        parser.add_argument(
+            "--systolic-dim",
+            type=int,
+            default=0,
+            help="Systolic array dimension (0..64).",
+        )
+    if "simd_lanes" not in _arch_existing:
+        parser.add_argument(
+            "--simd-lanes",
+            type=int,
+            default=1,
+            help="SIMD lanes (1..8).",
+        )
+    if "dataflow" not in _arch_existing:
+        parser.add_argument(
+            "--dataflow",
+            type=str,
+            default="weight_stationary",
+            choices=["weight_stationary", "output_stationary"],
+            help="Dataflow for systolic/PE array.",
+        )
+
+    parser.add_argument(
         "--trace",
         action="store_true",
         help="Print the per-cycle activity trace.",
@@ -184,3 +318,41 @@ def _add_common_hardware(
         action="store_true",
         help="Print machine-readable JSON.",
     )
+
+    # physics gate (idempotent)
+    _phys_existing = {a.dest for a in parser._actions}
+    if "physics" not in _phys_existing:
+        parser.add_argument(
+            "--physics",
+            choices=["off", "warn", "fail"],
+            default="off",
+            help="Physics gate mode: off/warn/fail (default off).",
+        )
+
+    _add_precision_args(parser)
+
+
+def _add_precision_args(parser: argparse.ArgumentParser) -> None:
+    """Idempotent precision-map args (coexists with B2)."""
+    existing = {a.dest for a in parser._actions}
+    if "precision_map" not in existing:
+        parser.add_argument(
+            "--precision-map",
+            type=str,
+            default=None,
+            help='Per-tensor precision map JSON, e.g. \'{"attn":2,"mlp":4}\'',
+        )
+    if "q2_group_size" not in existing:
+        parser.add_argument(
+            "--q2-group-size",
+            type=int,
+            default=32,
+            help="Q2 group size (weights per scale).",
+        )
+    if "q2_scale_bits" not in existing:
+        parser.add_argument(
+            "--q2-scale-bits",
+            type=int,
+            default=8,
+            help="Bits per Q2 scale.",
+        )
