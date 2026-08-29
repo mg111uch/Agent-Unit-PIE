@@ -109,7 +109,7 @@ class SemanticMemory:
                 object_id=node.node_id,
                 data=node.to_dict()
             )
-        logger.info(
+        logger.debug(
             f"Semantic node added: {node.node_id}"
         )
     def create_node(
@@ -166,7 +166,7 @@ class SemanticMemory:
                 object_id=edge.edge_id,
                 data=edge.to_dict()
             )
-        logger.info(
+        logger.debug(
             f"Semantic edge added: {edge.edge_id}"
         )
     def create_edge(

@@ -9,11 +9,17 @@ _indexed_topics = set()
 def _get_client():
     global _client
     if _client is None:
-        _client = chromadb.Client(
-            settings=chromadb.config.Settings(
-                persist_directory="../../data/chroma_db"
+        try:
+            from pathlib import Path
+            persist = Path(__file__).resolve().parents[5] / "data" / "chroma_db"
+            persist.mkdir(parents=True, exist_ok=True)
+            _client = chromadb.PersistentClient(path=str(persist))
+        except Exception:
+            _client = chromadb.Client(
+                settings=chromadb.config.Settings(
+                    persist_directory=str(Path(__file__).resolve().parents[5] / "data" / "chroma_db")
+                )
             )
-        )
     return _client
 
 
@@ -26,10 +32,14 @@ def _get_collection():
 
 @lru_cache(maxsize=1)
 def _get_model():
+    from pathlib import Path
+    cache_path = Path(__file__).resolve().parents[2] / "encoding_cache" / "all-MiniLM-L6-v2"
     try:
         from sentence_transformers import SentenceTransformer
-        return SentenceTransformer("all-MiniLM-L6-v2")
-    except ImportError:
+        if cache_path.exists():
+            return SentenceTransformer(str(cache_path), local_files_only=True)
+        return SentenceTransformer("all-MiniLM-L6-v2", local_files_only=True)
+    except Exception:
         import hashlib
         import numpy as np
 
@@ -73,3 +83,25 @@ def search_similar(argument, top_k=3):
         n_results=top_k
     )
     return results
+
+
+def sync_from_sqlite():
+    """Rebuild Chroma from SQLite embeddings if collection empty (cold start)."""
+    try:
+        from kernel.persistence.db import kernel_db
+        coll = _get_collection()
+        if coll.count() > 0:
+            return 0
+        rows = kernel_db.load_all_embeddings()
+        if not rows:
+            return 0
+        import struct
+        for node_id, blob in rows:
+            try:
+                vals = list(struct.unpack(f"{len(blob)//4}f", blob))
+                coll.add(ids=[node_id], embeddings=[vals], documents=[node_id], metadatas=[{"node_id": node_id}])
+            except Exception:
+                continue
+        return len(rows)
+    except Exception:
+        return 0

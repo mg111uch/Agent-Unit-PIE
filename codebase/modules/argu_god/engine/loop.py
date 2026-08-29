@@ -1,20 +1,16 @@
-import json
-import os
+from .topic_store import TopicStoreError, export_graph, hydrate
 
-DATA_ROOT = os.path.join(
-    os.path.dirname(os.path.abspath(__file__)),
-    "..", "..", "..", "..", "data",
-)
 
 def load_graph(topic: str):
-    path = os.path.join(DATA_ROOT, "topics", topic, "graph.json")
-    
-    if not os.path.exists(path):
+    """Topic graph view from kernel semantic memory (SQLite is canonical)."""
+    try:
+        hydrate()
+        graph = export_graph(topic)
+    except TopicStoreError:
         return None
+    return graph if graph["nodes"] else None
 
-    with open(path, "r") as f:
-        return json.load(f)
-    
+
 def get_next_argument(topic, graph, state, beliefs):
     nodes = graph.get("nodes", [])
 
@@ -36,6 +32,3 @@ def get_next_argument(topic, graph, state, beliefs):
             return node
 
     return None
-
-
-

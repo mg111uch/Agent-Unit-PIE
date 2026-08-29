@@ -146,10 +146,33 @@ class SemanticRetriever:
         self.embedding_backend = backend
         logger.info(f"Embedding backend set: {type(backend).__name__}")
 
+    def _valid_for_retrieval(self, node, simulator: Optional[str], include_historical: bool) -> bool:
+        try:
+            from kernel.simulation_version import is_compatible, get_current_version
+            md = getattr(node, "metadata", {}) or {}
+            obs = md.get("observation", {}) or {}
+            sim = obs.get("simulator") or md.get("validity", {}).get("simulator")
+            if simulator and sim and sim != simulator:
+                return False
+            validity = md.get("validity", {}) if isinstance(md, dict) else {}
+            if not include_historical and validity.get("status") == "HISTORICAL":
+                return False
+            if simulator and not include_historical:
+                find_ver = obs.get("version_id") or validity.get("valid_for_version")
+                cur = get_current_version(simulator)
+                query_ver = cur["version_id"] if cur else None
+                if find_ver and query_ver and not is_compatible(find_ver, query_ver, simulator=simulator):
+                    return False
+        except Exception:
+            pass
+        return True
+
     def search_by_embedding(
         self,
         query: str,
         limit: int = 10,
+        simulator: Optional[str] = None,
+        include_historical: bool = False,
     ) -> List[SemanticSearchResult]:
         if not self.embedding_backend:
             return self.search_by_concept(query, limit=limit)
@@ -164,6 +187,8 @@ class SemanticRetriever:
         for r in results:
             node = semantic_memory.get_node(r["node_id"])
             if not node:
+                continue
+            if not self._valid_for_retrieval(node, simulator, include_historical):
                 continue
             neighbors = semantic_memory.get_neighbors(node.node_id)
             output.append(SemanticSearchResult(
@@ -181,12 +206,16 @@ class SemanticRetriever:
         self,
         concept: str,
         limit: int = 10,
+        simulator: Optional[str] = None,
+        include_historical: bool = False,
     ) -> List[SemanticSearchResult]:
         concept = concept.lower()
         results = []
         for node in (
             semantic_memory.nodes.values()
         ):
+            if not self._valid_for_retrieval(node, simulator, include_historical):
+                continue
             matched_concepts = []
             score = 0.0
             # CONCEPT MATCH
@@ -332,6 +361,8 @@ class SemanticRetriever:
         self,
         concepts: List[str],
         limit: int = 20,
+        simulator: Optional[str] = None,
+        include_historical: bool = False,
     ) -> List[SemanticSearchResult]:
         combined_scores = {}
         result_map = {}
@@ -339,7 +370,9 @@ class SemanticRetriever:
             concept_results = (
                 self.search_by_concept(
                     concept=concept,
-                    limit=limit
+                    limit=limit,
+                    simulator=simulator,
+                    include_historical=include_historical,
                 )
             )
             for result in concept_results:
@@ -373,12 +406,16 @@ class SemanticRetriever:
         self,
         query: str,
         limit: int = 10,
+        simulator: Optional[str] = None,
+        include_historical: bool = False,
     ) -> Dict[str, Any]:
         concepts = query.lower().split()
         concept_results = (
             self.multi_concept_search(
                 concepts=concepts,
-                limit=limit
+                limit=limit,
+                simulator=simulator,
+                include_historical=include_historical,
             )
         )
         traversed_nodes = []

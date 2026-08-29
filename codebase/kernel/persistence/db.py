@@ -34,7 +34,9 @@ CREATE TABLE IF NOT EXISTS semantic_nodes (
     confidence REAL DEFAULT 1.0,
     created_at REAL NOT NULL,
     updated_at REAL NOT NULL,
-    topic_id TEXT DEFAULT ''
+    topic_id TEXT DEFAULT '',
+    embedding BLOB,
+    metadata_json TEXT DEFAULT '{}'
 );
 
 CREATE TABLE IF NOT EXISTS semantic_edges (
@@ -138,18 +140,54 @@ CREATE TABLE IF NOT EXISTS citation_cache (
     status TEXT NOT NULL,
     updated_at REAL NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS simulation_versions (
+    version_id TEXT PRIMARY KEY,
+    simulator TEXT DEFAULT 'popula_dyn',
+    parent_version_id TEXT DEFAULT NULL,
+    code_hash TEXT DEFAULT '',
+    created_at REAL NOT NULL,
+    change_reason TEXT DEFAULT '',
+    change_summary TEXT DEFAULT '',
+    affected_concepts_json TEXT DEFAULT '[]',
+    git_branch TEXT DEFAULT '',
+    git_message TEXT DEFAULT ''
+);
+
+CREATE INDEX IF NOT EXISTS idx_sim_versions_sim ON simulation_versions(simulator);
+
+CREATE TABLE IF NOT EXISTS simulation_runs (
+    run_id TEXT PRIMARY KEY,
+    simulator TEXT DEFAULT 'popula_dyn',
+    version_id TEXT NOT NULL,
+    parameters_json TEXT DEFAULT '{}',
+    baseline_run_id TEXT DEFAULT NULL,
+    result_json TEXT DEFAULT '{}',
+    horizon INTEGER DEFAULT 0,
+    status TEXT DEFAULT 'completed',
+    created_at REAL NOT NULL,
+    FOREIGN KEY(version_id) REFERENCES simulation_versions(version_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_sim_runs_version ON simulation_runs(version_id);
 """
 
 
 class KernelDB:
-    def __init__(self, db_path: str | Path = DB_PATH):
+    def __init__(self, db_path: str | Path = DB_PATH, read_only: bool = False):
         self.db_path = Path(db_path)
-        self.db_path.parent.mkdir(parents=True, exist_ok=True)
+        self.read_only = read_only
+        if not read_only:
+            self.db_path.parent.mkdir(parents=True, exist_ok=True)
         self._conn: sqlite3.Connection | None = None
-        self._init_db()
+        self._ro_conn: sqlite3.Connection | None = None
+        if not read_only:
+            self._init_db()
 
     @property
     def conn(self) -> sqlite3.Connection:
+        if self.read_only:
+            return self.ro_conn
         if self._conn is None:
             self._conn = sqlite3.connect(str(self.db_path))
             self._conn.row_factory = sqlite3.Row
@@ -157,16 +195,44 @@ class KernelDB:
             self._conn.execute("PRAGMA foreign_keys=ON")
         return self._conn
 
+    @property
+    def ro_conn(self) -> sqlite3.Connection:
+        if self._ro_conn is None:
+            if not self.db_path.exists():
+                # open in-memory empty DB for inspection when file missing
+                self._ro_conn = sqlite3.connect(":memory:")
+                self._ro_conn.row_factory = sqlite3.Row
+                return self._ro_conn
+            uri = f"file:{self.db_path}?mode=ro"
+            self._ro_conn = sqlite3.connect(uri, uri=True, check_same_thread=False)
+            self._ro_conn.row_factory = sqlite3.Row
+            try:
+                self._ro_conn.execute("PRAGMA query_only=ON")
+            except Exception:
+                pass
+        return self._ro_conn
+
     def _init_db(self):
+        if self.read_only:
+            return
         for statement in SCHEMA_SQL.split(";"):
             stripped = statement.strip()
             if stripped:
-                self.conn.execute(stripped)
+                try:
+                    self.conn.execute(stripped)
+                except sqlite3.OperationalError:
+                    pass
         for col_sql in [
             "ALTER TABLE semantic_nodes ADD COLUMN topic_id TEXT DEFAULT ''",
             "ALTER TABLE semantic_edges ADD COLUMN topic_id TEXT DEFAULT ''",
             "ALTER TABLE tool_stats ADD COLUMN output_chars INTEGER DEFAULT 0",
             "ALTER TABLE tool_stats ADD COLUMN token_estimate INTEGER DEFAULT 0",
+            "ALTER TABLE semantic_nodes ADD COLUMN embedding BLOB",
+            "ALTER TABLE semantic_nodes ADD COLUMN metadata_json TEXT DEFAULT '{}'",
+            "ALTER TABLE simulation_versions ADD COLUMN git_branch TEXT DEFAULT ''",
+            "ALTER TABLE simulation_versions ADD COLUMN git_message TEXT DEFAULT ''",
+            "ALTER TABLE simulation_versions ADD COLUMN simulator TEXT DEFAULT 'popula_dyn'",
+            "ALTER TABLE simulation_runs ADD COLUMN simulator TEXT DEFAULT 'popula_dyn'",
         ]:
             try:
                 self.conn.execute(col_sql)
@@ -178,6 +244,12 @@ class KernelDB:
         if self._conn is not None:
             self._conn.close()
             self._conn = None
+        if self._ro_conn is not None:
+            try:
+                self._ro_conn.close()
+            except Exception:
+                pass
+            self._ro_conn = None
 
     # --- LOGS ---
 
@@ -232,13 +304,15 @@ class KernelDB:
         created_at: Optional[float] = None,
         updated_at: Optional[float] = None,
         topic_id: str = "",
+        embedding: Optional[bytes] = None,
+        metadata: Optional[Dict[str, Any]] = None,
     ):
         now = time.time()
         self.conn.execute(
             """INSERT OR REPLACE INTO semantic_nodes
                (node_id, node_type, title, content, concepts_json, tags_json,
-                importance, confidence, created_at, updated_at, topic_id)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                importance, confidence, created_at, updated_at, topic_id, embedding, metadata_json)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
             (
                 node_id,
                 node_type,
@@ -251,9 +325,29 @@ class KernelDB:
                 created_at or now,
                 updated_at or now,
                 topic_id,
+                embedding,
+                json.dumps(metadata or {}),
             ),
         )
         self.conn.commit()
+
+    def save_semantic_embedding(self, node_id: str, embedding: bytes):
+        self.conn.execute(
+            "UPDATE semantic_nodes SET embedding = ? WHERE node_id = ?", (embedding, node_id)
+        )
+        self.conn.commit()
+
+    def load_semantic_embedding(self, node_id: str) -> Optional[bytes]:
+        row = self.conn.execute(
+            "SELECT embedding FROM semantic_nodes WHERE node_id = ?", (node_id,)
+        ).fetchone()
+        return bytes(row["embedding"]) if row and row["embedding"] is not None else None
+
+    def load_all_embeddings(self) -> List[Tuple[str, bytes]]:
+        rows = self.conn.execute(
+            "SELECT node_id, embedding FROM semantic_nodes WHERE embedding IS NOT NULL"
+        ).fetchall()
+        return [(r["node_id"], bytes(r["embedding"])) for r in rows]
 
     def load_semantic_node(self, node_id: str) -> Optional[Dict[str, Any]]:
         row = self.conn.execute(
@@ -283,11 +377,38 @@ class KernelDB:
         ).fetchall()
         return [self._row_to_node(dict(r)) for r in rows]
 
+    def delete_semantic_node(self, node_id: str) -> bool:
+        cur = self.conn.execute("DELETE FROM semantic_nodes WHERE node_id = ?", (node_id,))
+        self.conn.commit()
+        return cur.rowcount > 0
+
+    def delete_semantic_edge(self, edge_id: str) -> bool:
+        cur = self.conn.execute("DELETE FROM semantic_edges WHERE edge_id = ?", (edge_id,))
+        self.conn.commit()
+        return cur.rowcount > 0
+
+    def delete_semantic_nodes_by_topic(self, topic_id: str) -> int:
+        cur = self.conn.execute("DELETE FROM semantic_nodes WHERE topic_id = ?", (topic_id,))
+        self.conn.commit()
+        return cur.rowcount
+
+    def delete_semantic_edges_by_topic(self, topic_id: str) -> int:
+        cur = self.conn.execute("DELETE FROM semantic_edges WHERE topic_id = ?", (topic_id,))
+        self.conn.commit()
+        return cur.rowcount
+
     @staticmethod
     def _row_to_node(row: Dict[str, Any]) -> Dict[str, Any]:
         row["concepts"] = json.loads(row.pop("concepts_json", "[]"))
         row["tags"] = json.loads(row.pop("tags_json", "[]"))
         row["topic_id"] = row.get("topic_id", "")
+        try:
+            row["metadata"] = json.loads(row.pop("metadata_json", "{}") or "{}")
+        except Exception:
+            row["metadata"] = {}
+        # keep raw json for debug but ensure dict
+        if not isinstance(row.get("metadata"), dict):
+            row["metadata"] = {}
         return row
 
     # --- SEMANTIC EDGES ---
@@ -679,6 +800,68 @@ class KernelDB:
     def vacuum(self):
         self.conn.execute("VACUUM")
 
+    # --- SIMULATION LINEAGE (Phase 0 refactored — Git-backed, per-simulator) ---
+    def save_simulation_version(self, version_id: str, parent_version_id: Optional[str], code_hash: str, change_reason: str = "", change_summary: str = "", affected_concepts: Optional[List[str]] = None, created_at: Optional[float] = None, git_branch: str = "", git_message: str = "", simulator: str = "popula_dyn"):
+        self.conn.execute(
+            """INSERT OR REPLACE INTO simulation_versions
+               (version_id, simulator, parent_version_id, code_hash, created_at, change_reason, change_summary, affected_concepts_json, git_branch, git_message)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (version_id, simulator, parent_version_id, code_hash, created_at or time.time(), change_reason, change_summary, json.dumps(affected_concepts or []), git_branch, git_message),
+        )
+        self.conn.commit()
+
+    def load_simulation_version(self, version_id: str, simulator: Optional[str] = None) -> Optional[Dict[str, Any]]:
+        if simulator:
+            row = self.conn.execute("SELECT * FROM simulation_versions WHERE version_id=? AND simulator=?", (version_id, simulator)).fetchone()
+        else:
+            row = self.conn.execute("SELECT * FROM simulation_versions WHERE version_id=?", (version_id,)).fetchone()
+        if not row:
+            return None
+        d = dict(row)
+        d["affected_concepts"] = json.loads(d.pop("affected_concepts_json", "[]"))
+        return d
+
+    def load_all_simulation_versions(self, simulator: Optional[str] = None) -> List[Dict[str, Any]]:
+        if simulator:
+            rows = self.conn.execute("SELECT * FROM simulation_versions WHERE simulator=? ORDER BY created_at", (simulator,)).fetchall()
+        else:
+            rows = self.conn.execute("SELECT * FROM simulation_versions ORDER BY created_at").fetchall()
+        out = []
+        for r in rows:
+            d = dict(r)
+            d["affected_concepts"] = json.loads(d.pop("affected_concepts_json", "[]"))
+            out.append(d)
+        return out
+
+    def load_latest_version(self, simulator: Optional[str] = None) -> Optional[Dict[str, Any]]:
+        if simulator:
+            row = self.conn.execute("SELECT * FROM simulation_versions WHERE simulator=? ORDER BY created_at DESC LIMIT 1", (simulator,)).fetchone()
+        else:
+            row = self.conn.execute("SELECT * FROM simulation_versions ORDER BY created_at DESC LIMIT 1").fetchone()
+        if not row:
+            return None
+        d = dict(row)
+        d["affected_concepts"] = json.loads(d.pop("affected_concepts_json", "[]"))
+        return d
+
+    def save_simulation_run(self, run_id: str, version_id: str, parameters: Dict[str, Any], baseline_run_id: Optional[str], result: Dict[str, Any], horizon: int = 0, status: str = "completed", created_at: Optional[float] = None, simulator: str = "popula_dyn"):
+        self.conn.execute(
+            """INSERT OR REPLACE INTO simulation_runs
+               (run_id, simulator, version_id, parameters_json, baseline_run_id, result_json, horizon, status, created_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (run_id, simulator, version_id, json.dumps(parameters or {}), baseline_run_id, json.dumps(result or {}), horizon, status, created_at or time.time()),
+        )
+        self.conn.commit()
+
+    def load_simulation_run(self, run_id: str) -> Optional[Dict[str, Any]]:
+        row = self.conn.execute("SELECT * FROM simulation_runs WHERE run_id=?", (run_id,)).fetchone()
+        if not row:
+            return None
+        d = dict(row)
+        d["parameters"] = json.loads(d.pop("parameters_json", "{}"))
+        d["result"] = json.loads(d.pop("result_json", "{}"))
+        return d
+
     def stats(self) -> Dict[str, int]:
         counts = {}
         for table in [
@@ -692,6 +875,8 @@ class KernelDB:
             "tool_stats",
             "file_access",
             "daily_read_budget",
+            "simulation_versions",
+            "simulation_runs",
         ]:
             row = self.conn.execute(
                 f"SELECT COUNT(*) as cnt FROM {table}"
@@ -701,3 +886,4 @@ class KernelDB:
 
 
 kernel_db = KernelDB()
+kernel_db_ro = KernelDB(read_only=True)

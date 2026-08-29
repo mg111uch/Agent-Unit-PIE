@@ -495,7 +495,7 @@ def _register_debate_tools():
                                             "side": {"type": "string", "description": "One of: pro, con, neutral"}},
                             "additionalProperties": False}}, False),
         ("expand_topic", expand_topic, CAT_DEBATE,
-         "Add new nodes and edges to a topic's argument graph. Validates no duplicate names, persists to graph.json, and re-indexes the vector store.",
+         "Add new nodes and edges to a topic's argument graph. Validates no duplicate names, persists via kernel semantic memory (SQLite; graph.json is a regenerated view), re-indexes the vector store, and contradicts edges between agreed beliefs raise kernel contradiction signals.",
          {"topic": str_p("Topic name to expand (e.g. 'theism_atheism')", req=True),
           "new_nodes": {"t": "array", "desc": "New argument nodes to add", "r": True,
                         "items": {"type": "object", "properties": {

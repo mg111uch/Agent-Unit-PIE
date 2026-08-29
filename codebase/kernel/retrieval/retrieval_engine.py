@@ -68,18 +68,52 @@ class RetrievalEngine:
     def __init__(self):
         self.default_limit = 10
 
+    # helpers for Phase 3 version-aware filtering
+    def _valid_for_retrieval(self, node, simulator: Optional[str], include_historical: bool) -> bool:
+        # simulator isolation: strictly per-sim if simulator given
+        try:
+            from kernel.simulation_version import is_compatible
+            md = getattr(node, "metadata", {}) or {}
+            obs = md.get("observation", {}) or {}
+            sim = obs.get("simulator") or md.get("validity", {}).get("simulator")
+            if simulator and sim and sim != simulator:
+                return False
+            # validity status
+            validity = md.get("validity", {}) if isinstance(md, dict) else {}
+            if not include_historical and validity.get("status") == "HISTORICAL":
+                return False
+            # version compatibility if both have version_id
+            if simulator and not include_historical:
+                find_ver = obs.get("version_id") or validity.get("valid_for_version")
+                # query version is latest for this simulator
+                try:
+                    from kernel.simulation_version import get_current_version
+                    cur = get_current_version(simulator)
+                    query_ver = cur["version_id"] if cur else None
+                    if find_ver and query_ver and not is_compatible(find_ver, query_ver, simulator=simulator):
+                        return False
+                except Exception:
+                    pass
+        except Exception:
+            pass
+        return True
+
     # GLOBAL SEARCH
     def search(
         self,
         query: str,
         limit: int = 10,
+        simulator: Optional[str] = None,
+        include_historical: bool = False,
     ) -> List[RetrievalResult]:
         results = []
         # SEMANTIC MEMORY
         semantic_results = (
             self.search_semantic_memory(
                 query=query,
-                limit=limit
+                limit=limit,
+                simulator=simulator,
+                include_historical=include_historical,
             )
         )
         results.extend(
@@ -89,7 +123,9 @@ class RetrievalEngine:
         episodic_results = (
             self.search_episodic_memory(
                 query=query,
-                limit=limit
+                limit=limit,
+                simulator=simulator,
+                include_historical=include_historical,
             )
         )
         results.extend(
@@ -116,10 +152,14 @@ class RetrievalEngine:
         self,
         query: str,
         limit: int = 10,
+        simulator: Optional[str] = None,
+        include_historical: bool = False,
     ) -> List[RetrievalResult]:
         query_lower = query.lower()
         results = []
         for node in semantic_memory.nodes.values():
+            if not self._valid_for_retrieval(node, simulator, include_historical):
+                continue
             searchable_text = " ".join([
                 node.title,
                 node.content,
@@ -145,6 +185,7 @@ class RetrievalEngine:
                     metadata={
                         "node_type":
                         node.node_type,
+                        "simulator": (node.metadata.get("observation", {}) or {}).get("simulator") if isinstance(node.metadata, dict) else None,
                     },
                 )
             )
@@ -158,10 +199,20 @@ class RetrievalEngine:
         self,
         query: str,
         limit: int = 10,
+        simulator: Optional[str] = None,
+        include_historical: bool = False,
     ) -> List[RetrievalResult]:
         query_lower = query.lower()
         results = []
         for episode in episodic_memory.episodes.values():
+            # per-sim filter for episodic: check simulator in metadata/tags
+            if simulator:
+                ep_sim = (episode.metadata or {}).get("simulator")
+                if ep_sim and ep_sim != simulator:
+                    continue
+                if not ep_sim and simulator not in (episode.tags or []):
+                    # if no simulator tag, keep only if query is generic; for strict per-sim, skip generic episodes
+                    pass
             searchable_text = " ".join([
                 episode.summary,
                 " ".join(
@@ -187,6 +238,7 @@ class RetrievalEngine:
                     metadata={
                         "episode_type":
                         episode.episode_type,
+                        "simulator": (episode.metadata or {}).get("simulator"),
                     },
                 )
             )
@@ -302,10 +354,14 @@ class RetrievalEngine:
         self,
         query: str,
         max_items: int = 20,
+        simulator: Optional[str] = None,
+        include_historical: bool = False,
     ) -> Dict[str, Any]:
         search_results = self.search(
             query=query,
-            limit=max_items
+            limit=max_items,
+            simulator=simulator,
+            include_historical=include_historical,
         )
         patterns = self.retrieve_patterns(
             limit=5

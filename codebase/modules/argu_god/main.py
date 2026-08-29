@@ -39,13 +39,15 @@ async def list_topics():
 
 @app.get("/api/graph")
 async def get_graph(topic: str = "theism_atheism"):
-    path = os.path.join(DATA_ROOT, "topics", topic, "graph.json")
-    if os.path.exists(path):
-        try:
-            with open(path) as f:
-                return json.load(f)
-        except Exception as e:
-            print("Invalid graph.json:", e)
+    try:
+        from engine.topic_store import export_graph, hydrate
+    except ImportError:
+        from argu_god.engine.topic_store import export_graph, hydrate
+    try:
+        hydrate()
+        return export_graph(topic)
+    except Exception as e:
+        print("topic_store error:", e)
     return {"nodes": [], "edges": []}
 
 @app.post("/api/compile/{topic}")

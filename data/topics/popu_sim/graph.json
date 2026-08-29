@@ -1,0 +1,41 @@
+{
+  "nodes": [
+    {
+      "name": "run_basic Findings",
+      "side": "argument",
+      "premise": "Status: STABLE\nPopulation: 5 (baseline 0) +0.0%\nDeaths: 9 (SPIKED vs baseline 0)\n Births: 0\n Wealth: 1102.5 (baseline 0.0)\n AvgSkill: 0.66\n Signals: prosperity=220.50886321448147 intensity=5.0; population_decline=5 intensity=8.0(HIGH); population_trend_declining=5 intensity=5.0\n Interpretation: Zero births suggest fertile window or partner availability bottleneck; Death spike likely caused by wealth-based starvation multiplier",
+      "evidence": [],
+      "examples": [],
+      "sources": [],
+      "discipline": "",
+      "confidence": 1.0
+    },
+    {
+      "name": "run_policy_birth08 Findings",
+      "side": "argument",
+      "premise": "Status: COLLAPSED\nPopulation: 2 (baseline 5) -60.0%\nDeaths: 33 (SPIKED vs baseline 9)\n Births: 0\n Wealth: 871.7 (baseline 1102.5)\n AvgSkill: 0.70\n Signals: prosperity=435.8473467036253 intensity=5.0; population_decline=2 intensity=8.0(HIGH); population_trend_declining=2 intensity=5.0\n Interpretation: Zero births suggest fertile window or partner availability bottleneck; Death spike likely caused by wealth-based starvation multiplier; Wealth decline may indicate resource depletion",
+      "evidence": [],
+      "examples": [],
+      "sources": [],
+      "discipline": "",
+      "confidence": 1.0
+    },
+    {
+      "name": "run_policy_birth06 Findings",
+      "side": "argument",
+      "premise": "Status: IMPROVED\nPopulation: 8 (baseline 5) +60.0%\nDeaths: 3 (REDUCED vs baseline 9)\n Births: 0\n Wealth: 1308.0 (baseline 1102.5)\n AvgSkill: 0.56\n Signals: prosperity=163.50453610422778 intensity=5.0; population_decline=8 intensity=8.0(HIGH); population_trend_declining=8 intensity=5.0\n Interpretation: Zero births suggest fertile window or partner availability bottleneck",
+      "evidence": [],
+      "examples": [],
+      "sources": [],
+      "discipline": "",
+      "confidence": 1.0
+    }
+  ],
+  "edges": [
+    {
+      "source": "run_policy_birth06 Findings",
+      "target": "run_policy_birth08 Findings",
+      "relation": "contradicts"
+    }
+  ]
+}

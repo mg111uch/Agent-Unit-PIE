@@ -16,6 +16,7 @@ logger = get_child_logger("memory")
 class MemoryEngine:
     def __init__(self):
         self._db = None
+        self._ro_db = None
 
     @property
     def db(self):
@@ -24,9 +25,31 @@ class MemoryEngine:
             self._db = kernel_db
         return self._db
 
+    @property
+    def ro_db(self):
+        if self._ro_db is None:
+            try:
+                from kernel.persistence.db import kernel_db_ro
+                self._ro_db = kernel_db_ro
+            except Exception:
+                self._ro_db = self.db
+        return self._ro_db
+
     def _persist_structured(self, memory_type: str, object_id: str, data: Dict[str, Any]):
         try:
             if memory_type == "semantic":
+                if "edge_id" in data:
+                    self.db.save_semantic_edge(
+                        edge_id=object_id,
+                        source_node_id=data.get("source_node_id", ""),
+                        target_node_id=data.get("target_node_id", ""),
+                        relation_type=data.get("relation_type", "related"),
+                        weight=data.get("weight", 1.0),
+                        confidence=data.get("confidence", 1.0),
+                        created_at=data.get("created_at"),
+                        topic_id=data.get("topic_id", ""),
+                    )
+                    return
                 node_type = data.get("node_type", "generic")
                 self.db.save_semantic_node(
                     node_id=object_id,
@@ -40,6 +63,7 @@ class MemoryEngine:
                     created_at=data.get("created_at"),
                     updated_at=data.get("updated_at"),
                     topic_id=data.get("topic_id", ""),
+                    metadata=data.get("metadata", {}),
                 )
             elif memory_type == "pattern":
                 self.db.save_pattern(
@@ -88,7 +112,7 @@ class MemoryEngine:
     ) -> str:
         self.db.save_generic_memory(object_id, memory_type, data)
         self._persist_structured(memory_type, object_id, data)
-        logger.info(f"Saved object: {object_id}")
+        logger.debug(f"Saved object: {object_id}")
         return object_id
 
     def load_object(
@@ -106,13 +130,61 @@ class MemoryEngine:
         memory_type: str,
         object_id: str,
     ) -> bool:
-        return self.db.delete_generic_memory(object_id)
+        deleted = self.db.delete_generic_memory(object_id)
+        if memory_type == "semantic":
+            try:
+                self.db.delete_semantic_node(object_id)
+            except Exception:
+                pass
+            try:
+                self.db.delete_semantic_edge(object_id)
+            except Exception:
+                pass
+            try:
+                from argu_god.engine.vector_store import _get_collection
+                _get_collection().delete(ids=[object_id])
+            except Exception:
+                pass
+        return deleted
 
     def list_objects(
         self,
         memory_type: str,
     ) -> List[str]:
         return self.db.list_generic_memory_ids(memory_type)
+
+    def list_objects_ro(
+        self,
+        memory_type: str,
+    ) -> List[str]:
+        try:
+            # use RO conn directly to avoid persistent WAL init
+            conn = self.ro_db.ro_conn
+            rows = conn.execute(
+                "SELECT memory_id FROM generic_memory WHERE memory_type=? ORDER BY created_at",
+                (memory_type,),
+            ).fetchall()
+            return [r[0] for r in rows]
+        except Exception:
+            return self.db.list_generic_memory_ids(memory_type)
+
+    def load_object_ro(
+        self,
+        memory_type: str,
+        object_id: str,
+    ) -> Optional[Dict[str, Any]]:
+        try:
+            import json as _json
+            conn = self.ro_db.ro_conn
+            row = conn.execute(
+                "SELECT data_json FROM generic_memory WHERE memory_id=?", (object_id,)
+            ).fetchone()
+            if not row or row[0] is None:
+                return None
+            data = _json.loads(row[0]) if isinstance(row[0], str) else row[0]
+            return data
+        except Exception:
+            return self.load_object(memory_type, object_id)
 
     def search_by_prefix(
         self,

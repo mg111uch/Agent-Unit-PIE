@@ -25,4 +25,15 @@ cd /home/manigupt/Hello/Agentic_Unit_PIE/codebase/agent_tools/atlas_tools && pyt
 - Max 400–500 lines per file (including tests & comments).
 - Split large files when they exceed 500 LOC.
 - **One persistence path** — SQLite only now; don't let a future module invent a second.
-- Do not `Read` `atlas_output/children/` for routine work — check real code or use code_rag tools instead.
+- Do not `Read` `atlas_output/children/` for routine work — check real code or use code_rag tools instead if available.
+- All output to user must be ≤200 words.
+
+## Kernel & Topic Graphs (lazy-load only when relevant)
+If — and only if — the task touches kernel memory, topics, signals or logs
+(`codebase/kernel/**`, `codebase/modules/argu_god/**`, `data/topics/**`,
+`data/kernel.db`, `scripts/topic_ops.py`, `scripts/backfill_topics.py`,
+`scripts/prune_kernel_logs.py`, `scripts/smoke_kernel.py`):
+1. Read `system_devpt_reports/kernel/README.md` first (documentation map).
+2. Deep manual: `system_devpt_reports/kernel/usage.md`.
+3. Agent operating loop: `data/workflows/kernel_ops.json` + `kernel_ops.md`.
+Skip this section entirely for unrelated codefile edits.

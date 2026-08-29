@@ -148,6 +148,7 @@ def _debate_wait_and_process(session_id: str) -> str:
     state = meta.get("state", {})
     beliefs = meta.get("beliefs", {})
     graph = meta.get("graph", {})
+    topic = meta.get("topic", "")
 
     choice_raw = answers[0] if answers else "3"
     try:
@@ -199,9 +200,11 @@ def _debate_wait_and_process(session_id: str) -> str:
 
     # --- Phase 4: Contradiction detection & signal emission ---
     from kernel.patterns.contradiction_detector import detect_contradictions_for_beliefs
+    # claim_filter must stay None: detection needs BOTH endpoints of a
+    # contradicts edge inside the believed set; filtering to the just-
+    # answered claim alone can never satisfy that.
     raw = detect_contradictions_for_beliefs(
         beliefs["arguments"],
-        claim_filter=arg_name,
     )
     contradictions = [(r.claim_a_title, r.claim_b_title) for r in raw]
 

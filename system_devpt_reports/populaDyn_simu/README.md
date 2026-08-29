@@ -237,4 +237,7 @@ resources:
     regeneration_rate: 0.1
 ```
 
+## Problem Restatement
+Agent has 2 mutation axes: param sweep (birth 0.04→0.08) vs codebase mutation (change reproduction.py, starvation.py). Both write to same popu_sim graph; old V1 runs accumulate and falsely contradict V2 runs.
+
 ---

@@ -1,0 +1,42 @@
+{
+  "nodes": [
+    ["start", "START", "ellipse", "#d4f0c0", 150, 50, 150, 70, "", "popu_sim_dev.md#start"],
+    ["orient", "ORIENT\n(Kernel Retrieve, per-sim ACTIVE)", "rect", "#e0e0ff", 150, 155, 180, 80, "", "popu_sim_dev.md#orient"],
+    ["version_sync", "VERSION SYNC\nsync_from_git(sim)\nper-sim isolated", "rect", "#e0e0ff", 400, 155, 180, 80, "", "popu_sim_dev.md#version-sync"],
+    ["find_gaps", "FIND GAPS\n(Parameter Analysis)", "rect", "#fff2cc", 150, 265, 180, 80, "", "popu_sim_dev.md#find-gaps"],
+    ["propose", "PROPOSE POLICY", "rect", "#ffffff", 150, 375, 180, 80, "", "popu_sim_dev.md#propose"],
+    ["check", "CHECK\nCONTRADICTION\n(version-aware)", "diamond", "#ffe0b0", 150, 485, 150, 80, "", "popu_sim_dev.md#check"],
+    ["blocked", "BLOCKED?\n(Refine)", "rect", "#ffcccc", 400, 485, 150, 80, "", "popu_sim_dev.md#blocked"],
+    ["agree", "AGREE POLICY", "rect", "#d4f0c0", 150, 595, 180, 80, "", "popu_sim_dev.md#agree"],
+    ["implement", "IMPLEMENT\n(Run Simulation)\nsharded: units/simulations/{sim}/{run}", "rect", "#e0e0ff", 150, 705, 180, 80, "", "popu_sim_dev.md#implement"],
+    ["lineage", "LINEAGE PERSIST\nDB + episodic\n(data/memory/episodic)", "rect", "#d4f0c0", 400, 705, 180, 80, "", "popu_sim_dev.md#lineage-persist"],
+    ["register", "REGISTER\nFindings (per-sim topic)\n+ validity ACTIVE", "rect", "#d4f0c0", 150, 815, 180, 80, "", "popu_sim_dev.md#register"],
+    ["validity", "VALIDITY SCOPE\nHISTORICAL if\nconcept affected", "rect", "#ffe0b0", 400, 815, 180, 80, "", "popu_sim_dev.md#validity-scope"],
+    ["contradicts_edge", "ADD CONTRADICTS\nEDGE?", "diamond", "#ffe0b0", 150, 925, 150, 80, "", "popu_sim_dev.md#contradicts-edge"],
+    ["add_edge", "ADD EDGE", "rect", "#e0e0ff", 400, 925, 150, 80, "", "popu_sim_dev.md#add-edge"],
+    ["compress", "COMPRESS\nper-sim consolidate\n(keep episodic)", "rect", "#e0e0ff", 150, 1035, 180, 80, "", "popu_sim_dev.md#compress"],
+    ["loop", "ITERATIONS\n< MAX?", "diamond", "#ffe0b0", 150, 1135, 120, 80, "", "popu_sim_dev.md#loop"],
+    ["stop", "STOP", "ellipse", "#f0c0c0", 150, 1245, 150, 70, "", "popu_sim_dev.md#stop"]
+  ],
+  "edges": [
+    ["start", "orient", "", []],
+    ["orient", "version_sync", "", []],
+    ["version_sync", "find_gaps", "", []],
+    ["find_gaps", "propose", "", []],
+    ["propose", "check", "", []],
+    ["check", "blocked", "yes", []],
+    ["check", "agree", "no", []],
+    ["blocked", "propose", "refine", []],
+    ["agree", "implement", "", []],
+    ["implement", "lineage", "", []],
+    ["lineage", "register", "", []],
+    ["register", "validity", "", []],
+    ["validity", "contradicts_edge", "", []],
+    ["contradicts_edge", "add_edge", "yes", []],
+    ["contradicts_edge", "compress", "no", []],
+    ["add_edge", "compress", "", []],
+    ["compress", "loop", "", []],
+    ["loop", "orient", "yes", []],
+    ["loop", "stop", "no", []]
+  ]
+}

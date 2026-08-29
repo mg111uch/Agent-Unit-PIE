@@ -1,23 +1,24 @@
 #!/usr/bin/env python3
 """D6: record an intentional removal as a decision node in project_history.
 
-Appends a `side=decision` node and a `contradicts` edge to
-data/topics/project_history/graph.json. Idempotent: a node with the same name
-and an edge with the same (source, target, relation) are never duplicated.
+Routes through kernel semantic memory via argu_god.engine.topic_store
+(SQLite canonical); graph.json is regenerated as a derived view.
+Idempotent: duplicate node names and (source, target, relation) triples
+are never re-added. A contradicts edge between two agreed beliefs raises
+a kernel contradiction_detected signal.
 """
 
 import json
 import sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "codebase" / "modules"))
+
+from argu_god.engine import topic_store as ts  # noqa: E402
+from argu_god.engine.topic_store import TopicStoreError  # noqa: E402
+
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 GRAPH = PROJECT_ROOT / "data" / "topics" / "project_history" / "graph.json"
-
-
-def _load_graph() -> dict:
-    if not GRAPH.exists():
-        return {"nodes": [], "edges": []}
-    return json.loads(GRAPH.read_text(encoding="utf-8"))
 
 
 def record_removal(name, premise, evidence=None, sources=None,
@@ -25,38 +26,50 @@ def record_removal(name, premise, evidence=None, sources=None,
                    confidence=1.0, persist=True):
     evidence = list(evidence or [])
     sources = list(sources or [])
-    graph = _load_graph()
-    changes = []
 
-    if any(n.get("name") == name for n in graph["nodes"]):
-        changes.append({"kind": "node_skipped", "name": name})
-    else:
-        node = {
-            "name": name,
-            "side": "decision",
-            "premise": premise,
-            "evidence": evidence,
-            "examples": [],
-            "sources": sources,
-            "discipline": discipline,
-            "confidence": float(confidence),
-        }
-        graph["nodes"].append(node)
-        changes.append({"kind": "node_added", "name": name})
+    try:
+        ts.hydrate()
+    except TopicStoreError:
+        return []
 
-    if contradicts and not any(
-        e.get("source") == name and e.get("target") == contradicts
-        and e.get("relation") == "contradicts"
-        for e in graph["edges"]
-    ):
-        graph["edges"].append({"source": name, "target": contradicts,
-                               "relation": "contradicts"})
-        changes.append({"kind": "edge_added", "source": name,
-                        "target": contradicts})
+    node = {
+        "name": name,
+        "side": "decision",
+        "premise": premise,
+        "evidence": evidence,
+        "examples": [],
+        "sources": sources,
+        "discipline": discipline,
+        "confidence": float(confidence),
+    }
+    if persist:
+        changes = [ts.add_node("project_history", node)]
+        contradictions = []
+        if contradicts:
+            change = ts.add_edge("project_history", name, contradicts,
+                                 "contradicts")
+            changes.append(change)
+            if change["kind"] == "edge_added":
+                contradictions = ts.check_contradictions(
+                    "project_history", (name, contradicts))
+        return changes if not contradictions else _with_flags(
+            changes, contradictions)
+    # dry-run: existence checks only, no writes
+    exists = ts.find_node("project_history", name) is not None
+    changes = [{"kind": "node_skipped" if exists else "node_added", "name": name}]
+    if contradicts:
+        edge_id = f"edge_contradicts_{name}_{contradicts}".replace(" ", "_")
+        known = ts.find_node("project_history", contradicts) is not None
+        changes.append({
+            "kind": "edge_added" if known and edge_id not in ts.semantic_memory.edges
+            else "edge_skipped",
+            "source": name, "target": contradicts})
+    return changes
 
-    if persist and changes:
-        GRAPH.parent.mkdir(parents=True, exist_ok=True)
-        GRAPH.write_text(json.dumps(graph, indent=2) + "\n", encoding="utf-8")
+
+def _with_flags(changes, contradictions):
+    for pair in contradictions:
+        ts.emit_contradiction_signal(pair, "project_history")
     return changes
 
 

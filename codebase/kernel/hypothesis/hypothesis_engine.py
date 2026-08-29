@@ -57,7 +57,16 @@ class HypothesisEngine:
             List[str]
         ] = None,
         metadata: Optional[Dict] = None,
-    ) -> Hypothesis:
+        force: bool = False,
+    ) -> Hypothesis | Dict[str, Any]:
+        if not force:
+            from kernel.hypothesis.contradiction_gate import check_hypothesis_contradiction
+            blocked, conflicts = check_hypothesis_contradiction(
+                title, description, category, predictions or [])
+            if blocked:
+                return {"blocked": True,
+                        "reason": "Contradicts existing hypothesis. Resolve prior claim or re-run with force=True after user approval.",
+                        "conflicts": conflicts}
         hypothesis = Hypothesis(
             hypothesis_id=hypothesis_id,
             title=title,
@@ -103,7 +112,7 @@ class HypothesisEngine:
         ].append(
             hypothesis.hypothesis_id
         )
-        logger.info(
+        logger.debug(
             f"Hypothesis registered: "
             f"{hypothesis.hypothesis_id}"
         )

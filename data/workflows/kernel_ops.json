@@ -1,0 +1,41 @@
+{
+  "nodes": [
+    ["start", "KERNEL OPS\nSTART", "ellipse", "#d4f0c0", 250, 50, 150, 70],
+    ["orient", "ORIENT:\nkernel_retrieve(query, simulator)\nBEFORE exploring", "rect", "#e0e0ff", 250, 145, 170, 70, "", "kernel_ops.md#orient-before-exploring"],
+    ["version_sync", "VERSION SYNC:\nsync_from_git(sim)\nper-sim isolated", "rect", "#e0e0ff", 480, 145, 170, 70, "", "kernel_ops.md#version-sync"],
+    ["found", "PRIOR CONTEXT\nFOUND?", "diamond", "#ffe0b0", 260, 245, 120, 80],
+    ["apply", "APPLY PRIOR DECISIONS:\ntopic_ops.py list --topic\nproject_history --side decision\n(check before re-adding code)", "rect", "#d4f0c0", 480, 240, 190, 90, "", "kernel_ops.md#apply-prior-decisions"],
+    ["explore", "EXPLORE / EXECUTE TASK:\ncheap tools first\n(reports inventory,\ncapability list)", "rect", "#ffffff", 250, 355, 170, 80],
+    ["discovery", "NON-OBVIOUS DISCOVERY\nor user decision?", "diamond", "#ffe0b0", 260, 465, 140, 80],
+    ["store", "STORE:\nkernel_store_context(tags)\nor kernel_emit_signal\nimportance >= 0.5", "rect", "#fff2cc", 480, 460, 170, 80, "", "kernel_ops.md#store-context-and-signals"],
+    ["topics", "TOPIC GRAPHS:\nscripts/topic_ops.py\nadd-node | add-edge |\nlist | topics\n(per-sim topic)", "rect", "#e0e0ff", 250, 585, 170, 80, "", "kernel_ops.md#topic-graphs-cli"],
+    ["contradicts", "ADDED\n--relation contradicts\nEDGE?", "diamond", "#ffe0b0", 260, 695, 130, 80],
+    ["flag", "READ FLAG:\nCONTRADICTION: A <-> B\nsignal=contradiction_detected_*\n(exit stays 0)", "rect", "#ffd866", 480, 695, 180, 80, "", "kernel_ops.md#contradiction-signals"],
+    ["compress", "COMPRESS:\nper-sim ACTIVE only\nconsolidate (keep episodic)", "rect", "#e0e0ff", 250, 815, 170, 70, "", "kernel_ops.md#compress-per-sim"],
+    ["hygiene", "LOG HYGIENE:\nSELECT COUNT(*) FROM logs\n(data/kernel.db)", "rect", "#ffffff", 480, 815, 170, 70, "", "kernel_ops.md#log-hygiene-and-pruning"],
+    ["over200", "> 200\nROWS?", "diamond", "#ffe0b0", 265, 915, 110, 80],
+    ["prune", "PRUNE:\npython scripts/prune_kernel_logs.py\n--keep 200", "rect", "#ffd866", 480, 915, 200, 70, "", "kernel_ops.md#log-hygiene-and-pruning"],
+    ["stop", "STOP", "ellipse", "#f0c0c0", 250, 1035, 150, 70]
+  ],
+  "edges": [
+    ["start", "orient", "", []],
+    ["orient", "version_sync", "", []],
+    ["version_sync", "found", "", []],
+    ["found", "explore", "no", []],
+    ["found", "apply", "yes", []],
+    ["apply", "explore", "", []],
+    ["explore", "discovery", "", []],
+    ["discovery", "store", "yes", []],
+    ["discovery", "topics", "no", []],
+    ["store", "topics", "", []],
+    ["topics", "contradicts", "", []],
+    ["contradicts", "flag", "yes", []],
+    ["contradicts", "compress", "no", []],
+    ["flag", "compress", "", []],
+    ["compress", "hygiene", "", []],
+    ["hygiene", "over200", "", []],
+    ["over200", "prune", "yes", []],
+    ["over200", "stop", "no", []],
+    ["prune", "stop", "", []]
+  ]
+}

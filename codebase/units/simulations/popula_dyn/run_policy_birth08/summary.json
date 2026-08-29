@@ -1,0 +1,18 @@
+{
+  "step_count": 50,
+  "total_units": 2532,
+  "population": 2,
+  "total_wealth": 871.6946934072506,
+  "avg_skill": 0.7,
+  "births": 0,
+  "deaths": 33,
+  "spatial": {
+    "width": 50,
+    "height": 50,
+    "total_units": 2532,
+    "occupied_cells": 2500,
+    "torus": true
+  },
+  "run_id": "run_policy_birth08",
+  "timestamp": "2026-08-27T12:33:56.532550"
+}

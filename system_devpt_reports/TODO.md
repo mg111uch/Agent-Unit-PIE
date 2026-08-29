@@ -25,6 +25,8 @@ Also give suggestions for this workflow optimization, patterns which could be av
 
 > **Update rule for next agent:** When adding content, preserve all existing entries that are not exact duplicates. Append new items, don't replace sections wholesale. If a section already has 6 entries and you add 3, the result should be 9 — not 3. Only replace an entry if it says the *same thing* about the *same pattern*.
 
+- I want to make self development loop so that kernel and the simulation can be co developed together. The problem I am facing is that when an agent run simulation registered the outcomes in semantic memory the results which we registered as graph could not be contradicted because they look similar in structure for jaccard token and embedding similarity comparisions.
+
 # Questions
 grok --resume 019fc7b4-a7a3-7a20-86f1-6feab4f594bc
 
