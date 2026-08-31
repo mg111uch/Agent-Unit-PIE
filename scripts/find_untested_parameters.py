@@ -22,6 +22,10 @@ from pathlib import Path
 
 
 def find_simulations_base():
+    # primary: data/units/simulations/popula_dyn, fallback: codebase/units/simulations for backward compat
+    p = Path("data/units/simulations/popula_dyn")
+    if p.exists():
+        return Path("data/units/simulations")
     return Path("codebase/units/simulations")
 
 
@@ -48,13 +52,21 @@ def extract_tested_values(topic: str) -> dict:
     if not sim_base.exists():
         return tested
 
-    for run_dir in sim_base.iterdir():
-        if not run_dir.is_dir():
-            continue
-        params = scan_run_params(run_dir)
-        if not params:
-            continue
-        tested["params"][run_dir.name] = params
+    # handle sharded layout data/units/simulations/{sim}/{run}
+    scan_roots = [sim_base]
+    if (sim_base / "popula_dyn").exists():
+        scan_roots.append(sim_base / "popula_dyn")
+    if (sim_base / "eco_sim").exists():
+        scan_roots.append(sim_base / "eco_sim")
+
+    for root in scan_roots:
+        for run_dir in root.iterdir():
+            if not run_dir.is_dir():
+                continue
+            params = scan_run_params(run_dir)
+            if not params:
+                continue
+            tested["params"][run_dir.name] = params
 
     return tested
 

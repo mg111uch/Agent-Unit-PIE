@@ -13,6 +13,12 @@ logger = get_child_logger("validity")
 def _find_concepts_for_node(node) -> List[str]:
     md = getattr(node, "metadata", {}) or {}
     obs = md.get("observation", {}) or {}
+    # consolidated nodes carry affected_concepts directly (materialized view)
+    if isinstance(md, dict) and md.get("affected_concepts"):
+        try:
+            return sorted(set(md.get("affected_concepts") or []))
+        except Exception:
+            pass
     # derive from scenario keys + signals
     keys: List[str] = []
     scen = obs.get("scenario", {}) if isinstance(obs, dict) else {}
@@ -21,17 +27,18 @@ def _find_concepts_for_node(node) -> List[str]:
     sigs = obs.get("signals", []) if isinstance(obs, dict) else []
     # also premise content fallback
     content = (getattr(node, "content", "") or "").lower()
-    # map keys/sigs to concepts via MODULE_CONCEPTS registry
+    # map keys/sigs to concepts via ontology-aware registry
     try:
-        from kernel.schemas.simulation_schema import MODULE_CONCEPTS
+        from kernel.schemas.simulation_schema import _load_ontology_concepts
+        registry = _load_ontology_concepts()
         out: set[str] = set()
         for k in keys:
-            for mod, concepts in MODULE_CONCEPTS.items():
+            for mod, concepts in registry.items():
                 if mod in k or k in mod:
                     out.update(concepts)
         for s in sigs:
             s_low = str(s).lower()
-            for mod, concepts in MODULE_CONCEPTS.items():
+            for mod, concepts in registry.items():
                 if mod in s_low:
                     out.update(concepts)
         # premise keywords
@@ -66,6 +73,11 @@ def mark_stale_findings(simulator: str, new_version_id: str) -> List[str]:
     invalidated: List[str] = []
     for node in list(semantic_memory.search_by_topic(topic)):
         md = node.metadata or {}
+        # skip consolidated nodes — handled via materialized-view recompute, not direct invalidation
+        if getattr(node, "node_type", "") == "consolidated_observation":
+            continue
+        if isinstance(md.get("observation"), dict) and md["observation"].get("consolidated"):
+            continue
         validity = md.get("validity", {}) if isinstance(md, dict) else {}
         # only ACTIVE and same simulator
         if validity.get("status") == "HISTORICAL":
@@ -104,6 +116,19 @@ def mark_stale_findings(simulator: str, new_version_id: str) -> List[str]:
         try:
             from argu_god.engine.topic_store import write_export
             write_export(topic)
+        except Exception:
+            pass
+        # materialized view: recompute consolidated knowledge from remaining ACTIVE evidence
+        try:
+            from kernel.compression_engine import CompressionEngine
+            CompressionEngine().recompute_consolidated(simulator, invalidated_ids=invalidated, new_version_id=new_version_id)
+        except Exception as e:
+            logger.warning(f"validity: recompute_consolidated failed for {simulator}: {e}")
+    else:
+        # even if no raw findings invalidated, consolidated sources may have drifted — opportunistic recompute
+        try:
+            from kernel.compression_engine import CompressionEngine
+            CompressionEngine().recompute_consolidated(simulator, invalidated_ids=[], new_version_id=new_version_id)
         except Exception:
             pass
     return invalidated

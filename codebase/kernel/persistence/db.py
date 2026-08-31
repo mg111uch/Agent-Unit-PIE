@@ -170,6 +170,14 @@ CREATE TABLE IF NOT EXISTS simulation_runs (
 );
 
 CREATE INDEX IF NOT EXISTS idx_sim_runs_version ON simulation_runs(version_id);
+
+CREATE TABLE IF NOT EXISTS workflow_states (
+    simulator TEXT PRIMARY KEY,
+    current TEXT NOT NULL,
+    history_json TEXT DEFAULT '[]',
+    outputs_json TEXT DEFAULT '{}',
+    updated_at REAL NOT NULL
+);
 """
 
 
@@ -862,6 +870,23 @@ class KernelDB:
         d["result"] = json.loads(d.pop("result_json", "{}"))
         return d
 
+    def save_workflow_state(self, simulator: str, current: str, history: List[str], outputs: Dict[str, Any]):
+        self.conn.execute(
+            """INSERT OR REPLACE INTO workflow_states (simulator, current, history_json, outputs_json, updated_at)
+               VALUES (?, ?, ?, ?, ?)""",
+            (simulator, current, json.dumps(history), json.dumps(outputs), time.time()),
+        )
+        self.conn.commit()
+
+    def load_workflow_state(self, simulator: str) -> Optional[Dict[str, Any]]:
+        row = self.conn.execute("SELECT * FROM workflow_states WHERE simulator=?", (simulator,)).fetchone()
+        if not row:
+            return None
+        d = dict(row)
+        d["history"] = json.loads(d.pop("history_json", "[]"))
+        d["outputs"] = json.loads(d.pop("outputs_json", "{}"))
+        return d
+
     def stats(self) -> Dict[str, int]:
         counts = {}
         for table in [
@@ -877,6 +902,7 @@ class KernelDB:
             "daily_read_budget",
             "simulation_versions",
             "simulation_runs",
+            "workflow_states",
         ]:
             row = self.conn.execute(
                 f"SELECT COUNT(*) as cnt FROM {table}"

@@ -72,20 +72,35 @@ class EmbeddingBackend:
         raise NotImplementedError
 
 
+def _default_chroma_path() -> str:
+    import os
+    from pathlib import Path
+    env = os.getenv("CHROMA_DB_PATH")
+    if env:
+        return env
+    # codebase/kernel/retrieval/semantic_retriever.py -> parents[3] == Agentic_Unit_PIE
+    return str(Path(__file__).resolve().parents[3] / "data" / "chroma_db")
+
+
 class ChromaBackend(EmbeddingBackend):
-    def __init__(self, collection_name: str = "kernel_semantic", persist_dir: str = "./chroma_db"):
+    def __init__(self, collection_name: str = "kernel_semantic", persist_dir: str | None = None):
         self._collection = None
         self._collection_name = collection_name
-        self._persist_dir = persist_dir
+        self._persist_dir = persist_dir or _default_chroma_path()
 
     def _get_collection(self):
         if self._collection is None:
             import chromadb
-            client = chromadb.Client(
-                settings=chromadb.config.Settings(
-                    persist_directory=self._persist_dir
+            from pathlib import Path
+            Path(self._persist_dir).mkdir(parents=True, exist_ok=True)
+            try:
+                client = chromadb.PersistentClient(path=self._persist_dir)
+            except Exception:
+                client = chromadb.Client(
+                    settings=chromadb.config.Settings(
+                        persist_directory=self._persist_dir
+                    )
                 )
-            )
             self._collection = client.get_or_create_collection(name=self._collection_name)
         return self._collection
 

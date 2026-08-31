@@ -1,0 +1,48 @@
+{
+  "episode_id": "simrun_popula_dyn_run_policy_birth08",
+  "simulator": "popula_dyn",
+  "version_id": "popula_dyn@1a7d783",
+  "run_id": "run_policy_birth08",
+  "parameters": {
+    "birth_rate": 0.08,
+    "death_rate": 0.01,
+    "fertile_max_age": 50,
+    "fertile_min_age": 15,
+    "grid_height": 50,
+    "grid_width": 50,
+    "healer_healing_cost": 0.5,
+    "healer_healing_rate": 0.1,
+    "initial_healers": 10,
+    "initial_pop": 50,
+    "initial_toolmakers": 10,
+    "initial_traders": 10,
+    "max_age": 60,
+    "metabolism": 1,
+    "seed": "None",
+    "toolmaker_cost": 1.0,
+    "toolmaker_production_rate": 0.1,
+    "toolmaker_quality": 0.1,
+    "trader_margin": 0.05,
+    "trader_range": 2,
+    "vision": 2,
+    "years": 50
+  },
+  "result": {
+    "step_count": 50,
+    "total_units": 2532,
+    "population": 2,
+    "total_wealth": 871.6946934072506,
+    "avg_skill": 0.7,
+    "births": 0,
+    "deaths": 33,
+    "spatial": {
+      "width": 50,
+      "height": 50,
+      "total_units": 2532,
+      "occupied_cells": 2500,
+      "torus": true
+    },
+    "run_id": "run_policy_birth08",
+    "timestamp": "2026-08-27T12:33:56.532550"
+  }
+}

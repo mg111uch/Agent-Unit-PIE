@@ -55,6 +55,8 @@
     { file: 'minimal_context.json', title: 'Context Generation Workflow' },
     { file: 'kernel_ops.json', title: 'Kernel Ops Workflow' },
     { file: 'popu_sim_dev.json', title: 'Popu Sim Workflow' },
+    { file: 'research_development.json', title: 'Research Workflow' },
+    { file: 'docs_update.json', title: 'Docs Update Workflow' },
   ];
 
   const selectEl = document.getElementById('wf-select');
@@ -69,9 +71,16 @@
   function toDagre(data) {
     return {
       nodes: (data.nodes || []).map((n) => {
-        const ref = n[8];
-        const label = ref ? ((n[1] ? n[1] + '\n' : '') + ref) : n[1];
-        return [n[0], label, n[2], n[3]];
+        if (Array.isArray(n)) {
+          const ref = n[8];
+          const label = ref ? ((n[1] ? n[1] + '\n' : '') + ref) : n[1];
+          return [n[0], label, n[2], n[3]];
+        } else {
+          const ref = n.mdRef || n.ref;
+          const raw = n.label || n.goal || n.id;
+          const label = ref ? raw + '\n' + ref : raw;
+          return [n.id, label, n.shape || 'rect', n.color || '#e0e0ff'];
+        }
       }),
       edges: (data.edges || []).map(([from, to, label]) => [from, to, label]),
     };
@@ -114,7 +123,10 @@
 
   function markRefNodes(data) {
     const refs = {};
-    (data.nodes || []).forEach((n) => { if (n[8]) refs[n[0]] = n[8]; });
+    (data.nodes || []).forEach((n) => {
+      if (Array.isArray(n)) { if (n[8]) refs[n[0]] = n[8]; }
+      else { const ref = n.mdRef || n.ref || n.subgraph; if (ref) refs[n.id] = ref; }
+    });
     if (!inner || !Object.keys(refs).length) return;
     inner.selectAll('g.node').each(function () {
       const ref = refs[this.id];

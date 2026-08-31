@@ -116,6 +116,60 @@ class HypothesisEngine:
             f"Hypothesis registered: "
             f"{hypothesis.hypothesis_id}"
         )
+        # persist to single SQLite + semantic memory (like topic_store)
+        try:
+            from kernel.persistence.db import kernel_db
+            kernel_db.save_hypothesis(
+                hypothesis_id=hypothesis.hypothesis_id,
+                title=hypothesis.title,
+                description=hypothesis.description,
+                hypothesis_type=hypothesis.hypothesis_type,
+                category=hypothesis.category,
+                confidence=hypothesis.confidence,
+                status=hypothesis.status,
+                supporting=list(hypothesis.supporting_evidence),
+                contradicting=list(hypothesis.contradicting_evidence),
+                created_at=hypothesis.created_at,
+                updated_at=hypothesis.updated_at,
+            )
+        except Exception:
+            pass
+        try:
+            self.export_to_semantic_memory(hypothesis.hypothesis_id)
+        except Exception:
+            pass
+
+    def hydrate(self, force: bool = False):
+        """Load persisted hypotheses from DB (cross-process resume)."""
+        if self.hypotheses and not force:
+            return
+        try:
+            from kernel.persistence.db import kernel_db
+            for row in kernel_db.load_all_hypotheses():
+                hid = row["hypothesis_id"]
+                if hid in self.hypotheses and not force:
+                    continue
+                # reconstruct HypothesisSchema
+                h = Hypothesis(
+                    hypothesis_id=row["hypothesis_id"],
+                    title=row["title"],
+                    description=row["description"],
+                    hypothesis_type=row["hypothesis_type"],
+                    category=row["category"],
+                    confidence=row["confidence"],
+                    status=row["status"],
+                    supporting_evidence=row.get("supporting_evidence") or [],
+                    contradicting_evidence=row.get("contradicting_evidence") or [],
+                    created_at=row["created_at"],
+                    updated_at=row["updated_at"],
+                )
+                # preserve predictions/metadata if present via full row (fallback)
+                self.hypotheses[hid] = h
+                self.type_index[h.hypothesis_type].append(hid)
+                self.category_index[h.category].append(hid)
+                self.status_index[h.status].append(hid)
+        except Exception:
+            pass
     # AUTO GENERATE FROM PATTERNS
     def generate_from_patterns(
         self,
@@ -379,6 +433,11 @@ class HypothesisEngine:
         logger.warning(
             "Hypothesis engine cleared"
         )
+        try:
+            from kernel.persistence.db import kernel_db
+            # not deleting DB rows here — use kernel_db.conn for explicit wipe if needed
+        except Exception:
+            pass
 
 # GLOBAL ENGINE
 

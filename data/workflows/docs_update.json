@@ -1,0 +1,29 @@
+{
+  "meta": {
+    "id": "docs_update",
+    "goal": "General doc-sync subgraph — inject into any module workflow needing docs freshness",
+    "injection": "Add node [doc_sync, DOC SYNC..., rect, ..., docs_update.json] + edge to subgraph; workflow_graph.html click-through via ref",
+    "scope": "kernel→kernel/README,usage.md / sim→SimDvptPhases/README / workflows→*.md / codefiles_map auto"
+  },
+  "nodes": [
+    ["start", "DOC UPDATE\nSTART", "ellipse", "#d4f0c0", 250, 30, 150, 60],
+    ["detect_stale", "DETECT STALE\nreport_freshness_tool\n(_Last verified vs git)", "rect", "#e0e0ff", 250, 120, 180, 80, "", "docs_update.md#detect-stale"],
+    ["staleQ", "STALE\nFOUND?", "diamond", "#ffe0b0", 250, 230, 120, 70],
+    ["identify_scope", "IDENTIFY SCOPE\nkernel|sim|workflow\n+ codefiles_map", "rect", "#fff2cc", 480, 230, 180, 80, "", "docs_update.md#identify-scope"],
+    ["update_docs", "UPDATE DOCS\nedit_file prose\n+ render_status/codefiles_map", "rect", "#ffd866", 250, 340, 180, 80, "", "docs_update.md#update-docs"],
+    ["verify", "VERIFY\nreport_freshness_tool\nreport_schema_check", "rect", "#e0e0ff", 250, 450, 180, 80, "", "docs_update.md#verify"],
+    ["okQ", "DOCS\nFRESH?", "diamond", "#ffe0b0", 250, 560, 120, 70],
+    ["stop", "DOCS\nFRESH → RETURN", "ellipse", "#d4f0c0", 250, 670, 150, 60]
+  ],
+  "edges": [
+    ["start", "detect_stale", "", []],
+    ["detect_stale", "staleQ", "", []],
+    ["staleQ", "identify_scope", "yes", []],
+    ["staleQ", "stop", "no", []],
+    ["identify_scope", "update_docs", "", []],
+    ["update_docs", "verify", "", []],
+    ["verify", "okQ", "", []],
+    ["okQ", "update_docs", "no", []],
+    ["okQ", "stop", "yes", []]
+  ]
+}

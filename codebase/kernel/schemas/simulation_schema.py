@@ -127,11 +127,57 @@ MODULE_CONCEPTS: Dict[str, List[str]] = {
 }
 
 
-def concepts_for_changed_files(files: List[str]) -> List[str]:
+def _load_ontology_concepts() -> Dict[str, List[str]]:
+    """Merge per-simulator ontology.yaml declared concepts with MODULE_CONCEPTS."""
+    merged: Dict[str, List[str]] = dict(MODULE_CONCEPTS)
+    try:
+        from pathlib import Path as _P
+
+        sim_root = _P(__file__).resolve().parents[2] / "modules" / "simulators"
+        if sim_root.exists():
+            for child in sim_root.iterdir():
+                onto = child / "ontology.yaml"
+                if not onto.exists():
+                    onto = child / "ontology.yml"
+                if onto.exists():
+                    import yaml as _yaml
+
+                    data = _yaml.safe_load(onto.read_text()) or {}
+                    # support two shapes: {module: [concepts]} or {"modules": {module: {concepts: [...]}}}
+                    mods = data.get("modules") if isinstance(data, dict) and "modules" in data else data
+                    if isinstance(mods, dict):
+                        for mod, cfg in mods.items():
+                            if isinstance(cfg, dict):
+                                conc = cfg.get("concepts") or cfg.get("affects") or []
+                            elif isinstance(cfg, list):
+                                conc = cfg
+                            else:
+                                continue
+                            merged[mod.lower()] = sorted(set(conc))
+                    elif isinstance(mods, list):
+                        for entry in mods:
+                            if not isinstance(entry, dict):
+                                continue
+                            mod = str(entry.get("module", "")).replace(".py", "").lower()
+                            conc = entry.get("concepts", [])
+                            if mod and conc:
+                                merged[mod] = sorted(set(conc))
+    except Exception:
+        pass
+    return merged
+
+
+def concepts_for_changed_files(files: List[str], _ontology: Optional[Dict[str, List[str]]] = None) -> List[str]:
+    registry = _ontology or _load_ontology_concepts()
     out: set[str] = set()
     for f in files:
         stem = Path(f).stem.lower()
-        for mod, concepts in MODULE_CONCEPTS.items():
+        for mod, concepts in registry.items():
             if mod in stem:
                 out.update(concepts)
     return sorted(out)
+
+
+def module_concepts_for(module: str) -> List[str]:
+    """Public helper: concepts declared for a simulator module (ontology-aware)."""
+    return _load_ontology_concepts().get(module.lower(), MODULE_CONCEPTS.get(module.lower(), []))

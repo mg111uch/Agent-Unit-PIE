@@ -1,9 +1,43 @@
 {
   "$schema": "https://opencode.ai/config.json",
+  
+  "provider": {
+    "groq": {
+      "models": {
+        "qwen/qwen3.6-27b": {
+          "name": "Qwen 3.6 27B",
+          "limit": {
+            "context": 131042,
+            "output": 16384
+          }
+        }
+      }
+    },
+    "tokenharbor": {
+      "name": "Token Harbor",
+      "npm": "@ai-sdk/openai-compatible",
+      "options": {
+        "baseURL": "https://tokenharbor.ai/v1"
+      },
+      "models": {
+        "th-orchestra": {
+          "name": "TH Orchestra"
+        },
+        "deepseek-v4-flash:free": {
+          "name": "DS-v4-Flash-0731"
+        }
+      }
+    }
+  },  
+  
   "mcp": {
     "pie": {
       "type": "local",
-      "command": ["/home/manigupt/miniconda3/envs/myenv/bin/python", "-m", "agent_core.mcp_server"],
+      "command": [
+        "/home/manigupt/miniconda3/envs/myenv/bin/python", 
+        "-m", 
+        "agent_core.mcp_server"
+      ],
       "cwd": "/home/manigupt/Hello/Agentic_Unit_PIE/codebase",
       "enabled": false,
       "environment": {

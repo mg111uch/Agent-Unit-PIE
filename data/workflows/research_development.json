@@ -1,0 +1,39 @@
+{
+  "meta": {
+    "id": "research_development",
+    "goal": "Unified development operating loop — LLM thinks inside workflow, engine enforces transitions",
+    "subgraphs": ["kernel_ops.json", "popu_sim_dev.json"],
+    "determinism": "LLM provides goal/hypothesis/interpretation; executor provides allowed next states, preconditions, validation, recovery",
+    "persistence": "Single SQLite data/kernel.db — workflow_states per-simulator (current/history/outputs) + hypotheses/semantic_nodes; fresh agent orients by hydrating DB (no handover Steps duplication)"
+  },
+  "nodes": [
+    {"id":"start","goal":"Entry — loads persisted workflow_states + hypotheses/semantic_nodes from data/kernel.db; if resume exists, orient shows current node without re-verify","inputs":[],"preconditions":[],"actions":["hydrate"],"outputs":[],"success":["entered","resumed"],"failure":["error"],"next":["orient"],"x":250,"y":40,"w":150,"h":60,"color":"#d4f0c0","shape":"ellipse","mdRef":"research_development.md#start"},
+    {"id":"orient","goal":"Retrieve per-sim ACTIVE knowledge + simulator + git state (hydrated from DB; workflow_states resume if exists)","inputs":["query","simulator"],"preconditions":[],"actions":["hydrate","kernel_retrieve","sim.inspect","git_state"],"outputs":["context"],"success":["context_found"],"failure":["kernel_unavailable"],"next":["version_sync"],"x":250,"y":130,"w":180,"h":80,"color":"#e0e0ff","shape":"rect","mdRef":"research_development.md#orient","subgraph":"kernel_ops.json:orient+version_sync"},
+    {"id":"version_sync","goal":"Sync per-sim lineage sim@commit (ontology-aware)","inputs":["simulator"],"preconditions":["context_found"],"actions":["sync_from_git"],"outputs":["version_id"],"success":["version_synced"],"failure":["sync_failed"],"next":["hypothesis"],"x":480,"y":130,"w":180,"h":70,"color":"#e0e0ff","shape":"rect","mdRef":"research_development.md#version-sync"},
+    {"id":"hypothesis","goal":"Form/refine hypothesis or gap (world/model/development)","inputs":["context","version_id"],"preconditions":["version_synced"],"actions":["hypothesis_form"],"outputs":["hypothesis_id"],"success":["hypothesis_ready"],"failure":["no_gap"],"next":["decide_branch"],"x":250,"y":240,"w":180,"h":80,"color":"#fff2cc","shape":"rect","mdRef":"research_development.md#hypothesis"},
+    {"id":"decide_branch","goal":"Decisive branch: experiment vs model vs kernel/workflow","inputs":["hypothesis_id"],"preconditions":["hypothesis_ready"],"actions":["branch_decide"],"outputs":["branch"],"success":["branch_chosen"],"failure":["unclear"],"next":["experiment","modify_code"],"x":250,"y":340,"w":180,"h":80,"color":"#ffe0b0","shape":"diamond","mdRef":"research_development.md#decide-branch"},
+    {"id":"experiment","goal":"Parameter experiment (no code change)","inputs":["hypothesis_id","simulator"],"preconditions":["branch==experiment"],"actions":["simulation.run"],"outputs":["run_id","finding_id"],"success":["finding_registered"],"failure":["sim_crash","invalid_params","contradiction"],"next":["update_knowledge"],"x":150,"y":460,"w":180,"h":80,"color":"#d4f0c0","shape":"rect","mdRef":"research_development.md#experiment","subgraph":"popu_sim_dev.json:implement+lineage+register"},
+    {"id":"modify_code","goal":"Modify simulator/kernel/workflow (gated)","inputs":["hypothesis_id"],"preconditions":["branch==model_or_kernel"],"actions":["code_edit"],"outputs":["commit"],"success":["tests_pass"],"failure":["tests_fail"],"next":["validate"],"x":400,"y":460,"w":180,"h":80,"color":"#ffd866","shape":"rect","mdRef":"research_development.md#modify-code"},
+    {"id":"update_knowledge","goal":"Contradiction gate + patterns + compress (materialized view)","inputs":["finding_id"],"preconditions":["finding_registered"],"actions":["contradiction_check","pattern_detect","compress"],"outputs":["knowledge_updated"],"success":["knowledge_updated"],"failure":["contradiction"],"next":["evaluate"],"x":150,"y":580,"w":180,"h":80,"color":"#e0e0ff","shape":"rect","mdRef":"research_development.md#update-knowledge","subgraph":"kernel_ops.json:store+topics+compress"},
+    {"id":"evaluate","goal":"Did model/kernel need improvement?","inputs":["knowledge_updated"],"preconditions":["knowledge_updated"],"actions":["eval_gap"],"outputs":["eval_result"],"success":["evaluated"],"failure":[],"next":["validate","hypothesis"],"x":250,"y":700,"w":180,"h":70,"color":"#ffe0b0","shape":"diamond","mdRef":"research_development.md#evaluate"},
+    {"id":"validate","goal":"Tests + smoke + lineage + regression (graduated L0-L6)","inputs":["run_id","commit"],"preconditions":[],"actions":["run_tests","smoke","lineage"],"outputs":["validation"],"success":["validation_pass"],"failure":["validation_fail"],"next":["loop"],"x":250,"y":810,"w":180,"h":70,"color":"#ffffff","shape":"rect","mdRef":"research_development.md#validate"},
+    {"id":"loop","goal":"Loop or stop + gated self-improvement commit","inputs":["validation"],"preconditions":[],"actions":[],"outputs":[],"success":["continue","stop"],"failure":[],"next":["orient","stop"],"x":250,"y":910,"w":150,"h":70,"color":"#ffe0b0","shape":"diamond","mdRef":"research_development.md#loop"},
+    {"id":"stop","goal":"Terminal","inputs":[],"preconditions":[],"actions":[],"outputs":[],"success":["done"],"failure":[],"next":[],"x":250,"y":1010,"w":150,"h":60,"color":"#f0c0c0","shape":"ellipse","mdRef":"research_development.md#stop"}
+  ],
+  "edges": [
+    ["start","orient","",[]],
+    ["orient","version_sync","",[]],
+    ["version_sync","hypothesis","",[]],
+    ["hypothesis","decide_branch","",[]],
+    ["decide_branch","experiment","branch==experiment",[]],
+    ["decide_branch","modify_code","branch==model_or_kernel",[]],
+    ["experiment","update_knowledge","finding_registered",[]],
+    ["modify_code","validate","tests_pass",[]],
+    ["update_knowledge","evaluate","",[]],
+    ["evaluate","validate","eval==kernel_or_model",[]],
+    ["evaluate","hypothesis","eval==next_question",[]],
+    ["validate","loop","",[]],
+    ["loop","orient","continue",[]],
+    ["loop","stop","stop",[]]
+  ]
+}

@@ -27,7 +27,7 @@ engine/expand.py      ─┘    (SQLite: data/kernel.db,       └─ scripts/to
   source of truth — it is overwritten on the next mutation.
 - Topics are rows partitioned by `topic_id`; per-simulator isolation: `kernel/simulator_registry.py` discovers `simulators/*` → `popula_dyn→popu_sim`.
 - **Lineage tables**: `simulation_versions(version_id=sim@commit, simulator, parent, affected_concepts)` + `simulation_runs(version_id, simulator)`; `sync_from_git(sim)` uses `git log -- simulators/<sim>` (scoped).
-- **Sharded FS**: `units/simulations/{sim}/{run}` (+ `data/memory/episodic/{sim}_{run}.json` immutable).
+- **Sharded FS**: `data/units/simulations/{sim}/{run}` (+ legacy `codebase/units/simulations/{sim}/{run}` fallback, `data/memory/episodic/{sim}_{run}.json` immutable).
 - **Validity**: `kernel/validity.py` `ACTIVE→HISTORICAL` per-sim concept-level (`is_compatible` lineage).
 - **Retrieval filtering**: default `include_historical=False` + `simulator` + version compatibility.
 
@@ -176,7 +176,7 @@ Gate logic lives in `codebase/kernel/hypothesis/contradiction_gate.py:67`:
 
 - **Registry**: `kernel/simulator_registry.py` discovers `simulators/*` (e.g., `popula_dyn→popu_sim`). Strict isolation: findings, versions, lineage, retrieval per simulator.
 - **Git-backed lineage**: `kernel/git_version.py:81` `sim_commit(sim)` = last commit touching `simulators/<sim>`; `diff_sim_files(sim)` scoped. `kernel/simulation_version.py:sync_from_git(sim)` → `sim@commit` (`parent, branch, affected_concepts` via `MODULE_CONCEPTS`). Non-sim commits (e.g., `virtual_silicon`) don't bump `popula_dyn`.
-- **Sharded runs**: `SimulationConnector(simulator)` writes `units/simulations/{sim}/{run}` + `data/memory/episodic/{sim}_{run}.json` + `simulation_runs` row (per-sim). Legacy `units/simulations/run_*` auto-migrated on first `popula_dyn` init.
+- **Sharded runs**: `SimulationConnector(simulator)` writes `data/units/simulations/{sim}/{run}` (+ legacy `codebase/units/simulations/{sim}/{run}` fallback) + `data/memory/episodic/{sim}_{run}.json` + `simulation_runs` row (per-sim). Legacy `units/simulations/run_*` auto-migrated on first `popula_dyn` init.
 - **Validity scope**: `kernel/validity.py:mark_stale_findings(sim, new_version)` concept-level (`affected_by`): `reproduction` change → population findings `HISTORICAL` (`invalidated_by`), `terrain` leaves them `ACTIVE`. `eco_sim` untouched.
 - **Version-aware retrieval**: `retrieval_engine.search(..., simulator, include_historical=False)` + `semantic_retriever.search_by_concept` filter `simulator` + `HISTORICAL` + `is_compatible`. `build_context(..., simulator)` per-sim.
 - **Compression**: `kernel/compression_engine.py:147` groups `ACTIVE` findings per `(simulator, outcome, horizon)` → `consolidated_{sim}_{outcome}` node (keeps `episodic` raw immutable).

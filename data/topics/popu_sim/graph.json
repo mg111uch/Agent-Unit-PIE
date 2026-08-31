@@ -1,9 +1,39 @@
 {
   "nodes": [
     {
+      "name": "popula_dyn consolidated IMPROVED (2 runs, avg 25.0%)",
+      "side": "consolidated",
+      "premise": "Consolidated popula_dyn: IMPROVED over 2 runs; outcomes IMPROVED; avg delta 25.0%; sources test_improved_0,test_improved_1",
+      "evidence": [],
+      "examples": [],
+      "sources": [],
+      "discipline": "",
+      "confidence": 0.9
+    },
+    {
+      "name": "popula_dyn consolidated COLLAPSED (2 runs, avg -32.5%)",
+      "side": "consolidated",
+      "premise": "Consolidated popula_dyn: COLLAPSED over 2 runs; avg delta -32.5%; sources test_c_2,test_c_3 (recomputed)",
+      "evidence": [],
+      "examples": [],
+      "sources": [],
+      "discipline": "",
+      "confidence": 0.9
+    },
+    {
       "name": "run_basic Findings",
       "side": "argument",
       "premise": "Status: STABLE\nPopulation: 5 (baseline 0) +0.0%\nDeaths: 9 (SPIKED vs baseline 0)\n Births: 0\n Wealth: 1102.5 (baseline 0.0)\n AvgSkill: 0.66\n Signals: prosperity=220.50886321448147 intensity=5.0; population_decline=5 intensity=8.0(HIGH); population_trend_declining=5 intensity=5.0\n Interpretation: Zero births suggest fertile window or partner availability bottleneck; Death spike likely caused by wealth-based starvation multiplier",
+      "evidence": [],
+      "examples": [],
+      "sources": [],
+      "discipline": "",
+      "confidence": 1.0
+    },
+    {
+      "name": "run_policy_birth06 Findings",
+      "side": "argument",
+      "premise": "Status: IMPROVED\nPopulation: 8 (baseline 5) +60.0%\nDeaths: 3 (REDUCED vs baseline 9)\n Births: 0\n Wealth: 1308.0 (baseline 1102.5)\n AvgSkill: 0.56\n Signals: prosperity=163.50453610422778 intensity=5.0; population_decline=8 intensity=8.0(HIGH); population_trend_declining=8 intensity=5.0\n Interpretation: Zero births suggest fertile window or partner availability bottleneck",
       "evidence": [],
       "examples": [],
       "sources": [],
@@ -21,9 +51,29 @@
       "confidence": 1.0
     },
     {
-      "name": "run_policy_birth06 Findings",
+      "name": "run_policy_birth10 Findings",
       "side": "argument",
-      "premise": "Status: IMPROVED\nPopulation: 8 (baseline 5) +60.0%\nDeaths: 3 (REDUCED vs baseline 9)\n Births: 0\n Wealth: 1308.0 (baseline 1102.5)\n AvgSkill: 0.56\n Signals: prosperity=163.50453610422778 intensity=5.0; population_decline=8 intensity=8.0(HIGH); population_trend_declining=8 intensity=5.0\n Interpretation: Zero births suggest fertile window or partner availability bottleneck",
+      "premise": "Status: IMPROVED\nPopulation: 11 (baseline 5) +120.0%\nDeaths: 6 (REDUCED vs baseline 9)\n Births: 0\n Wealth: 1533.8 (baseline 1102.5)\n AvgSkill: 0.50\n Signals: prosperity=139.4336755198664 intensity=5.0; population_decline=11 intensity=8.0(HIGH); population_trend_declining=11 intensity=5.0\n Interpretation: Zero births suggest fertile window or partner availability bottleneck",
+      "evidence": [],
+      "examples": [],
+      "sources": [],
+      "discipline": "",
+      "confidence": 1.0
+    },
+    {
+      "name": "popula_dyn consolidated IMPROVED (2 runs, avg 90.0%)",
+      "side": "consolidated",
+      "premise": "Consolidated popula_dyn: IMPROVED over 2 runs; outcomes IMPROVED; avg delta 90.0%; sources argu_popu_sim_run_policy_birth06_Findings,argu_popu_sim_run_birth10_Findings",
+      "evidence": [],
+      "examples": [],
+      "sources": [],
+      "discipline": "",
+      "confidence": 0.9
+    },
+    {
+      "name": "run_policy_birth05 Findings",
+      "side": "argument",
+      "premise": "Status: COLLAPSED\nPopulation: 3 (baseline 5) -40.0%\nDeaths: 9 (STABLE vs baseline 9)\n Births: 0\n Wealth: 857.6 (baseline 1102.5)\n AvgSkill: 0.70\n Signals: prosperity=285.8522339049329 intensity=5.0; population_decline=3 intensity=8.0(HIGH); population_trend_declining=3 intensity=5.0\n Interpretation: Zero births suggest fertile window or partner availability bottleneck; Wealth decline may indicate resource depletion",
       "evidence": [],
       "examples": [],
       "sources": [],
@@ -35,6 +85,11 @@
     {
       "source": "run_policy_birth06 Findings",
       "target": "run_policy_birth08 Findings",
+      "relation": "contradicts"
+    },
+    {
+      "source": "run_policy_birth08 Findings",
+      "target": "run_policy_birth06 Findings",
       "relation": "contradicts"
     }
   ]

@@ -15,7 +15,8 @@
     ["hygiene", "LOG HYGIENE:\nSELECT COUNT(*) FROM logs\n(data/kernel.db)", "rect", "#ffffff", 480, 815, 170, 70, "", "kernel_ops.md#log-hygiene-and-pruning"],
     ["over200", "> 200\nROWS?", "diamond", "#ffe0b0", 265, 915, 110, 80],
     ["prune", "PRUNE:\npython scripts/prune_kernel_logs.py\n--keep 200", "rect", "#ffd866", 480, 915, 200, 70, "", "kernel_ops.md#log-hygiene-and-pruning"],
-    ["stop", "STOP", "ellipse", "#f0c0c0", 250, 1035, 150, 70]
+    ["doc_sync", "DOC SYNC\nreport_freshness→update docs", "rect", "#e0e0ff", 250, 1015, 170, 70, "", "docs_update.json"],
+    ["stop", "STOP", "ellipse", "#f0c0c0", 250, 1135, 150, 70]
   ],
   "edges": [
     ["start", "orient", "", []],
@@ -35,7 +36,8 @@
     ["compress", "hygiene", "", []],
     ["hygiene", "over200", "", []],
     ["over200", "prune", "yes", []],
-    ["over200", "stop", "no", []],
-    ["prune", "stop", "", []]
+    ["over200", "doc_sync", "no", []],
+    ["prune", "doc_sync", "", []],
+    ["doc_sync", "stop", "", []]
   ]
 }

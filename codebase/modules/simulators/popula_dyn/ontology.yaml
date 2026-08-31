@@ -1,0 +1,37 @@
+# Per-module ontology: simulation declares its own concepts (Review: semantic impact)
+# Changing a module auto-produces semantic impact via `concepts` listed here.
+# MODULE_CONCEPTS in kernel/schemas/simulation_schema.py is fallback.
+modules:
+  reproduction:
+    concepts: [reproduction, population_growth, fertility, mortality]
+    outputs: [births, population]
+  survival:
+    concepts: [mortality, resource_scarcity, survival]
+    outputs: [deaths]
+  consume:
+    concepts: [resource_scarcity, wealth, consumption]
+    outputs: [wealth, resource_level]
+  harvest:
+    concepts: [wealth, resource_scarcity]
+    outputs: [wealth]
+  regrow:
+    concepts: [terrain, resource_scarcity]
+    outputs: [resource_level]
+  move:
+    concepts: [spatial, population_decline, mobility]
+    outputs: [position]
+  heal:
+    concepts: [healthcare_gap, mortality, health]
+    outputs: [health, deaths]
+  trade:
+    concepts: [trade_gap, wealth]
+    outputs: [wealth, trade_volume]
+  starvation:
+    concepts: [mortality, population_decline]
+    outputs: [deaths, population]
+  world_engine:
+    concepts: [population_growth, wealth, environment]
+    outputs: [population, wealth]
+  simulation_model:
+    concepts: [population_growth, wealth, mortality]
+    outputs: [population, wealth, deaths, births]

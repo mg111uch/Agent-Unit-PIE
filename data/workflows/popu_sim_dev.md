@@ -11,7 +11,7 @@ Entry point. Initialize context for popu_sim topic.
 ```bash
 conda run -n myenv python scripts/topic_ops.py topics --json
 conda run -n myenv python scripts/topic_ops.py list --topic popu_sim --json
-ls codebase/units/simulations/
+ls data/units/simulations/popula_dyn/  # legacy codebase/units/simulations fallback
 ```
 
 ## Orient (Kernel Retrieve)
@@ -63,8 +63,8 @@ This outputs:
 Draft a new policy with structured premise format for contradiction detection.
 
 ```bash
-# Policy naming: {run_id_prefix} Policy: {param} {old}->{new}
-# Example: run_next Policy: birth_rate 0.04->0.05
+# Uniform: run_basic baseline, run_policy_<param><value> e.g. run_policy_birth05 for birth_rate 0.05 (value*100)
+# Policy naming: {run_id} Policy: {param} {old}->{new}  e.g. run_policy_birth05 Policy: birth_rate 0.04->0.05
 
 # Structured premise format (contradiction-friendly):
 # Verdict: {IMPROVED|DEGRADED|STABLE|COLLAPSED}
@@ -74,8 +74,8 @@ Draft a new policy with structured premise format for contradiction detection.
 
 Example:
 ```bash
-# Proposed: birth_rate 0.05 (gap between 0.04 and 0.06)
---name "run_next Policy: birth_rate 0.04->0.05"
+# Proposed: birth_rate 0.05 (gap between 0.04 and 0.06) → uniform run_policy_birth05
+--name "run_policy_birth05 Policy: birth_rate 0.04->0.05"
 --premise "Verdict: POLICY_CANDIDATE
 Claim: Population will IMPROVE (vs run_basic 5->8 with birth_rate 0.06)
 Justification: birth_rate 0.06 worked (IMPROVED); 0.05 is between 0.04(failed) and 0.06(worked), likely to show similar or better results"
@@ -87,7 +87,7 @@ Dry-run node creation to detect contradictions before committing.
 
 ```bash
 conda run -n myenv python scripts/topic_ops.py add-node --dry-run --json --topic popu_sim \
-  --name "run_next Policy: birth_rate 0.04->0.05" \
+  --name "run_policy_birth05 Policy: birth_rate 0.04->0.05" \
   --premise "Verdict: POLICY_CANDIDATE..."
 ```
 
@@ -104,7 +104,7 @@ Policy contradicts an existing claim. Options:
 ```bash
 # Check what contradicted
 conda run -n myenv python scripts/topic_ops.py check --topic popu_sim \
-  --claims "run_next Policy: birth_rate 0.04->0.05,run_policy_birth06 Findings" --json
+  --claims "run_policy_birth05 Policy: birth_rate 0.04->0.05,run_policy_birth06 Findings" --json
 ```
 
 ## Agree
@@ -114,26 +114,26 @@ Mark policy as agreed (required for contradiction edge detection).
 ```bash
 # Add policy node
 conda run -n myenv python scripts/topic_ops.py add-node --topic popu_sim \
-  --name "run_next Policy: birth_rate 0.04->0.05" \
+  --name "run_policy_birth05 Policy: birth_rate 0.04->0.05" \
   --premise "Verdict: POLICY_CANDIDATE..." --json
 
 # Set stance to agree
 conda run -n myenv python scripts/topic_ops.py set-stance --topic popu_sim \
-  --name "run_next Policy: birth_rate 0.04->0.05" --stance agree --json
+  --name "run_policy_birth05 Policy: birth_rate 0.04->0.05" --stance agree --json
 ```
 
 ## Implement (Run Simulation)
 
-Run simulation **per-simulator, sharded** (`units/simulations/{sim}/{run}`) using `SimulationConnector(simulator=...)`.
+Run simulation **per-simulator, sharded** (`data/units/simulations/{sim}/{run}`) using `SimulationConnector(simulator=...)`.
 
 ```bash
 conda run -n myenv python -c "
 import sys; sys.path.insert(0,'codebase')
 from modules.simulators.simulation_connector import SimulationConnector
 conn = SimulationConnector(simulator='popula_dyn')
-result = conn.inject_policy('run_basic', {'birth_rate': 0.05}, 'run_next')
+result = conn.inject_policy('run_basic', {'birth_rate': 0.05}, 'run_policy_birth05')
 print(result)
-# → writes codebase/units/simulations/popula_dyn/run_next/ + data/memory/episodic/popula_dyn_run_next.json
+# → writes data/units/simulations/popula_dyn/run_policy_birth05/ + data/memory/episodic/popula_dyn_run_policy_birth05.json
 "
 ```
 
@@ -145,9 +145,9 @@ print(result)
 # DB: simulation_runs (simulator, version_id=sim@commit, params, result)
 # Episodic: data/memory/episodic/{sim}_{run}.json + kernel episodic_memory
 # Topic: popu_sim for popula_dyn, sim_eco_sim for others (strict isolation)
-ls codebase/units/simulations/popula_dyn/
+ls data/units/simulations/popula_dyn/
 ls data/memory/episodic/
-conda run -n myenv python -c "from kernel.persistence.db import kernel_db; print(kernel_db.load_simulation_run('run_next'))"
+conda run -n myenv python -c "from kernel.persistence.db import kernel_db; print(kernel_db.load_simulation_run('run_policy_birth05'))"
 ```
 
 ## Auto-Register Findings
@@ -159,9 +159,9 @@ conda run -n myenv python -c "
 import sys; sys.path.insert(0,'codebase')
 from modules.simulators.simulation_connector import SimulationConnector
 conn = SimulationConnector(simulator='popula_dyn')
-premise = conn.generate_structured_premise('run_next', 'run_basic')
+premise = conn.generate_structured_premise('run_policy_birth05', 'run_basic')
 print(premise)
-result = conn.register_to_kernel('run_next', premise, 'run_basic')
+result = conn.register_to_kernel('run_policy_birth05', premise, 'run_basic')
 print(result)  # → metadata.observation={simulator, version_id: popula_dyn@1a7d783, validity: {valid_for_version, status: ACTIVE}}
 "
 ```
@@ -183,11 +183,11 @@ Decision: Does the new finding contradict any prior **ACTIVE, same-simulator, ve
 # Auto-created by register_to_kernel via symbolic gate; manual check:
 conda run -n myenv python -c "
 from kernel.hypothesis.contradiction_gate import check_topic_contradiction
-print(check_topic_contradiction('popu_sim', 'run_next Findings', 'Status: IMPROVED...', {'observation':{'simulator':'popula_dyn','version_id':'popula_dyn@1a7d783'}}))
+print(check_topic_contradiction('popu_sim', 'run_policy_birth05 Findings', 'Status: IMPROVED...', {'observation':{'simulator':'popula_dyn','version_id':'popula_dyn@1a7d783'}}))
 "
 # If contradiction found, add edge:
 conda run -n myenv python scripts/topic_ops.py add-edge --topic popu_sim \
-  --source "run_next Findings" --target "run_policy_birth06 Findings" \
+  --source "run_policy_birth05 Findings" --target "run_policy_birth06 Findings" \
   --relation contradicts --json
 # Cross-sim (popu vs eco) never contradicts — strict isolation
 ```
@@ -218,5 +218,5 @@ Terminal. Verify final state.
 ```bash
 conda run -n myenv python scripts/topic_ops.py doctor --json
 conda run -n myenv python scripts/topic_ops.py list --topic popu_sim --json
-ls -R codebase/units/simulations/
+ls -R data/units/simulations/
 ```

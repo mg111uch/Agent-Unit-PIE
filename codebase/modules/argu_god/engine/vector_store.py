@@ -11,13 +11,13 @@ def _get_client():
     if _client is None:
         try:
             from pathlib import Path
-            persist = Path(__file__).resolve().parents[5] / "data" / "chroma_db"
+            persist = Path(__file__).resolve().parents[4] / "data" / "chroma_db"
             persist.mkdir(parents=True, exist_ok=True)
             _client = chromadb.PersistentClient(path=str(persist))
         except Exception:
             _client = chromadb.Client(
                 settings=chromadb.config.Settings(
-                    persist_directory=str(Path(__file__).resolve().parents[5] / "data" / "chroma_db")
+                    persist_directory=str(Path(__file__).resolve().parents[4] / "data" / "chroma_db")
                 )
             )
     return _client

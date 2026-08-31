@@ -37,28 +37,44 @@ def _codebase_root():
     return os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 
+def _workspace_root():
+    return os.path.dirname(_codebase_root())
+
+
+def _default_sim_base(simulator: str) -> str:
+    return os.path.join(_workspace_root(), "data", "units", "simulations", simulator)
+
+
 class SimulationConnector:
     """
     Bridge between simulators and kernel cognition — per-simulator isolated.
     """
     def __init__(
         self,
-        base_path: str = "units/simulations",
+        base_path: str | None = None,
         emit_to_kernel: bool = True,
         simulator: str = "popula_dyn",
     ):
         self.simulator = simulator
-        # shard filesystem per-sim: units/simulations/{simulator}
-        if not os.path.isabs(base_path):
-            root = os.path.join(_codebase_root(), base_path)
-            # if user gave explicit custom path, respect it; else shard
-            if base_path == "units/simulations":
-                root = os.path.join(root, simulator)
-            base_path = root
+        # default: data/units/simulations/{simulator} (single source; codebase path is legacy fallback)
+        if base_path is None:
+            base_path = _default_sim_base(simulator)
+        elif not os.path.isabs(base_path):
+            # legacy explicit "units/simulations" or "codebase/units/simulations" → map to legacy location for migration
+            if base_path in ("units/simulations", "codebase/units/simulations"):
+                root = os.path.join(_codebase_root(), "units", "simulations", simulator)
+                base_path = root
+            elif base_path == "data/units/simulations":
+                base_path = os.path.join(_workspace_root(), "data", "units", "simulations", simulator)
+            else:
+                root = os.path.join(_codebase_root(), base_path)
+                if base_path == "units/simulations":
+                    root = os.path.join(root, simulator)
+                base_path = root
         self.base_path = Path(base_path)
         self.base_path.mkdir(parents=True, exist_ok=True)
         self.emit_to_kernel = emit_to_kernel
-        # legacy migration: move shared runs into sharded location once
+        # legacy migration: move shared runs into sharded location once + migrate codebase → data/units
         self._migrate_legacy_shard()
         # resolve topic via registry
         try:
@@ -77,28 +93,47 @@ class SimulationConnector:
     def _legacy_base(self) -> Path:
         return Path(_codebase_root()) / "units" / "simulations"
 
+    def _data_base(self) -> Path:
+        return Path(_workspace_root()) / "data" / "units" / "simulations" / self.simulator
+
     def _migrate_legacy_shard(self):
         try:
+            # 1) legacy shared → sharded (inside codebase) for old layout
             legacy = self._legacy_base()
-            if not legacy.exists() or self.base_path == legacy:
-                return
-            # only for popula_dyn legacy shared layout
-            if self.simulator != "popula_dyn":
-                return
-            for child in list(legacy.iterdir()):
-                if not child.is_dir() or child.name.startswith("."):
-                    continue
-                # skip already sharded subdirs that are simulator names
-                if child.name in ("popula_dyn", "eco_sim"):
-                    continue
-                dest = self.base_path / child.name
-                if dest.exists():
-                    continue
-                try:
-                    import shutil
-                    shutil.move(str(child), str(dest))
-                except Exception:
-                    pass
+            if legacy.exists() and self.base_path != legacy:
+                for child in list(legacy.iterdir()):
+                    if not child.is_dir() or child.name.startswith("."):
+                        continue
+                    if child.name in ("popula_dyn", "eco_sim"):
+                        continue
+                    if self.simulator != "popula_dyn":
+                        continue
+                    dest = self.base_path / child.name
+                    if dest.exists():
+                        continue
+                    # only migrate to data base if we are the data base; else to codebase sharded
+                    if self.base_path == Path(_workspace_root()) / "data" / "units" / "simulations" / self.simulator:
+                        dest = self.base_path / child.name
+                    try:
+                        import shutil
+                        shutil.move(str(child), str(dest))
+                    except Exception:
+                        pass
+            # 2) codebase sharded → data/units sharded (one-time)
+            if self.base_path == self._data_base():
+                codebase_sharded = self._legacy_base() / self.simulator
+                if codebase_sharded.exists() and codebase_sharded != self.base_path:
+                    for child in list(codebase_sharded.iterdir()):
+                        if not child.is_dir():
+                            continue
+                        dest = self.base_path / child.name
+                        if dest.exists():
+                            continue
+                        try:
+                            import shutil
+                            shutil.copytree(str(child), str(dest))
+                        except Exception:
+                            pass
         except Exception:
             pass
     def run_and_extract(
@@ -249,10 +284,10 @@ class SimulationConnector:
         p = self.base_path / run_id
         if p.exists():
             return p
-        # fallback legacy shared
-        legacy = self._legacy_base() / run_id
-        if legacy.exists():
-            return legacy
+        # fallback legacy codebase sharded + shared
+        for cand in [self._legacy_base() / self.simulator / run_id, self._legacy_base() / run_id, Path(_workspace_root()) / "data" / "units" / "simulations" / self.simulator / run_id]:
+            if cand.exists():
+                return cand
         return p
 
     def _store_run(
@@ -262,7 +297,7 @@ class SimulationConnector:
         model: SimulationModel,
         signals: List[Dict[str, Any]],
     ) -> None:
-        """Store run data in units/simulations/{simulator}/{run_id}/ + DB + episodic."""
+        """Store run data in data/units/simulations/{simulator}/{run_id}/ + DB + episodic (legacy codebase fallback)."""
         run_path = self.base_path / run_id
         run_path.mkdir(parents=True, exist_ok=True)
         with open(run_path / "params.yaml", "w") as f:
@@ -413,17 +448,16 @@ class SimulationConnector:
         params = {**base_params, **policy}
         return self.run_and_extract(params, new_run_id)
     def list_runs(self) -> List[str]:
-        """List all simulation runs (sharded + legacy fallback for popula_dyn)."""
+        """List all simulation runs (data/units + legacy codebase fallback)."""
         runs: set[str] = set()
         if self.base_path.exists():
             for p in self.base_path.iterdir():
                 if p.is_dir():
                     runs.add(p.name)
-        # include legacy shared for popula_dyn for backward compat
-        if self.simulator == "popula_dyn":
-            legacy = self._legacy_base()
-            if legacy.exists() and legacy != self.base_path:
-                for p in legacy.iterdir():
+        # include legacy codebase sharded/shared for backward compat
+        for cand in [self._legacy_base() / self.simulator, self._legacy_base()]:
+            if cand.exists() and cand != self.base_path:
+                for p in cand.iterdir():
                     if p.is_dir() and p.name not in ("popula_dyn", "eco_sim") and (p / "summary.json").exists():
                         runs.add(p.name)
         return sorted(runs)

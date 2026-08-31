@@ -183,7 +183,16 @@ def generate_embedding(text):
     # Sentence Transformers can handle batching automatically for lists of texts
     return embedding_model.encode(text, convert_to_numpy=True).tolist()
 
-CHROMA_DB_PATH = "./chroma_data"
+def _resolve_chroma_path() -> str:
+    import os
+    from pathlib import Path
+    env = os.getenv("CHROMA_DB_PATH")
+    if env:
+        return env
+    # codebase/rag_pipeline/ChunkEmbedChroma.py -> parents[2] == Agentic_Unit_PIE
+    return str(Path(__file__).resolve().parents[2] / "data" / "chroma_db")
+
+CHROMA_DB_PATH = _resolve_chroma_path()
 os.makedirs(CHROMA_DB_PATH, exist_ok=True)
 
 chroma_client = chromadb.PersistentClient(path=CHROMA_DB_PATH)

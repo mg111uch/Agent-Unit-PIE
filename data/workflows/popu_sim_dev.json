@@ -15,6 +15,7 @@
     ["contradicts_edge", "ADD CONTRADICTS\nEDGE?", "diamond", "#ffe0b0", 150, 925, 150, 80, "", "popu_sim_dev.md#contradicts-edge"],
     ["add_edge", "ADD EDGE", "rect", "#e0e0ff", 400, 925, 150, 80, "", "popu_sim_dev.md#add-edge"],
     ["compress", "COMPRESS\nper-sim consolidate\n(keep episodic)", "rect", "#e0e0ff", 150, 1035, 180, 80, "", "popu_sim_dev.md#compress"],
+    ["doc_sync", "DOC SYNC\nreport_freshness→update docs", "rect", "#e0e0ff", 400, 1035, 180, 80, "", "docs_update.json"],
     ["loop", "ITERATIONS\n< MAX?", "diamond", "#ffe0b0", 150, 1135, 120, 80, "", "popu_sim_dev.md#loop"],
     ["stop", "STOP", "ellipse", "#f0c0c0", 150, 1245, 150, 70, "", "popu_sim_dev.md#stop"]
   ],
@@ -35,7 +36,8 @@
     ["contradicts_edge", "add_edge", "yes", []],
     ["contradicts_edge", "compress", "no", []],
     ["add_edge", "compress", "", []],
-    ["compress", "loop", "", []],
+    ["compress", "doc_sync", "", []],
+    ["doc_sync", "loop", "", []],
     ["loop", "orient", "yes", []],
     ["loop", "stop", "no", []]
   ]

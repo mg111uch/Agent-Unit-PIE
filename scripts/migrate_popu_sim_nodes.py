@@ -114,7 +114,7 @@ def main():
         print(f"       {line}")
 
     import os
-    if os.path.exists("codebase/units/simulations/run_policy_birth08/summary.json"):
+    if os.path.exists(conn._resolve_run_path("run_policy_birth08") / "summary.json"):
         run08_premise = conn.generate_structured_premise("run_policy_birth08", "run_basic")
         structured_premises["run_policy_birth08 Findings"] = run08_premise
         print(f"   - run_policy_birth08 Findings:")

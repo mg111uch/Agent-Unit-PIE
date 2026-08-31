@@ -80,7 +80,7 @@ from agent_core.tools.chain.chain_admin import chain_admin
 from agent_core.tools.chain.workflow_status import workflow_status_tool
 from agent_core.tools.registry import (
     ToolRegistry, CAT_FILE, CAT_KERNEL, CAT_SIM, CAT_META, CAT_SEARCH, CAT_GIT, CAT_OBSERVER, CAT_CODE_RAG, CAT_DEBATE,
-    CAT_CHAIN, str_p, int_p, float_p, bool_p, arr_p, obj_p, derive_schema,
+    CAT_CHAIN, CAT_DEVELOP, str_p, int_p, float_p, bool_p, arr_p, obj_p, derive_schema,
 )
 from agent_core.tools.observer_ops import tool_stats, file_stats, user_reading_budget
 from agent_core.config import SUBAGENT_TASK_ENABLED
@@ -398,6 +398,41 @@ _CHAIN_SPECS = [
 ]
 
 
+def _register_develop_tools():
+    try:
+        from development.develop_tools import DEVELOP_TOOLS  # codebase on sys.path
+        _register([
+            ("develop_state", DEVELOP_TOOLS["develop_state"], CAT_DEVELOP,
+             "Compact DevelopmentState (<2KB): git/sim version, hypotheses, runs, allowed actions. Returns {state,text}. Prefer over raw reads.",
+             {"simulator": str_p("simulator id (default popula_dyn)")} ),
+            ("develop_orient", DEVELOP_TOOLS["develop_orient"], CAT_DEVELOP,
+             "Unified orient: per-sim ACTIVE retrieve + git state + DevelopmentState. Moves workflow start/loop→orient→version_sync. Replaces kernel_retrieve+git shell.",
+             {"query": str_p("search query"), "simulator": str_p("simulator id"), "limit": int_p("max hits (default 5)")} ),
+            ("develop_experiment", DEVELOP_TOOLS["develop_experiment"], CAT_DEVELOP,
+             "Parameter experiment: run simulation, persist lineage+episodic, auto-register finding. Moves decide_branch→experiment→update_knowledge.",
+             {"run_id": str_p("unique run id", req=True), "params": obj_p("params e.g. {years,birth_rate}", additionalProperties=True), "simulator": str_p("simulator id"), "baseline_run_id": str_p("baseline run for delta")} ),
+            ("develop_analyze", DEVELOP_TOOLS["develop_analyze"], CAT_DEVELOP,
+             "Analyze run: signals + compress (materialized view) + advance update_knowledge→evaluate. Replaces simulation_get_signals+compress shell.",
+             {"run_id": str_p("run id", req=True), "simulator": str_p("simulator id")} ),
+            ("develop_modify_simulator", DEVELOP_TOOLS["develop_modify_simulator"], CAT_DEVELOP,
+             "Gated L3 sim edit: old_string→new_string. Gate L3 (contracts+sim_smoke+lineage). Advances decide_branch→modify_code.",
+             {"path": str_p("file path rel workspace", req=True), "old_string": str_p("exact text to replace", req=True), "new_string": str_p("replacement", req=True), "replace_all": bool_p("replace all runs"), "level": int_p("autonomy level 0-6 (default 3)"), "human_approved": bool_p("human approval for gated levels")} ),
+            ("develop_modify_kernel", DEVELOP_TOOLS["develop_modify_kernel"], CAT_DEVELOP,
+             "Gated L6 kernel edit: requires human_approved=true + full gate (contracts+smoke+lineage+retrieval). Propose first without flag to test.",
+             {"path": str_p("file path rel workspace", req=True), "old_string": str_p("exact text to replace", req=True), "new_string": str_p("replacement", req=True), "replace_all": bool_p("replace all runs"), "human_approved": bool_p("required true for L6", req=True)} ),
+            ("develop_modify_workflow", DEVELOP_TOOLS["develop_modify_workflow"], CAT_DEVELOP,
+             "Gated L4 workflow edit: must target data/workflows/*.json, gate L4 (contracts+conformance).",
+             {"path": str_p("workflow json path data/workflows/*.json", req=True), "old_string": str_p("exact text to replace", req=True), "new_string": str_p("replacement", req=True), "replace_all": bool_p("replace all runs")} ),
+            ("develop_validate", DEVELOP_TOOLS["develop_validate"], CAT_DEVELOP,
+             "Validate: sync_from_git + lineage check + advance to loop. Replaces manual test/smoke shell.",
+             {"simulator": str_p("simulator id")} ),
+            ("develop_commit", DEVELOP_TOOLS["develop_commit"], CAT_DEVELOP,
+             "Git commit (staged or add_all) + advance loop→orient. Requires message.",
+             {"message": str_p("commit message", req=True), "add_all": bool_p("stage all before commit")} ),
+        ])
+    except Exception as e:
+        log_output(f"[tools] develop_tools unavailable: {e}")
+
 def _register_stored_chains():
     """Reload approved mined chains from SQLite (survives restarts) as live tools."""
     registered = 0
@@ -545,6 +580,7 @@ def _register_all():
     _register(_CODE_RAG_SPECS)
     _register(_OBSERVER_SPECS)
     _register(_CHAIN_SPECS)
+    _register_develop_tools()
     _register([
         ("chain_admin", chain_admin, CAT_CHAIN,
          "Manage mined tool chains: list | candidates | approve (name=...) | activate (name=...) "
