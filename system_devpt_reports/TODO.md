@@ -43,3 +43,4 @@ grok --resume 019fc7b4-a7a3-7a20-86f1-6feab4f594bc
 - **Session compaction:** Objective, Important Details, Work State (Completed, Active, Blocked), Next Move, Relevant Files
 
 - **Git commit line** 
+- iter1: MODEL hyp_pop_collapse_08 + run_policy_birth10 + infra: workflow_states persist + hypothesis hydrate + data/units/simulations migration

@@ -1,0 +1,34 @@
+[
+  {
+    "signal_type": "mortality_event",
+    "value": 3,
+    "category": "demographic",
+    "subtype": "death_rate",
+    "intensity": 0.3,
+    "trend": "significant"
+  },
+  {
+    "signal_type": "prosperity",
+    "value": 157.18236774643083,
+    "category": "economic",
+    "subtype": "wealth",
+    "intensity": 5.0,
+    "trend": "increasing"
+  },
+  {
+    "signal_type": "population_decline",
+    "value": 10,
+    "category": "demographic",
+    "subtype": "critical",
+    "intensity": 8.0,
+    "trend": "declining"
+  },
+  {
+    "signal_type": "population_trend_declining",
+    "value": 10,
+    "category": "demographic",
+    "subtype": "trend",
+    "intensity": 5.0,
+    "trend": "declining"
+  }
+]

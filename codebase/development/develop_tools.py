@@ -240,6 +240,14 @@ def develop_validate(input_data) -> str:
         ver=sync_from_git(sim)
         cur=get_current_version(sim)
         workflow_engine=_wf()
+        # refresh stored version_id to cur after sync (fixes stale outputs 1a7d783 → 06d914a)
+        try:
+            if cur and cur.get("version_id"):
+                workflow_engine.outputs["version_id"] = cur["version_id"]
+                # persist corrected version immediately
+                workflow_engine._save()
+        except Exception:
+            pass
         if workflow_engine.current in ("modify_code","evaluate","update_knowledge"):
             try: workflow_engine.advance("validate", produced={"knowledge_updated":True}, success="knowledge_updated")
             except: 

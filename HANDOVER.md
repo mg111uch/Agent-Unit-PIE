@@ -2,8 +2,8 @@
 
 Point your agent harness to this file to start autonomous research development. Static pointers (no duplication) — follow links.
 
-## Task 
-Find why popula_dyn population collapses at birth_rate 0.08 and improve simulator if model-deficient (world→model→development)
+## Task — Iter3 (fresh agent entry)
+Fix popula_dyn reproduction bottleneck: births 0 at birth_rate 0.08-0.12 (run_policy_birth08 pop2 COLLAPSED, run_policy_birth10 pop11 IMPROVED, run_policy_birth12 pop10 IMPROVED all births0 vs run_basic pop5). `hyp_pop_collapse_08` MODEL. Next: `modify_code` L3 `codebase/modules/simulators/popula_dyn/core/reproduction.py` (fertile window 15-50 / partner search) and validate `run_policy_birth08` births>0.
 
 Follow the unified loop in `data/workflows/research_development.json` (see `research_development.md` for node contracts) strictly via `develop.*` primitives — LLM thinks inside workflow, `workflow_engine` enforces transitions. No steps duplicated here — read workflow files.
 
@@ -77,3 +77,9 @@ Repeat same task from clean context; harness `development/eval_harness.py:run_al
 
 - Do not re-read `PhasePlan.md` or `AGENTS.md` — auto-loaded/historical.
 - Keep plan ≤1 file (`research_development.json` + `.md`); lazy-load kernel/docs only on gated branch.
+
+## Execution Mode — Ask First
+
+Fresh agents must ask user before iteration 2+:
+`ask_user_question: Which execution mode? [Proceed stepwise with report after each step (inspect anomalies before next step) | Silent steps until validate (report only at loop)]`
+Default is stepwise with report (safer for first MODEL fix). Respect choice for all subsequent `develop.*` calls in that iteration.

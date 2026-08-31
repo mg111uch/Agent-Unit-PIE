@@ -71,9 +71,9 @@
       "confidence": 0.9
     },
     {
-      "name": "run_policy_birth05 Findings",
+      "name": "run_policy_birth12 Findings",
       "side": "argument",
-      "premise": "Status: COLLAPSED\nPopulation: 3 (baseline 5) -40.0%\nDeaths: 9 (STABLE vs baseline 9)\n Births: 0\n Wealth: 857.6 (baseline 1102.5)\n AvgSkill: 0.70\n Signals: prosperity=285.8522339049329 intensity=5.0; population_decline=3 intensity=8.0(HIGH); population_trend_declining=3 intensity=5.0\n Interpretation: Zero births suggest fertile window or partner availability bottleneck; Wealth decline may indicate resource depletion",
+      "premise": "Status: IMPROVED\nPopulation: 10 (baseline 5) +100.0%\nDeaths: 3 (REDUCED vs baseline 9)\n Births: 0\n Wealth: 1571.8 (baseline 1102.5)\n AvgSkill: 0.62\n Signals: prosperity=157.18236774643083 intensity=5.0; population_decline=10 intensity=8.0(HIGH); population_trend_declining=10 intensity=5.0\n Interpretation: Zero births suggest fertile window or partner availability bottleneck",
       "evidence": [],
       "examples": [],
       "sources": [],

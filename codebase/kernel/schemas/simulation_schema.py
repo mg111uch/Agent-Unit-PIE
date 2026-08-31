@@ -171,9 +171,16 @@ def concepts_for_changed_files(files: List[str], _ontology: Optional[Dict[str, L
     registry = _ontology or _load_ontology_concepts()
     out: set[str] = set()
     for f in files:
-        stem = Path(f).stem.lower()
+        p = Path(f)
+        stem = p.stem.lower()
+        name = p.name.lower()
+        # ontology.yaml change affects all declared concepts (declaration change)
+        if "ontology" in stem or name in ("ontology.yaml", "ontology.yml"):
+            for concs in registry.values():
+                out.update(concs)
+            continue
         for mod, concepts in registry.items():
-            if mod in stem:
+            if mod in stem or mod in name:
                 out.update(concepts)
     return sorted(out)
 

@@ -1,0 +1,19 @@
+{
+  "step_count": 50,
+  "total_units": 2540,
+  "population": 10,
+  "total_wealth": 1571.8236774643083,
+  "avg_skill": 0.6199999999999999,
+  "births": 0,
+  "deaths": 3,
+  "spatial": {
+    "width": 50,
+    "height": 50,
+    "total_units": 2540,
+    "occupied_cells": 2500,
+    "torus": true
+  },
+  "run_id": "run_policy_birth12",
+  "simulator": "popula_dyn",
+  "timestamp": "2026-08-31T13:33:47.962939"
+}
