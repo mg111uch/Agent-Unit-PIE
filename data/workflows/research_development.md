@@ -78,14 +78,16 @@ Failures `sim_crash|invalid_params|contradiction` → recovery node (eval_harnes
 Edit simulator/kernel/workflow files; gate enforced before write. Outputs `commit`. Success `tests_pass` → `validate`.
 
 ```python
-from development.develop_tools import develop_modify_simulator, develop_modify_workflow, develop_modify_kernel
+from development.develop_tools import develop_modify_simulator, develop_modify_workflow, develop_modify_kernel, develop_hypothesis
 from development.validation_gate import gate  # check before edit
 
-gate(3, "codebase/modules/simulators/popula_dyn/core/reproduction.py")  # L3 sim → ALLOW
+gate(3, "codebase/modules/simulators/popula_dyn/behaviours/reproduce.py")  # L3 sim → ALLOW
 gate(1, "data/workflows/research_development.json")  # → GATE (needs L4)
 
 # L3 sim (autonomous, ceiling):
-develop_modify_simulator({"path": "codebase/modules/simulators/popula_dyn/core/reproduction.py", "old_string": "x=1", "new_string": "x=2"})
+develop_modify_simulator({"path": "codebase/modules/simulators/popula_dyn/behaviours/reproduce.py", "old_string": "x=1", "new_string": "x=2"})
+# Hypothesis (Phase E):
+develop_hypothesis({"hypothesis_id":"hyp_new","title":"MODEL: ...","type":"MODEL"})  # hypothesis→decide_branch
 # L4 workflow (needs contracts+workflow_conformance+sim_smoke):
 develop_modify_workflow({"path": "data/workflows/research_development.json", "old_string": "\"id\":\"tmp\"", "new_string": "\"id\":\"tmp2\""})
 # L6 kernel (human gate):

@@ -3,7 +3,7 @@
 Point your agent harness to this file to start autonomous research development. Static pointers (no duplication) — follow links.
 
 ## Task — Iter3 (fresh agent entry)
-Fix popula_dyn reproduction bottleneck: births 0 at birth_rate 0.08-0.12 (run_policy_birth08 pop2 COLLAPSED, run_policy_birth10 pop11 IMPROVED, run_policy_birth12 pop10 IMPROVED all births0 vs run_basic pop5). `hyp_pop_collapse_08` MODEL. Next: `modify_code` L3 `codebase/modules/simulators/popula_dyn/core/reproduction.py` (fertile window 15-50 / partner search) and validate `run_policy_birth08` births>0.
+Fix popula_dyn reproduction bottleneck: births 0 at birth_rate 0.08-0.12 (run_policy_birth08 pop2 COLLAPSED, run_policy_birth10 pop11 IMPROVED, run_policy_birth12 pop10 IMPROVED all births0 vs run_basic pop5). `hyp_pop_collapse_08` MODEL. Next: `modify_code` L3 `codebase/modules/simulators/popula_dyn/behaviours/reproduce.py` (fertile window 15-50 / partner search) and validate `run_policy_birth08` births>0. Note: `core/reproduction.py` does not exist — use `behaviours/reproduce.py`.
 
 Follow the unified loop in `data/workflows/research_development.json` (see `research_development.md` for node contracts) strictly via `develop.*` primitives — LLM thinks inside workflow, `workflow_engine` enforces transitions. No steps duplicated here — read workflow files.
 
@@ -44,12 +44,14 @@ from development.develop_tools import develop_orient, develop_experiment, develo
 from development.development_state import generate_state
 develop_orient({"query":"population collapse birth_rate 0.08","simulator":"popula_dyn"})  # → {context,state,allowed:[hypothesis]}
 
-# 2. Hypothesis via hypothesis_engine (WORLD|MODEL|DEVELOPMENT) — decide_branch: param→experiment (L1-2), model→sim L3, workflow L4, kernel L5 propose/L6 modify
+# 2. Hypothesis via develop_hypothesis (WORLD|MODEL|DEVELOPMENT) — decide_branch: param→experiment (L1-2), model→sim L3, workflow L4, kernel L5 propose/L6 modify
+from development.develop_tools import develop_hypothesis
+develop_hypothesis({"hypothesis_id":"hyp_pop_collapse_08","title":"MODEL: births bottleneck","type":"MODEL"})  # → decide_branch
 # 3a. Experiment L1-2 (uniform: run_basic baseline, run_policy_<param><value> e.g. birth08 for 0.08):
 develop_experiment({"run_id":"run_policy_birth08","params":{"birth_rate":0.08},"simulator":"popula_dyn","baseline_run_id":"run_basic"})
 # 3b. Code edit (gated):
 from development.validation_gate import gate
-gate(3,"codebase/modules/simulators/popula_dyn/core/reproduction.py")  # sim L3 ALLOW
+gate(3,"codebase/modules/simulators/popula_dyn/behaviours/reproduce.py")  # sim L3 ALLOW
 develop_modify_simulator({"path":"...","old_string":"x=1","new_string":"x=2"})  # L3
 develop_modify_workflow({"path":"data/workflows/research_development.json","old_string":"...","new_string":"..."})  # L4
 develop_modify_kernel({"path":"codebase/kernel/...","old_string":"...","new_string":"...","human_approved":True})  # L6

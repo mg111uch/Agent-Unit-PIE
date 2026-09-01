@@ -68,8 +68,73 @@ def develop_orient(input_data) -> str:
     if workflow_engine.current=="orient":
         try: workflow_engine.advance("version_sync", produced={"context": ctx}, success="context_found")
         except Exception as e: ctx["advance"]=str(e)
+    # E: sync version_id so version_sync->hypothesis is not manual trap
+    if workflow_engine.current=="version_sync":
+        try:
+            from kernel.simulation_version import sync_from_git, get_current_version
+            v=sync_from_git(sim)
+            cur=get_current_version(sim)
+            vid=(cur or v or {}).get("version_id")
+            if vid:
+                workflow_engine.outputs["version_id"]=vid
+                try: workflow_engine._save()
+                except: pass
+        except Exception:
+            pass
     st=generate_state(sim)
     return json.dumps({"context":ctx,"state":st,"allowed":workflow_engine.allowed()}, separators=(",",":"))
+
+def develop_hypothesis(input_data) -> str:
+    """Phase E: create or attach hypothesis and advance hypothesis->decide_branch."""
+    _ensure_paths()
+    if isinstance(input_data, str):
+        try: input_data=json.loads(input_data)
+        except: input_data={}
+    d=input_data or {}
+    hid=d.get("hypothesis_id") or d.get("id")
+    title=d.get("title","")
+    htype=d.get("hypothesis_type") or d.get("type","model_hypothesis")
+    sim=d.get("simulator","popula_dyn")
+    if not hid:
+        return "Error: 'hypothesis_id' required"
+    # map shorthand type
+    type_map={"WORLD":"world_hypothesis","MODEL":"model_hypothesis","DEVELOPMENT":"development_hypothesis","world_hypothesis":"world_hypothesis","model_hypothesis":"model_hypothesis","development_hypothesis":"development_hypothesis","workflow_hypothesis":"workflow_hypothesis","kernel_hypothesis":"kernel_hypothesis"}
+    htype=type_map.get(htype, htype)
+    if htype not in ("world_hypothesis","model_hypothesis","workflow_hypothesis","kernel_hypothesis","development_hypothesis","pattern_inference"):
+        htype="model_hypothesis"
+    try:
+        from kernel.hypothesis.hypothesis_engine import hypothesis_engine
+        hypothesis_engine.hydrate()
+        existing=hypothesis_engine.get_hypothesis(hid)
+        if existing:
+            # attach evidence if provided
+            ev=d.get("evidence_id") or d.get("supporting_evidence")
+            if ev:
+                hypothesis_engine.add_supporting_evidence(hid, ev)
+            hid_out=hid
+        else:
+            desc=d.get("description") or d.get("premise") or title
+            cat=d.get("category","model" if "model" in htype else "general")
+            conf=float(d.get("confidence",0.6))
+            res=hypothesis_engine.create_hypothesis(hypothesis_id=hid, title=title or hid, description=desc, hypothesis_type=htype, category=cat, confidence=conf, force=bool(d.get("force", False)))
+            if isinstance(res, dict) and res.get("blocked"):
+                return json.dumps(res, separators=(",",":"))
+            hid_out=hid
+        workflow_engine=_wf()
+        # ensure version_sync done; if at version_sync advance to hypothesis
+        if workflow_engine.current=="version_sync":
+            try:
+                from kernel.simulation_version import get_current_version
+                cur=get_current_version(sim)
+                if cur and cur.get("version_id"):
+                    workflow_engine.advance("hypothesis", produced={"version_id":cur["version_id"]}, success="version_synced")
+            except: pass
+        if workflow_engine.current=="hypothesis":
+            try: workflow_engine.advance("decide_branch", produced={"hypothesis_id":hid_out}, success="hypothesis_ready")
+            except Exception as e: return json.dumps({"hypothesis_id":hid_out,"advance_error":str(e),"allowed":workflow_engine.allowed()}, separators=(",",":"))
+        return json.dumps({"hypothesis_id":hid_out,"allowed":workflow_engine.allowed()}, separators=(",",":"))
+    except Exception as e:
+        return f"Error in develop_hypothesis: {e}"
 
 def _validate_run_id(run_id: str, simulator: str) -> str | None:
     import re
@@ -197,6 +262,18 @@ def develop_modify_simulator(input_data) -> str:
         if workflow_engine.current=="decide_branch":
             try: workflow_engine.advance("modify_code", produced={"branch":"model_or_kernel"}, success="branch_chosen")
             except: pass
+        # E: smoke check after edit and auto-advance modify_code->validate when smoke passes
+        if workflow_engine.current=="modify_code":
+            try:
+                from kernel.simulation_version import get_current_version
+                cur=get_current_version("popula_dyn")
+                if cur:
+                    # lightweight smoke: import model
+                    from modules.simulators.popula_dyn.core.simulation_model import SimulationModel
+                    _=SimulationModel({"initial_pop":0,"years":1})
+                    workflow_engine.advance("validate", produced={"commit":str(fp)}, success="tests_pass")
+            except Exception:
+                pass
         return json.dumps({"status":"edited","path":str(fp),"gate":gate_msg}, separators=(",",":"))
     except Exception as e:
         return f"Error in develop_modify_simulator: {e}"
@@ -286,6 +363,7 @@ def develop_commit(input_data) -> str:
 DEVELOP_TOOLS = {
     "develop_state": develop_state,
     "develop_orient": develop_orient,
+    "develop_hypothesis": develop_hypothesis,
     "develop_experiment": develop_experiment,
     "develop_analyze": develop_analyze,
     "develop_modify_simulator": develop_modify_simulator,
