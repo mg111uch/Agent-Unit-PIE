@@ -153,7 +153,7 @@ def create_unit_config(
 
     initial_state = config.get("initial_state", {}).copy()
     if agent_type == "farmer":
-        initial_state.setdefault("age", rng.randint(0, 80))
+        initial_state.setdefault("age", rng.randint(15, 40))
         initial_state.setdefault("gender", rng.choice(["M", "F"]))
 
     for key, value in overrides.items():

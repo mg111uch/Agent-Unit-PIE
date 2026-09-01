@@ -83,6 +83,12 @@ class SimulationModel:
         grid_width = params.get("grid_width", PARAMS["grid_width"])
         grid_height = params.get("grid_height", PARAMS["grid_height"])
         rng = self.random
+        years = params.get("years", PARAMS["years"])
+        max_age = params.get("max_age", PARAMS["max_age"])
+        fertile_min = params.get("fertile_min_age", PARAMS["fertile_min_age"])
+        if years >= max_age - fertile_min:
+            import logging
+            logging.getLogger("popula_dyn").warning(f"years {years} >= max_age-fertile_min {max_age-fertile_min}: initial cohort will exit fertile window; expect last-year births dip without overlapping generations")
         land_patches = params.get("grid_width", PARAMS["grid_width"]) * params.get(
             "grid_height", PARAMS["grid_height"]
         )
@@ -101,7 +107,11 @@ class SimulationModel:
         for _ in range(initial_pop):
             x = rng.randint(0, grid_width)
             y = rng.randint(0, grid_height)
-            age = rng.randint(0, params.get("max_age", PARAMS["max_age"]))
+            # Phase C: concentrate initial ages in fertile window for overlapping generations
+            if rng.random() < 0.8:
+                age = rng.randint(15, 40)
+            else:
+                age = rng.randint(0, params.get("max_age", PARAMS["max_age"]))
             gender = rng.choice(["M", "F"])
             unit = self._create_unit(
                 "farmer",
