@@ -12,7 +12,7 @@ def conformance_mini() -> Tuple[bool,str]:
     """Workflow conformance mini: legal path ok, illegal blocked."""
     try:
         from development.workflow_engine import WorkflowEngine
-        we = WorkflowEngine()
+        we = WorkflowEngine(persist=False)
         we.advance("orient")
         we.advance("version_sync", produced={"context":"x"}, success="context_found")
         we.advance("hypothesis", produced={"version_id":"v"}, success="version_synced")
@@ -20,7 +20,7 @@ def conformance_mini() -> Tuple[bool,str]:
         we.advance("experiment", produced={"branch":"experiment"}, success="branch_chosen")
         we.advance("update_knowledge", produced={"run_id":"r","finding_id":"f"}, success="finding_registered")
         # illegal should raise
-        we2 = WorkflowEngine()
+        we2 = WorkflowEngine(persist=False)
         try:
             we2.advance("experiment")
             return False, "conformance fail: illegal start->experiment not blocked"
