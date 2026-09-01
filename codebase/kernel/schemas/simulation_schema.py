@@ -180,7 +180,13 @@ def concepts_for_changed_files(files: List[str], _ontology: Optional[Dict[str, L
                 out.update(concs)
             continue
         for mod, concepts in registry.items():
-            if mod in stem or mod in name:
+            ml = mod.lower()
+            # handle path keys like behaviours/reproduce
+            mod_stem = Path(ml).stem.lower()
+            mod_name = Path(ml).name.lower()
+            if ml in stem or ml in name or mod_stem == stem or mod_name == name or stem in ml or name in ml:
+                out.update(concepts)
+            elif mod_stem in stem or stem == mod_stem:
                 out.update(concepts)
     return sorted(out)
 
