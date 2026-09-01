@@ -52,6 +52,8 @@ class SimulationModel:
         self.step_count = 0
         self.births = 0
         self.deaths = 0
+        self.births_total = 0
+        self.deaths_total = 0
         self.successful_healings = 0
         self.tools_produced = 0
         self.trades_executed = 0
@@ -64,6 +66,8 @@ class SimulationModel:
                 "Avg_Skill": lambda m: m.get_average_skill(),
                 "Births": "births",
                 "Deaths": "deaths",
+                "Births_Cumul": "births_total",
+                "Deaths_Cumul": "deaths_total",
                 "Healer_Count": lambda m: m.get_unit_type_count("specialist", "heal"),
                 "Toolmaker_Count": lambda m: m.get_unit_type_count("specialist", "produce"),
                 "Trader_Count": lambda m: m.get_unit_type_count("specialist", "trade_ag"),
@@ -186,6 +190,7 @@ class SimulationModel:
             self.spatial_engine.place_agent(unit, position)
             self.units[unit.unit_id] = unit
             self.births += 1
+            self.births_total += 1
         return unit
 
     def step(self) -> None:
@@ -201,6 +206,7 @@ class SimulationModel:
             "grid": self.spatial_engine,
             "model": self,
             "seed": self.random.randint(0, 1000000),
+            "rng": self.random,
         }
         land_units = [
             u for u in self.units.values()
@@ -227,6 +233,7 @@ class SimulationModel:
                 self.spatial_engine.remove_agent(unit)
             del self.units[unit.unit_id]
             self.deaths += 1
+            self.deaths_total += 1
         self.step_count += 1
         self.datacollector.collect(self)
 
@@ -245,7 +252,8 @@ class SimulationModel:
                 if result:
                     self._process_behavior_result(unit, result)
             except Exception as e:
-                pass
+                import logging
+                logging.getLogger("popula_dyn").debug(f"behavior {behavior_name} {unit.unit_id} failed: {e}")
     def _process_behavior_result(
         self,
         unit: UnitAgent,
@@ -262,9 +270,11 @@ class SimulationModel:
         for event in events:
             event_type = event.get("event_type")
             if event_type == "birth":
-                self.births += 1
+                # births owned by add_unit only; event is informational
+                pass
             elif event_type == "death":
-                self.deaths += 1
+                # deaths owned by sweep only
+                pass
             elif event_type == "healed":
                 self.successful_healings += 1
             elif event_type == "tool_produced":
@@ -334,6 +344,8 @@ class SimulationModel:
             "avg_skill": self.get_average_skill(),
             "births": self.births,
             "deaths": self.deaths,
+            "births_total": self.births_total,
+            "deaths_total": self.deaths_total,
             "spatial": self.spatial_engine.summary(),
         }
 

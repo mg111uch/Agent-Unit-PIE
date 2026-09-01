@@ -38,7 +38,9 @@ class MoveBehavior(BaseBehavior):
         if not possible_moves:
             return {}
 
-        rng = np.random.RandomState(world_state.get("seed", None))
+        rng = world_state.get("rng")
+        if rng is None:
+            rng = np.random.RandomState(world_state.get("seed", None))
         new_pos = possible_moves[rng.randint(len(possible_moves))]
         grid.move_agent(unit, new_pos)
 

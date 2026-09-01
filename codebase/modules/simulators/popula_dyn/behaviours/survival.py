@@ -44,22 +44,17 @@ class SurvivalBehavior(BaseBehavior):
         if age > 60:
             death_prob *= 1.5
 
-        if age > params.get("max_age", 80):
+        if age > params.get("max_age", 60):
             death_prob = 1.0
 
         death_prob += death_prob_modifier
         death_prob = max(0.0, death_prob)
 
-        rng = np.random.RandomState(world_state.get("seed", None))
+        rng = world_state.get("rng")
+        if rng is None:
+            rng = model.random if model is not None and hasattr(model, "random") else np.random.RandomState(world_state.get("seed", None))
         if rng.random() < death_prob:
             unit.alive = False
-
-            if model:
-                if hasattr(model, "deaths"):
-                    model.deaths += 1
-                else:
-                    model.deaths = 1
-
             return {
                 "events": [
                     {
