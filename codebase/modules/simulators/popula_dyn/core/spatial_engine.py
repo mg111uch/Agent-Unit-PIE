@@ -139,10 +139,14 @@ class SpatialEngine:
         occupied_cells = sum(
             1 for cells in self.grid.values() if cells
         )
+        human_units = sum(1 for cells in self.grid.values() for u in cells if getattr(u, "unit_type", None) == "human")
+        human_occupied = sum(1 for cells in self.grid.values() if any(getattr(u, "unit_type", None) == "human" for u in cells))
         return {
             "width": self.width,
             "height": self.height,
             "total_units": total_units,
             "occupied_cells": occupied_cells,
+            "human_units": human_units,
+            "human_occupied_cells": human_occupied,
             "torus": self.torus,
         }

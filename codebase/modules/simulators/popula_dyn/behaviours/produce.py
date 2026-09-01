@@ -36,7 +36,9 @@ class ProduceBehavior(BaseBehavior):
         tool_cost = unit.get_state("tool_cost", 1.0)
         inventory = unit.get_state("inventory", 0)
 
-        rng = np.random.RandomState(world_state.get("seed", None))
+        rng = world_state.get("rng")
+        if rng is None:
+            rng = model.random if model is not None and hasattr(model, "random") else np.random.RandomState(world_state.get("seed", None))
         if rng.random() < production_rate:
             inventory += 1
             unit.set_state("inventory", inventory)
@@ -56,7 +58,7 @@ class ProduceBehavior(BaseBehavior):
         if inventory <= 0 or not potential_customers:
             return {}
 
-        customer = rng.choice(potential_customers)
+        customer = potential_customers[rng.randint(len(potential_customers))]
         customer.modify_resource("wealth", -tool_cost)
         customer.set_state(
             "skill", customer.get_state("skill", 0.5) + tool_quality

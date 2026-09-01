@@ -91,7 +91,10 @@ class TradeBehaviorAg(BaseBehavior):
         if len(all_agents) < 2:
             return {}
 
-        rng = np.random.RandomState(world_state.get("seed", None))
+        rng = world_state.get("rng")
+        if rng is None:
+            rng = model.random if model is not None and hasattr(model, "random") else np.random.RandomState(world_state.get("seed", None))
+        # rng kept for future stochastic choice; sorting is deterministic
         sorted_agents = sorted(
             all_agents, key=lambda a: a.get_resource("wealth", 0), reverse=True
         )

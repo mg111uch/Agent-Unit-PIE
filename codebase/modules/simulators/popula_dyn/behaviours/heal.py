@@ -46,11 +46,13 @@ class HealBehavior(BaseBehavior):
         if not potential_patients:
             return {}
 
-        rng = np.random.RandomState(world_state.get("seed", None))
+        rng = world_state.get("rng")
+        if rng is None:
+            rng = model.random if model is not None and hasattr(model, "random") else np.random.RandomState(world_state.get("seed", None))
         if rng.random() >= healing_rate:
             return {}
 
-        patient = rng.choice(potential_patients)
+        patient = potential_patients[rng.randint(len(potential_patients))]
         patient.set_state("death_prob_modifier", -0.5)
         patient.modify_resource("wealth", -healing_cost)
         unit.modify_resource("wealth", healing_cost)

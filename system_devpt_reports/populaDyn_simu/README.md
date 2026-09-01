@@ -1,4 +1,6 @@
-# Simulation Engine Development Report
+# Simulation Engine
+
+> **For future agents:** Keep this README as wholesome feature docs — add/update features as one-liner prose rows in `## Features Overview`; do not add phase sections or phase-wise history. Code is the ultimate source of truth.
 
 ## New system
 - Generic `UnitAgent` with behavior list
@@ -41,154 +43,25 @@ Goal-autonomous research using the shared agent loop.
 
 ---
 
-## Simulation Usage
+## Features Overview
 
-### Via Agent
-```
-Run a simulation with 50 years and 100 initial population
-```
-
-### Via Python
-```python
-from modules.simulators.simulation_connector import SimulationConnector
-conn = SimulationConnector()
-result = conn.run_and_extract({'years': 20, 'initial_pop': 50}, 'run_001')
-print(conn.compare_runs(['run_001', 'run_002']))
-```
-
-### Parameters
-| Parameter | Default |
-|-----------|----------|
-| `years` | 50 |
-| `initial_pop` | 50 |
-| `initial_healers` | 1 |
-| `grid_width` | 10 |
-
----
-
-### Phase 1 Completed: Behavior Registry Refactoring
-
-**What was done:**
-- Split monolithic `behavior_registry.py` into modular `behaviours/` directory
-- Created 14 behavior classes in separate files
-
----
-
-### Phase 2 Completed: Agent Factory
-
-**Created:** `core/agent_factory.py`
-
-**Agent Configs:**
-| Agent Type | Unit Type | Behaviors |
-|-----------|----------|----------|
-| `farmer` | `human` | move, harvest, consume_metabolism, reproduce, survival |
-| `healer` | `specialist` | move, heal |
-| `toolmaker` | `specialist` | move, produce |
-| `trader` | `specialist` | move, trade_ag |
-| `land` | `land` | regrow |
-
-**Functions:**
-- `create_unit_config()` - Creates unit with unique ID, behaviors, state, resources
-- `get_agent_behaviors()` - Returns behavior list for type
-- `list_agent_types()` - Lists all available types
-
----
-
-
-
-### Phase 3 Completed: Spatial Engine
-
-**Created:** `core/spatial_engine.py`
-
-**SpatialEngine provides:**
-- `place_agent()` / `remove_agent()` / `move_agent()` - Position management
-- `get_neighbors()` - Find nearby units
-- `get_neighborhood()` - Get adjacent positions
-- `get_cell_list_contents()` - Get units at positions
-- Toroidal (wrap-around) grid support
-- `summary()` - Statistics
-
----
-
-### Phase 4 Completed: Simulation Model
-
-**Created:** `core/simulation_model.py`
-
-**SimulationModel provides:**
-- Unit initialization from `agent_factory.py`
-- Behavior execution via `BehaviorRegistry`
-- Spatial management via `SpatialEngine`
-- Data collection (population, wealth, births, deaths, etc.)
-- Step-by-step simulation
-
----
-
-### Phase 5 Completed: WorldEngine Integration
-
-**Modified:** `core/world_engine.py`
-
-**Changes:**
-- Added `simulation_model` parameter to constructor
-- Added `process_simulation()` method - advances simulation each tick
-- Added `with_agricultural_simulation(params)` - convenience factory
-- Updated `health_check()` - includes simulation_model status
-
-**Usage:**
-```python
-from modules.simulators.popula_dyn.core.world_engine import WorldEngine
-
-world = WorldEngine.with_agricultural_simulation()
-world.start()
-
-for _ in range(100):
-    world.tick()
-```
-
----
-
-## Phase 6 Completed: Simulation Connector
-
-Created `modules/simulators/simulation_connector.py`:
-
-| Method | Purpose |
-|--------|---------|
-| `run_and_extract()` | Run sim → extract signals → store in KB |
-| `compare_runs()` | Diff between simulation runs |
-| `inject_policy()` | Modify params, re-run scenario |
-| `get_signals()` | Read signals for run |
-| `list_runs()` | List all runs |
-
-Stores under `units/simulations/{run_id}/`:
-- `params.yaml` - simulation parameters
-- `signals.json` - extracted signals
-- `data.csv` - time series data
-- `summary.json` - run summary
-
-Signals extracted:
-- population_growth, mortality_event
-- resource_scarcity, prosperity
-- population_decline
-- healthcare_gap, trade_gap
-- population_trend_declining
-
-### Priority 2: Event Logging
-
-Add signal emission at each simulation step:
-- population_decline events
-- resource_scarcity events
-- Store under `units/simulations/run_XXX/signals.json`
-
-### Priority 3: Experiment Mode
-
-Store multiple simulation variants under `units/simulations/` for pattern analysis.
-
----
-
-## Phase 7 : Pattern Auto-Detection ✅ IMPLEMENTED
-Connect simulation signals → kernel pattern engine:
-- Auto-detect: population_trends, resource_cycles, collapse_signals
-- Enable proactive alerts via kernel_retrieve
-- ✅ Closes simulation → cognition loop
+| Capability | Description |
+|------------|-------------|
+| Hot-Reload | Auto-detect tool module file changes and reload without restart; explicit `kernel_reload` and `hot_reload` tools |
+| Behavior Registry | Pluggable registry with modular `behaviours/` (move, harvest, consume_metabolism, reproduce, survival, heal, produce, trade_ag, regrow) |
+| Agent Factory | Typed agents `farmer`/`healer`/`toolmaker`/`trader`/`land` via `create_unit_config`, `get_agent_behaviors`, `list_agent_types` |
+| Spatial Engine | Toroidal grid with `place_agent`/`remove_agent`/`move_agent`, `get_neighbors`/`get_neighborhood`/`get_cell_list_contents`, `summary` (`human_occupied_cells`/`human_units` separate from land) |
+| Simulation Model | Unit initialization, `BehaviorRegistry` + `SpatialEngine` orchestration, stepwise `step`/`run`, `DataCollector` (Population, Wealth, Births/Births_Cumul, Deaths/Deaths_Cumul) |
+| WorldEngine Integration | `simulation_model` constructor param, `process_simulation()` tick, `with_agricultural_simulation(params)`, `health_check` |
+| Simulation Connector | `run_and_extract`/`compare_runs`/`inject_policy`/`get_signals`/`list_runs`; stores `params.yaml`, `signals.json`, `data.csv`, `summary.json` under `data/units/simulations/{run_id}` |
+| Per-Sim Isolation & Lineage | Kernel scopes findings, versions and topics per simulator (`sim@commit` via Git, `data/units/simulations/{sim}/{run}` sharded, `ACTIVE→HISTORICAL` validity) — code is source of truth |
+| Pattern Auto-Detection | Simulation signals → kernel pattern engine (population_trends, resource_cycles, collapse_signals), closes simulation → cognition loop |
+| Reproduction & Mating | Fertile window 15–50, `mate_radius`/`mate_global_fallback`/`require_opposite_gender`, `births_total`/`deaths_total` cumulative, independent `model.random` RNG |
+| Single Spawn Path | Single `add_unit` path via `position`/`state`/`behaviors`/`resources` + `behaviours/reproduce` child `{unit_id,position,behaviors,state,resources}` — code is source |
+| Independent RNG | `world_state["rng"]=model.random` used by `reproduce`/`survival`/`move` (remaining `heal`/`trade`/`produce` pending) |
+| Behavior Error Logging | `simulation_model.py:255` logs `behavior {name} {unit} failed` instead of silent `pass` |
+| Smoke Test | `tests/test_popula_dyn_smoke.py` — same-cell 2 fertile `birth_rate 1.0` → `births_total>=1`, cumulative vs last-step, RNG independence |
+| Signals & Trends | `population_growth`, `mortality_event`, `resource_scarcity`, `prosperity`, `population_decline`, `healthcare_gap`, `trade_gap`, `population_trend_declining` |
 
 ---
 
