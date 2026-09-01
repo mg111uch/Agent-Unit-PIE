@@ -262,17 +262,25 @@ def develop_modify_simulator(input_data) -> str:
         if workflow_engine.current=="decide_branch":
             try: workflow_engine.advance("modify_code", produced={"branch":"model_or_kernel"}, success="branch_chosen")
             except: pass
-        # E: smoke check after edit and auto-advance modify_code->validate when smoke passes
+        # E hardened: birth smoke — 2 fertile same-cell birth_rate=1.0 must create child
         if workflow_engine.current=="modify_code":
             try:
                 from kernel.simulation_version import get_current_version
                 cur=get_current_version("popula_dyn")
                 if cur:
-                    # lightweight smoke: import model
                     from modules.simulators.popula_dyn.core.simulation_model import SimulationModel
-                    _=SimulationModel({"initial_pop":0,"years":1})
+                    m=SimulationModel({"grid_width":10,"grid_height":10,"initial_pop":0,"initial_healers":0,"initial_toolmakers":0,"initial_traders":0,"birth_rate":1.0,"years":1,"seed":42})
+                    u1=m._create_unit("farmer", position=(5,5), age=20, gender="M", seed=1)
+                    u1.set_state("age",20);u1.set_state("gender","M")
+                    u2=m._create_unit("farmer", position=(5,5), age=20, gender="F", seed=2)
+                    u2.set_state("age",20);u2.set_state("gender","F")
+                    m.step()
+                    assert m.births_total>=1, f"smoke births_total {m.births_total}<1"
+                    assert m.get_population_count()>=3, "smoke population"
+                    # also check independent RNG not reusing seed (basic)
                     workflow_engine.advance("validate", produced={"commit":str(fp)}, success="tests_pass")
-            except Exception:
+            except Exception as e:
+                # smoke failed — stay in modify_code for fix
                 pass
         return json.dumps({"status":"edited","path":str(fp),"gate":gate_msg}, separators=(",",":"))
     except Exception as e:

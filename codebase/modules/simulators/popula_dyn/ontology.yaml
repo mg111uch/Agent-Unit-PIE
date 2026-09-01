@@ -5,9 +5,6 @@ modules:
   behaviours/reproduce:
     concepts: [reproduction, population_growth, fertility, mortality]
     outputs: [births, population]
-  reproduction:
-    concepts: [reproduction, population_growth, fertility, mortality]
-    outputs: [births, population]
   survival:
     concepts: [mortality, resource_scarcity, survival]
     outputs: [deaths]
