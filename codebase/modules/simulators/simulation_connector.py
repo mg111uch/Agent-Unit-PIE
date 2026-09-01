@@ -598,11 +598,11 @@ class SimulationConnector:
         scenario = {}
         if baseline_run_id:
             base_params = self.get_params(baseline_run_id)
-            for k in ("birth_rate", "death_rate", "initial_pop", "years"):
+            for k in ("birth_rate", "death_rate", "initial_pop", "years", "mate_radius", "mate_global_fallback", "require_opposite_gender", "vision"):
                 if params.get(k) != base_params.get(k):
                     scenario[k] = params.get(k)
         else:
-            scenario = {k: params.get(k) for k in ("birth_rate", "death_rate") if k in params}
+            scenario = {k: params.get(k) for k in ("birth_rate", "death_rate", "mate_radius") if k in params}
 
         # per-simulator version (git-scoped, strictly isolated)
         try:

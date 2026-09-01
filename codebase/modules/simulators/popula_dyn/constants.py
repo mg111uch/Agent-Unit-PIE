@@ -11,6 +11,9 @@ PARAMS: Dict[str, Any] = {
     "max_age": 60,
     "metabolism": 1,  # Food units consumed per year
     "vision": 2,  # Cells to scan for movement/mating
+    "mate_radius": 2,  # Partner search radius (defaults to vision)
+    "mate_global_fallback": True,  # Fallback to global fertile pool if local none
+    "require_opposite_gender": True,  # Gender requirement for mating
     "years": 100,  # Simulation length
     "seed": None,  # For reproducibility
     # New agent initial counts
