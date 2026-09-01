@@ -2,8 +2,8 @@
 
 Point your agent harness to this file to start autonomous research development. Static pointers (no duplication) — follow links.
 
-## Task — Iter3 (fresh agent entry)
-Fix popula_dyn reproduction bottleneck: births 0 at birth_rate 0.08-0.12 (run_policy_birth08 pop2 COLLAPSED, run_policy_birth10 pop11 IMPROVED, run_policy_birth12 pop10 IMPROVED all births0 vs run_basic pop5). `hyp_pop_collapse_08` MODEL. Next: `modify_code` L3 `codebase/modules/simulators/popula_dyn/behaviours/reproduce.py` (fertile window 15-50 / partner search) and validate `run_policy_birth08` births>0. Note: `core/reproduction.py` does not exist — use `behaviours/reproduce.py`.
+## Task — Iter4 (fresh agent entry) — Iter3 DONE
+Iter3 MODEL `hyp_pop_collapse_08` bottleneck fixed `popula_dyn@e61996e`: `behaviours/reproduce.py` child placement + `mate_radius`/`mate_global_fallback`, `simulation_model` `births_total`/`deaths_total` + `model.random` RNG + `survival`/`move`/`heal`/`produce` RNG, age after `execute` + init 15-40, `simulation_connector` totals, `ontology` slash-path, `develop_hypothesis` + smoke-hardened `modify_code`. Validate `run_policy_birth08` `pop 209 births_total 253 IMPROVED` vs `run_basic 41`, ladder `0.04 41/58 →0.06 88/112 →0.08 209/253 →0.10 241/279 →0.12 376/447` monotone. `hyp_birth_elastic_world` WORLD validated (`popula_dyn@e61996e`, 5/5 harness). Next: `develop_orient` fresh query for next research question (e.g., resource/scarcity) via unified loop — no phase history needed.
 
 Follow the unified loop in `data/workflows/research_development.json` (see `research_development.md` for node contracts) strictly via `develop.*` primitives — LLM thinks inside workflow, `workflow_engine` enforces transitions. No steps duplicated here — read workflow files.
 

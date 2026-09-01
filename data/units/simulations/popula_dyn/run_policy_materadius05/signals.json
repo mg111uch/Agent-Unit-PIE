@@ -1,11 +1,11 @@
 [
   {
     "signal_type": "population_growth",
-    "value": 21,
+    "value": 1,
     "category": "demographic",
     "subtype": "birth_rate",
-    "intensity": 2.1,
-    "trend": "increasing"
+    "intensity": 0.1,
+    "trend": "stable"
   },
   {
     "signal_type": "mortality_event",
@@ -13,7 +13,15 @@
     "category": "demographic",
     "subtype": "death_rate",
     "intensity": 0.2,
-    "trend": "normal"
+    "trend": "significant"
+  },
+  {
+    "signal_type": "prosperity",
+    "value": 65.52505848591386,
+    "category": "economic",
+    "subtype": "wealth",
+    "intensity": 5.0,
+    "trend": "increasing"
   },
   {
     "signal_type": "healthcare_gap",

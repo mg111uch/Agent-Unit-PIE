@@ -1,5 +1,7 @@
 # Kernel
 
+> **For future agents:** Keep this README as wholesome feature docs — add/update features as one-liner prose rows in `## Features Overview`; do not add phase sections or phase-wise history. Code is the ultimate source of truth.
+
 ## Documentation Map
 
 | Artifact | Purpose |
@@ -44,6 +46,9 @@
 | develop.* Primitives | `development/develop_tools.py:211` 9 `CAT_DEVELOP` tools (`develop_state/orient/experiment/analyze/modify_simulator/modify_workflow/modify_kernel/validate/commit`) — each composes deterministic ops (`retrieval_engine.search`, `SimulationConnector.run_and_extract+register_to_kernel`, `CompressionEngine.compress_observations`, `git_commit`) and advances `workflow_engine`; hides `conda run ... topic_ops.py` shell; `develop_modify_*` gated via `validation_gate` |
 | Graduated Autonomy Gate | `development/validation_gate.py:11` `LEVELS L0 suggest /L1 edit+test /L2 edit+test+commit /L3 sim_modify /L4 workflow_modify /L5 kernel_propose /L6 kernel_modify` (`DEFAULT_CEILING=3` sim autonomous, L4+ gated, L5-6 human approval); `required_level(path)` (`simulators/*→3`, `data/workflows→4`, `kernel→6`); `gate(level,path,human_approved)` runs `contracts,sim_smoke,lineage,retrieval,workflow_conformance,human_approval` and blocks `L3 kernel`/`L1 workflow`/`L6 without approval` |
 | Agent Evaluation Harness | `development/eval_harness.py:14` `run_all()` harness (FixesIssues 6A/B/E/F + 9): `workflow_conformance` (legal `orient→…→update_knowledge` + illegal `start→experiment` blocked), `recovery` (missing params → Error), `adversarial_lineage` (5 invariants `V1 stale/partial/unrelated/no-contradiction/same-version`), `workflow_evolution` (added node still validates), `research_loop` (`_bytes<2000`); helpers `conformance_mini`/`adversarial_mini` reused by gate |
+| Hypothesis Primitive | `development/develop_tools.py:87` `develop_hypothesis({id,title,type})` creates/attaches `WORLD|MODEL|DEVELOPMENT` hypothesis and auto `hypothesis→decide_branch` — code is source |
+| Smoke-Guarded Modify | `develop_tools.py:265` `develop_modify_simulator` smoke `2 fertile same-cell birth_rate 1.0 → births_total>=1` before `modify_code→validate` (`tests_pass`) |
+| Ontology Slash-Path Fix | `kernel/schemas/simulation_schema.py:172` slash-aware `concepts_for_changed_files` for `behaviours/reproduce` → `reproduction` concepts — code is source |
 | Agent Onboarding | `codebase/prompt_fragments/onboarding.md` (in `FRAGMENT_ORDER`) points agents at `project_history` + `list_capabilities`/`report_inventory` instead of full-report reads |
 | Capability Regression Signal | `validate_capabilities` detects regressions (previously-`supported` caps now FAIL, via citation_cache) and emits a `capability_regression` kernel signal |
 | Tool-Bypass Detection | `scripts/detect_tool_bypass.py` surfaces repeated raw Reads on atlas-indexed files via `pattern_engine.detect_repeated_events` |

@@ -10,9 +10,12 @@ initial_healers: 10
 initial_pop: 50
 initial_toolmakers: 10
 initial_traders: 10
+mate_global_fallback: true
+mate_radius: 2
 max_age: 60
 metabolism: 1
-seed: None
+require_opposite_gender: true
+seed: null
 toolmaker_cost: 1.0
 toolmaker_production_rate: 0.1
 toolmaker_quality: 0.1

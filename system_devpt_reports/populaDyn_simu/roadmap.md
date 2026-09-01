@@ -18,4 +18,9 @@ Build recursive improvement loop:
 - Track hypothesis → simulation → validation
 - Recursive hypothesis refinement
 
----
+## Later product ideas (not Iter3, keep)
+
+- Cumulative plots in `simulation_plot.png` / game UI (no frontend tests per policy).
+- Explicit `ReproductionEngine` in `core/` if behaviors must stay side-effect free (return intended child; model applies spawn). Matches old `core/reproduction.py` idea.
+- `event_bridge.py` / `world_engine.py` / `resource_engine.py` unread — do not redesign yet.
+- Self-improvement eval: repeat task from clean context; success is fewer `develop_*` calls.

@@ -1,0 +1,21 @@
+{
+  "step_count": 50,
+  "total_units": 2603,
+  "population": 73,
+  "total_wealth": 4963.514273446445,
+  "avg_skill": 0.5566780821917808,
+  "births": 5,
+  "deaths": 0,
+  "births_total": 86,
+  "deaths_total": 63,
+  "spatial": {
+    "width": 50,
+    "height": 50,
+    "total_units": 2603,
+    "occupied_cells": 2500,
+    "torus": true
+  },
+  "run_id": "run_policy_materadius01",
+  "simulator": "popula_dyn",
+  "timestamp": "2026-09-01T07:39:57.076256"
+}

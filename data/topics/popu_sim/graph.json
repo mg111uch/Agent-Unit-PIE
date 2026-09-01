@@ -61,9 +61,9 @@
       "confidence": 1.0
     },
     {
-      "name": "popula_dyn consolidated IMPROVED (2 runs, avg 90.0%)",
+      "name": "popula_dyn consolidated IMPROVED (3 runs, avg 93.3%)",
       "side": "consolidated",
-      "premise": "Consolidated popula_dyn: IMPROVED over 2 runs; outcomes IMPROVED; avg delta 90.0%; sources argu_popu_sim_run_policy_birth06_Findings,argu_popu_sim_run_birth10_Findings",
+      "premise": "Consolidated popula_dyn: IMPROVED over 3 runs; outcomes IMPROVED; avg delta 93.3%; sources argu_popu_sim_run_policy_birth12_Findings,argu_popu_sim_run_policy_birth06_Findings,argu_popu_sim_run_policy_birth10_Findings",
       "evidence": [],
       "examples": [],
       "sources": [],
@@ -74,6 +74,26 @@
       "name": "run_policy_birth12 Findings",
       "side": "argument",
       "premise": "Status: IMPROVED\nPopulation: 10 (baseline 5) +100.0%\nDeaths: 3 (REDUCED vs baseline 9)\n Births: 0\n Wealth: 1571.8 (baseline 1102.5)\n AvgSkill: 0.62\n Signals: prosperity=157.18236774643083 intensity=5.0; population_decline=10 intensity=8.0(HIGH); population_trend_declining=10 intensity=5.0\n Interpretation: Zero births suggest fertile window or partner availability bottleneck",
+      "evidence": [],
+      "examples": [],
+      "sources": [],
+      "discipline": "",
+      "confidence": 1.0
+    },
+    {
+      "name": "run_policy_materadius01 Findings",
+      "side": "argument",
+      "premise": "Status: STABLE\nPopulation: 73 (baseline 90) -18.9%\nDeaths: 63 (STABLE vs baseline 56)\n Births: 86\n Wealth: 4963.5 (baseline 5652.3)\n AvgSkill: 0.56\n Signals: prosperity=67.99334621159514 intensity=5.0; healthcare_gap=0 intensity=6.0\n Interpretation: No obvious failure mode detected",
+      "evidence": [],
+      "examples": [],
+      "sources": [],
+      "discipline": "",
+      "confidence": 1.0
+    },
+    {
+      "name": "run_policy_materadius05 Findings",
+      "side": "argument",
+      "premise": "Status: DEGRADED\nPopulation: 70 (baseline 90) -22.2%\nDeaths: 72 (STABLE vs baseline 56)\n Births: 92\n Wealth: 4586.8 (baseline 5652.3)\n AvgSkill: 0.54\n Signals: prosperity=65.52505848591386 intensity=5.0; healthcare_gap=0 intensity=6.0\n Interpretation: No obvious failure mode detected",
       "evidence": [],
       "examples": [],
       "sources": [],
@@ -90,6 +110,11 @@
     {
       "source": "run_policy_birth08 Findings",
       "target": "run_policy_birth06 Findings",
+      "relation": "contradicts"
+    },
+    {
+      "source": "run_policy_materadius05 Findings",
+      "target": "run_policy_materadius01 Findings",
       "relation": "contradicts"
     }
   ]

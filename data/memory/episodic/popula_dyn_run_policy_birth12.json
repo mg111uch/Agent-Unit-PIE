@@ -1,7 +1,7 @@
 {
   "episode_id": "simrun_popula_dyn_run_policy_birth12",
   "simulator": "popula_dyn",
-  "version_id": "popula_dyn@06d914a",
+  "version_id": "popula_dyn@e61996e",
   "run_id": "run_policy_birth12",
   "parameters": {
     "initial_pop": 50,
@@ -14,6 +14,9 @@
     "max_age": 60,
     "metabolism": 1,
     "vision": 2,
+    "mate_radius": 2,
+    "mate_global_fallback": true,
+    "require_opposite_gender": true,
     "years": 50,
     "seed": null,
     "initial_healers": 10,
@@ -29,22 +32,26 @@
   },
   "result": {
     "step_count": 50,
-    "total_units": 2540,
-    "population": 10,
-    "total_wealth": 1571.8236774643083,
-    "avg_skill": 0.6199999999999999,
-    "births": 0,
-    "deaths": 3,
+    "total_units": 2906,
+    "population": 376,
+    "total_wealth": 14608.56328747449,
+    "avg_skill": 0.5329454787234043,
+    "births": 21,
+    "deaths": 2,
+    "births_total": 447,
+    "deaths_total": 121,
     "spatial": {
       "width": 50,
       "height": 50,
-      "total_units": 2540,
+      "total_units": 2906,
       "occupied_cells": 2500,
+      "human_units": 376,
+      "human_occupied_cells": 325,
       "torus": true
     },
     "run_id": "run_policy_birth12",
     "simulator": "popula_dyn",
-    "timestamp": "2026-08-31T13:33:47.962939"
+    "timestamp": "2026-09-01T11:56:52.994125"
   },
-  "timestamp": "2026-08-31T13:33:47.962939"
+  "timestamp": "2026-09-01T11:56:52.994125"
 }

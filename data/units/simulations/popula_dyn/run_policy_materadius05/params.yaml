@@ -1,4 +1,4 @@
-birth_rate: 0.1
+birth_rate: 0.04
 death_rate: 0.01
 fertile_max_age: 50
 fertile_min_age: 15
@@ -11,7 +11,7 @@ initial_pop: 50
 initial_toolmakers: 10
 initial_traders: 10
 mate_global_fallback: true
-mate_radius: 2
+mate_radius: 5
 max_age: 60
 metabolism: 1
 require_opposite_gender: true

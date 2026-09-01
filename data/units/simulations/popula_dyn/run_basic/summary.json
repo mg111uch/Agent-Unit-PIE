@@ -1,18 +1,23 @@
 {
   "step_count": 50,
-  "total_units": 2535,
-  "population": 5,
-  "total_wealth": 1102.5443160724074,
-  "avg_skill": 0.6599999999999999,
-  "births": 0,
-  "deaths": 9,
+  "total_units": 2571,
+  "population": 41,
+  "total_wealth": 3103.5694166561084,
+  "avg_skill": 0.548170731707317,
+  "births": 1,
+  "deaths": 0,
+  "births_total": 58,
+  "deaths_total": 67,
   "spatial": {
     "width": 50,
     "height": 50,
-    "total_units": 2535,
+    "total_units": 2571,
     "occupied_cells": 2500,
+    "human_units": 41,
+    "human_occupied_cells": 38,
     "torus": true
   },
   "run_id": "run_basic",
-  "timestamp": "2026-08-27T11:33:59.726332"
+  "simulator": "popula_dyn",
+  "timestamp": "2026-09-01T11:56:38.492795"
 }
