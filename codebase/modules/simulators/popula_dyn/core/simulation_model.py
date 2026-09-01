@@ -222,10 +222,10 @@ class SimulationModel:
         for unit in active_units:
             if not unit.alive:
                 continue
+            self._execute_behaviors(unit, world_state)
             age = unit.get_state("age", 0)
             if age is not None:
                 unit.set_state("age", age + 1)
-            self._execute_behaviors(unit, world_state)
         dead_units = [u for u in self.units.values() if not u.alive]
         for unit in dead_units:
             position = unit.get_state("position")

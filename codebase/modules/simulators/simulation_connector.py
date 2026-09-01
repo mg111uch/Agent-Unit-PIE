@@ -483,8 +483,8 @@ class SimulationConnector:
         params = self.get_params(run_id)
 
         pop = summary.get("population", 0)
-        deaths = summary.get("deaths", 0)
-        births = summary.get("births", 0)
+        deaths = summary.get("deaths_total", summary.get("deaths", 0))
+        births = summary.get("births_total", summary.get("births", 0))
         wealth = summary.get("total_wealth", 0)
         avg_skill = summary.get("avg_skill", 0)
 
@@ -496,7 +496,7 @@ class SimulationConnector:
         if baseline_run_id:
             baseline = self._read_summary(baseline_run_id)
             if baseline:
-                baseline_deaths = baseline.get("deaths", 0)
+                baseline_deaths = baseline.get("deaths_total", baseline.get("deaths", 0))
                 baseline_pop = baseline.get("population", 0)
                 baseline_wealth = baseline.get("total_wealth", 0)
 
@@ -529,8 +529,8 @@ class SimulationConnector:
 
         interpretation_parts = []
         if births == 0 and deaths > 0:
-            interpretation_parts.append("Zero births suggest fertile window or partner availability bottleneck")
-        if deaths > baseline_deaths * 2:
+            interpretation_parts.append("Zero total births with deaths suggest fertile window or partner availability bottleneck")
+        if deaths > baseline_deaths * 2 and baseline_deaths > 0:
             interpretation_parts.append("Death spike likely caused by wealth-based starvation multiplier")
         if wealth < baseline_wealth * 0.8 and baseline_wealth > 0:
             interpretation_parts.append("Wealth decline may indicate resource depletion")
@@ -568,8 +568,8 @@ class SimulationConnector:
         signals = self.get_signals(run_id)
         pop = summary.get("population", 0)
         wealth = summary.get("total_wealth", 0)
-        deaths = summary.get("deaths", 0)
-        births = summary.get("births", 0)
+        deaths = summary.get("deaths_total", summary.get("deaths", 0))
+        births = summary.get("births_total", summary.get("births", 0))
         years = params.get("years", summary.get("step_count", 0))
 
         baseline_pop = 0

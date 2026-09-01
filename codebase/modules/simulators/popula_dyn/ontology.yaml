@@ -2,6 +2,9 @@
 # Changing a module auto-produces semantic impact via `concepts` listed here.
 # MODULE_CONCEPTS in kernel/schemas/simulation_schema.py is fallback.
 modules:
+  behaviours/reproduce:
+    concepts: [reproduction, population_growth, fertility, mortality]
+    outputs: [births, population]
   reproduction:
     concepts: [reproduction, population_growth, fertility, mortality]
     outputs: [births, population]
