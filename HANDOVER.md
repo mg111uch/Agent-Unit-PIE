@@ -2,8 +2,8 @@
 
 Point your agent harness to this file to start autonomous research development. Static pointers (no duplication) — follow links.
 
-## Task — Iter4 (fresh agent entry) — Iter3 DONE
-Iter3 MODEL `hyp_pop_collapse_08` bottleneck fixed `popula_dyn@e61996e`: `behaviours/reproduce.py` child placement + `mate_radius`/`mate_global_fallback`, `simulation_model` `births_total`/`deaths_total` + `model.random` RNG + `survival`/`move`/`heal`/`produce` RNG, age after `execute` + init 15-40, `simulation_connector` totals, `ontology` slash-path, `develop_hypothesis` + smoke-hardened `modify_code`. Validate `run_policy_birth08` `pop 209 births_total 253 IMPROVED` vs `run_basic 41`, ladder `0.04 41/58 →0.06 88/112 →0.08 209/253 →0.10 241/279 →0.12 376/447` monotone. `hyp_birth_elastic_world` WORLD validated (`popula_dyn@e61996e`, 5/5 harness). Next: `develop_orient` fresh query for next research question (e.g., resource/scarcity) via unified loop — no phase history needed.
+## Task — Iter7 (next) — Iter4-6 DONE, post_commit active
+Iter4 `popula_dyn@735cf9a` `harvest/produce/trade` double-count fix, Iter5 `a5f9752` `regrow` fertility sync, Iter6 `9ff8ff1` `consume/survival` graded starvation. Workflow `research_development.json@cd57976` adds bottom `post_commit` node (`loop→post_commit→orient/stop`, `research_development.md#post-commit`): handover is pointer only, history via `data/kernel.db` hydration. Next: `develop_orient({"query":"resource/scarcity graded starvation follow-up","simulator":"popula_dyn"})` via unified loop — no history copy.
 
 Follow the unified loop in `data/workflows/research_development.json` (see `research_development.md` for node contracts) strictly via `develop.*` primitives — LLM thinks inside workflow, `workflow_engine` enforces transitions. No steps duplicated here — read workflow files.
 
