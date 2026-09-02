@@ -1,0 +1,23 @@
+{
+  "step_count": 50,
+  "total_units": 2552,
+  "population": 22,
+  "total_wealth": 160.25870104896256,
+  "avg_skill": 0.515909090909091,
+  "births": 1,
+  "deaths": 2,
+  "births_total": 79,
+  "deaths_total": 107,
+  "spatial": {
+    "width": 50,
+    "height": 50,
+    "total_units": 2552,
+    "occupied_cells": 2500,
+    "human_units": 22,
+    "human_occupied_cells": 21,
+    "torus": true
+  },
+  "run_id": "run_policy_metabolism25",
+  "simulator": "popula_dyn",
+  "timestamp": "2026-09-02T10:27:50.665112"
+}

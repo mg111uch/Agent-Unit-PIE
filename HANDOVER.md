@@ -21,10 +21,6 @@ conda run -n myenv python -c "import sys;sys.path.insert(0,'codebase');from deve
 1. `data/workflows/research_development.json` + `research_development.md` — **Top-level 12-node loop** `start→orient→version_sync→hypothesis→decide_branch→{experiment,modify_code}→update_knowledge→evaluate→validate→loop→stop` (subgraphs: `kernel_ops.json`, `popu_sim_dev.json`). Contracts: `{id,goal,inputs,preconditions,actions,outputs,success,failure,next,mdRef}` via `development/contracts.py`.
 2. `system_devpt_reports/kernel/README.md` + `usage.md` — Kernel capabilities & per-sim lineage/validity/retrieval docs (lazy-load only when task touches `kernel/**`, topics, signals, logs).
 
-Historical (do NOT read for new research sessions — prior build log):
-- `system_devpt_reports/PhasePlan.md` — Phase 0-8 build history.
-- `data/workflows/docs_update.json` + `docs_update.md` — Inject only as `doc_sync` subgraph after edits (detect_stale→identify_scope→update_docs→verify via `report_freshness`).
-
 Plan-mode rule: do NOT re-verify checklist steps 1-5 by reading 10+ implementation files (`development/*`, `kernel/*`). Trust `workflow_engine.enforces transitions`; read extra files only when hypothesis gated to that path.
 
 ## Core Invariants (do not reinvent)
@@ -74,11 +70,6 @@ Repeat same task from clean context; harness `development/eval_harness.py:run_al
 
 - Kernel/sim isolation, lineage, docs freshness → check `report_freshness_tool` / `report_schema_check_tool` first (via `develop_validate`).
 - Never hand-edit `data/topics/*/graph.json` (derived view).
-
-## Agent Scope Note
-
-- Do not re-read `PhasePlan.md` or `AGENTS.md` — auto-loaded/historical.
-- Keep plan ≤1 file (`research_development.json` + `.md`); lazy-load kernel/docs only on gated branch.
 
 ## Execution Mode — Ask First
 

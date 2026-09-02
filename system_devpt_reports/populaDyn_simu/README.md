@@ -72,13 +72,19 @@ popula_dyn/
 ├── core/
 │   ├── unit_agent.py      # Generic agent with behavior list
 │   ├── agent_factory.py   # Creates typed agents
-│   ├── spatial_engine.py # Grid management
+│   ├── resource_engine.py # Simulates resource creation, movement, allocation, consumption, scarcity, abundance, and optimization across all unit systems.
+│   ├── spatial_engine.py # Manages unit positions in toroidal space.
+│   ├── event_bridge.py # Connects simulation outputs into the kernel cognition pipeline.
 │   ├── simulation_model.py # Main model
 │   └── world_engine.py   # Integration layer
 ├── behaviours/            # Modular behaviors
 │   ├── move, harvest, consume, reproduce
 │   ├── survival, heal, produce, trade
 │   └── regrow, learn, idle
+├── simulations_config/            # Modular behaviors
+│   └── agriculture.yaml
+├── constants.py
+├── ontology.yaml
 └── behavior_registry.py  # Registry
 ```
 

@@ -1,5 +1,5 @@
 # Session end ask
-- In this session did you feel the need of any other `tool` or any post chat, mid chat or pre chat task `hook` which would have been useful to implement plan or fixes faster and more efficiently using lesser number of tokens. Also suggest methods or tools so that if an agent next time tries to access the same files, it could do it much faster or with accuracy and precision, so they not keep repeating same patterns.In which step the most tokens are spend and how can it be saved by making a tool or some other trick. Also which are the tool call patterns which gets repeated and we hardcode in the harness itself  to chain those tools ao that llms have to work lesser and smaller llms could work efiiciently with lesser drift. Compare your recommendations with already existing tools, dont suggest duplicates doing same functionality with different name, only suggest novel helpful tools.
+- In this session did you feel the need of any other `tool` or any post chat, mid chat or pre chat task `hook` which would have been useful to implement plan or fixes faster and more efficiently using lesser number of tokens. Also suggest methods or tools so that if an agent next time tries to access the same files, it could do it much faster or with accuracy and precision, so they not keep repeating same patterns.In which step the most tokens are spend and how can it be saved by making a tool or some other trick. Also which are the tool call patterns which gets repeated and we hardcode in the harness itself  to chain those tools ao that llms have to work lesser and smaller llms could work efiiciently with lesser drift. Compare your recommendations with already existing tools in `Agentic_Unit_PIE/system_devpt_reports/agent_core/README.md`, dont suggest duplicates doing same functionality with different name, only suggest novel helpful tools.
 
 - Give multiple suggestions based on the files you accessed in this session so that project lines of code could be reduced without changing functionality, making def out of repeated code blocks which are bigger than 25 loc (individually not cumulative) and repeated 2 or more times and cumulatively save more than 50 loc. Only report those which save more than 50 loc cumulatively as we dont want non trivial defs pile up in the codebase.Look for dead code candidates, Also how execution time , token consumption could be improved and optimized for future agents. 
 
@@ -27,8 +27,10 @@ Also give suggestions for this workflow optimization, patterns which could be av
 
 - I want to make self development loop so that kernel and the simulation can be co developed together. The problem I am facing is that when an agent run simulation registered the outcomes in semantic memory the results which we registered as graph could not be contradicted because they look similar in structure for jaccard token and embedding similarity comparisions.
 
+-  You are not allowed to read complete project or module code. You have a budget of 75k total tokens including thinking and ip/op context under which you should complete the task, so you must read code files judiciously so that your context window does not fill with unrelated code which does not relate to the task.
+
 # GROK session
-grok --resume 01a05ba2-436a-7c32-ac7d-f4dc7949b2c5
+grok --resume 01a06170-e581-7360-b166-0688bfda701e
 
 # Questions
 
@@ -46,3 +48,5 @@ grok --resume 01a05ba2-436a-7c32-ac7d-f4dc7949b2c5
 
 - **Git commit line** 
 - iter1: MODEL hyp_pop_collapse_08 + run_policy_birth10 + infra: workflow_states persist + hypothesis hydrate + data/units/simulations migration
+
+# Develop stock analyzer

@@ -84,28 +84,6 @@ The game displays live metrics:
 - **Births/Deaths**: Cumulative counts per year
 - **Specialist Counts**: Current numbers of each agent type
 
-
-## 🏗️ Project Structure
-
-```
-python/Popula/
-├── README.md                # This documentation
-├── feature_list.md                  # Todo list of features to be added
-├── constants.py             # Simulation parameters
-├── base_classes.py          # Core agent and grid classes
-├── agents.py                # Agent implementations
-├── model.py                 # Agricultural model
-├── simulation.py            # Simulation runner and plotting
-├── PopuDyn.py               # Main entry point for simulation
-├── devpt_log.md             # Log of features addition in project
-├── Insight.md               # Insight from analysing the simulation plot
-├── simulation_game.py       # Game server entry point 
-├── simulation_plot.png      # Plot obtained after running the main simulation
-├── static/
-│   └── game.html           # Simulation game script
-└── DevptPhases.md               # Development phases
-```
-
 ## 🎯 Agent Behaviors
 
 ### Farmers

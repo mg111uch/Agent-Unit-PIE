@@ -1,7 +1,7 @@
 ## Codebase size
-Total files processed: 428
-Total lines of code: 73269
-Total tokens: 577521
+Total files processed: 437
+Total lines of code: 76669
+Total tokens: 618873
 ## End Codebase size
 
 ## Directory Structure 
@@ -17,7 +17,7 @@ Total tokens: 577521
 │   ├── [] session6.md [76 LOC, 1208 tokens]
 │   ├── [] session7.md [43 LOC, 1038 tokens]
 │   └── [] session8.md [22 LOC, 550 tokens]
-├── scripts/ [2481 LOC, 21219 tokens]
+├── scripts/ [2551 LOC, 22102 tokens]
 │   ├── lib/ [120 LOC, 816 tokens]
 │   │   ├── __init__.py
 │   │   └── [] citations.py [120 LOC, 816 tokens]
@@ -28,7 +28,7 @@ Total tokens: 577521
 │   ├── [] smoke_kernel.py [188 LOC, 1864 tokens]
 │   ├── [] render_recent_changes.py [115 LOC, 974 tokens]
 │   ├── [] render_status.py [133 LOC, 1033 tokens]
-│   ├── [] find_untested_parameters.py [194 LOC, 1401 tokens]
+│   ├── [] find_untested_parameters.py [206 LOC, 1542 tokens]
 │   ├── [] link_gap_blockers.py [124 LOC, 1165 tokens]
 │   ├── [] backfill_topics.py [46 LOC, 375 tokens]
 │   ├── [] render_index.py [100 LOC, 926 tokens]
@@ -37,9 +37,9 @@ Total tokens: 577521
 │   ├── [] rename_tools.py [101 LOC, 703 tokens]
 │   ├── [] detect_tool_bypass.py [109 LOC, 915 tokens]
 │   ├── [] migrate_popu_sim_nodes.py [178 LOC, 1479 tokens]
-│   ├── [] topic_ops.py [381 LOC, 3912 tokens]
+│   ├── [] topic_ops.py [439 LOC, 4654 tokens]
 │   └── [] validate_capabilities.py [210 LOC, 1948 tokens]
-├── codebase/ [86179 LOC, 607708 tokens]
+├── codebase/ [88795 LOC, 638551 tokens]
 │   ├── storage/ [808 LOC, 3826 tokens]
 │   │   ├── raw_observation_storage.py
 │   │   ├── [] unit_storage.py [432 LOC, 2036 tokens]
@@ -89,6 +89,15 @@ Total tokens: 577521
 │   │   ├── [] screenRecord.py [144 LOC, 971 tokens]
 │   │   ├── [] llama_cpp.py [40 LOC, 270 tokens]
 │   │   └── [] gemini_doc_clean.py [86 LOC, 622 tokens]
+│   ├── development/ [980 LOC, 11083 tokens]
+│   │   ├── [X] validation_gate.py [134 LOC, 1537 tokens]
+│   │   ├── [X] development_state.py [126 LOC, 1266 tokens]
+│   │   ├── [X] contracts.py [84 LOC, 878 tokens]
+│   │   ├── [X] workflow_engine.py [126 LOC, 1766 tokens]
+│   │   ├── [] __init__.py [1 LOC, 12 tokens]
+│   │   ├── [X] develop_tools.py [383 LOC, 4124 tokens]
+│   │   └── [X] eval_harness.py [126 LOC, 1500 tokens]
+│   ├── popula_dyn/
 │   ├── prompt_fragments/ [208 LOC, 3159 tokens]
 │   │   ├── [] meta_playbook.md [5 LOC, 108 tokens]
 │   │   ├── [] onboarding.md [30 LOC, 414 tokens]
@@ -105,9 +114,9 @@ Total tokens: 577521
 │   │   ├── [] sys_devpt_reports.md [49 LOC, 681 tokens]
 │   │   ├── [] base_persona.md [9 LOC, 133 tokens]
 │   │   └── [] debate_playbook.md [4 LOC, 59 tokens]
-│   ├── kernel/ [15590 LOC, 79858 tokens]
-│   │   ├── persistence/ [725 LOC, 5558 tokens]
-│   │   │   ├── [] db.py [725 LOC, 5558 tokens]
+│   ├── kernel/ [17069 LOC, 94882 tokens]
+│   │   ├── persistence/ [915 LOC, 7485 tokens]
+│   │   │   ├── [] db.py [915 LOC, 7485 tokens]
 │   │   │   └── __init__.py
 │   │   ├── config/ [16 LOC, 128 tokens]
 │   │   │   ├── [] kernel_config.py [16 LOC, 128 tokens]
@@ -117,19 +126,19 @@ Total tokens: 577521
 │   │   │   ├── [] timestamps.py [223 LOC, 849 tokens]
 │   │   │   ├── [] paths.py [173 LOC, 711 tokens]
 │   │   │   └── [] ids.py [160 LOC, 713 tokens]
-│   │   ├── schemas/ [975 LOC, 6402 tokens]
+│   │   ├── schemas/ [1171 LOC, 8171 tokens]
 │   │   │   ├── [] hypothesis_schema.py [47 LOC, 399 tokens]
-│   │   │   ├── simulation_schema.py
+│   │   │   ├── [X] simulation_schema.py [196 LOC, 1769 tokens]
 │   │   │   ├── memory_schema.py
 │   │   │   ├── [] pattern_schema.py [252 LOC, 1574 tokens]
 │   │   │   ├── [] event_schema.py [219 LOC, 1345 tokens]
 │   │   │   ├── [] unit_schema.py [159 LOC, 1075 tokens]
 │   │   │   ├── [] signal_schema.py [129 LOC, 899 tokens]
 │   │   │   └── [] relation_schema.py [169 LOC, 1110 tokens]
-│   │   ├── hypothesis/ [1003 LOC, 5919 tokens]
-│   │   │   ├── [] hypothesis_engine.py [387 LOC, 2034 tokens]
+│   │   ├── hypothesis/ [1221 LOC, 8274 tokens]
+│   │   │   ├── [] hypothesis_engine.py [446 LOC, 2509 tokens]
 │   │   │   ├── validation_engine.py
-│   │   │   ├── [] contradiction_gate.py [131 LOC, 1432 tokens]
+│   │   │   ├── [] contradiction_gate.py [290 LOC, 3312 tokens]
 │   │   │   └── [] confidence_engine.py [485 LOC, 2453 tokens]
 │   │   ├── ontology/ [3106 LOC, 12058 tokens]
 │   │   │   ├── [] event_types.py [408 LOC, 1864 tokens]
@@ -140,18 +149,18 @@ Total tokens: 577521
 │   │   │   ├── [] signal_types.py [319 LOC, 1307 tokens]
 │   │   │   ├── hypothesis_types.py
 │   │   │   └── [] resource_types.py [464 LOC, 1593 tokens]
-│   │   ├── memory/ [1214 LOC, 7416 tokens]
+│   │   ├── memory/ [1286 LOC, 7930 tokens]
 │   │   │   ├── [] working_memory.py [247 LOC, 1543 tokens]
-│   │   │   ├── [] memory_engine.py [223 LOC, 1488 tokens]
+│   │   │   ├── [] memory_engine.py [295 LOC, 2002 tokens]
 │   │   │   ├── [] episodic_memory.py [308 LOC, 1781 tokens]
 │   │   │   ├── [] semantic_memory.py [436 LOC, 2604 tokens]
 │   │   │   └── pattern_memory.py
-│   │   ├── retrieval/ [2849 LOC, 13748 tokens]
+│   │   ├── retrieval/ [2957 LOC, 14823 tokens]
 │   │   │   ├── [] timeline_retriever.py [527 LOC, 2351 tokens]
-│   │   │   ├── [] semantic_retriever.py [546 LOC, 2996 tokens]
+│   │   │   ├── [] semantic_retriever.py [598 LOC, 3505 tokens]
 │   │   │   ├── [] unit_retriever.py [407 LOC, 1834 tokens]
 │   │   │   ├── [] pattern_retriever.py [551 LOC, 2547 tokens]
-│   │   │   ├── [] retrieval_engine.py [401 LOC, 1916 tokens]
+│   │   │   ├── [] retrieval_engine.py [457 LOC, 2482 tokens]
 │   │   │   ├── [] hierarchy_retriever.py [408 LOC, 1995 tokens]
 │   │   │   └── [] relation_retriever.py [9 LOC, 109 tokens]
 │   │   ├── extractors/ [210 LOC, 1442 tokens]
@@ -173,25 +182,17 @@ Total tokens: 577521
 │   │   │   ├── [] trend_detector.py [381 LOC, 2053 tokens]
 │   │   │   ├── [] pattern_engine.py [408 LOC, 2165 tokens]
 │   │   │   └── causal_engine.py
+│   │   ├── [X] simulation_version.py [177 LOC, 1850 tokens]
 │   │   ├── [] context_builder.py [400 LOC, 1791 tokens]
 │   │   ├── [] observation_pipeline.py [289 LOC, 1434 tokens]
-│   │   ├── [] compression_engine.py [320 LOC, 1736 tokens]
+│   │   ├── [X] simulator_registry.py [77 LOC, 679 tokens]
+│   │   ├── [X] compression_engine.py [482 LOC, 4218 tokens]
+│   │   ├── [X] validity.py [149 LOC, 1401 tokens]
 │   │   ├── [] unit_registry.py [426 LOC, 1921 tokens]
 │   │   ├── [] ontology_registry.py [432 LOC, 1750 tokens]
-│   │   └── [] __init__.py [186 LOC, 777 tokens]
-│   ├── units/ [339 LOC, 1677 tokens]
-│   │   ├── countries/
-│   │   ├── codebases/
-│   │   ├── organizations/
-│   │   └── cities/ [339 LOC, 1677 tokens]
-│   │       ├── lucknow/
-│   │       ├── delhi/
-│   │       ├── kanpur/
-│   │       ├── city_summary_generator.py
-│   │       ├── city_signal_mapper.py
-│   │       ├── city_pattern_detector.py
-│   │       └── [] city_initializer.py [339 LOC, 1677 tokens]
-│   ├── modules/ [47297 LOC, 322987 tokens]
+│   │   ├── [] __init__.py [186 LOC, 777 tokens]
+│   │   └── [X] git_version.py [130 LOC, 972 tokens]
+│   ├── modules/ [47756 LOC, 328489 tokens]
 │   │   ├── astro_chart/ [731 LOC, 7612 tokens]
 │   │   │   ├── [] style.css [108 LOC, 638 tokens]
 │   │   │   ├── [] main.py [59 LOC, 390 tokens]
@@ -397,8 +398,8 @@ Total tokens: 577521
 │   │   │   ├── [] IssuesFix.md [146 LOC, 2354 tokens]
 │   │   │   ├── [] README.md [300 LOC, 3337 tokens]
 │   │   │   └── [] usage.md [474 LOC, 5342 tokens]
-│   │   ├── simulators/ [5243 LOC, 32896 tokens]
-│   │   │   ├── popula_dyn/ [4773 LOC, 29238 tokens]
+│   │   ├── simulators/ [5539 LOC, 36844 tokens]
+│   │   │   ├── popula_dyn/ [4856 LOC, 30296 tokens]
 │   │   │   │   ├── static/ [474 LOC, 3447 tokens]
 │   │   │   │   │   └── [] game.html [474 LOC, 3447 tokens]
 │   │   │   │   ├── simulations_config/ [15 LOC, 52 tokens]
@@ -407,34 +408,35 @@ Total tokens: 577521
 │   │   │   │   │   ├── [] agriculture.yaml [15 LOC, 52 tokens]
 │   │   │   │   │   ├── ecosystem.yaml
 │   │   │   │   │   └── ai_society.yaml
-│   │   │   │   ├── core/ [2682 LOC, 14273 tokens]
+│   │   │   │   ├── core/ [2708 LOC, 14639 tokens]
 │   │   │   │   │   ├── [] unit_agent.py [428 LOC, 2090 tokens]
 │   │   │   │   │   ├── [] resource_engine.py [640 LOC, 2851 tokens]
-│   │   │   │   │   ├── [] spatial_engine.py [148 LOC, 1055 tokens]
+│   │   │   │   │   ├── [] spatial_engine.py [152 LOC, 1142 tokens]
 │   │   │   │   │   ├── [] agent_factory.py [204 LOC, 1252 tokens]
 │   │   │   │   │   ├── [] event_bridge.py [236 LOC, 1109 tokens]
 │   │   │   │   │   ├── [] world_engine.py [668 LOC, 3010 tokens]
-│   │   │   │   │   └── [] simulation_model.py [358 LOC, 2906 tokens]
-│   │   │   │   ├── behaviours/ [856 LOC, 4445 tokens]
+│   │   │   │   │   └── [X] simulation_model.py [380 LOC, 3185 tokens]
+│   │   │   │   ├── behaviours/ [873 LOC, 4773 tokens]
 │   │   │   │   │   ├── [] consume.py [66 LOC, 316 tokens]
-│   │   │   │   │   ├── [] survival.py [96 LOC, 471 tokens]
+│   │   │   │   │   ├── [] survival.py [91 LOC, 469 tokens]
 │   │   │   │   │   ├── [] idle.py [27 LOC, 96 tokens]
 │   │   │   │   │   ├── [] learn.py [38 LOC, 157 tokens]
-│   │   │   │   │   ├── [] produce.py [77 LOC, 461 tokens]
+│   │   │   │   │   ├── [] produce.py [79 LOC, 496 tokens]
 │   │   │   │   │   ├── [] __init__.py [53 LOC, 340 tokens]
 │   │   │   │   │   ├── [] regrow.py [46 LOC, 222 tokens]
-│   │   │   │   │   ├── [] trade.py [132 LOC, 700 tokens]
+│   │   │   │   │   ├── [] trade.py [135 LOC, 743 tokens]
 │   │   │   │   │   ├── [] base_behavior.py [49 LOC, 211 tokens]
 │   │   │   │   │   ├── [] harvest.py [62 LOC, 317 tokens]
-│   │   │   │   │   ├── [] reproduce.py [84 LOC, 500 tokens]
-│   │   │   │   │   ├── [] heal.py [71 LOC, 393 tokens]
-│   │   │   │   │   └── [] move.py [55 LOC, 261 tokens]
-│   │   │   │   ├── [] constants.py [28 LOC, 291 tokens]
+│   │   │   │   │   ├── [] reproduce.py [97 LOC, 702 tokens]
+│   │   │   │   │   ├── [] heal.py [73 LOC, 428 tokens]
+│   │   │   │   │   └── [] move.py [57 LOC, 276 tokens]
+│   │   │   │   ├── [] constants.py [31 LOC, 346 tokens]
 │   │   │   │   ├── [] simulation_game.py [204 LOC, 1466 tokens]
 │   │   │   │   ├── [] main.py [16 LOC, 100 tokens]
+│   │   │   │   ├── [X] ontology.yaml [37 LOC, 309 tokens]
 │   │   │   │   ├── [] behavior_registry.py [133 LOC, 739 tokens]
 │   │   │   │   └── [] SimDvptPhases.md [365 LOC, 4425 tokens]
-│   │   │   └── [] simulation_connector.py [470 LOC, 3658 tokens]
+│   │   │   └── [X] simulation_connector.py [683 LOC, 6548 tokens]
 │   │   ├── graph_editor/ [1672 LOC, 16255 tokens]
 │   │   │   ├── script/ [1041 LOC, 10730 tokens]
 │   │   │   │   ├── [] geometry.js [100 LOC, 1190 tokens]
@@ -451,10 +453,10 @@ Total tokens: 577521
 │   │   │   ├── [] main.py [233 LOC, 2137 tokens]
 │   │   │   └── [] index.html [113 LOC, 1243 tokens]
 │   │   ├── stock_analyser/
-│   │   ├── argu_god/ [1764 LOC, 13996 tokens]
-│   │   │   ├── engine/ [1290 LOC, 10041 tokens]
+│   │   ├── argu_god/ [1927 LOC, 15550 tokens]
+│   │   │   ├── engine/ [1453 LOC, 11595 tokens]
 │   │   │   │   ├── [] debate.py [381 LOC, 3070 tokens]
-│   │   │   │   ├── [] topic_store.py [439 LOC, 3616 tokens]
+│   │   │   │   ├── [] topic_store.py [602 LOC, 5170 tokens]
 │   │   │   │   ├── [] loop.py [34 LOC, 192 tokens]
 │   │   │   │   ├── [] retriever.py [14 LOC, 85 tokens]
 │   │   │   │   ├── [] expand.py [46 LOC, 433 tokens]
@@ -485,7 +487,7 @@ Total tokens: 577521
 │   │   ├── [] store.js [165 LOC, 1420 tokens]
 │   │   ├── [] app.js [32 LOC, 177 tokens]
 │   │   └── [] index.html [248 LOC, 4699 tokens]
-│   ├── agent_core/ [14777 LOC, 131533 tokens]
+│   ├── agent_core/ [14814 LOC, 132444 tokens]
 │   │   ├── server/ [1025 LOC, 7945 tokens]
 │   │   │   ├── [] ws_handler.py [412 LOC, 3213 tokens]
 │   │   │   ├── [] routes.py [128 LOC, 1079 tokens]
@@ -493,7 +495,7 @@ Total tokens: 577521
 │   │   │   ├── [] __init__.py [164 LOC, 1143 tokens]
 │   │   │   ├── [] encrypt_env.py [198 LOC, 1595 tokens]
 │   │   │   └── [] audit.py [87 LOC, 685 tokens]
-│   │   ├── tools/ [6767 LOC, 63560 tokens]
+│   │   ├── tools/ [6804 LOC, 64471 tokens]
 │   │   │   ├── code_rag/ [856 LOC, 8524 tokens]
 │   │   │   │   ├── [] tools.py [447 LOC, 4451 tokens]
 │   │   │   │   ├── [] __init__.py [21 LOC, 138 tokens]
@@ -523,14 +525,14 @@ Total tokens: 577521
 │   │   │   ├── [] debate_ops.py [9 LOC, 66 tokens]
 │   │   │   ├── [] undo_ops.py [143 LOC, 987 tokens]
 │   │   │   ├── [] context_dump.py [137 LOC, 1400 tokens]
-│   │   │   ├── [] __init__.py [584 LOC, 8421 tokens]
+│   │   │   ├── [] __init__.py [620 LOC, 9324 tokens]
 │   │   │   ├── [] tool_introspect.py [393 LOC, 3739 tokens]
 │   │   │   ├── [] git_ops.py [136 LOC, 919 tokens]
 │   │   │   ├── [] ast_ops.py [330 LOC, 2907 tokens]
 │   │   │   ├── [] file_ops.py [419 LOC, 4128 tokens]
 │   │   │   ├── [] exec_ops.py [124 LOC, 988 tokens]
 │   │   │   ├── [] expand_ops.py [9 LOC, 65 tokens]
-│   │   │   ├── [] registry.py [322 LOC, 2703 tokens]
+│   │   │   ├── [] registry.py [323 LOC, 2711 tokens]
 │   │   │   └── [] types.py [41 LOC, 247 tokens]
 │   │   ├── loop/ [2109 LOC, 17735 tokens]
 │   │   │   ├── [] streaming.py [63 LOC, 384 tokens]
@@ -591,22 +593,32 @@ Total tokens: 577521
 │   ├── [] GPT_5-5_Chat.md [4962 LOC, 18724 tokens]
 │   ├── [] backupPlans.md [119 LOC, 1813 tokens]
 │   ├── [] Devpt_phases.md [333 LOC, 2918 tokens]
-│   └── [X] README.md [896 LOC, 4466 tokens]
-├── data/ [1578 LOC, 17168 tokens]
-│   ├── chroma_db/
-│   ├── workflows/ [937 LOC, 11620 tokens]
+│   └── [] README.md [896 LOC, 4466 tokens]
+├── data/ [10562 LOC, 17751929 tokens]
+│   ├── chroma_db/ [8199 LOC, 17725053 tokens]
+│   │   ├── 6bb1c6cd-e3b1-4e4f-b026-ca31b41bf0d4/ [3 LOC, 16800086 tokens]
+│   │   │   ├── link_lists.bin
+│   │   │   ├── [] header.bin [1 LOC, 86 tokens]
+│   │   │   ├── [] data_level0.bin [1 LOC, 16760000 tokens]
+│   │   │   └── [] length.bin [1 LOC, 40000 tokens]
+│   │   └── [] chroma.sqlite3 [8196 LOC, 924967 tokens]
+│   ├── workflows/ [1305 LOC, 18517 tokens]
 │   │   ├── [] implement_fix.json [48 LOC, 1329 tokens]
-│   │   ├── [] workflow_graph.html [209 LOC, 2185 tokens]
+│   │   ├── [] workflow_graph.html [221 LOC, 2336 tokens]
+│   │   ├── [X] research_development.md [151 LOC, 2240 tokens]
+│   │   ├── [] docs_update.json [29 LOC, 578 tokens]
 │   │   ├── [] main_agent.json [67 LOC, 255 tokens]
 │   │   ├── [] Agent_graph.json [66 LOC, 1368 tokens]
-│   │   ├── [] kernel_ops.json [37 LOC, 891 tokens]
+│   │   ├── [X] research_development.json [39 LOC, 1542 tokens]
+│   │   ├── [X] kernel_ops.json [43 LOC, 1082 tokens]
 │   │   ├── [] minimal_context.json [44 LOC, 1121 tokens]
-│   │   ├── [] popu_sim_dev.md [176 LOC, 1285 tokens]
+│   │   ├── [X] popu_sim_dev.md [222 LOC, 2112 tokens]
 │   │   ├── [] node_sections.md [41 LOC, 476 tokens]
-│   │   ├── [] popu_sim_dev.json [34 LOC, 762 tokens]
-│   │   ├── [] kernel_ops.md [131 LOC, 1147 tokens]
+│   │   ├── [X] popu_sim_dev.json [44 LOC, 1111 tokens]
+│   │   ├── [X] kernel_ops.md [150 LOC, 1496 tokens]
 │   │   ├── [] Agent_graph.md [36 LOC, 627 tokens]
-│   │   └── [] agent_sub_graph.json [48 LOC, 174 tokens]
+│   │   ├── [] agent_sub_graph.json [48 LOC, 174 tokens]
+│   │   └── [] docs_update.md [56 LOC, 670 tokens]
 │   ├── memory/
 │   │   ├── semantic/
 │   │   ├── working/
@@ -623,7 +635,7 @@ Total tokens: 577521
 │   ├── workspaces/
 │   │   ├── local/
 │   │   └── test123/
-│   ├── topics/ [536 LOC, 4789 tokens]
+│   ├── topics/ [612 LOC, 5895 tokens]
 │   │   ├── theism_atheism/ [302 LOC, 2349 tokens]
 │   │   │   ├── wiki/ [7 LOC, 255 tokens]
 │   │   │   │   └── [] index.md [7 LOC, 255 tokens]
@@ -633,10 +645,8 @@ Total tokens: 577521
 │   │   │   └── metadata.json
 │   │   ├── project_history/ [189 LOC, 1810 tokens]
 │   │   │   └── [] graph.json [189 LOC, 1810 tokens]
-│   │   ├── popu_sim/ [41 LOC, 618 tokens]
-│   │   │   └── [] graph.json [41 LOC, 618 tokens]
-│   │   └── demo/ [4 LOC, 12 tokens]
-│   │       └── [] graph.json [4 LOC, 12 tokens]
+│   │   └── popu_sim/ [121 LOC, 1736 tokens]
+│   │       └── [] graph.json [121 LOC, 1736 tokens]
 │   ├── mindmaps/ [105 LOC, 759 tokens]
 │   │   ├── global_aggregated/
 │   │   └── local_user/ [105 LOC, 759 tokens]
@@ -646,15 +656,23 @@ Total tokens: 577521
 │   │       ├── [] human_mind_map.md [6 LOC, 41 tokens]
 │   │       ├── [] interaction_log.json [35 LOC, 277 tokens]
 │   │       └── [] mindmap.json [13 LOC, 89 tokens]
-│   └── units/
-│       └── humans/
-│           ├── development/
-│           ├── finance/
-│           ├── mind/
-│           ├── body/
-│           ├── profile/
-│           └── system_summery.md
-├── system_devpt_reports/ [2913 LOC, 39736 tokens]
+│   ├── units/ [339 LOC, 1677 tokens]
+│   │   ├── countries/
+│   │   ├── codebases/
+│   │   ├── humans/
+│   │   │   ├── development/
+│   │   │   ├── finance/
+│   │   │   ├── mind/
+│   │   │   ├── body/
+│   │   │   └── profile/
+│   │   ├── organizations/
+│   │   └── cities/ [339 LOC, 1677 tokens]
+│   │       ├── lucknow/
+│   │       ├── delhi/
+│   │       ├── kanpur/
+│   │       └── [] city_initializer.py [339 LOC, 1677 tokens]
+│   └── [] kernelDB_sqlcmd.md [2 LOC, 28 tokens]
+├── system_devpt_reports/ [3655 LOC, 46458 tokens]
 │   ├── debate_argu/ [336 LOC, 3437 tokens]
 │   │   ├── [] roadmap.md [24 LOC, 224 tokens]
 │   │   ├── [] status.md [28 LOC, 692 tokens]
@@ -663,15 +681,15 @@ Total tokens: 577521
 │   │   ├── [] roadmap.md [184 LOC, 3958 tokens]
 │   │   ├── [] status.md [20 LOC, 267 tokens]
 │   │   └── [] README.md [251 LOC, 2180 tokens]
-│   ├── populaDyn_simu/ [276 LOC, 1776 tokens]
-│   │   ├── [] roadmap.md [21 LOC, 128 tokens]
+│   ├── populaDyn_simu/ [157 LOC, 1740 tokens]
+│   │   ├── [] roadmap.md [26 LOC, 243 tokens]
 │   │   ├── [] status.md [15 LOC, 155 tokens]
-│   │   └── [] README.md [240 LOC, 1493 tokens]
-│   ├── kernel/ [377 LOC, 7011 tokens]
+│   │   └── [] README.md [116 LOC, 1342 tokens]
+│   ├── kernel/ [414 LOC, 9576 tokens]
 │   │   ├── [] roadmap.md [125 LOC, 3102 tokens]
 │   │   ├── [] status.md [25 LOC, 503 tokens]
-│   │   ├── [] README.md [35 LOC, 974 tokens]
-│   │   └── [] usage.md [192 LOC, 2432 tokens]
+│   │   ├── [] README.md [55 LOC, 2715 tokens]
+│   │   └── [] usage.md [209 LOC, 3256 tokens]
 │   ├── agent_core/ [1318 LOC, 18359 tokens]
 │   │   ├── [] roadmap.md [283 LOC, 4612 tokens]
 │   │   ├── [] status.md [38 LOC, 1143 tokens]
@@ -679,15 +697,19 @@ Total tokens: 577521
 │   │   ├── [] gemini_benchmark.md [166 LOC, 1924 tokens]
 │   │   ├── [] workflow_graphs.md [75 LOC, 786 tokens]
 │   │   ├── [] tool_chaining.md [83 LOC, 880 tokens]
-│   │   ├── [X] README.md [229 LOC, 4333 tokens]
+│   │   ├── [] README.md [229 LOC, 4333 tokens]
 │   │   └── [] model_routing.md [108 LOC, 1132 tokens]
 │   ├── [] PlanFixes2.md [108 LOC, 1544 tokens]
-│   ├── [] TODO.md [43 LOC, 1204 tokens]
-│   ├── FeatureIdeas.md
-│   └── FixesIssues.md
-├── [] opencode.json [16 LOC, 163 tokens]
+│   ├── [] TODO.md [48 LOC, 1327 tokens]
+│   ├── [] FeatureIdeas.md [3 LOC, 68 tokens]
+│   ├── [] FixesIssues.md [816 LOC, 4002 tokens]
+│   └── PhasePlan.md
+├── tests/ [44 LOC, 714 tokens]
+│   └── [] test_popula_dyn_smoke.py [44 LOC, 714 tokens]
+├── [] opencode.json [50 LOC, 351 tokens]
+├── [X] HANDOVER.md [87 LOC, 1789 tokens]
 ├── [] AGENTS.md [39 LOC, 569 tokens]
-├── [] codefiles_map.md [676 LOC, 12741 tokens]
+├── [] codefiles_map.md [694 LOC, 13054 tokens]
 ├── [] .gitignore [12 LOC, 40 tokens]
 ├── [] README.md [93 LOC, 458 tokens]
 └── [] project_tools.md [32 LOC, 1182 tokens]

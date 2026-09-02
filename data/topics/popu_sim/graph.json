@@ -1,6 +1,16 @@
 {
   "nodes": [
     {
+      "name": "Init",
+      "side": "argument",
+      "premise": "Initial seed node for popu_sim topic. Simulation topic for population dynamics experimentation.",
+      "evidence": [],
+      "examples": [],
+      "sources": [],
+      "discipline": "",
+      "confidence": 1.0
+    },
+    {
       "name": "popula_dyn consolidated IMPROVED (2 runs, avg 25.0%)",
       "side": "consolidated",
       "premise": "Consolidated popula_dyn: IMPROVED over 2 runs; outcomes IMPROVED; avg delta 25.0%; sources test_improved_0,test_improved_1",
@@ -61,9 +71,9 @@
       "confidence": 1.0
     },
     {
-      "name": "popula_dyn consolidated IMPROVED (3 runs, avg 93.3%)",
+      "name": "popula_dyn consolidated IMPROVED (4 runs, avg 241.5%)",
       "side": "consolidated",
-      "premise": "Consolidated popula_dyn: IMPROVED over 3 runs; outcomes IMPROVED; avg delta 93.3%; sources argu_popu_sim_run_policy_birth12_Findings,argu_popu_sim_run_policy_birth06_Findings,argu_popu_sim_run_policy_birth10_Findings",
+      "premise": "Consolidated popula_dyn: IMPROVED over 4 runs; outcomes IMPROVED; avg delta 241.5%; sources argu_popu_sim_run_policy_metabolism05_Findings,argu_popu_sim_run_policy_metabolism10_Findings,argu_popu_sim_run_policy_metabolism20_Findings",
       "evidence": [],
       "examples": [],
       "sources": [],
@@ -99,6 +109,106 @@
       "sources": [],
       "discipline": "",
       "confidence": 1.0
+    },
+    {
+      "name": "popula_dyn consolidated STABLE (2 runs, avg -9.4%)",
+      "side": "consolidated",
+      "premise": "Consolidated popula_dyn: STABLE over 2 runs; outcomes STABLE; avg delta -9.4%; sources argu_popu_sim_run_basic_Findings,argu_popu_sim_run_policy_materadius01_Findings",
+      "evidence": [],
+      "examples": [],
+      "sources": [],
+      "discipline": "",
+      "confidence": 0.9
+    },
+    {
+      "name": "run_policy_metabolism05 Findings",
+      "side": "argument",
+      "premise": "Status: IMPROVED\nPopulation: 140 (baseline 41) +241.5%\nDeaths: 79 (STABLE vs baseline 67)\n Births: 169\n Wealth: 8849.9 (baseline 3103.6)\n AvgSkill: 0.55\n Signals: prosperity=63.21343317091595 intensity=5.0; healthcare_gap=0 intensity=6.0\n Interpretation: No obvious failure mode detected",
+      "evidence": [],
+      "examples": [],
+      "sources": [],
+      "discipline": "",
+      "confidence": 1.0
+    },
+    {
+      "name": "run_policy_metabolism10 Findings",
+      "side": "argument",
+      "premise": "Status: IMPROVED\nPopulation: 140 (baseline 41) +241.5%\nDeaths: 79 (STABLE vs baseline 67)\n Births: 169\n Wealth: 7358.4 (baseline 3103.6)\n AvgSkill: 0.55\n Signals: prosperity=52.560267570680026 intensity=5.0; healthcare_gap=0 intensity=6.0\n Interpretation: No obvious failure mode detected",
+      "evidence": [],
+      "examples": [],
+      "sources": [],
+      "discipline": "",
+      "confidence": 1.0
+    },
+    {
+      "name": "run_policy_metabolism20 Findings",
+      "side": "argument",
+      "premise": "Status: IMPROVED\nPopulation: 140 (baseline 41) +241.5%\nDeaths: 79 (STABLE vs baseline 67)\n Births: 169\n Wealth: 4338.1 (baseline 3103.6)\n AvgSkill: 0.55\n Signals: healthcare_gap=0 intensity=6.0\n Interpretation: No obvious failure mode detected",
+      "evidence": [],
+      "examples": [],
+      "sources": [],
+      "discipline": "",
+      "confidence": 1.0
+    },
+    {
+      "name": "run_policy_metabolism06 Findings",
+      "side": "argument",
+      "premise": "Status: IMPROVED\nPopulation: 140 (baseline 41) +241.5%\nDeaths: 79 (STABLE vs baseline 67)\n Births: 169\n Wealth: 3796.7 (baseline 3103.6)\n AvgSkill: 0.55\n Signals: healthcare_gap=0 intensity=6.0\n Interpretation: No obvious failure mode detected",
+      "evidence": [],
+      "examples": [],
+      "sources": [],
+      "discipline": "",
+      "confidence": 1.0
+    },
+    {
+      "name": "run_policy_metabolism25 Findings",
+      "side": "argument",
+      "premise": "Status: DEGRADED\nPopulation: 22 (baseline 41) -46.3%\nDeaths: 107 (SPIKED vs baseline 67)\n Births: 79\n Wealth: 160.3 (baseline 3103.6)\n AvgSkill: 0.52\n Signals: resource_scarcity=7.28448641131648 intensity=7.0(HIGH); population_decline=22 intensity=8.0(HIGH); healthcare_gap=0 intensity=6.0; population_trend_declining=22 intensity=5.0\n Interpretation: Wealth decline may indicate resource depletion",
+      "evidence": [],
+      "examples": [],
+      "sources": [],
+      "discipline": "",
+      "confidence": 1.0
+    },
+    {
+      "name": "run_policy_metabolism35 Findings",
+      "side": "argument",
+      "premise": "Status: DEGRADED\nPopulation: 32 (baseline 41) -22.0%\nDeaths: 107 (SPIKED vs baseline 67)\n Births: 89\n Wealth: 143.8 (baseline 3103.6)\n AvgSkill: 0.51\n Signals: resource_scarcity=4.49225711117591 intensity=7.0(HIGH); healthcare_gap=0 intensity=6.0; population_trend_declining=32 intensity=5.0\n Interpretation: Wealth decline may indicate resource depletion",
+      "evidence": [],
+      "examples": [],
+      "sources": [],
+      "discipline": "",
+      "confidence": 1.0
+    },
+    {
+      "name": "popula_dyn consolidated DEGRADED (2 runs, avg -34.1%)",
+      "side": "consolidated",
+      "premise": "Consolidated popula_dyn: DEGRADED over 2 runs; outcomes DEGRADED; avg delta -34.1%; sources argu_popu_sim_run_policy_metabolism25_Findings,argu_popu_sim_run_policy_metabolism35_Findings",
+      "evidence": [],
+      "examples": [],
+      "sources": [],
+      "discipline": "",
+      "confidence": 0.9
+    },
+    {
+      "name": "run_policy_metabolism07 Findings",
+      "side": "argument",
+      "premise": "Status: IMPROVED\nPopulation: 140 (baseline 41) +241.5%\nDeaths: 79 (STABLE vs baseline 67)\n Births: 169\n Wealth: 3299.2 (baseline 3103.6)\n AvgSkill: 0.55\n Signals: healthcare_gap=0 intensity=6.0\n Interpretation: No obvious failure mode detected",
+      "evidence": [],
+      "examples": [],
+      "sources": [],
+      "discipline": "",
+      "confidence": 1.0
+    },
+    {
+      "name": "run_policy_metabolism27 Findings",
+      "side": "argument",
+      "premise": "Status: DEGRADED\nPopulation: 12 (baseline 41) -70.7%\nDeaths: 101 (SPIKED vs baseline 67)\n Births: 63\n Wealth: 157.2 (baseline 3103.6)\n AvgSkill: 0.50\n Signals: resource_scarcity=13.102777357287136 intensity=7.0(HIGH); population_decline=12 intensity=8.0(HIGH)\n Interpretation: Wealth decline may indicate resource depletion",
+      "evidence": [],
+      "examples": [],
+      "sources": [],
+      "discipline": "",
+      "confidence": 1.0
     }
   ],
   "edges": [
@@ -115,6 +225,61 @@
     {
       "source": "run_policy_materadius05 Findings",
       "target": "run_policy_materadius01 Findings",
+      "relation": "contradicts"
+    },
+    {
+      "source": "run_policy_metabolism25 Findings",
+      "target": "run_policy_metabolism05 Findings",
+      "relation": "contradicts"
+    },
+    {
+      "source": "run_policy_metabolism25 Findings",
+      "target": "run_policy_metabolism10 Findings",
+      "relation": "contradicts"
+    },
+    {
+      "source": "run_policy_metabolism25 Findings",
+      "target": "run_policy_metabolism20 Findings",
+      "relation": "contradicts"
+    },
+    {
+      "source": "run_policy_metabolism25 Findings",
+      "target": "popula_dyn consolidated IMPROVED (4 runs, avg 241.5%)",
+      "relation": "contradicts"
+    },
+    {
+      "source": "run_policy_metabolism25 Findings",
+      "target": "run_policy_metabolism06 Findings",
+      "relation": "contradicts"
+    },
+    {
+      "source": "run_policy_metabolism35 Findings",
+      "target": "run_policy_metabolism05 Findings",
+      "relation": "contradicts"
+    },
+    {
+      "source": "run_policy_metabolism35 Findings",
+      "target": "run_policy_metabolism10 Findings",
+      "relation": "contradicts"
+    },
+    {
+      "source": "run_policy_metabolism35 Findings",
+      "target": "run_policy_metabolism20 Findings",
+      "relation": "contradicts"
+    },
+    {
+      "source": "run_policy_metabolism35 Findings",
+      "target": "popula_dyn consolidated IMPROVED (4 runs, avg 241.5%)",
+      "relation": "contradicts"
+    },
+    {
+      "source": "run_policy_metabolism35 Findings",
+      "target": "run_policy_metabolism06 Findings",
+      "relation": "contradicts"
+    },
+    {
+      "source": "run_policy_metabolism27 Findings",
+      "target": "run_policy_metabolism07 Findings",
       "relation": "contradicts"
     }
   ]

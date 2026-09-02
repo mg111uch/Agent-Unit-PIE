@@ -1,0 +1,50 @@
+[
+  {
+    "signal_type": "population_growth",
+    "value": 2,
+    "category": "demographic",
+    "subtype": "birth_rate",
+    "intensity": 0.2,
+    "trend": "stable"
+  },
+  {
+    "signal_type": "mortality_event",
+    "value": 4,
+    "category": "demographic",
+    "subtype": "death_rate",
+    "intensity": 0.4,
+    "trend": "significant"
+  },
+  {
+    "signal_type": "resource_scarcity",
+    "value": 6.177769646831858,
+    "category": "economic",
+    "subtype": "wealth",
+    "intensity": 7.0,
+    "trend": "declining"
+  },
+  {
+    "signal_type": "healthcare_gap",
+    "value": 0,
+    "category": "social",
+    "subtype": "services",
+    "intensity": 6.0,
+    "trend": "deficit"
+  },
+  {
+    "signal_type": "trade_gap",
+    "value": 0,
+    "category": "economic",
+    "subtype": "services",
+    "intensity": 4.0,
+    "trend": "deficit"
+  },
+  {
+    "signal_type": "population_trend_declining",
+    "value": 56,
+    "category": "demographic",
+    "subtype": "trend",
+    "intensity": 5.0,
+    "trend": "declining"
+  }
+]
