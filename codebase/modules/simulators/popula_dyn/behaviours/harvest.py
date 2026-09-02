@@ -47,7 +47,6 @@ class HarvestBehavior(BaseBehavior):
             return {}
 
         patch.modify_resource("crops", -harvest_amount)
-        unit.modify_resource("wealth", harvest_amount)
 
         return {
             "resource_updates": {

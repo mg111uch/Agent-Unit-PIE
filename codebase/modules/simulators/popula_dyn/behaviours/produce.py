@@ -63,7 +63,6 @@ class ProduceBehavior(BaseBehavior):
         customer.set_state(
             "skill", customer.get_state("skill", 0.5) + tool_quality
         )
-        unit.modify_resource("wealth", tool_cost)
         unit.set_state("inventory", inventory - 1)
 
         return {

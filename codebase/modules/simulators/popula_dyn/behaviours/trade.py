@@ -112,7 +112,6 @@ class TradeBehaviorAg(BaseBehavior):
 
         richest.modify_resource("wealth", -trade_amount)
         poorest.modify_resource("wealth", transfer)
-        unit.modify_resource("wealth", margin)
 
         if model:
             if hasattr(model, "trades_executed"):
