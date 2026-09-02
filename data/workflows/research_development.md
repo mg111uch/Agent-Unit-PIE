@@ -139,6 +139,15 @@ develop_commit({"message": "Phase 8: gate L3 sim edit, validated", "add_all": Tr
 # advances loop→orient on success
 ```
 
+## Post Commit
+
+Handover pointer only — no history duplication. Hydrates `data/kernel.db` via `development_state.generate_state` + `kernel/retrieval/retrieval_engine.search` to emit `next_query` for `HANDOVER.md` bottom task. Previous iteration results fetched from kernel memory, not copied. `HANDOVER.md` task = `develop_orient({"query":next_query,"simulator":"popula_dyn"})`.
+
+```python
+from development.development_state import generate_state
+generate_state("popula_dyn")  # hydrated loop→post_commit→orient
+```
+
 ## Stop
 
 `doctor --json` + `list --topic`. Render via `data/workflows/workflow_graph.html?graph=research_development.json` (now handles both legacy array and dict nodes).

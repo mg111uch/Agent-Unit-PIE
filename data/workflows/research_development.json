@@ -17,7 +17,8 @@
     {"id":"update_knowledge","goal":"Contradiction gate + patterns + compress (materialized view)","inputs":["finding_id"],"preconditions":["finding_registered"],"actions":["contradiction_check","pattern_detect","compress"],"outputs":["knowledge_updated"],"success":["knowledge_updated"],"failure":["contradiction"],"next":["evaluate"],"x":150,"y":580,"w":180,"h":80,"color":"#e0e0ff","shape":"rect","mdRef":"research_development.md#update-knowledge","subgraph":"kernel_ops.json:store+topics+compress"},
     {"id":"evaluate","goal":"Did model/kernel need improvement?","inputs":["knowledge_updated"],"preconditions":["knowledge_updated"],"actions":["eval_gap"],"outputs":["eval_result"],"success":["evaluated"],"failure":[],"next":["validate","hypothesis"],"x":250,"y":700,"w":180,"h":70,"color":"#ffe0b0","shape":"diamond","mdRef":"research_development.md#evaluate"},
     {"id":"validate","goal":"Tests + smoke + lineage + regression (graduated L0-L6)","inputs":["run_id","commit"],"preconditions":[],"actions":["run_tests","smoke","lineage"],"outputs":["validation"],"success":["validation_pass"],"failure":["validation_fail"],"next":["loop"],"x":250,"y":810,"w":180,"h":70,"color":"#ffffff","shape":"rect","mdRef":"research_development.md#validate"},
-    {"id":"loop","goal":"Loop or stop + gated self-improvement commit","inputs":["validation"],"preconditions":[],"actions":[],"outputs":[],"success":["continue","stop"],"failure":[],"next":["orient","stop"],"x":250,"y":910,"w":150,"h":70,"color":"#ffe0b0","shape":"diamond","mdRef":"research_development.md#loop"},
+    {"id":"loop","goal":"Loop or stop + gated self-improvement commit","inputs":["validation"],"preconditions":[],"actions":[],"outputs":[],"success":["continue","stop"],"failure":[],"next":["post_commit"],"x":250,"y":910,"w":150,"h":70,"color":"#ffe0b0","shape":"diamond","mdRef":"research_development.md#loop"},
+    {"id":"post_commit","goal":"Post-commit handover pointer — emit next orient query only (hydrated from DB, no history duplication)","inputs":["validation"],"preconditions":[],"actions":["hydrate","next_query_suggest"],"outputs":["next_query"],"success":["emitted"],"failure":[],"next":["orient","stop"],"x":250,"y":960,"w":180,"h":50,"color":"#e0e0ff","shape":"rect","mdRef":"research_development.md#post-commit"},
     {"id":"stop","goal":"Terminal","inputs":[],"preconditions":[],"actions":[],"outputs":[],"success":["done"],"failure":[],"next":[],"x":250,"y":1010,"w":150,"h":60,"color":"#f0c0c0","shape":"ellipse","mdRef":"research_development.md#stop"}
   ],
   "edges": [
@@ -33,7 +34,8 @@
     ["evaluate","validate","eval==kernel_or_model",[]],
     ["evaluate","hypothesis","eval==next_question",[]],
     ["validate","loop","",[]],
-    ["loop","orient","continue",[]],
-    ["loop","stop","stop",[]]
+    ["loop","post_commit","",[]],
+    ["post_commit","orient","continue",[]],
+    ["post_commit","stop","stop",[]]
   ]
 }
