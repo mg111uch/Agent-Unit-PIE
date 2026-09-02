@@ -38,8 +38,12 @@ class SurvivalBehavior(BaseBehavior):
 
         death_prob = params.get("death_rate", 0.01)
 
-        if wealth < 1.0:
+        if wealth <= 0:
+            death_prob *= 8.0
+        elif wealth < 1.0:
             death_prob *= 5.0
+        elif wealth < 2.0:
+            death_prob *= 2.0
 
         if age > 60:
             death_prob *= 1.5

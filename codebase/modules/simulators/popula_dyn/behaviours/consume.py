@@ -54,11 +54,6 @@ class ConsumeMetabolismBehavior(BaseBehavior):
         params = world_state.get("params", {})
         metabolism = params.get("metabolism", 1.0)
 
-        wealth = unit.get_resource("wealth", 0)
-        new_wealth = max(0, wealth - metabolism)
-
-        unit.set_state("wealth", new_wealth)
-
         return {
             "resource_updates": {
                 "wealth": -metabolism
