@@ -103,6 +103,7 @@ class SimulationModel:
                 )
                 unit.set_state("fertility", fertility)
                 unit.set_state("current_crops", fertility)
+                unit.resources["crops"] = float(fertility)
         initial_pop = params.get("initial_pop", PARAMS["initial_pop"])
         for _ in range(initial_pop):
             x = rng.randint(0, grid_width)

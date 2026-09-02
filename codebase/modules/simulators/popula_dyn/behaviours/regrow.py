@@ -31,8 +31,6 @@ class RegrowBehavior(BaseBehavior):
             fertility, current_crops + (fertility - current_crops) * regrowth_rate
         )
 
-        unit.set_state("current_crops", new_crops)
-
         return {
             "resource_updates": {
                 "crops": new_crops - current_crops
