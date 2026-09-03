@@ -168,23 +168,31 @@ def develop_experiment(input_data) -> str:
         # try to move to experiment if allowed
         pass
     try:
-        from modules.simulators.simulation_connector import SimulationConnector
-        conn=SimulationConnector(simulator=sim)
-        # baseline policy: inherit baseline params so all policy runs share same baseline experiment
-        merged = dict(params or {})
-        if baseline:
-            base_params = conn.get_params(baseline)
-            if base_params:
-                merged = {**base_params, **merged}
-                # ensure version consistency: keep baseline horizon/pop unless explicitly overridden
+        if sim == "stock_analyser":
+            from modules.stock_analyser.connector import StockConnector as _SC
+            conn = _SC(simulator=sim)
+            summary = conn.run_and_extract(dict(params or {}), run_id)
+            premise = conn.generate_structured_premise(run_id, baseline)
+            reg = conn.register_to_kernel(run_id, premise, baseline)
+            finding = reg.get("name", "")
         else:
-            # without baseline, suggest uniform naming helper
-            if run_id != "run_basic" and not params:
-                return "Error: policy run requires baseline_run_id='run_basic' and params e.g. {'birth_rate':0.08} to keep uniform baseline"
-        summary=conn.run_and_extract(merged, run_id)
-        premise=conn.generate_structured_premise(run_id, baseline)
-        reg=conn.register_to_kernel(run_id, premise, baseline)
-        finding=reg.get("name","")
+            from modules.simulators.simulation_connector import SimulationConnector as _PSC
+            conn = _PSC(simulator=sim)
+            # baseline policy: inherit baseline params so all policy runs share same baseline experiment
+            merged = dict(params or {})
+            if baseline:
+                base_params = conn.get_params(baseline)
+                if base_params:
+                    merged = {**base_params, **merged}
+                    # ensure version consistency: keep baseline horizon/pop unless explicitly overridden
+            else:
+                # without baseline, suggest uniform naming helper
+                if run_id != "run_basic" and not params:
+                    return "Error: policy run requires baseline_run_id='run_basic' and params e.g. {'birth_rate':0.08} to keep uniform baseline"
+            summary=conn.run_and_extract(merged, run_id)
+            premise=conn.generate_structured_premise(run_id, baseline)
+            reg=conn.register_to_kernel(run_id, premise, baseline)
+            finding=reg.get("name","")
         if workflow_engine.current=="decide_branch" and "experiment" in workflow_engine.allowed():
             try: workflow_engine.advance("experiment", produced={"branch":"experiment"}, success="branch_chosen")
             except: pass
@@ -205,15 +213,21 @@ def develop_analyze(input_data) -> str:
     run_id=d.get("run_id","")
     # lightweight: signals + recent knowledge + pattern/compress trigger
     try:
-        from modules.simulators.simulation_connector import SimulationConnector
-        conn=SimulationConnector(simulator=sim)
-        sigs=conn.get_signals(run_id) if run_id else []
-        # compression (materialized view already via validity, but explicit)
-        try:
-            from kernel.compression_engine import CompressionEngine
-            comp=CompressionEngine().compress_observations()
-        except Exception as e:
-            comp={"error":str(e)}
+        if sim == "stock_analyser":
+            from modules.stock_analyser.connector import StockConnector as _SC2
+            sigs = _SC2(simulator=sim).get_signals(run_id) if run_id else []
+            comp: Any = {"note": "stock: no compression"}
+        else:
+            from modules.simulators.simulation_connector import SimulationConnector
+            conn=SimulationConnector(simulator=sim)
+            sigs=conn.get_signals(run_id) if run_id else []
+        # compression (materialized view already via validity, but explicit; skip for stock)
+        if sim != "stock_analyser":
+            try:
+                from kernel.compression_engine import CompressionEngine
+                comp=CompressionEngine().compress_observations()
+            except Exception as e:
+                comp={"error":str(e)}
         workflow_engine=_wf()
         if workflow_engine.current=="update_knowledge":
             try: workflow_engine.advance("evaluate", produced={"knowledge_updated":True}, success="knowledge_updated")

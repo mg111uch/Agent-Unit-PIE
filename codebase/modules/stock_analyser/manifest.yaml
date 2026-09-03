@@ -1,0 +1,7 @@
+kind: domain_engine
+simulator: stock_analyser
+topic: sim_stock
+patterns:
+  - codebase/modules/stock_analyser/**
+timeframes: [1D, 15m]
+notes: Domain engine for Indian equity/options research; cognition stays in PIE kernel.

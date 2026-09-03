@@ -1,0 +1,293 @@
+{
+ "strategy": {
+  "name": "volume_breakout_pullback~exit114~exit121~lookback141~hold143~position151~position179~position193~timeframe201",
+  "universe": "MY_UNIVERSE_200",
+  "timeframe": "15m",
+  "features": {},
+  "entry": {
+   "op": "and",
+   "args": [
+    {
+     "op": "gt",
+     "args": [
+      {
+       "field": "close"
+      },
+      {
+       "op": "lag",
+       "args": [
+        {
+         "op": "rolling_max",
+         "args": [
+          {
+           "field": "close"
+          },
+          {
+           "const": 15.0
+          }
+         ]
+        },
+        {
+         "const": 1.0
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "op": "gt",
+     "args": [
+      {
+       "op": "ratio",
+       "args": [
+        {
+         "field": "volume"
+        },
+        {
+         "op": "lag",
+         "args": [
+          {
+           "op": "rolling_mean",
+           "args": [
+            {
+             "field": "volume"
+            },
+            {
+             "const": 10.0
+            }
+           ]
+          },
+          {
+           "const": 1.0
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "const": 7.0
+      }
+     ]
+    }
+   ]
+  },
+  "stop_atr": 1.33,
+  "take_atr": 3.37,
+  "max_hold": 9,
+  "position_frac": 0.14,
+  "max_positions": 5,
+  "fee_bps": 5.0,
+  "slippage_bps": 5.0,
+  "flat_cost": 0.0,
+  "atr_n": 14,
+  "meta": {
+   "parent": "volume_breakout_pullback~exit114~exit121~lookback141~hold143~position151~position179~position193",
+   "mutation": "timeframe"
+  }
+ },
+ "dataset": "csv",
+ "symbols": [
+  "360ONE",
+  "ABB",
+  "ABCAPITAL",
+  "ADANIENSOL",
+  "ADANIENT",
+  "ADANIGREEN",
+  "ADANIPORTS",
+  "ADANIPOWER",
+  "ALKEM",
+  "AMBUJACEM",
+  "APLAPOLLO",
+  "APOLLOHOSP",
+  "ASHOKLEY",
+  "ASIANPAINT",
+  "ASTRAL",
+  "ATGL",
+  "AUBANK",
+  "AUROPHARMA",
+  "AXISBANK",
+  "BAJAJ-AUTO",
+  "BAJAJFINSV",
+  "BAJAJHLDNG",
+  "BAJFINANCE",
+  "BANKBARODA",
+  "BANKINDIA",
+  "BDL",
+  "BEL",
+  "BHARATFORG",
+  "BHARTIARTL",
+  "BHEL",
+  "BIOCON",
+  "BLUESTARCO",
+  "BOSCHLTD",
+  "BPCL",
+  "BRITANNIA",
+  "BSE",
+  "CANBK",
+  "CGPOWER",
+  "CHOLAFIN",
+  "CIPLA",
+  "COALINDIA",
+  "COCHINSHIP",
+  "COFORGE",
+  "COLPAL",
+  "CONCOR",
+  "COROMANDEL",
+  "CUMMINSIND",
+  "DABUR",
+  "DIVISLAB",
+  "DIXON",
+  "DLF",
+  "DMART",
+  "DRREDDY",
+  "EICHERMOT",
+  "ENRIN",
+  "ETERNAL",
+  "EXIDEIND",
+  "FEDERALBNK",
+  "FORTIS",
+  "GAIL",
+  "GLENMARK",
+  "GMRAIRPORT",
+  "GODFRYPHLP",
+  "GODREJCP",
+  "GODREJPROP",
+  "GRASIM",
+  "GROWW",
+  "GVT&D",
+  "HAL",
+  "HAVELLS",
+  "HCLTECH",
+  "HDFCAMC",
+  "HDFCBANK",
+  "HDFCLIFE",
+  "HEROMOTOCO",
+  "HINDALCO",
+  "HINDPETRO",
+  "HINDUNILVR",
+  "HINDZINC",
+  "HUDCO",
+  "HYUNDAI",
+  "ICICIAMC",
+  "ICICIBANK",
+  "ICICIGI",
+  "IDEA",
+  "IDFCFIRSTB",
+  "INDHOTEL",
+  "INDIANB",
+  "INDIGO",
+  "INDUSINDBK",
+  "INDUSTOWER",
+  "INFY",
+  "IOC",
+  "IRCTC",
+  "IREDA",
+  "IRFC",
+  "ITC",
+  "JINDALSTEL",
+  "JIOFIN",
+  "JSWENERGY",
+  "JSWSTEEL",
+  "JUBLFOOD",
+  "KALYANKJIL",
+  "KEI",
+  "KOTAKBANK",
+  "KPITTECH",
+  "LAURUSLABS",
+  "LENSKART",
+  "LGEINDIA",
+  "LICHSGFIN",
+  "LODHA",
+  "LT",
+  "LTF",
+  "LTM",
+  "LUPIN",
+  "M&M",
+  "M&MFIN",
+  "MANKIND",
+  "MARICO",
+  "MARUTI",
+  "MAXHEALTH",
+  "MAZDOCK",
+  "MCX",
+  "MFSL",
+  "MOTHERSON",
+  "MOTILALOFS",
+  "MPHASIS",
+  "MRF",
+  "MUTHOOTFIN",
+  "NATIONALUM",
+  "NAUKRI",
+  "NESTLEIND",
+  "NHPC",
+  "NMDC",
+  "NTPC",
+  "NYKAA",
+  "OBEROIRLTY",
+  "OFSS",
+  "OIL",
+  "ONGC",
+  "PAGEIND",
+  "PATANJALI",
+  "PAYTM",
+  "PERSISTENT",
+  "PFC",
+  "PHOENIXLTD",
+  "PIDILITIND",
+  "PIIND",
+  "PNB",
+  "POLICYBZR",
+  "POLYCAB",
+  "POWERGRID",
+  "POWERINDIA",
+  "PREMIERENE",
+  "PRESTIGE",
+  "RADICO",
+  "RECLTD",
+  "RELIANCE",
+  "RVNL",
+  "SAIL",
+  "SBICARD",
+  "SBILIFE",
+  "SBIN",
+  "SHREECEM",
+  "SHRIRAMFIN",
+  "SIEMENS",
+  "SOLARINDS",
+  "SRF",
+  "SUNPHARMA",
+  "SUPREMEIND",
+  "SUZLON",
+  "SWIGGY",
+  "TATACAP",
+  "TATACOMM",
+  "TATACONSUM",
+  "TATAELXSI",
+  "TATAINVEST",
+  "TATAPOWER",
+  "TATASTEEL",
+  "TCS",
+  "TECHM",
+  "TIINDIA",
+  "TITAN",
+  "TMCV",
+  "TMPV",
+  "TORNTPHARM",
+  "TRENT",
+  "TVSMOTOR",
+  "ULTRACEMCO",
+  "UNIONBANK",
+  "UNITDSPR",
+  "UPL",
+  "VBL",
+  "VEDL",
+  "VMM",
+  "VOLTAS",
+  "WAAREEENER",
+  "WIPRO",
+  "YESBANK",
+  "ZYDUSLIFE"
+ ],
+ "timeframe": "1D",
+ "start_cash": 50000.0
+}

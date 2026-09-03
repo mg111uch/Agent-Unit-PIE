@@ -1,0 +1,23 @@
+{
+ "n": 0,
+ "wins": 0,
+ "losses": 0,
+ "avg_ret": 0.0,
+ "median_ret": 0.0,
+ "max_dd": 0.0,
+ "sharpe": 0.0,
+ "sortino": 0.0,
+ "cagr": 0.0,
+ "final_equity": 50000.0,
+ "total_costs": 0.0,
+ "net_profit": 0,
+ "avg_net_per_trade": 0.0,
+ "equity_curve": [
+  50000.0,
+  50000.0,
+  50000.0,
+  50000.0,
+  50000.0
+ ],
+ "excluded": []
+}

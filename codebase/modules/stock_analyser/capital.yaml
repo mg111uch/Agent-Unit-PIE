@@ -1,0 +1,13 @@
+capital: 50000
+flat_cost_per_roundtrip: 60
+max_positions: 8
+min_history_bars: 60
+scale_step: 25000
+min_trades: 20
+retire_after: 25
+screen_min_trades: 3
+screen_min_avg_net: -30.0
+# scale-up gate: evaluated on closed paper trades, human approves the step
+scale_min_closed_trades: 10
+scale_min_avg_net_per_trade: 90
+scale_max_drawdown: -0.15

@@ -10,6 +10,7 @@ from typing import Dict, List, Any, Optional
 import yaml
 
 _SIM_ROOT = Path(__file__).resolve().parents[1] / "modules" / "simulators"
+_MOD_ROOT = Path(__file__).resolve().parents[1] / "modules"
 
 def _is_simulator_dir(p: Path) -> bool:
     if not p.is_dir() or p.name.startswith("_") or p.name.startswith("."):
@@ -47,6 +48,20 @@ def discover_simulators() -> Dict[str, Dict[str, Any]]:
                 "topic": topic,
                 "manifest": manifest,
             }
+    # domain engines: modules/stock_analyser with manifest.yaml (Plan M6)
+    try:
+        sa = _MOD_ROOT / "stock_analyser"
+        if sa.is_dir() and (sa / "manifest.yaml").exists() and "stock_analyser" not in out:
+            m: Dict[str, Any] = {}
+            try:
+                m = yaml.safe_load((sa / "manifest.yaml").read_text()) or {}
+            except Exception:
+                pass
+            out["stock_analyser"] = {"root": sa,
+                "patterns": m.get("patterns", ["codebase/modules/stock_analyser/**"]),
+                "topic": m.get("topic", "sim_stock"), "manifest": m}
+    except Exception:
+        pass
     # fallback ensure popula_dyn always present for backward compat
     if "popula_dyn" not in out and (_SIM_ROOT / "popula_dyn").exists():
         out["popula_dyn"] = {
@@ -72,6 +87,9 @@ def sim_topic(sim_name: str) -> str:
 def sim_patterns(sim_name: str) -> List[str]:
     sim = get_simulator(sim_name)
     if sim:
-        # convert to git pathspec style
-        return [f"codebase/modules/simulators/{p}" for p in sim["patterns"]]
+        # honor absolute codebase/... patterns (stock_analyser manifest)
+        pats = []
+        for p in sim["patterns"]:
+            pats.append(p if p.startswith("codebase/") else f"codebase/modules/simulators/{p}")
+        return pats
     return [f"codebase/modules/simulators/{sim_name}/**"]

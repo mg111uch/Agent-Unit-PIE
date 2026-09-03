@@ -2,7 +2,7 @@
   "meta": {
     "id": "research_development",
     "goal": "Unified development operating loop — LLM thinks inside workflow, engine enforces transitions",
-    "subgraphs": ["kernel_ops.json", "popu_sim_dev.json"],
+    "subgraphs": ["kernel_ops.json", "popu_sim_dev.json", "stock_analyser_dev.json"],
     "determinism": "LLM provides goal/hypothesis/interpretation; executor provides allowed next states, preconditions, validation, recovery",
     "persistence": "Single SQLite data/kernel.db — workflow_states per-simulator (current/history/outputs) + hypotheses/semantic_nodes; fresh agent orients by hydrating DB (no handover Steps duplication)"
   },

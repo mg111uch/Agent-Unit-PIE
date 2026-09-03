@@ -1,0 +1,26 @@
+# Semantic impact for kernel lineage (concepts_for_changed_files).
+modules:
+  features/algebra:
+    concepts: [feature_algebra, abnormal_volume, momentum]
+    outputs: [feature_series]
+  strategies/model:
+    concepts: [strategy_edge, entry_logic, exit_logic]
+    outputs: [strategy]
+  strategies/genome:
+    concepts: [strategy_edge, mutation]
+    outputs: [strategy]
+  backtest/engine:
+    concepts: [backtest, execution, drawdown]
+    outputs: [metrics, trades]
+  backtest/validation:
+    concepts: [robustness, walk_forward, out_of_sample]
+    outputs: [robustness_score]
+  data/store:
+    concepts: [market_data, universe]
+    outputs: [bars]
+  research/job:
+    concepts: [research_loop, hypothesis]
+    outputs: [finding]
+  kernel_bridge:
+    concepts: [finding, lineage]
+    outputs: [finding_id]

@@ -33,6 +33,7 @@ def required_level(path: str) -> int:
     p = Path(path).as_posix().lower()
     if "data/workflows" in p: return 4
     if "codebase/kernel" in p: return 6
+    if "codebase/modules/stock_analyser" in p: return 3
     if "codebase/modules/simulators" in p: return 3
     if "codebase/development" in p: return 4
     if p.endswith(".md") and "workflow" in p: return 4

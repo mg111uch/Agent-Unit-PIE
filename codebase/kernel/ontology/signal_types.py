@@ -247,6 +247,40 @@ SIGNAL_TYPES: Dict[str, SignalTypeDefinition] = {
         ]
     ),
 
+    # MARKET-MICROSTRUCTURE / RESEARCH SIGNALS (stock_analyser domain)
+
+    "abnormal_volume": SignalTypeDefinition(
+        signal_type="abnormal_volume",
+        category="market",
+        description="Volume far above rolling baseline.",
+        data_type="float",
+        related_patterns=["volume_breakout"],
+    ),
+
+    "momentum_burst": SignalTypeDefinition(
+        signal_type="momentum_burst",
+        category="market",
+        description="Short-horizon momentum expansion.",
+        data_type="float",
+        related_patterns=["momentum"],
+    ),
+
+    "drawdown_breach": SignalTypeDefinition(
+        signal_type="drawdown_breach",
+        category="market",
+        description="Backtest drawdown beyond tolerance.",
+        data_type="float",
+        related_patterns=["risk_breach"],
+    ),
+
+    "strategy_edge": SignalTypeDefinition(
+        signal_type="strategy_edge",
+        category="market",
+        description="Strategy shows risk-adjusted edge in backtest.",
+        data_type="float",
+        related_patterns=["robust_edge"],
+    ),
+
     # AI / KNOWLEDGE SIGNALS
 
     "pattern_detected": SignalTypeDefinition(

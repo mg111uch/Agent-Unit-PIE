@@ -1,0 +1,15 @@
+{
+  "nodes": [
+    {
+      "name": "stock_run_basic",
+      "side": "neutral",
+      "premise": "smoke premise",
+      "evidence": [],
+      "examples": [],
+      "sources": [],
+      "discipline": "",
+      "confidence": 1.0
+    }
+  ],
+  "edges": []
+}

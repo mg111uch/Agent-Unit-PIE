@@ -6,27 +6,6 @@ A comprehensive simulation system modeling human societies with multiple agent t
 
 This project simulates the dynamics of agricultural populations using agent-based modeling. It includes farmers, healers, toolmakers, and traders interacting in a spatial environment, demonstrating concepts like Malthusian traps, economic specialization, and population dynamics.
 
-## 🛠️ Technology Stack
-
-### Backend
-- **Python 3.12**: Core simulation logic
-- **NumPy**: Numerical computations and random number generation
-- **Pandas**: Data collection and analysis
-- **Matplotlib**: Static visualization and plotting
-- **FastAPI**: REST API and WebSocket server
-- **Uvicorn**: ASGI server for FastAPI
-
-### Frontend
-- **PixiJS**: 2D graphics rendering for game visualization
-- **HTML5/CSS3**: UI styling and layout
-- **JavaScript (ES6+)**: Game logic and WebSocket communication
-- **WebSockets**: Real-time bidirectional communication
-
-### Architecture
-- **Agent-Based Modeling**: Mesa-inspired framework
-- **Spatial Grid**: Toroidal multi-agent grid system
-- **Real-time Updates**: WebSocket broadcasting for live simulation
-
 ## 🚀 Getting Started
 
 ### Prerequisites
