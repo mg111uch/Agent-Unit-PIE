@@ -116,7 +116,9 @@ def develop_hypothesis(input_data) -> str:
             desc=d.get("description") or d.get("premise") or title
             cat=d.get("category","model" if "model" in htype else "general")
             conf=float(d.get("confidence",0.6))
-            res=hypothesis_engine.create_hypothesis(hypothesis_id=hid, title=title or hid, description=desc, hypothesis_type=htype, category=cat, confidence=conf, force=bool(d.get("force", False)))
+            md = dict(d.get("metadata") or {})
+            md.setdefault("simulator", sim)
+            res=hypothesis_engine.create_hypothesis(hypothesis_id=hid, title=title or hid, description=desc, hypothesis_type=htype, category=cat, confidence=conf, force=bool(d.get("force", False)), metadata=md)
             if isinstance(res, dict) and res.get("blocked"):
                 return json.dumps(res, separators=(",",":"))
             hid_out=hid

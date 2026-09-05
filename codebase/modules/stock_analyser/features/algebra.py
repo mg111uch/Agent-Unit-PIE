@@ -198,3 +198,28 @@ def validate_expr(expr: Any, depth: int = 0) -> str | None:
         if e:
             return e
     return None
+
+
+COMMUTATIVE = ("and", "or", "add", "mul")
+
+
+def canonical(expr: Any) -> Any:
+    """Normalized AST: canonical form before hashing.
+
+    Sorts args of commutative ops (and/or/add/mul) by their JSON rendering so
+    `A/B`-style reorderings (`B/A` only where mathematically identical) and
+    `and(a,b)` vs `and(b,a)` hash equally. Non-commutative ops keep order.
+    """
+    import json
+    if isinstance(expr, dict):
+        if "const" in expr or "field" in expr:
+            return dict(expr)
+        if "op" in expr:
+            args = [canonical(a) for a in expr.get("args", [])]
+            if expr["op"] in COMMUTATIVE:
+                args = sorted(args, key=lambda a: json.dumps(a, sort_keys=True))
+            return {"op": expr["op"], "args": args}
+        return {k: canonical(v) for k, v in sorted(expr.items())}
+    if isinstance(expr, list):
+        return [canonical(a) for a in expr]
+    return expr

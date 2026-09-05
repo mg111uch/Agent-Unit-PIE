@@ -316,7 +316,7 @@ Expose the debate/simulation pack.
 
 Expose the simulation connector pack.
 
-### tool_packs.git = false
+### tool_packs.git = true
 
 Expose the git pack (gated together with `git_tools_enabled`).
 
@@ -329,7 +329,7 @@ Expose the codebase-atlas retrieval pack.
 Expose the tool-chain pack. Learned recipes are only ever hinted to the agent
 when this pack is on.
 
-### git_tools_enabled = false
+### git_tools_enabled = true
 
 Expose git-aware tools (they still obey the sandbox allowlist).
 

@@ -24,25 +24,42 @@ def _lag(field: str, n: int):
 
 FEATURES: Dict[str, dict] = {
     "ret_1": _sub1(_ratio({"field": "close"}, _lag("close", 1))),
+    "ret_3": _sub1(_ratio({"field": "close"}, _lag("close", 3))),
     "ret_5": _sub1(_ratio({"field": "close"}, _lag("close", 5))),
     "ret_10": _sub1(_ratio({"field": "close"}, _lag("close", 10))),
     "ret_20": _sub1(_ratio({"field": "close"}, _lag("close", 20))),
+    "ret_60": _sub1(_ratio({"field": "close"}, _lag("close", 60))),
     "vol_ratio": _ratio({"field": "volume"},
                         {"op": "rolling_mean", "args": [{"field": "volume"}, {"const": 20}]}),
+    "vol_ratio_5": _ratio({"field": "volume"},
+                          {"op": "rolling_mean", "args": [{"field": "volume"}, {"const": 5}]}),
     "zret_20": {"op": "zscore", "args": [{"field": "returns"}, {"const": 20}]},
     "vol_20": {"op": "rolling_std", "args": [{"field": "returns"}, {"const": 20}]},
+    "trend_20": _sub1(_ratio({"field": "close"},
+                             {"op": "rolling_mean", "args": [{"field": "close"}, {"const": 20}]})),
+    "range_20": {"op": "div", "args": [
+        {"op": "sub", "args": [
+            {"op": "rolling_max", "args": [{"field": "high"}, {"const": 20}]},
+            {"op": "rolling_min", "args": [{"field": "low"}, {"const": 20}]}]},
+        {"field": "close"}]},
     "range_pos": {"op": "div", "args": [
         {"op": "sub", "args": [{"field": "close"},
                                {"op": "rolling_min", "args": [{"field": "low"}, {"const": 20}]}]},
         {"op": "sub", "args": [
             {"op": "rolling_max", "args": [{"field": "high"}, {"const": 20}]},
             {"op": "rolling_min", "args": [{"field": "low"}, {"const": 20}]}]}]},
+    "pos_60": {"op": "div", "args": [
+        {"op": "sub", "args": [{"field": "close"},
+                               {"op": "rolling_min", "args": [{"field": "low"}, {"const": 60}]}]},
+        {"op": "sub", "args": [
+            {"op": "rolling_max", "args": [{"field": "high"}, {"const": 60}]},
+            {"op": "rolling_min", "args": [{"field": "low"}, {"const": 60}]}]}]},
     "dist_high": _sub1(_ratio({"field": "close"},
                               {"op": "rolling_max", "args": [{"field": "high"}, {"const": 20}]})),
 }
 
 
-def symbol_frame(bars: List[Dict], fwd: int = 5, warmup: int = 30) -> List[Dict]:
+def symbol_frame(bars: List[Dict], fwd: int = 5, warmup: int = 65) -> List[Dict]:
     """One symbol -> feature rows. Drops warmup head and label-unknown tail."""
     cols = columns_from_bars(bars)
     series = {name: evaluate(expr, cols) for name, expr in FEATURES.items()}

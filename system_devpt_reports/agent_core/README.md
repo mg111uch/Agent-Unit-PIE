@@ -227,3 +227,57 @@ The native loop is the inverse: the loop owns the per-turn payload (`build_catal
 The server exposes each active-pack playbook as an MCP **resource** (`pie://playbooks/<pack>`, e.g. `pie://playbooks/code_rag`), derived from `prompt_fragments` gating (`FRAGMENT_ORDER`). The client calls `resources/list` once and reads the ones it wants via `resources/read` (resource-aware clients auto-load them into context at session start). MCP has no server→client content-push, so there is **no per-user-message or per-tool-turn sending** — the client pulls once and re-injects as it sees fit. The server advertises `resources` capability with `listChanged`; `hot_reload` emits `notifications/resources/list_changed`. `find_tool`/`get_tool_schema` descriptions point at the resource URIs so the model can discover them.
 
 ----------
+
+## Context
+
+The original token-bloat problem is solved: tool schemas were compressed to
+~237 tokens, first-call accounting is consistent, and the system prompt was
+measured precisely. The three-tier routing architecture is implemented. The
+remaining work is **benchmark-driven**, not another large refactor.
+
+At the last review, the local FunctionGemma tier was implemented but not
+reliable enough to be the default router (misclassification, ~55s CPU
+inference). The response was a pivot: **tier 2 now uses a small cloud model by
+default** (config-switchable to a local model), giving near-instant, accurate
+routing instead of fine-tuning a slow local model.
+
+## Resolution status (original issues)
+
+| # | Issue | Status | Resolution |
+|---|-------|--------|------------|
+| 1 | First-call token accounting inconsistent (899 vs 1,288) | ✅ done | `context_budget.provider_prompt_tokens` (est vs measured labels); `system_prompt_report.py` (deployed = 5,223 ch / 1,288 tok) |
+| 2 | System prompt too large (~1,288 → target 700–900) | ⏳ open | Core-only variant is 831 tokens but is **not enabled** (`system_prompt_core_only: false`) |
+| 3 | Routing makes model walk dirs; needs deterministic preprocess | ✅ done | Deterministic factory → 0 LLM calls for find/read/list/check |
+| 4 | mkdir path awkward; `create_directory` tool | ✅ done | Dedicated tool **dropped by decision**; factory routes create-dir → allowlisted `execute_command("mkdir -p …")` |
+| 5 | Failed-tool recovery wasting an LLM call | ⏸ closed | Deterministic recovery map **dropped by decision**; factory failure falls back to the LLM honestly |
+| 6 | False-success detected, not prevented | ✅ done | Bounded honesty gate in the loop (`FAILURE_SIGNALS`); failures counted, false-success = 0 |
+| 7 | Irrelevant completed-turn history in new turns | ✅ done | `history_relevance` filter (FixesIssues.md): `filter_irrelevant_history` in `loop/session_state.py` (turn segmentation, recency guard, substring/path overlap); wired before `compact()` in `context_manager.build_active_context` with a dropped-turns note; enabled in config.json (`keep_recent=1`, `min_overlap=1`) |
+| 8 | Tool schemas feature-complete | ✅ done | Schema compression landed; stop optimizing further |
+| 9 | Stateful Gemini working | ✅ done | Keep stateful chains, no transcript replay |
+
+## Decisions made and kept
+
+- **No dedicated `create_directory` tool.** The factory handles it via an
+  allowlisted `mkdir -p`, so obvious requests never reach a model.
+- **No deterministic failure-recovery map.** Predictable tool failures are
+  handled honestly: the factory's failure falls back to the LLM rather than
+  guessing a follow-up.
+- **No more tool-schema optimization.** Schemas are feature-complete.
+- **Tier 2 pivoted from a local model to a small cloud model.** FunctionGemma
+  (270M) was not production-accurate and was too slow on CPU. Tier 2's backend
+  is now config-driven (`gemini` / `openrouter` for cloud, `ollama` for local);
+  the local path is retained as an offline option, and the config key was
+  renamed `local_router` → `tier2_model_router` to reflect this.
+
+## Implementation ledger
+
+| Phase | Work | Status |
+|-------|------|--------|
+| 1 | First-call token accounting + `system_prompt_report.py` | ✅ done |
+| 2 | False-success honesty gate | ✅ done |
+| 4 | Deterministic factory (`try_factory`) — 0-LLM fast paths | ✅ done |
+| 6 | Tier-2 model router — fixed 9-action vocabulary, policy gate, pluggable backend | ✅ done (evolved: cloud backend default, 60s timeout) |
+| — | LocalPlanner (legacy local execution loop) removed — superseded by the factory + router | ✅ done |
+| 5 | System prompt reduction (enable core-only) | ⏳ open |
+| 7 | Irrelevant-history classification (FixesIssues.md) | ✅ done | `filter_irrelevant_history` drops zero-overlap completed turns; conservative defaults keep the current turn + newest `keep_recent` |
+

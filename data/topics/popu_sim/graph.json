@@ -71,9 +71,9 @@
       "confidence": 1.0
     },
     {
-      "name": "popula_dyn consolidated IMPROVED (4 runs, avg 241.5%)",
+      "name": "popula_dyn consolidated IMPROVED (2 runs, avg 150.0%)",
       "side": "consolidated",
-      "premise": "Consolidated popula_dyn: IMPROVED over 4 runs; outcomes IMPROVED; avg delta 241.5%; sources argu_popu_sim_run_policy_metabolism05_Findings,argu_popu_sim_run_policy_metabolism10_Findings,argu_popu_sim_run_policy_metabolism20_Findings",
+      "premise": "Consolidated popula_dyn: IMPROVED over 2 runs; outcomes IMPROVED; avg delta 150.0%; sources argu_popu_sim_run_policy_metabolism07_Findings,argu_popu_sim_run_policy_metabolism12_Findings",
       "evidence": [],
       "examples": [],
       "sources": [],
@@ -209,6 +209,26 @@
       "sources": [],
       "discipline": "",
       "confidence": 1.0
+    },
+    {
+      "name": "run_policy_metabolism12 Findings",
+      "side": "argument",
+      "premise": "Status: IMPROVED\nPopulation: 65 (baseline 41) +58.5%\nDeaths: 64 (STABLE vs baseline 67)\n Births: 79\n Wealth: 1067.4 (baseline 3103.6)\n AvgSkill: 0.53\n Signals: resource_scarcity=16.421478448844525 intensity=7.0(HIGH); healthcare_gap=0 intensity=6.0; population_trend_declining=65 intensity=5.0\n Interpretation: Wealth decline may indicate resource depletion",
+      "evidence": [],
+      "examples": [],
+      "sources": [],
+      "discipline": "",
+      "confidence": 1.0
+    },
+    {
+      "name": "run_policy_metabolism17 Findings",
+      "side": "argument",
+      "premise": "Status: DEGRADED\nPopulation: 22 (baseline 41) -46.3%\nDeaths: 90 (STABLE vs baseline 67)\n Births: 62\n Wealth: 286.6 (baseline 3103.6)\n AvgSkill: 0.60\n Signals: resource_scarcity=13.025021898544416 intensity=7.0(HIGH); population_decline=22 intensity=8.0(HIGH); healthcare_gap=0 intensity=6.0; population_trend_declining=22 intensity=5.0\n Interpretation: Wealth decline may indicate resource depletion",
+      "evidence": [],
+      "examples": [],
+      "sources": [],
+      "discipline": "",
+      "confidence": 1.0
     }
   ],
   "edges": [
@@ -244,7 +264,7 @@
     },
     {
       "source": "run_policy_metabolism25 Findings",
-      "target": "popula_dyn consolidated IMPROVED (4 runs, avg 241.5%)",
+      "target": "popula_dyn consolidated IMPROVED (2 runs, avg 150.0%)",
       "relation": "contradicts"
     },
     {
@@ -269,7 +289,7 @@
     },
     {
       "source": "run_policy_metabolism35 Findings",
-      "target": "popula_dyn consolidated IMPROVED (4 runs, avg 241.5%)",
+      "target": "popula_dyn consolidated IMPROVED (2 runs, avg 150.0%)",
       "relation": "contradicts"
     },
     {
@@ -280,6 +300,16 @@
     {
       "source": "run_policy_metabolism27 Findings",
       "target": "run_policy_metabolism07 Findings",
+      "relation": "contradicts"
+    },
+    {
+      "source": "run_policy_metabolism17 Findings",
+      "target": "run_policy_metabolism12 Findings",
+      "relation": "contradicts"
+    },
+    {
+      "source": "run_policy_metabolism17 Findings",
+      "target": "popula_dyn consolidated IMPROVED (2 runs, avg 150.0%)",
       "relation": "contradicts"
     }
   ]

@@ -37,6 +37,23 @@ def _ensure(con) -> None:
         pass
 
 
+def _bars_held(bl: List[Dict], t_in: str, ci: int) -> int:
+    """Bars held like the engine: index distance from fill bar to latest closed."""
+    idx = next((k for k, b in enumerate(bl) if b["ts"] > t_in), None)
+    if idx is None:  # fill bar is last or t_in unknown: fall back to 0
+        idx = next((k for k, b in enumerate(bl) if b["ts"] == t_in), ci)
+    return max(0, ci - idx)
+
+
+def _stale_days(ts: str, now: datetime | None = None) -> int:
+    try:
+        last = datetime.fromisoformat(ts[:10])
+        today = (now or datetime.now(IST)).astimezone(IST).replace(tzinfo=None)
+        return max(0, (today - last).days)
+    except Exception:
+        return 0
+
+
 def _closed_idx(bl: List[Dict], now: datetime | None = None) -> int:
     """Index of latest CLOSED bar; today's bar is forming while market is open."""
     now = (now or datetime.now(IST)).astimezone(IST)
@@ -90,7 +107,7 @@ def step(strategy_d: Dict[str, Any], symbols: List[str], db_path: str | None = N
                               live_from=max(bars[s][ci[s]]["ts"] for s in bars))
             except Exception:
                 ml_sig = {}
-        # 1. fills: first bar open strictly after the signal bar
+        # 1. fills: first bar open strictly after the signal bar (engine parity)
         for oid, sym, sig_ts in con.execute(
                 "SELECT id,symbol,signal_ts FROM paper_orders WHERE strategy=? AND status='PENDING'",
                 (strat.name,)).fetchall():
@@ -102,13 +119,27 @@ def step(strategy_d: Dict[str, Any], symbols: List[str], db_path: str | None = N
                 continue
             fb = fills[0]
             fi = bl.index(fb)
-            equity = _paper_equity(con, strat.name, capital, closes)
-            qty = equity * strat.position_frac / fb["open"] if fb["open"] > 0 else 0
-            if qty <= 0:
-                con.execute("UPDATE paper_orders SET status='CANCELLED' WHERE id=?", (oid,))
+            n_open = con.execute("SELECT COUNT(*) FROM paper_trades WHERE strategy=? AND status='OPEN'",
+                                 (strat.name,)).fetchone()[0]
+            if n_open >= strat.max_positions:  # engine parity: capped book
+                log.append(f"SKIP {sym} book full ({n_open}/{strat.max_positions})")
                 continue
+            prev = bl[fi - 1] if fi >= 1 else None
+            if prev and fb["open"] and prev["close"]:
+                gap = abs(fb["open"] - prev["close"]) / prev["close"]
+                if gap > float(cap.get("paper_max_gap", 0.15)):
+                    con.execute("UPDATE paper_orders SET status='CANCELLED' WHERE id=?", (oid,))
+                    log.append(f"ACTION-SKIP {sym} gap {gap:.1%} (split/bonus?)")
+                    continue
+            equity = _paper_equity(con, strat.name, capital, closes)
             atr = _atr(bl, fi - 1, strat.atr_n) if fi >= 1 else None
             if atr is None:
+                continue
+            from ..backtest.costs import sized_frac as _sized
+            qty = equity * _sized(strat.position_frac, atr, fb["open"], cap) / fb["open"] \
+                if fb["open"] > 0 else 0
+            if qty <= 0:
+                con.execute("UPDATE paper_orders SET status='CANCELLED' WHERE id=?", (oid,))
                 continue
             cost = trade_cost(qty * fb["open"], flat) / 2
             con.execute("INSERT INTO paper_trades(strategy,symbol,t_in,qty,px_in,atr,cost,"
@@ -126,13 +157,8 @@ def step(strategy_d: Dict[str, Any], symbols: List[str], db_path: str | None = N
             last = bl[ci[sym]]
             stop, take = px_in - strat.stop_atr * atr, px_in + strat.take_atr * atr
             px = stop if last["low"] <= stop else (take if last["high"] >= take else None)
-            try:
-                hold = (datetime.fromisoformat(last["ts"]) -
-                        datetime.fromisoformat(t_in)).days
-            except ValueError:
-                hold = 0
-            if px is None and hold >= strat.max_hold:
-                px = last["close"]
+            if px is None and _bars_held(bl, t_in, ci[sym]) >= strat.max_hold:
+                px = last["close"]  # engine parity: bar-count hold, not calendar days
             if px is None:
                 continue
             cost = trade_cost(qty * px, flat) / 2
@@ -142,9 +168,13 @@ def step(strategy_d: Dict[str, Any], symbols: List[str], db_path: str | None = N
                         "status='CLOSED' WHERE id=?", (last["ts"], px, net, cost, tid))
             log.append(f"CLOSE {sym} net Rs{net:.0f}")
         # 3. signals on latest closed bar -> pending for next session
+        stale_after = int(cap.get("paper_stale_days", 5))
         for s, bl in bars.items():
             i = ci[s]
             if i < 1:
+                continue
+            if _stale_days(bl[i]["ts"]) > stale_after:  # recorder downtime: no fresh bars
+                log.append(f"STALE {s} last {bl[i]['ts'][:10]}; no signal")
                 continue
             if is_ml:
                 sl = ml_sig.get(s, [])

@@ -75,6 +75,20 @@ def emit_signals(run_id: str, metrics: Dict[str, Any]) -> List[Dict[str, Any]]:
     return sigs
 
 
+def register_episode_finding(summary: Dict[str, Any]) -> Dict[str, Any]:
+    """P17: one kernel finding per research episode (not per candidate)."""
+    ep = summary.get("episode", "?")
+    n, ready = summary.get("tested", 0), summary.get("n_paper_ready", 0)
+    status = "SUPPORTED" if ready else ("REFUTED" if summary.get("status") == "ALL_RETIRED"
+                                        else "HYPOTHESIS")
+    claim = (f"Stock episode {ep}: {n} candidates on {summary.get('universe','?')} "
+             f"→ {ready} PAPER_READY {summary.get('paper_ready', [])[:5]}; "
+             f"verdicts {summary.get('verdicts', {})}; families {summary.get('families', {})}")
+    return register_finding(claim, [ep], {"tested": n, "paper_ready": ready,
+                                          "verdicts": summary.get("verdicts", {})},
+                            universe=summary.get("universe", ""), status=status)
+
+
 def register_finding(claim: str, experiments: List[str], metrics: Dict[str, Any],
                      universe: str = "", timeframe: str = "1D",
                      status: str = "HYPOTHESIS") -> Dict[str, Any]:

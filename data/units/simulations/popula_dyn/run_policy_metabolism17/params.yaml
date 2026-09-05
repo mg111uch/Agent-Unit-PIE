@@ -1,4 +1,4 @@
-birth_rate: 0.08
+birth_rate: 0.04
 death_rate: 0.01
 fertile_max_age: 50
 fertile_min_age: 15
@@ -15,7 +15,7 @@ mate_radius: 2
 max_age: 60
 metabolism: 1.7
 require_opposite_gender: true
-seed: 42
+seed: null
 toolmaker_cost: 1.0
 toolmaker_production_rate: 0.1
 toolmaker_quality: 0.1

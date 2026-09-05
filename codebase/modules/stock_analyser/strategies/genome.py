@@ -7,19 +7,21 @@ from .model import Strategy
 
 MUTATIONS = ("threshold", "lookback", "exit", "hold", "position", "timeframe", "feature_scale")
 
-ML_MUTATIONS = ("top_n", "depth", "exit", "hold", "position", "features")
+ML_MUTATIONS = ("top_n", "depth", "exit", "hold", "position", "features", "model")
 
-ML_DEFAULTS = {"top_n": 5, "max_depth": 3, "stop_atr": 2.0, "take_atr": 4.0,
+ML_DEFAULTS = {"model": "hgb", "top_n": 5, "max_depth": 3, "stop_atr": 2.0, "take_atr": 4.0,
                "max_hold": 10, "position_frac": 0.2, "max_positions": 3}
+
+ML_MODELS = ("hgb", "rf", "ridge")
 
 
 def ml_seed(universe: str = "MY_UNIVERSE_200", top_n: int = 5) -> Dict[str, Any]:
     from ..ml.dataset import FEATURES
     return {"name": "ml_ranker", "universe": universe, "timeframe": "1D",
             "flat_cost": 0.0,
-            "meta": {"family": "ml", "top_n": top_n, "max_depth": 3,
+            "meta": {"family": "ml", "model": "hgb", "top_n": top_n, "max_depth": 3,
                      "features": list(FEATURES), **{k: v for k, v in ML_DEFAULTS.items()
-                                                    if k not in ("top_n", "max_depth")}}}
+                                                    if k not in ("model", "top_n", "max_depth")}}}
 
 
 def mutate_ml(strategy_d: Dict[str, Any], seed: int = 0, kind: str | None = None) -> Dict[str, Any]:
@@ -49,9 +51,14 @@ def mutate_ml(strategy_d: Dict[str, Any], seed: int = 0, kind: str | None = None
         else:
             cur = list(FEATURES)
         m["features"] = cur
+    elif kind == "model":
+        cur = m.get("model", "hgb")
+        opts = [x for x in ML_MODELS if x != cur] or list(ML_MODELS)
+        m["model"] = rng.choice(opts)
     d["name"] = f"{d.get('name', 'ml_ranker')}~{kind}{seed}"
     m["parent"] = strategy_d.get("name", "ml_ranker")
     m["mutation"] = kind
+    m.pop("oos_seal", None)  # new lineage: hard-seal cleared
     return d
 
 
@@ -89,5 +96,6 @@ def mutate(strategy: Strategy, seed: int = 0, kind: str | None = None) -> Strate
         d["features"] = {k: _walk_numbers(v, lambda x: round(x * f, 4)) for k, v in strategy.features.items()}
     d["name"] = f"{strategy.name}~{kind}{seed}"
     d["meta"] = {**(strategy.meta or {}), "parent": strategy.name, "mutation": kind}
+    d["meta"].pop("oos_seal", None)  # new lineage: hard-seal cleared
     from .model import strategy_from_dict
     return strategy_from_dict(d)

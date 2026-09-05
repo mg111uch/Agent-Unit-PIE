@@ -3013,3 +3013,1607 @@ The first deliverable should therefore be an **architecture integration report +
 That will keep `stock_analyzer` from becoming a parallel architecture that later has to be merged back into PIE.
 
 ---
+
+# Prompt
+Given in this code dump are the generated stock analyser code readme along with the readme of other modules in project. How to tie up research loop, which works for every module. Should we make different research loop for each module or use general one which can work on any module. Also the issue with stock analyser is that Currently we are testing technical strategies one at a time. There are more than 100 technical indicators and including the agent can invent its own indicators along with their combinations, The total search space for a technical indicator based strategy over 200 stocks grows unbound to maybe 10000+ strategies. Backtesting over each of then is a futile effort as most of them would fail. Most modern trading is done using machine learning algorithms. What if we shift our focus to researching ML algo instead of technical as ml algos by definition learn about all possible technical indicaters in its optimization space. Search space for technical indicator is very high and it would take arbitary abount of time to find a profitable strategy in shortest amount of time. Dont let testing if strategies which are publically known to fail. Only test potential successfull candidates so that we could reach a profitable strategy fast using whichever method ml or technical. Point is to make profit not to test all potential strategies. We are not in position for benchmarking all existing and publically known to be failing strategies. Suggest all improvements overall.
+# Response
+Yes. After reading the current `stock_analyser` README and the shared `research_development` design, I would make a fairly significant strategic change.
+
+Your instinct is right about **not brute-forcing thousands of human-designed technical strategies**. But I would *not* replace technical research with "ML alone." The better architecture is:
+
+> **ML-first discovery + selective symbolic research + adaptive research allocation.**
+
+The current code is already halfway there: it has symbolic and ML families competing, an ML cross-sectional dataset/ranker, screen-first rejection, resumable research jobs, and an existing shared development loop. 
+
+The problem is primarily **the research policy**, not the existence of the two approaches.
+
+---
+
+# 1. First: your shared research-loop decision is already correct
+
+Do **not** create a separate research loop for stock analysis.
+
+Your current architecture explicitly defines:
+
+```text
+LLM
+ ↓
+stock_analyser = domain engine
+ ↓
+PIE kernel = cognition
+ ↓
+research_development = universal loop
+```
+
+and explicitly forbids a second experiment registry, finding store, agent loop, or SQLite database. 
+
+I would keep this exactly.
+
+The existing universal loop already provides:
+
+```text
+orient
+→ version_sync
+→ hypothesis
+→ decide_branch
+→ experiment / modify_code
+→ update_knowledge
+→ evaluate
+→ validate
+→ loop
+```
+
+and the workflow itself describes LLM output as the hypothesis/interpretation while the executor enforces transitions, validation and recovery. 
+
+### What should become domain-specific?
+
+Not another loop.
+
+Instead each domain should provide a **Research Domain Interface**:
+
+```text
+ResearchDomain
+    discover_questions()
+    propose_experiment()
+    execute_experiment()
+    evaluate_result()
+    generate_findings()
+    suggest_next_research()
+```
+
+Stock implements those capabilities; `popula_dyn` implements its own; future modules implement theirs.
+
+So:
+
+```text
+             UNIVERSAL RESEARCH LOOP
+                       │
+             ┌─────────┼─────────┐
+             ↓         ↓         ↓
+        stock       popula     future
+        domain      domain     domain
+```
+
+This is the cleanest long-term architecture.
+
+---
+
+# 2. Your ML hypothesis is right — but there's one correction
+
+You said:
+
+> ML algorithms by definition learn about all possible technical indicators in their optimization space.
+
+**Not quite.**
+
+ML only learns relationships represented by the **features you give it**.
+
+Your current ML dataset is built around the existing algebra primitives and a forward-5 label. 
+
+So if you give:
+
+```text
+OHLCV
+RSI
+EMA
+ATR
+...
+```
+
+the model can discover useful nonlinear combinations of *those*.
+
+It cannot discover information that isn't represented in its input space.
+
+However, this actually gives us a better architecture:
+
+```text
+Raw Market Data
+      ↓
+Feature Generator
+      ↓
+Feature Pool
+      ↓
+ML Discovery
+      ↓
+Candidate Signals
+      ↓
+Backtester
+```
+
+The feature generator can include both:
+
+```text
+100+ conventional indicators
+```
+
+and:
+
+```text
+agent-invented algebraic features
+```
+
+Then ML becomes the **search/compression mechanism over a huge feature space**.
+
+This is far superior to making the LLM independently invent 10,000 explicit strategies.
+
+---
+
+# 3. I would change the research objective from "strategy search" to "alpha discovery"
+
+This is the biggest conceptual change.
+
+Current mentality:
+
+```text
+Generate strategy
+→ backtest strategy
+→ generate strategy
+→ backtest
+```
+
+New mentality:
+
+```text
+Generate observations
+→ discover predictive relationships
+→ construct candidate alpha
+→ test economically
+→ convert promising alpha into strategy
+```
+
+For example:
+
+```text
+                200 stocks
+                    ↓
+             feature matrix
+                    ↓
+        ┌───────────┼───────────┐
+        ↓           ↓           ↓
+     price        volume        OI
+     features     features      features
+        └───────────┼───────────┘
+                    ↓
+                 ML model
+                    ↓
+        predicted cross-sectional return
+                    ↓
+             rank stocks
+                    ↓
+             portfolio rules
+                    ↓
+                backtest
+```
+
+That's much more efficient.
+
+---
+
+# 4. Don't ask ML "will the stock go up?"
+
+I would strongly prefer the ML task:
+
+> **Rank expected future returns across the available stocks.**
+
+rather than:
+
+> classify whether tomorrow is up/down.
+
+Your current implementation already has a cross-sectional panel and `top-N` signal mechanism. 
+
+That is exactly the direction I'd pursue.
+
+For example:
+
+```text
+At 10:00:
+
+RELIANCE   predicted +0.8%
+TCS        predicted +0.2%
+INFY       predicted +0.6%
+HDFC       predicted -0.4%
+...
+```
+
+Then the trading policy might take:
+
+```text
+top 5
+top 10
+top decile
+long/short spread
+```
+
+The ML model does not need to "predict the price."
+
+It needs to produce a **useful ranking signal**.
+
+---
+
+# 5. The researcher should not spend its budget uniformly
+
+This is where I think your system can become much smarter.
+
+Suppose:
+
+```text
+Family A = breakout
+Family B = mean reversion
+Family C = ML ranker
+Family D = volatility
+Family E = custom feature discovery
+```
+
+After 200 experiments:
+
+```text
+A → almost all failures
+B → mediocre
+C → promising
+D → poor
+E → promising
+```
+
+The researcher should **shift future compute toward C and E**.
+
+Your current research job already has family competition, screen-first filtering, retirement after 25 consecutive rejects, and elitist selection. 
+
+I would evolve that into:
+
+```text
+Research Allocation
+
+                   100 experiments
+                         │
+        ┌────────────────┼────────────────┐
+        ↓                ↓                ↓
+     exploration       exploitation      validation
+         30%               50%              20%
+```
+
+and dynamically change the percentages.
+
+This is essentially a **research-bandit** problem.
+
+The system should learn:
+
+> Which type of research is currently producing the most promising candidates?
+
+---
+
+# 6. Publicly known bad strategies should become priors, not experiments
+
+I completely agree with:
+
+> Don't spend compute rediscovering obvious failures.
+
+But I would **not permanently blacklist broad categories**.
+
+Instead create a research prior:
+
+```text
+StrategyFamily
+    prior_score
+    evidence
+    historical_success_rate
+    failure_rate
+    cost_to_test
+```
+
+For example:
+
+```text
+generic_RSI_14_cross
+    low priority
+
+simple_MACD_cross
+    very low priority
+
+random_indicator_combination
+    almost never explore
+
+cross-sectional ML
+    high priority
+
+novel feature + ML
+    high priority
+
+ML + market regime
+    high priority
+```
+
+The researcher can still override a low-priority family when new evidence suggests it is worth revisiting.
+
+This is more scientific than a permanent blacklist.
+
+---
+
+# 7. The system needs an extremely cheap "alpha gate"
+
+This is perhaps the single biggest improvement I'd make.
+
+Currently your machine takes ~16 seconds per candidate on 200 symbols. 
+
+At 10,000 candidates:
+
+```text
+10,000 × 16 sec
+≈ 44 hours
+```
+
+on one CPU.
+
+That is not the right architecture.
+
+Instead:
+
+```text
+                Candidate
+                    ↓
+             VERY CHEAP SCREEN
+                    ↓
+              reject 80–95%
+                    ↓
+             medium evaluation
+                    ↓
+              reject more
+                    ↓
+             full backtest
+                    ↓
+              robust validation
+```
+
+### Cheap screen could measure:
+
+```text
+predictive correlation
+rank IC
+stability across stocks
+stability across time
+minimum observation count
+turnover
+sign consistency
+economic significance
+```
+
+Only survivors reach expensive simulation.
+
+---
+
+# 8. ML should itself be a family of algorithms
+
+Don't make:
+
+```text
+ML = HGBRanker
+```
+
+Your current implementation has a fixed-default HGB ranker. 
+
+That's fine as V1.
+
+But the research architecture should treat algorithms as interchangeable:
+
+```text
+MLFamily
+├── linear/ridge
+├── random forest
+├── gradient boosting
+├── histogram gradient boosting
+├── shallow neural network
+└── future models
+```
+
+Then the agent decides:
+
+```text
+Dataset
++
+Feature family
++
+Target
++
+Model
++
+Hyperparameter region
++
+Portfolio policy
+```
+
+is one research candidate.
+
+Still, **do not start with deep learning**.
+
+On your i3, the first useful research frontier is likely classical ML + intelligent feature engineering rather than large neural networks.
+
+---
+
+# 9. The real search space should be hierarchical
+
+Instead of:
+
+```text
+10,000 strategies
+```
+
+make:
+
+```text
+LEVEL 0
+Does this feature family contain signal?
+
+LEVEL 1
+Which target/horizon?
+
+LEVEL 2
+Which ML architecture?
+
+LEVEL 3
+Which features matter?
+
+LEVEL 4
+Which portfolio construction?
+
+LEVEL 5
+Which risk management?
+
+LEVEL 6
+Does it survive realistic costs?
+
+LEVEL 7
+Does it survive OOS?
+```
+
+A failure at Level 0 should eliminate thousands of downstream combinations.
+
+This is enormously more efficient.
+
+---
+
+# 10. Feature selection should become one of the main discoveries
+
+Suppose you give the model:
+
+```text
+150 features
+```
+
+and it consistently selects:
+
+```text
+volume acceleration
+short-term volatility
+relative strength
+OI change
+cross-sectional momentum
+```
+
+That itself becomes a PIE finding:
+
+```text
+Finding:
+These features repeatedly contribute to OOS predictive performance.
+
+Evidence:
+37 independent experiments.
+
+Persistence:
+2018–2025.
+
+Universes:
+NIFTY_200.
+
+Status:
+ROBUST
+```
+
+Then future researchers start from informed priors rather than restarting from zero.
+
+This is precisely where the existing PIE finding system becomes more valuable than simply storing "best strategy." Your current findings already carry claim, experiments, metrics, universe, timeframe, regime, confidence and status. 
+
+---
+
+# 11. Don't optimize solely for Sharpe
+
+I'd change the research objective.
+
+A model with:
+
+```text
+Sharpe = 2.0
+```
+
+and:
+
+```text
+12 trades
+```
+
+is less interesting than:
+
+```text
+Sharpe = 1.2
+500 trades
+stable across regimes
+low turnover
+```
+
+I'd use a **multi-objective score**:
+
+```text
+ResearchScore =
+    predictive_quality
+  + economic_return
+  + stability
+  + robustness
+  + diversification
+  - drawdown_penalty
+  - turnover_penalty
+  - complexity_penalty
+  - overfit_penalty
+```
+
+Don't collapse everything into Sharpe.
+
+---
+
+# 12. Add "complexity penalty"
+
+This is particularly important because your agent can invent arbitrary indicators.
+
+Otherwise it will eventually produce:
+
+```text
+indicator = giant expression involving 37 transformations
+```
+
+that happens to fit historical data.
+
+Make complexity itself costly:
+
+```text
+simple expression → cheaper
+5 operators → okay
+30 operators → heavily penalized
+```
+
+Then the researcher has an incentive to discover **simple reusable relationships**.
+
+---
+
+# 13. ML does NOT eliminate the overfitting problem
+
+This is the biggest danger in your proposed direction.
+
+ML can make the search **much more efficient**, but it can also make overfitting dramatically easier.
+
+Recent work specifically emphasizes that leakage, multiple testing and selection can make machine-generated trading backtests look convincing while being worthless; a new 2026 Indian-equity benchmark explicitly focuses on exactly these issues. ([SSRN][1])
+
+Another 2026 study finds substantial distortions when financial ML pipelines leak information and recommends walk-forward + embargo-style evaluation. ([SSRN][2])
+
+So your current:
+
+```text
+screen
+→ stress
+→ perturb
+→ walk-forward
+→ locked OOS
+```
+
+is directionally correct. 
+
+But I would strengthen it.
+
+---
+
+# 14. Make OOS genuinely immutable
+
+Your README explicitly says:
+
+> "No-mutate-after-OOS is convention-only."
+
+
+
+That should **not remain a convention**.
+
+Make the dataset state machine enforce:
+
+```text
+DISCOVERY
+   ↓
+TRAIN
+   ↓
+VALIDATION
+   ↓
+SEALED
+   ↓
+OOS
+   ↓
+PROMOTED / REJECTED
+```
+
+Once `SEALED`:
+
+```text
+research agent cannot:
+modify strategy
+modify features
+modify labels
+modify parameters
+```
+
+unless a new experiment lineage is created.
+
+This is probably the most important technical upgrade before serious autonomous ML research.
+
+---
+
+# 15. Add a research "falsification" stage
+
+The agent shouldn't ask only:
+
+> "Can I prove this works?"
+
+It should ask:
+
+> "What evidence would prove this doesn't work?"
+
+For every promising candidate:
+
+```text
+Candidate
+ ↓
+Find strongest alternative explanation
+ ↓
+Try to break candidate
+ ↓
+Permutation test
+ ↓
+Regime splits
+ ↓
+Different universes
+ ↓
+Cost stress
+ ↓
+Feature ablation
+ ↓
+Time-shift test
+```
+
+A candidate that survives deliberate attacks is much more interesting.
+
+---
+
+# 16. Your autonomous loop then becomes much better
+
+I'd change the stock research workflow conceptually to:
+
+```text
+ORIENT
+  ↓
+OBSERVE MARKET / KNOWLEDGE
+  ↓
+GENERATE RESEARCH QUESTIONS
+  ↓
+ALLOCATE RESEARCH BUDGET
+  ↓
+GENERATE CANDIDATES
+  ↓
+CHEAP ALPHA SCREEN
+  ↓
+        ┌───────────────┐
+        │               │
+      SYMBOLIC         ML
+        │               │
+        └───────┬───────┘
+                ↓
+          FULL BACKTEST
+                ↓
+          ROBUSTNESS
+                ↓
+         FALSIFICATION
+                ↓
+             OOS
+                ↓
+          PIE FINDING
+                ↓
+       UPDATE RESEARCH PRIORS
+                ↓
+          NEXT QUESTION
+```
+
+Notice that **technical strategies have not disappeared**.
+
+They have become one research family.
+
+ML becomes another.
+
+And the researcher decides where to spend its next compute budget.
+
+---
+
+# 17. I would change the role of the LLM too
+
+The LLM should **not generate 10,000 strategies**.
+
+It should generate:
+
+```text
+research hypotheses
+feature ideas
+target definitions
+model configurations
+falsification tests
+interpretations
+next questions
+```
+
+Then deterministic code handles:
+
+```text
+feature calculation
+ML training
+prediction
+ranking
+portfolio construction
+backtesting
+metrics
+validation
+```
+
+That keeps the expensive reasoning with the LLM and the repetitive mathematics with Python.
+
+---
+
+# 18. One more major improvement: research portfolios, not only strategies
+
+Eventually the researcher should optimize:
+
+```text
+Strategy A
+Strategy B
+Strategy C
+       ↓
+correlation matrix
+       ↓
+portfolio
+```
+
+A mediocre strategy with low correlation to the current portfolio might be much more valuable than a second high-performing but redundant strategy.
+
+So the ultimate research objective becomes:
+
+> **Find incremental portfolio alpha, not isolated winning strategies.**
+
+---
+
+# My recommended direction
+
+I would now explicitly **retire the idea of exhaustive technical-indicator strategy testing**.
+
+Not:
+
+```text
+100 indicators
+× combinations
+× 200 stocks
+× parameters
+= brute force
+```
+
+Instead:
+
+```text
+                  RAW DATA
+                     ↓
+             Feature Factory
+          ┌──────────┴─────────┐
+          ↓                    ↓
+ Conventional             Agent-generated
+ features                  features
+          └──────────┬─────────┘
+                     ↓
+                ML Discovery
+                     ↓
+              Alpha Candidates
+                     ↓
+            Cheap Alpha Screen
+                     ↓
+              Full Backtest
+                     ↓
+             Falsification
+                     ↓
+          Walk-forward / OOS
+                     ↓
+                 Finding
+                     ↓
+          Research Knowledge
+                     ↓
+          Adaptive Next Search
+```
+
+And symbolic strategies remain available when the researcher discovers something worth expressing explicitly.
+
+### The most important change to the existing implementation
+
+Your README says the research job already has **"families (symbolic + ML) compete"**, screen-first and retirement logic. 
+
+I would evolve this from a **candidate runner** into an **adaptive research allocator**.
+
+That is the architectural leap.
+
+The system shouldn't ask:
+
+> "How can I test more strategies?"
+
+It should ask:
+
+> **"Given everything I've learned so far, what is the single most promising experiment to run next?"**
+
+That is exactly how I'd define your autonomous quantitative researcher.
+
+One caveat: **profit cannot be the only success criterion**, because an autonomous system optimized purely for historical profit will eventually optimize the backtest rather than the market. Recent financial-ML research continues to show that multiple testing, leakage, transaction costs and selection bias can make apparently excellent ML strategies fail out of sample. ([SSRN][1])
+
+So I would optimize for **robust expected economic value under strict falsification**, not maximum backtest return.
+
+The next step I recommend is for us to design the **Adaptive Research Engine** itself: its candidate-generation hierarchy, alpha screen, ML family, experiment scoring, research-budget allocation, and exact changes needed to your existing `research/job.py` + shared `research_development` workflow.
+
+----
+
+# Prompt
+Review implementation of above plan
+
+# Response
+I reviewed the uploaded `stock_analyser` README, the shared `research_development` workflow, and the current implementation notes. The architecture is already much better than the initial design: stock remains a domain engine, the universal research loop remains shared, and the stock research job already has symbolic + ML families, screening, retirement, OOS validation, and a resumable ledger.  
+
+But there are several **important loopholes** I would fix before declaring the current plan complete.
+
+# 1. Biggest issue: LEVEL-0 pooled IC is too crude
+
+Your proposed:
+
+> score each feature family by pooled single-feature IC → eliminate bad families
+
+is directionally right, but dangerous.
+
+A feature can have:
+
+```text
+nonlinear signal
+conditional signal
+regime-specific signal
+cross-sectional signal
+interaction-only signal
+```
+
+and therefore have near-zero standalone IC.
+
+Example:
+
+```text
+feature A alone → IC ≈ 0
+feature B alone → IC ≈ 0
+A × B          → strong signal
+```
+
+A family-level gate could kill the discovery before ML gets a chance.
+
+### Better
+
+Make LEVEL-0 **hierarchical**, not simply IC:
+
+```text
+L0-A  sanity/data quality
+L0-B  univariate linear signal
+L0-C  rank/nonlinear signal
+L0-D  conditional/interaction probe
+L0-E  tiny ML probe
+```
+
+The tiny ML probe is still cheap compared with a full backtest.
+
+So:
+
+```text
+feature family
+   ↓
+cheap statistical screens
+   ↓
+tiny ML probe
+   ↓
+only promising families survive
+```
+
+This is a much stronger "fail fast" mechanism.
+
+---
+
+# 2. You have an even bigger hidden search problem: feature selection itself
+
+You solved:
+
+> don't test 10,000 strategies.
+
+But now ML can try:
+
+```text
+150 features
+× 3 models
+× horizons
+× top-N
+× hyperparameters
+× feature subsets
+× universes
+```
+
+and create an even larger multiple-testing problem.
+
+The danger becomes:
+
+```text
+feature mining
+→ model selection
+→ portfolio selection
+→ OOS selection
+```
+
+all progressively fitting the same evidence.
+
+### Add a research firewall
+
+Every experiment should have:
+
+```text
+DATASET_ID
+DATA_HASH
+FEATURE_SET_HASH
+MODEL_CONFIG_HASH
+CODE_VERSION
+RANDOM_SEED
+```
+
+and, more importantly:
+
+```text
+DISCOVERY
+→ VALIDATION
+→ SEALED
+→ FINAL OOS
+```
+
+The **final OOS must never influence candidate ranking, mutation, feature selection, or family allocation after the first reveal**.
+
+Your current README says no-mutate-after-OOS was previously only a convention; you've now implemented the seal, which is good. Keep the seal immutable in the actual execution layer, not just workflow logic. 
+
+---
+
+# 3. Your "feature attribution → finding" needs another gate
+
+You currently record top features from validation. 
+
+Don't say:
+
+> Feature X appeared frequently → robust feature.
+
+Tree-model attribution can be unstable when features are correlated.
+
+Instead require:
+
+```text
+selection_frequency
+OOS_frequency
+across_model_frequency
+across_time_frequency
+ablation_delta
+```
+
+Then a finding becomes:
+
+```text
+Feature X repeatedly survives independent experiments
+AND
+removing X materially reduces OOS performance
+AND
+effect persists across windows/models
+```
+
+That is much stronger.
+
+---
+
+# 4. Current universe handling has a survivorship-bias loophole
+
+This is probably one of the most important missing items.
+
+You currently have named universes such as `NIFTY_200`, and the README describes seeded/current universes. 
+
+But historical research must answer:
+
+> Which stocks were actually eligible **at that historical date**?
+
+Otherwise:
+
+```text
+2020 backtest
+using 2026 survivors
+```
+
+creates survivorship bias.
+
+You already have:
+
+```text
+universes(name, member_id, effective_from, effective_to)
+```
+
+which is exactly the right schema direction. 
+
+But make **point-in-time membership mandatory** for research datasets.
+
+Add:
+
+```text
+dataset.universe_snapshot_hash
+```
+
+and require the backtester to resolve constituents as-of each timestamp.
+
+---
+
+# 5. Data adjustment is still a major threat
+
+Your own review correctly found the Yahoo-adjusted vs NSE-raw mixing issue.
+
+I would go further:
+
+**Never permit a dataset to contain mixed price semantics without an explicit transformation.**
+
+A dataset should declare:
+
+```text
+price_basis:
+    raw
+    split_adjusted
+    total_return_adjusted
+```
+
+and:
+
+```text
+corporate_action_policy
+```
+
+Then:
+
+```text
+adjusted prices → research
+raw prices → execution
+```
+
+can coexist, but only through explicitly defined conversions.
+
+Otherwise the model may learn artifacts caused by inconsistent adjustments.
+
+---
+
+# 6. Your 15m research currently risks a subtle data-leakage issue
+
+You already noticed forming-bar refresh.
+
+The rule should be:
+
+```text
+A bar is immutable after its close timestamp.
+```
+
+Not:
+
+```text
+keep updating 10:15 bar until 10:30 and later use it.
+```
+
+Every stored bar should have:
+
+```text
+bar_start
+bar_end
+is_final
+observed_at
+source_timestamp
+```
+
+For research:
+
+```text
+only is_final = true
+```
+
+For live:
+
+```text
+forming bars allowed only in live state
+```
+
+The two paths must be impossible to accidentally mix.
+
+---
+
+# 7. The bandit can still converge too early
+
+You added novelty quota, which is good.
+
+But:
+
+```text
+30% explore
+50% exploit
+20% validate
+```
+
+is still a manually chosen policy.
+
+Worse, "family" is too coarse.
+
+Suppose:
+
+```text
+ML + volume features = promising
+ML + price features = poor
+```
+
+A family-level bandit may classify **all ML** as good and waste resources.
+
+Use hierarchical allocation:
+
+```text
+Family
+  ↓
+Feature family
+  ↓
+Model
+  ↓
+Horizon
+  ↓
+Portfolio policy
+```
+
+The allocator should learn where the edge is.
+
+I'd also replace:
+
+> retire after 25 rejects
+
+with:
+
+> retire only after sufficient independent evidence across multiple windows/regimes and low posterior probability of improvement.
+
+A bad run of 25 experiments doesn't prove a family is dead.
+
+---
+
+# 8. Anti-duplicate hashing should be semantic, not just structural
+
+You proposed feature-set hashing.
+
+Good, but:
+
+```text
+A / B
+```
+
+and:
+
+```text
+B / A
+```
+
+may be mathematically equivalent.
+
+Likewise:
+
+```text
+zscore(x)
+```
+
+versus an algebraically transformed equivalent expression.
+
+A purely textual hash won't catch this.
+
+Create:
+
+```text
+canonical_expression()
+```
+
+before hashing.
+
+Then:
+
+```text
+raw expression
+→ normalized AST
+→ canonical form
+→ hash
+```
+
+Eventually add **behavioral duplicate detection**:
+
+```text
+two different strategies
+→ nearly identical signal stream
+→ redundant
+```
+
+This will matter enormously once the system discovers thousands of candidates.
+
+---
+
+# 9. ResearchScore should not replace hard gates
+
+Multi-objective scoring is useful, but don't do:
+
+```text
+score = 87
+→ PAPER_READY
+```
+
+Instead:
+
+```text
+HARD GATES
+    ↓
+economic viability
+    ↓
+robustness
+    ↓
+OOS
+    ↓
+then ResearchScore ranks survivors
+```
+
+For example a candidate could never graduate if:
+
+```text
+OOS trades < minimum
+```
+
+or:
+
+```text
+cost stress destroys edge
+```
+
+or:
+
+```text
+performance concentrated in one year
+```
+
+ResearchScore is for **ranking survivors**, not overriding failed scientific tests.
+
+---
+
+# 10. Add liquidity/capacity before PAPER_READY
+
+Your current capital configuration has max positions and capital steps. 
+
+But ML top-N can concentrate into illiquid names.
+
+Add:
+
+```text
+ADV
+price
+volume
+spread proxy
+position / ADV
+position / traded value
+```
+
+and require:
+
+```text
+estimated participation rate < threshold
+```
+
+Otherwise a backtest may say:
+
+```text
+BUY 10 stocks
+```
+
+while actual execution would move the market materially.
+
+This is particularly important when you move from 200 → 2,000 stocks.
+
+---
+
+# 11. Paper trading should be another validation layer, not merely execution
+
+You already have:
+
+```text
+PAPER_READY
+→ human approval
+→ paper trader
+```
+
+which is good. 
+
+But I'd formalize:
+
+```text
+BACKTEST
+→ OOS
+→ PAPER
+→ PAPER_REVALIDATED
+```
+
+with comparison:
+
+```text expected return
+expected turnover
+expected slippage
+expected fill rate
+actual paper equivalents
+```
+
+Then the finding can say:
+
+```text
+Backtest-to-paper deviation = +X%
+```
+
+This becomes feedback to the simulator.
+
+---
+
+# 12. The research loop itself should not process every candidate
+
+This is an important PIE integration point.
+
+Your universal workflow is:
+
+```text
+orient
+→ version_sync
+→ hypothesis
+→ decide_branch
+→ experiment
+→ update_knowledge
+→ evaluate
+→ ...
+```
+
+
+
+Do **not** make every one of 1,000 ML candidates pass through the full LLM-oriented workflow.
+
+That would destroy your efficiency.
+
+Instead:
+
+```text
+ONE PIE RESEARCH CYCLE
+       ↓
+stock research job
+       ↓
+1000 deterministic candidate evaluations
+       ↓
+summaries
+       ↓
+interesting discoveries
+       ↓
+PIE knowledge update
+       ↓
+next research cycle
+```
+
+So the generic loop orchestrates **research episodes**, while the domain engine internally executes many cheap experiments.
+
+That is the cleanest way to preserve the universal loop without turning it into a bottleneck.
+
+---
+
+# 13. Separate "discovery truth" from "deployment truth"
+
+Create two different result concepts:
+
+```text
+DISCOVERY_RESULT
+```
+
+means:
+
+> interesting statistical/economic relationship.
+
+and:
+
+```text
+DEPLOYMENT_CANDIDATE
+```
+
+means:
+
+> has passed all requirements for potential human paper-trading approval.
+
+This prevents:
+
+```text
+interesting correlation
+```
+
+from accidentally becoming:
+
+```text
+tradable strategy
+```
+
+---
+
+# 14. Add a research-resource objective
+
+The researcher currently optimizes strategy quality.
+
+It should also optimize:
+
+```text
+Expected information gain / compute cost
+```
+
+Example:
+
+```text
+Candidate A:
+estimated probability of success = 8%
+cost = 20 sec
+
+Candidate B:
+probability = 7%
+cost = 0.2 sec
+```
+
+B may be preferable.
+
+This lets the researcher become truly efficient rather than simply "more ML."
+
+---
+
+# 15. I would add these phases to your current plan
+
+### P13 — Research Firewall
+
+Immutable dataset versions, point-in-time universe, dataset/feature/model/code hashes, strict post-seal isolation.
+
+### P14 — Hierarchical Discovery
+
+L0 family screen → cheap univariate/nonlinear tests → tiny ML probe → candidate generation → full backtest.
+
+### P15 — Candidate Deduplication
+
+Canonical AST hashing + signal-behavior similarity + lineage-aware duplicate detection.
+
+### P16 — Capacity & Liquidity
+
+ADV, participation, spread/slippage, position-capacity constraints before PAPER_READY.
+
+### P17 — Research Episode Architecture
+
+One universal PIE research cycle can launch thousands of deterministic domain experiments; only aggregate discoveries return to the LLM/kernel.
+
+### P18 — Paper Reality Check
+
+Backtest/OOS vs paper parity metrics and simulator-calibration feedback.
+
+### P19 — Point-in-Time Universe
+
+Mandatory historical constituent reconstruction; eliminate survivorship bias.
+
+---
+
+# Revised research architecture
+
+I would now target this:
+
+```text
+                 PIE UNIVERSAL RESEARCH LOOP
+                           │
+                    Research Episode
+                           │
+             ┌─────────────┴─────────────┐
+             │                           │
+        Question Generator          Prior Knowledge
+             │                           │
+             └─────────────┬─────────────┘
+                           ↓
+                  STOCK RESEARCH ENGINE
+                           │
+                    LEVEL 0 SCREEN
+                           │
+              ┌────────────┴────────────┐
+              ↓                         ↓
+       SYMBOLIC DISCOVERY          ML DISCOVERY
+              │                         │
+              └────────────┬────────────┘
+                           ↓
+                 CHEAP CANDIDATE TESTS
+                           ↓
+                    FULL BACKTEST
+                           ↓
+                HARD ROBUSTNESS GATES
+                           ↓
+                   FALSIFICATION
+                           ↓
+                    LOCKED OOS
+                           ↓
+               ┌───────────┴───────────┐
+               ↓                       ↓
+           REJECTED              DISCOVERY
+                                       ↓
+                              PIE FINDING ENGINE
+                                       ↓
+                              KNOWLEDGE / PRIORS
+                                       ↓
+                              NEXT RESEARCH EPISODE
+```
+
+Then:
+
+```text
+DISCOVERY
+   ↓
+DEPLOYMENT CANDIDATE
+   ↓
+HUMAN
+   ↓
+PAPER
+   ↓
+PAPER VALIDATION
+   ↓
+HUMAN
+   ↓
+LIVE
+```
+
+## My strongest recommendation
+
+**Do not make "ML instead of technical strategies" the central decision.**
+
+Make **"adaptive alpha discovery"** the central decision.
+
+ML should be the primary **search engine** because it compresses a huge feature/interaction space much more efficiently than enumerating indicator strategies. Symbolic methods remain valuable for interpretable hypotheses, feature invention, sanity checks, and discoveries that ML might miss.
+
+And the most important optimization is not:
+
+> "How do we backtest more strategies?"
+
+It is:
+
+> **"How do we maximize the probability of finding robust economic edge per unit of compute and per unit of research capital?"**
+
+That should become the north-star objective of the stock research engine.
+
+Your current code already has enough infrastructure to move in this direction without redesigning everything: the shared loop, stock connector, research ledger, ML dataset/ranker, screening, OOS validation, findings and paper gate are already present. 
+
+The next plan should therefore be a **P13–P19 refinement plus a redefinition of `research/job.py` as an adaptive alpha-discovery scheduler**, rather than another wholesale rewrite.

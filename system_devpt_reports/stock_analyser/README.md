@@ -1,5 +1,8 @@
 # Stock Analyser — domain engine (V1-generated using MuseSpark.1.3)
 
+> Agent rule: this file's features table lists SHIPPED features only.
+> Put every unimplemented idea in `roadmap.md` (Next up / Deferred), never here.
+
 | Feature | State | Notes |
 |---|---|---|
 | Universe (NIFTY_200/OPTIONS_ELIGIBLE/ALL/MY) | done | seed 15 symbols; 200 = data size, no code cap |
@@ -9,7 +12,22 @@
 | Feature algebra (16 ops) | done | LLM emits exprs, kernel evaluates |
 | Strategy object + genome mutate | done | no arbitrary Python |
 | Backtest 1D/15m, fill open t+1 | done | ATR stops, costs, long-only |
-| Validation (stress/perturb/WF/OOS) | done | locked OOS; no mutate-after-seal by convention |
+| Validation (stress/perturb/WF/sealed-OOS/falsify) | done | hard OOS seal (MUTATED_AFTER_SEAL); passers-only attacks |
+| ResearchScore (multi-objective + complexity) | done | eco/stab/rob − DD/cx/gap/drag; elites rank by score |
+| Cheap alpha gate | done | hierarchical L0 (IC/rank-spread/interaction/tiny-ML); any-level pass |
+| Adaptive allocator (bandit + priors + novelty) | done | explore/exploit/validate; ML-aware dedup hash |
+| ML family (hgb/rf/ridge) + 15-feature pool | done | rank fwd_ret, top-N policy; per-validation attribution |
+| Data-quality gate | done | trims live forming bar; adj-mix flag; INSUFFICIENT_DATA |
+| Realistic costs + vol sizing | done | STT/stamp/impact breakdown; shared ATR sizing (engine + paper) |
+| Determinism + ledger provenance | done | run seed→bars; data_hash + code_version per candidate |
+| Paper parity guards | done | max_positions cap; bar-count hold; stale/action guards |
+| Research firewall (provenance + seal binding) | done | 7 hashes/candidate incl. signal_hash; sealed lineage frozen to data+code |
+| Candidate dedup (canonical + behavioral) | done | normalized-AST hash; identical signal stream → DUPLICATE |
+| Liquidity/capacity gate | done | ADV/participation/spread/price; ILLIQUID blocks PAPER_READY |
+| Dataset registry + marketdb source | done | `research_datasets` pins; full-history marketdb reads |
+| Research episodes (P17) | done | one bounded job + one kernel finding; 1000s evals stay in-engine |
+| Paper reality check (P18) | done | backtest-vs-paper deviation → REVALIDATED/DEGRADED/REJECTED |
+| PIT universe + snapshots (P19) | done | `resolve_asof`; registry pins members + snapshot hash |
 | Kernel bridge (sim_stock) | done | signals + findings + run shards |
 | develop_experiment dispatch | done | no popula import for stock |
 | Overnight job | done | 1–100 exps, CPU-first |
@@ -29,31 +47,42 @@
 | `data/providers.py` | Historical/Live/CSV/synthetic; Upstox stub | done |
 | `data/nse_session.py` | NSE cookie-handshake session, rate limiter (no key, stdlib) | done |
 | `data/recorder.py` | chain/quote fetch → normalize → upsert; market-hours guard; Yahoo fallback (1d backfill, 1h top-ups, refreshes forming bar) | done |
+| `data/quality.py` | gate: trim live forming bar, flag adj-mix, exclude short/gappy; INSUFFICIENT_DATA | done |
+| `data/datasets.py` | named dataset registry (universe/timeframe/window pins) over `research_datasets` | done |
 | `tests/test_recorder.py` | offline chain normalize + dup-safety + hours guard | done |
 | `tests/test_panel.py` | late entrant keeps full panel; short history excluded | done |
 | `features/algebra.py` | expression AST + deterministic evaluator | done |
 | `strategies/model.py` | Strategy object (no arbitrary Python) | done |
-| `strategies/genome.py` | mutate feature/threshold/exit/hold | done |
+| `strategies/genome.py` | mutate symbolic + ML (incl. model choice); clears oos_seal (new lineage) | done |
 | `backtest/engine.py` | date-aligned union panel; <60-bar symbols excluded+reported; no lookahead | done |
 | `backtest/validation.py` | shared-date train/OOS split; eligibility gate on full history | done |
 | `backtest/costs.py` | fees, slippage | done |
-| `backtest/validation.py` | cost stress, perturbation, walk-forward, OOS | done |
+| `backtest/validation.py` | hard OOS seal (hash+cut; MUTATED_AFTER_SEAL); cost stress, perturbation, walk-forward, locked OOS, falsification gate | done |
+| `research/alpha_screen.py` | cheap pre-sim gate (freq/turnover/stability/complexity; ML max-IC) | done |
+| `research/scoring.py` | multi-objective ResearchScore (eco/stab/rob − DD/cx/gap); elites rank by score | done |
+| `research/allocate.py` | bandit allocator (prior×ready_rate+UCB; explore/exploit/validate) | done |
+| `research/falsify.py` | permutation/halves/shift/LOO attacks on passers only; FALSIFIED downgrade | done |
+| `research/firewall.py` | provenance fingerprints + execution-layer seal binding (data+code) | done |
+| `research/liquidity.py` | ADV/participation/spread gate pre-PAPER_READY | done |
+| `paper/reality.py` | backtest-vs-paper deviation check → REVALIDATED/DEGRADED/REJECTED | done |
+| Universe PIT + snapshots | done | `resolve_asof`; registry pins members + snapshot hash |
+| `ml/family.py` | hgb/rf/ridge registry; shared rank target; attribution for findings | done |
 | `kernel_bridge.py` | signals + topic findings + sim_runs | done |
-| `connector.py` | `run_and_extract` / `register_to_kernel` for develop.* | done |
+| `connector.py` | `run_and_extract` / `run_episode` / `register_to_kernel` for develop.*; datasets synthetic/csv/marketdb (+registry pin) | done |
 | `research/questions.py` | questions from objectives, observations, gaps | done |
-| `research/job.py` | day + overnight resumable jobs; elitist selection from ledger best; ledger in market.db | done |
-| `ml/dataset.py` | cross-sectional panel on algebra primitives; fwd-5 labels; embargoed splits | done |
-| `ml/ranker.py` | fixed-default HGB ranker; top-N signals via engine hook; pickle artifacts | done |
-| `ml/strategies.py` | ML validation (screen→dropout→stress→locked test); quick_screen; connector dispatch | done |
-| `research/job.py` | families compete; screen-first; retirement after 25 consecutive REJECTs | done |
+| `research/job.py` | day + overnight resumable jobs; bandit allocation; score-ranked elites; seeded RNG; firewall seal binding; ledger in market.db (full strategy_json + 6 provenance hashes) | done |
+| `ml/dataset.py` | 15-feature panel on algebra primitives; fwd-5 labels; embargoed splits | done |
+| `ml/ranker.py` | family-dispatched ranker (hgb/rf/ridge); top-N signals via engine hook; pickle artifacts | done |
+| `ml/strategies.py` | ML validation (screen→dropout→stress→locked test→falsify); sealed embargo; attribution | done |
+| `research/job.py` | families compete via bandit; tiered screen (alpha→quick→full); retirement after 25 consecutive REJECTs | done |
 | `tests/test_ml_ranker.py` | train→score→backtest on locked test; OOS gating; artifact round-trip | done |
 | `tests/test_ml_dataset.py` | panel integrity, causality (no peek), embargo gaps | done |
 | `data/universe.py` | `import_universe[_file]` for hand-picked lists; DB-first resolve | done |
 | `tests/test_research_ledger.py` | import, resume, hash-dedup | done |
 | `paper.py` | PAPER_READY propose; **human_approved required** | done |
-| `paper/gate.py` + `paper/trader.py` | proposal gate; pending-order paper trader mirroring backtest (signal→next-open fill, frozen ATR); ledger + scale report | done |
+| `paper/gate.py` + `paper/trader.py` | proposal gate; paper trader mirroring backtest (next-open fill, frozen ATR, max_positions cap, bar-count hold, stale/action guards); ledger + scale report | done |
 | `capital.yaml` + `config.py` | capital 50000, Rs60 flat/trade, max 8 positions, Rs25000 steps | done |
-| `backtest/costs.py` | flat Rs/trade (default) or bps fallback; per-trade net metrics | done |
+| `backtest/costs.py` | flat Rs/trade (default) or bps fallback; realistic STT/stamp/impact breakdown; ATR vol sizing | done |
 | `tests/test_capital.py` | flat costs, config, net tracking, paper ledger | done |
 | `tests/test_stock_analyser_smoke.py` | synthetic → backtest → finding | done |
 | `data/workflows/stock_analyser_dev.json` | subgraph for research_development | done |
@@ -70,21 +99,47 @@
 
 ## Architecture (do not duplicate PIE)
 
-```
-LLM proposes (hypothesis / strategy genome)
-        ↓
-stock_analyser = domain engine (data, features, strategy, backtest)
-        ↓
-PIE kernel = cognition (lineage, signals, findings, contradiction, retrieval)
-        ↓
-research_development workflow = loop (orient → version_sync → hypothesis
-  → decide_branch → experiment | modify_code → update_knowledge → evaluate
-  → validate → loop)
-```
+                 PIE UNIVERSAL RESEARCH LOOP
+                           │
+                    Research Episode
+                           │
+             ┌─────────────┴─────────────┐
+             │                           │
+        Question Generator          Prior Knowledge
+             │                           │
+             └─────────────┬─────────────┘
+                           ↓
+                  STOCK RESEARCH ENGINE
+                           │
+                    LEVEL 0 SCREEN
+                           │
+              ┌────────────┴────────────┐
+              ↓                         ↓
+       SYMBOLIC DISCOVERY          ML DISCOVERY
+              │                         │
+              └────────────┬────────────┘
+                           ↓
+                 CHEAP CANDIDATE TESTS
+                           ↓
+                    FULL BACKTEST
+                           ↓
+                HARD ROBUSTNESS GATES
+                           ↓
+                   FALSIFICATION
+                           ↓
+                    LOCKED OOS
+                           ↓
+               ┌───────────┴───────────┐
+               ↓                       ↓
+           REJECTED              DISCOVERY
+                                       ↓
+                              PIE FINDING ENGINE
+                                       ↓
+                              KNOWLEDGE / PRIORS
+                                       ↓
+                              NEXT RESEARCH EPISODE
 
-Stock is a **domain engine**, not a second research loop. Reuse:
-
-**Forbidden:** new experiment registry, new finding store, new agent loop, second SQLite file, pandas/numpy (stdlib only unless user approves).
+Stock is a **domain engine**, not a second research loop. 
 
 ## Simulator identity
 
@@ -110,12 +165,12 @@ Indexes: `(instrument_id, ts)`, `(ts, instrument_id)`. Raw bars only — never p
 ## V1 behavior
 
 1. **Universe:** `NIFTY_200`, `OPTIONS_ELIGIBLE`, `ALL_EQUITIES`, `MY_RESEARCH_UNIVERSE`. Seed ~15 Indian symbols in YAML; 200 is a dataset size, not a code cap.
-2. **Data:** CSV ingest + deterministic synthetic provider (offline). Daily history: `fetch_daily_history` — 1y split-adjusted 1D from Yahoo (`yahoo-adj`; 200 NIFTY symbols, ~50k bars in `market.db`). Live: NSE cookie-session recorder (no key, stdlib) with Yahoo chart fallback for equities/indices; Upstox adapter stays a stub (normalize → validate → upsert; restart-safe, skip dups).
-3. **Features:** LLM emits expressions, not code. Ops: lag, diff, rolling_mean/std/min/max, rank, zscore, percentile, correlation, covariance, slope, ratio, abs, log.
-4. **Strategy:** universe, timeframe, features, entry (bool expr), exit (stop_atr, take_atr, max_hold), position, risk. No lookahead.
+2. **Data:** CSV ingest + deterministic synthetic provider (offline). Daily history: `fetch_daily_history` — 1y split-adjusted 1D from Yahoo (`yahoo-adj`; 200 NIFTY symbols, ~50k bars in `market.db`). Live: NSE cookie-session recorder (no key, stdlib) with Yahoo chart fallback; quality gate trims the live forming bar, flags adj-mix, excludes short symbols. Upstox adapter stays a stub.
+3. **Features:** LLM emits expressions, not code. 15 trailing-only ops-built features (rets, vol/volume, trend/range/position) + agent-invented algebra; ML discovers over the pool.
+4. **Strategy:** universe, timeframe, features, entry (bool expr), exit (stop_atr, take_atr, max_hold), position, risk; ML = model+top_n+features+exits. No lookahead.
 5. **Backtest metrics:** n, wins, losses, avg/median ret, max DD, Sharpe/Sortino, CAGR, final_equity, costs.
-6. **Validation:** cost stress → param perturbation → walk-forward → locked OOS. No-mutate-after-OOS is convention-only (see roadmap).
-7. **Research job:** families (symbolic + ML) compete; screen-first, retirement after 25 consecutive REJECTs, ledger resume in market.db. ~16s/candidate on 200 symbols (i3).
+6. **Validation:** cost stress → param perturbation → walk-forward → hard-sealed OOS (MUTATED_AFTER_SEAL enforced) → falsification (permutation/halves/shift/LOO) on passers. Multi-objective ResearchScore ranks elites, not Sharpe alone.
+7. **Research job:** families (symbolic + ML hgb/rf/ridge) compete via bandit allocator (priors + UCB, explore/exploit/validate); tiered screen (alpha gate → quick backtest → full pipeline); retirement after 25 consecutive REJECTs; ledger resume in market.db. ~16s/candidate on 200 symbols (i3).
 8. **Findings:** claim, experiments, metrics, universe, timeframe, regime, confidence, status in `{HYPOTHESIS,SUPPORTED,ROBUST,REFUTED,REGIME_DEPENDENT,INSUFFICIENT_DATA,SUPERSEDED}`.
 9. **Paper:** `propose_paper(..., human_approved=False)` always blocked. Live execution interface exists as raise-NotImplemented; research agent must not call it.
 10. **Options:** instrument + chain models + recorder schema in V1; no options research until live history exists.
@@ -146,8 +201,9 @@ print(r.run_once())   # single snapshot; use r.loop() to poll till close
 
 ## Next (new session pickup)
 
-Status: 0 PAPER_READY after ~180 candidates (breakout + ML-top3 families both negative net of ₹60/trade). Ledger: `market.db:research_runs` (`res_20260903_113818`, PAUSED_USER), shards pruned to 50, suite 23/23 green.
-1. Seed new families — mean-reversion and MA-trend symbolic + ML depth/top_n variants via `seeds=[...]`; breakout lineage is retired, don't revive it.
-2. Launch bounded day/overnight `run_job` on `MY_UNIVERSE_200`; monitor with `run_status`.
-3. On first PAPER_READY: human approves → `paper.trader.step` daily on live bars → `report` scale verdict → capital.yaml step.
+Status: 0 PAPER_READY after ~180 candidates (breakout + ML-top3 families both negative net of ₹60/trade). Ledger: `market.db:research_runs` (`res_20260903_113818`, PAUSED_USER); shards pruned to 50, full record in ledger. Suite 23/23 green. All P1–P12 shipped (features table above); open items in `roadmap.md` → Next up, details in `FixesIssues.md`.
+1. Seed new families — mean-reversion and MA-trend symbolic + ML model/features variants via `seeds=[...]`; breakout lineage is retired, don't revive it.
+2. Pin a dataset: `data/datasets.py:register_dataset("...","MY_UNIVERSE_200","1D")`, then bounded day/overnight `run_job` with `dataset="marketdb"`; monitor with `run_status`.
+3. On first PAPER_READY (post-falsification): human approves → `paper.trader.step` daily on live bars → `report` scale verdict → capital.yaml step.
 4. Keep 15m recorder running for future intraday entries; daily remains the research timeframe.
+5. Research backlog, in order: LEVEL-0 family IC gate → feature-attribution findings → portfolio simulator + portfolio-level allocation.

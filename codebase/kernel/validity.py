@@ -31,15 +31,19 @@ def _find_concepts_for_node(node) -> List[str]:
     try:
         from kernel.schemas.simulation_schema import _load_ontology_concepts
         registry = _load_ontology_concepts()
+        from pathlib import Path as _P
         out: set[str] = set()
         for k in keys:
+            kl = str(k).lower()
             for mod, concepts in registry.items():
-                if mod in k or k in mod:
+                ml = mod.lower()
+                if kl == ml or _P(ml).stem == kl or kl in concepts:
                     out.update(concepts)
         for s in sigs:
             s_low = str(s).lower()
             for mod, concepts in registry.items():
-                if mod in s_low:
+                ml = mod.lower()
+                if s_low == ml or _P(ml).stem == s_low or s_low in concepts:
                     out.update(concepts)
         # premise keywords
         if "population" in content:

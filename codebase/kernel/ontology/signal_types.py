@@ -281,6 +281,57 @@ SIGNAL_TYPES: Dict[str, SignalTypeDefinition] = {
         related_patterns=["robust_edge"],
     ),
 
+    # POPULA_DYN DOMAIN SIGNALS (emitted by simulation_connector)
+    "mortality_event": SignalTypeDefinition(
+        signal_type="mortality_event",
+        category="demographic",
+        description="Deaths observed in a step.",
+        data_type="float",
+        related_patterns=["mortality"],
+    ),
+    "resource_scarcity": SignalTypeDefinition(
+        signal_type="resource_scarcity",
+        category="economic",
+        description="Low per-capita wealth / scarcity pressure.",
+        data_type="float",
+        related_patterns=["scarcity"],
+    ),
+    "prosperity": SignalTypeDefinition(
+        signal_type="prosperity",
+        category="economic",
+        description="High per-capita wealth.",
+        data_type="float",
+        related_patterns=["growth"],
+    ),
+    "population_decline": SignalTypeDefinition(
+        signal_type="population_decline",
+        category="demographic",
+        description="Population below critical threshold.",
+        data_type="float",
+        related_patterns=["collapse_risk"],
+    ),
+    "healthcare_gap": SignalTypeDefinition(
+        signal_type="healthcare_gap",
+        category="social",
+        description="No healers while population needs care.",
+        data_type="float",
+        related_patterns=["health_risk"],
+    ),
+    "trade_gap": SignalTypeDefinition(
+        signal_type="trade_gap",
+        category="economic",
+        description="No traders while population needs trade.",
+        data_type="float",
+        related_patterns=["trade_stress"],
+    ),
+    "population_trend_declining": SignalTypeDefinition(
+        signal_type="population_trend_declining",
+        category="demographic",
+        description="Trailing 5-step population decline.",
+        data_type="float",
+        related_patterns=["decline_trend"],
+    ),
+
     # AI / KNOWLEDGE SIGNALS
 
     "pattern_detected": SignalTypeDefinition(

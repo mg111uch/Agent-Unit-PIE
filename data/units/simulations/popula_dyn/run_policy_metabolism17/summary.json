@@ -1,23 +1,23 @@
 {
   "step_count": 50,
-  "total_units": 2586,
-  "population": 56,
-  "total_wealth": 345.95510022258406,
-  "avg_skill": 0.5513392857142857,
-  "births": 2,
-  "deaths": 4,
-  "births_total": 131,
-  "deaths_total": 125,
+  "total_units": 2552,
+  "population": 22,
+  "total_wealth": 286.55048176797715,
+  "avg_skill": 0.6011363636363636,
+  "births": 0,
+  "deaths": 1,
+  "births_total": 62,
+  "deaths_total": 90,
   "spatial": {
     "width": 50,
     "height": 50,
-    "total_units": 2586,
+    "total_units": 2552,
     "occupied_cells": 2500,
-    "human_units": 56,
-    "human_occupied_cells": 54,
+    "human_units": 22,
+    "human_occupied_cells": 21,
     "torus": true
   },
   "run_id": "run_policy_metabolism17",
   "simulator": "popula_dyn",
-  "timestamp": "2026-09-02T10:58:15.877881"
+  "timestamp": "2026-09-05T11:04:50.265960"
 }

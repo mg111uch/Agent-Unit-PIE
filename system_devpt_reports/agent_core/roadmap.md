@@ -281,3 +281,59 @@ One guardrail I'd insist on: keep this a **soft hint, not a hard gate**. State i
 - **Runaway self-modification**: `graph_state.version` already increments on every evolve and `sweep_stale_chains()` demotes unused chains after 14 days — good instincts already in place. I'd add an explicit node/cluster cap and a "diff before commit" step (show what `evolve()` is about to add/remove) rather than silent auto-apply, especially once ghost proposals and hook promotion widen what evolve can touch.
 - **Validate against real sessions**: your own `FixesIssues.md` already flags this — "mining was validated with synthetic feeds; validating against the 8 real transcripts in `sessions_analysis/` is a natural next step." That's the single highest-leverage thing to do before adding any of the above, since it'll tell you whether the existing miner even fires correctly on real usage.
 - **`tool_packs.chain` is off by default**, which makes the whole pipeline invisible to the LLM until someone flips it — worth reconsidering as "on once N approved chains exist and token budget allows" rather than a static default.
+
+------
+
+## Remaining work
+
+### System prompt — enable & measure (originally #2)
+`system_prompt_core_only: false` today; the 831-token core-only variant is
+built but untested. Enable it and measure for behavioral regression before
+trimming further. Do not touch prompt fragments without re-running
+`system_prompt_report.py`.
+
+### Tier-2 model quality
+The fine-tune-FunctionGemma path (build a 50–100-example-per-action dataset,
+then SFT) was superseded by the cloud small-model pivot. Revisit only if a
+capable local model is needed offline. A routing benchmark decides whether the
+cloud tier-2 model is accurate enough to trust at scale.
+
+### Three-way benchmark (the decision point)
+Compare:
+- **A** — cloud tool-calling only (no router),
+- **B** — cloud → tier-2 router → executor,
+- **C** — deterministic factory → tier-2 router fallback → executor.
+
+Predict C wins; it is only meaningful once the tier-2 model is accurate. Use
+20–50 tasks across read/list/search/grep/write/edit/create/git/shell,
+nonexistent paths, invalid requests, and ambiguous requests. Measure: cloud
+input/output tokens, cloud calls, router calls, latency (p50/p95), CPU/RAM,
+accuracy, tool failures, false successes.
+
+### Batch action plane
+Eliminate cloud → router → cloud ping-pong. The cloud reasoning step should
+produce a compact plan of N actions; the local/router layer executes the whole
+batch, then the cloud synthesizes only when the result needs reasoning.
+
+### Explicit action intent + confidence
+Formalize the internal action object (action ID, arguments, source) and add a
+confidence signal combined with structural validation (valid ID, required args
+present, policy allows). Today only the policy gate exists.
+
+### Success metric
+Prefer an efficiency score (correctness × completion / tokens + latency) or a
+dashboard over raw token-minimization. Tracked goals: deterministic simple
+tasks ≥90%, router accuracy ≥98%, false-success = 0, no cloud schemas on tier 2,
+no cloud calls for simple tasks, router p95 < 1s, cloud tokens minimized.
+
+## Strategic principle
+
+The architecture is **progressive intelligence**: the deterministic fast path
+handles everything it can, the cheap router handles the rest of the
+single-operation requests, and the cloud reasoning model is invoked only when a
+request genuinely needs it. The next milestone is proving this three-tier
+system is faster and at least as reliable as the original cloud-tool-calling
+architecture — through the benchmark above, not more token optimization.
+
+For how a request moves through the tiers and what each tier sees, see
+`../project_docs/model_routing.md`.

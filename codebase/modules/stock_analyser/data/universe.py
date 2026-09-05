@@ -1,5 +1,7 @@
 """Universe manager — named sets; 200 is a dataset size, not a code cap."""
 from __future__ import annotations
+import hashlib
+import json
 import sqlite3
 from typing import Any, Dict, List
 from ..constants import SEED_SYMBOLS
@@ -11,6 +13,32 @@ DEFS = {
     "ALL_EQUITIES": {"members": list(SEED_SYMBOLS), "options": []},
     "MY_RESEARCH_UNIVERSE": {"members": list(SEED_SYMBOLS)[:5], "options": []},
 }
+
+
+def resolve_asof(name: str, ts: str, db_path: str | None = None) -> List[str]:
+    """P19: point-in-time membership — only constituents eligible at `ts`.
+
+    Rows with blank effective_from/to are all-time members (legacy seeds).
+    Without this, backtests use 2026 survivors on 2020 data (bias).
+    """
+    try:
+        con = connect(db_path)
+        try:
+            rows = con.execute("SELECT member_id,effective_from,effective_to FROM universes"
+                               " WHERE name=?", (name,)).fetchall()
+            if rows:
+                return [m for m, fr, to in rows
+                        if (not fr or fr <= ts) and (not to or ts <= to)]
+        finally:
+            con.close()
+    except Exception:
+        pass
+    d = DEFS.get(name)
+    return list(d["members"]) if d else []
+
+
+def snapshot_hash(members: List[str]) -> str:
+    return hashlib.sha256(json.dumps(sorted(members)).encode()).hexdigest()[:16]
 
 
 def resolve_universe(name: str, db_path: str | None = None) -> List[str]:

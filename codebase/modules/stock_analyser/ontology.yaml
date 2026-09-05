@@ -24,3 +24,9 @@ modules:
   kernel_bridge:
     concepts: [finding, lineage]
     outputs: [finding_id]
+  paper/trader:
+    concepts: [execution, paper_trading]
+    outputs: [fills]
+  paper/gate:
+    concepts: [execution, paper_trading]
+    outputs: [proposal]

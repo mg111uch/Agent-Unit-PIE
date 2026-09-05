@@ -13,7 +13,7 @@ initial_traders: 10
 mate_global_fallback: true
 mate_radius: 2
 max_age: 60
-metabolism: 2.5
+metabolism: 1.2
 require_opposite_gender: true
 seed: null
 toolmaker_cost: 1.0

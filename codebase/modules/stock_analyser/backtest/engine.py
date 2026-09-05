@@ -133,8 +133,14 @@ def run_backtest(strategy: Strategy, bars_by_symbol: Dict[str, List[Dict[str, An
                 atr = _atr(bars_by_symbol[s], i - 1, strategy.atr_n)
                 if not atr:
                     continue
+                from .costs import sized_frac as _sized
+                try:
+                    from ..config import load_capital as _cap
+                    frac = _sized(strategy.position_frac, atr, b["open"], _cap())
+                except Exception:
+                    frac = strategy.position_frac
                 alloc = (cash + sum(p["qty"] * p["last_px"]
-                                    for p in positions.values())) * strategy.position_frac
+                                    for p in positions.values())) * frac
                 qty = alloc / b["open"] if b["open"] > 0 else 0
                 if qty <= 0:
                     continue

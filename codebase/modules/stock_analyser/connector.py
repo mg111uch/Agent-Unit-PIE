@@ -1,7 +1,9 @@
 """StockConnector — develop_experiment interface for simulator='stock_analyser'.
 
-params: {"strategy": <Strategy dict>, "dataset": "synthetic"|"csv",
-         "symbols": [...], "n": int, "timeframe": "1D"|"15m", "seed": int}
+params: {"strategy": <Strategy dict>, "dataset": "synthetic"|"csv"|"marketdb",
+         "dataset_id": "ds_<name>" (registry pin: universe/timeframe/window),
+         "symbols": [...], "n": int, "timeframe": "1D"|"15m", "seed": int,
+         "start"/"end": ts window filters}
 run_id: 'run_basic' or 'run_policy_<param><int>' (existing validator).
 """
 from __future__ import annotations
@@ -27,12 +29,36 @@ class StockConnector:
         tf = p.get("timeframe", "1D")
         syms = p.get("symbols") or resolve_universe(p.get("universe", "MY_RESEARCH_UNIVERSE")) or ["RELIANCE"]
         n = int(p.get("n", 120))
-        if ds == "csv":
+        if ds in ("csv", "marketdb"):
+            if ds == "marketdb":
+                from .data.datasets import get_dataset as _getds
+                d = _getds(str(p.get("dataset_id", "")), db_path=self.db_path) or {}
+                if d.get("universe") and not p.get("symbols"):
+                    snap = (d.get("splits") or {}).get("members") or []
+                    syms = list(snap) if snap else (
+                        resolve_universe(d["universe"], db_path=self.db_path) or syms)
+                tf = str(p.get("timeframe") or d.get("timeframe") or tf)
             out = {}
             for s in syms:
                 rows = S.query_equity(f"NSE:{s}", tf, db_path=self.db_path)
-                out[s] = rows[-n:] if rows else []  # trailing window, not oldest
-            return {s: v for s, v in out.items() if v}
+                if p.get("start"):
+                    rows = [r for r in rows if r["ts"] >= p["start"]]
+                if p.get("end"):
+                    rows = [r for r in rows if r["ts"] <= p["end"]]
+                if ds == "marketdb" and n <= 0:
+                    out[s] = rows  # full pinned history, no trailing truncation
+                else:
+                    out[s] = rows[-n:] if rows else []  # trailing window, not oldest
+            bars = {s: v for s, v in out.items() if v}
+            try:  # quality gate: trim forming bar, exclude short/gappy symbols
+                from .config import load_capital as _cap
+                from .data.quality import gate as _gate
+                g = _gate(bars, _cap())
+                self._quality = {"excluded": g["excluded"], "mixed": g["mixed"],
+                                 "dropped_forming": g["dropped_forming"]}
+                return g["bars"]
+            except Exception:
+                return bars
         data = SyntheticProvider().fetch(syms, n=n, timeframe=tf,
                                          seed=int(p.get("seed", 7)), db_path=self.db_path,
                                          persist=False)  # never pollute market.db
@@ -73,6 +99,30 @@ class StockConnector:
                                      "final_equity", "avg_net_per_trade", "net_profit")}
         return json.dumps({"run_id": run_id, "strategy": strat.name, "metrics": m,
                             "verdict": "PAPER_READY" if (m.get("avg_net_per_trade") or 0) > 0 and (m.get("n") or 0) >= 20 else "EXPLORE"})
+
+    def run_episode(self, objective: str, run_id: str, seeds: List[Dict[str, Any]],
+                    universe: str = "MY_RESEARCH_UNIVERSE", budget: int = 20,
+                    dataset: str = "marketdb", timeframe: str = "1D",
+                    mode: str = "day", max_hours: float = 0,
+                    seed: int = 1) -> str:
+        """P17: one PIE episode = one bounded job + one kernel finding.
+
+        Thousands of deterministic evals stay inside the domain engine; only
+        the aggregate summary returns to the universal loop.
+        """
+        from .research.job import run_job, episode_summary
+        out = run_job(objective, None, None, universe=universe, budget=budget,
+                      seed=seed, timeframe=timeframe, dataset=dataset,
+                      db_path=self.db_path, mode=mode, run_id=run_id,
+                      max_hours=max_hours, seeds=seeds)
+        summary = episode_summary(out["run_id"], db_path=self.db_path)
+        reg = KB.register_episode_finding(summary)
+        KB.write_shard(run_id, {"objective": objective, "universe": universe,
+                              "dataset": dataset, "budget": budget},
+                    [], {k: summary.get(k) for k in
+                         ("tested", "status", "verdicts", "families", "n_paper_ready")})
+        return json.dumps({"episode": out["run_id"], "finding": reg.get("node_id", ""),
+                           "summary": summary}, separators=(",", ":"))
 
     def generate_structured_premise(self, run_id: str, baseline: str | None = None) -> str:
         p = self._params.get(run_id, {})

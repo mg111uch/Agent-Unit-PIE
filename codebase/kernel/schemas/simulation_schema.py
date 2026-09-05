@@ -127,41 +127,65 @@ MODULE_CONCEPTS: Dict[str, List[str]] = {
 }
 
 
+def _merge_onto_file(onto, merged: Dict[str, List[str]]) -> None:
+    import yaml as _yaml
+
+    data = _yaml.safe_load(onto.read_text()) or {}
+    mods = data.get("modules") if isinstance(data, dict) and "modules" in data else data
+    if isinstance(mods, dict):
+        for mod, cfg in mods.items():
+            if isinstance(cfg, dict):
+                conc = cfg.get("concepts") or cfg.get("affects") or []
+            elif isinstance(cfg, list):
+                conc = cfg
+            else:
+                continue
+            merged[mod.lower()] = sorted(set(conc))
+    elif isinstance(mods, list):
+        for entry in mods:
+            if not isinstance(entry, dict):
+                continue
+            mod = str(entry.get("module", "")).replace(".py", "").lower()
+            conc = entry.get("concepts", [])
+            if mod and conc:
+                merged[mod] = sorted(set(conc))
+
+
 def _load_ontology_concepts() -> Dict[str, List[str]]:
     """Merge per-simulator ontology.yaml declared concepts with MODULE_CONCEPTS."""
     merged: Dict[str, List[str]] = dict(MODULE_CONCEPTS)
     try:
         from pathlib import Path as _P
 
-        sim_root = _P(__file__).resolve().parents[2] / "modules" / "simulators"
-        if sim_root.exists():
-            for child in sim_root.iterdir():
-                onto = child / "ontology.yaml"
-                if not onto.exists():
-                    onto = child / "ontology.yml"
+        mods_root = _P(__file__).resolve().parents[2] / "modules"
+        roots = [mods_root / "simulators"]
+        # domain engines: modules/<engine>/ontology.yaml (e.g. stock_analyser)
+        if mods_root.exists():
+            for child in mods_root.iterdir():
+                if child.is_dir() and (child / "ontology.yaml").exists():
+                    roots.append(child)
+                elif child.is_dir() and (child / "ontology.yml").exists():
+                    roots.append(child)
+        seen: set[str] = set()
+        for root in roots:
+            if not root.exists() or str(root) in seen:
+                continue
+            seen.add(str(root))
+            # root itself may be an ontology holder (domain engine)
+            for onto in (root / "ontology.yaml", root / "ontology.yml"):
                 if onto.exists():
-                    import yaml as _yaml
-
-                    data = _yaml.safe_load(onto.read_text()) or {}
-                    # support two shapes: {module: [concepts]} or {"modules": {module: {concepts: [...]}}}
-                    mods = data.get("modules") if isinstance(data, dict) and "modules" in data else data
-                    if isinstance(mods, dict):
-                        for mod, cfg in mods.items():
-                            if isinstance(cfg, dict):
-                                conc = cfg.get("concepts") or cfg.get("affects") or []
-                            elif isinstance(cfg, list):
-                                conc = cfg
-                            else:
-                                continue
-                            merged[mod.lower()] = sorted(set(conc))
-                    elif isinstance(mods, list):
-                        for entry in mods:
-                            if not isinstance(entry, dict):
-                                continue
-                            mod = str(entry.get("module", "")).replace(".py", "").lower()
-                            conc = entry.get("concepts", [])
-                            if mod and conc:
-                                merged[mod] = sorted(set(conc))
+                    try:
+                        _merge_onto_file(onto, merged)
+                    except Exception:
+                        pass
+            if root.name == "simulators":
+                for child in root.iterdir():
+                    for onto in (child / "ontology.yaml", child / "ontology.yml"):
+                        if onto.exists():
+                            try:
+                                _merge_onto_file(onto, merged)
+                            except Exception:
+                                pass
     except Exception:
         pass
     return merged
@@ -174,19 +198,30 @@ def concepts_for_changed_files(files: List[str], _ontology: Optional[Dict[str, L
         p = Path(f)
         stem = p.stem.lower()
         name = p.name.lower()
-        # ontology.yaml change affects all declared concepts (declaration change)
+        # ontology.yaml change affects only concepts declared in THAT file
         if "ontology" in stem or name in ("ontology.yaml", "ontology.yml"):
-            for concs in registry.values():
-                out.update(concs)
+            try:
+                from pathlib import Path as _P2
+                cand = [_P2(f), _P2("codebase") / f, _P2(__file__).resolve().parents[3] / f]
+                hit = next((c for c in cand if c.exists() and c.is_file()), None)
+                if hit is not None:
+                    tmp: Dict[str, List[str]] = {}
+                    _merge_onto_file(hit, tmp)
+                    for concs in tmp.values():
+                        out.update(concs)
+                    continue
+            except Exception:
+                pass
             continue
+        fl = f.replace("\\", "/").lower()
+        parts = [p for p in fl.split("/") if p]
         for mod, concepts in registry.items():
-            ml = mod.lower()
-            # handle path keys like behaviours/reproduce
+            ml = mod.lower().replace("\\", "/")
             mod_stem = Path(ml).stem.lower()
-            mod_name = Path(ml).name.lower()
-            if ml in stem or ml in name or mod_stem == stem or mod_name == name or stem in ml or name in ml:
+            # exact match only: full-path suffix, path segment, or stem equality
+            if fl.endswith(ml) or fl.endswith(ml + ".py"):
                 out.update(concepts)
-            elif mod_stem in stem or stem == mod_stem:
+            elif ml in parts or mod_stem == stem:
                 out.update(concepts)
     return sorted(out)
 

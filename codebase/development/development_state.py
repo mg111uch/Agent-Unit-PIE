@@ -28,11 +28,28 @@ def _sim_version(sim: str="popula_dyn") -> Optional[Dict[str,Any]]:
     except Exception:
         return None
 
-def _hypotheses() -> List[Dict[str,Any]]:
+def _hypotheses(simulator: str = "") -> List[Dict[str,Any]]:
     try:
         from kernel.hypothesis.hypothesis_engine import hypothesis_engine
+        sim = (simulator or "").lower()
+        sim_key = sim.replace("_analyser", "").replace("analyser", "")
+        items = list(hypothesis_engine.hypotheses.values())
+        def _rank(h) -> int:
+            try:
+                blob = f"{h.hypothesis_id} {h.title} {getattr(h,'category','')} {((getattr(h,'metadata',{}) or {}).get('simulator',''))}".lower()
+                if sim and sim in blob:
+                    return 0
+                if sim_key and sim_key in blob:
+                    return 0
+                md = getattr(h, "metadata", {}) or {}
+                if isinstance(md, dict) and md.get("simulator", "").lower() == sim:
+                    return 0
+            except Exception:
+                pass
+            return 1
+        items = sorted(items, key=_rank)
         out=[]
-        for h in list(hypothesis_engine.hypotheses.values())[:10]:
+        for h in items[:10]:
             out.append({"id":h.hypothesis_id,"title":h.title[:60],"type":h.hypothesis_type,"cat":h.category,"status":h.status,"conf":round(h.confidence,2)})
         return out
     except Exception:
@@ -49,10 +66,19 @@ def _open_gaps() -> List[Dict[str,Any]]:
     except Exception:
         return []
 
-def _recent_runs(limit:int=5) -> List[Dict[str,Any]]:
+def _recent_runs(limit:int=5, simulator: str = "") -> List[Dict[str,Any]]:
     try:
         from kernel.persistence.db import kernel_db
-        rows = kernel_db.conn.execute("SELECT run_id,simulator,version_id,horizon,status FROM simulation_runs ORDER BY created_at DESC LIMIT ?", (limit,)).fetchall()
+        rows = []
+        if simulator:
+            try:
+                rows = kernel_db.conn.execute("SELECT run_id,simulator,version_id,horizon,status FROM simulation_runs WHERE simulator=? ORDER BY created_at DESC LIMIT ?", (simulator, limit,)).fetchall()
+            except Exception:
+                rows = []
+        if not rows:
+            if simulator:
+                return []  # honest per-sim: stock ledger lives in market.db
+            rows = kernel_db.conn.execute("SELECT run_id,simulator,version_id,horizon,status FROM simulation_runs ORDER BY created_at DESC LIMIT ?", (limit,)).fetchall()
         return [{"run_id":r["run_id"],"sim":r["simulator"],"ver":r["version_id"][:18],"h":r["horizon"]} for r in rows]
     except Exception:
         return []
@@ -71,9 +97,9 @@ def generate_state(simulator: str="popula_dyn", query: str="") -> Dict[str,Any]:
     git=_git_commit()
     sim_c=_git_commit(simulator)
     cur=_sim_version(simulator)
-    hyps=_hypotheses()
+    hyps=_hypotheses(simulator)
     gaps=_open_gaps()
-    runs=_recent_runs()
+    runs=_recent_runs(simulator=simulator)
     aff=(cur or {}).get("affected_concepts",[]) if cur else []
     # recommended_next via workflow_engine
     try:

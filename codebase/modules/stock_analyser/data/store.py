@@ -39,6 +39,10 @@ CREATE TABLE IF NOT EXISTS research_candidates(
  id INTEGER PRIMARY KEY AUTOINCREMENT, run_id TEXT, strategy_hash TEXT,
  strategy_json TEXT, parent TEXT, mutation TEXT, verdict TEXT,
  avg_net REAL, oos_net REAL, robustness REAL, created_at TEXT DEFAULT '',
+ data_hash TEXT DEFAULT '', code_version TEXT DEFAULT '',
+ feature_set_hash TEXT DEFAULT '', model_config_hash TEXT DEFAULT '',
+ random_seed TEXT DEFAULT '', dataset_id TEXT DEFAULT '',
+ signal_hash TEXT DEFAULT '',
  UNIQUE(run_id, strategy_hash));
 CREATE INDEX IF NOT EXISTS idx_eq_inst_ts ON equity_bars(instrument_id, ts);
 CREATE INDEX IF NOT EXISTS idx_eq_ts_inst ON equity_bars(ts, instrument_id);
