@@ -13,7 +13,7 @@
 | Baseline-vs-policy compare + visual diff (non-technical policy UI) | open (was Option B) | connector compare_runs |
 | Self-evolution loop (auto-summarize learnings, hypothesis→sim→validate, recursive refinement) | open (was Option C) | hypothesis engine + compression |
 | Deterministic init placement (route `get_random_position` + factory ages through model rng; `uuid4` ids excluded from summaries) | open | agent_factory/spatial plumbing |
-| Side-effect-free behaviours (return-intent child; model applies spawn, ReproductionEngine-style) | open | reproduce path |
+| Side-effect-free behaviours for heal/trade/produce (return-intent intents; model applies) | open | reproduce pattern above |
 | Individual variation: fertility trait + lifespan distribution + categorized death causes | open (Phase 2, minus gender auto-adjust) | unit traits schema |
 | Environment: carrying capacity + adaptability trait + fertility-gradient prospecting move (no A* dep) | open (Phase 3 core, no GIS) | spatial + resource engine |
 | Economy: supply-demand scarcity↔vital-rates + barter markets + inheritance (wealth/skill to children) | open (Phase 4 + high-value upgrades) | trade/produce behaviours |

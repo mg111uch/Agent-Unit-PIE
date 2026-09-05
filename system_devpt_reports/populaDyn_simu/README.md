@@ -57,7 +57,7 @@ Goal-autonomous research using the shared agent loop.
 | Per-Sim Isolation & Lineage | Kernel scopes findings, versions and topics per simulator (`sim@commit` via Git, `data/units/simulations/{sim}/{run}` sharded, `ACTIVE→HISTORICAL` validity) — code is source of truth |
 | Pattern Auto-Detection | Simulation signals → kernel pattern engine (population_trends, resource_cycles, collapse_signals), closes simulation → cognition loop |
 | Reproduction & Mating | Fertile window 15–50, `mate_radius`/`mate_global_fallback`/`require_opposite_gender`, `births_total`/`deaths_total` cumulative, independent `model.random` RNG |
-| Single Spawn Path | Single `add_unit` path via `position`/`state`/`behaviors`/`resources` + `behaviours/reproduce` child `{unit_id,position,behaviors,state,resources}` — code is source |
+| Single Spawn Path | Return-intent: `reproduce` returns `{spawn, events}` (no direct `add_unit`/uuid); model assigns deterministic `child-s{step}-{n}` ids and applies spawn; child ids identical across same-seed runs |
 | Independent RNG | `world_state["rng"]=model.random` used by all stochastic behaviours (`reproduce`/`survival`/`move`/`heal`/`trade_ag`/`produce`); missing rng raises instead of silent unseeded fallback; same-seed runs reproduce identical summaries |
 | Behavior Error Logging | `simulation_model.py:255` logs `behavior {name} {unit} failed` instead of silent `pass` |
 | Smoke Test | `tests/test_popula_dyn_smoke.py` — same-cell 2 fertile `birth_rate 1.0` → `births_total>=1`, cumulative vs last-step, RNG independence |

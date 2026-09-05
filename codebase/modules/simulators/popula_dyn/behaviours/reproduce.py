@@ -72,10 +72,8 @@ class ReproduceBehavior(BaseBehavior):
         partner = potential_partners[rng.randint(len(potential_partners))]
         child_skill = (unit.get_state("skill", 0.5) + partner.get_state("skill", 0.5)) / 2
 
-        import uuid
-        child_id = str(uuid.uuid4())
+        # return-intent: model owns spawn (deterministic id + add_unit)
         child_data = {
-            "unit_id": child_id,
             "unit_type": "human",
             "position": position,
             "behaviors": ["move", "harvest", "consume_metabolism", "reproduce", "survival"],
@@ -84,14 +82,12 @@ class ReproduceBehavior(BaseBehavior):
             "alive": True,
         }
 
-        model.add_unit(child_data)
-
         return {
+            "spawn": child_data,
             "events": [
                 {
                     "event_type": "birth",
                     "parent_id": unit.unit_id,
-                    "child_id": child_id,
                 }
             ]
         }

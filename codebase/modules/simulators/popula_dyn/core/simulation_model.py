@@ -50,6 +50,7 @@ class SimulationModel:
             torus=True,
         )
         self.step_count = 0
+        self._spawn_counter = 0
         self.births = 0
         self.deaths = 0
         self.births_total = 0
@@ -271,6 +272,16 @@ class SimulationModel:
         result: Dict[str, Any],
     ) -> None:
         """Process behavior output."""
+        spawn = result.get("spawn")
+        if spawn is not None:
+            if not isinstance(spawn, dict):
+                raise ValueError("behavior spawn intent must be a unit-data dict")
+            self._spawn_counter += 1
+            spawn = {**spawn, "unit_id": f"child-s{self.step_count}-{self._spawn_counter}"}
+            child = self.add_unit(spawn)
+            for event in result.get("events", []):
+                if event.get("event_type") == "birth" and not event.get("child_id"):
+                    event["child_id"] = child.unit_id
         state_updates = result.get("state_updates", {})
         for key, value in state_updates.items():
             unit.set_state(key, value)
