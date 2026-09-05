@@ -48,7 +48,12 @@ class HealBehavior(BaseBehavior):
 
         rng = world_state.get("rng")
         if rng is None:
-            rng = model.random if model is not None and hasattr(model, "random") else np.random.RandomState(world_state.get("seed", None))
+            rng = model.random if model is not None and hasattr(model, "random") else None
+        if rng is None:
+            seed = world_state.get("seed")
+            if seed is None:
+                raise ValueError("heal needs deterministic rng: pass world_state['rng']")
+            rng = np.random.RandomState(seed)
         if rng.random() >= healing_rate:
             return {}
 

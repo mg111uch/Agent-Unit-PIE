@@ -320,6 +320,10 @@ Expose the simulation connector pack.
 
 Expose the git pack (gated together with `git_tools_enabled`).
 
+### git_tools_enabled = true
+
+Expose git-aware tools (they still obey the sandbox allowlist).
+
 ### tool_packs.code_rag = false
 
 Expose the codebase-atlas retrieval pack.
@@ -328,10 +332,6 @@ Expose the codebase-atlas retrieval pack.
 
 Expose the tool-chain pack. Learned recipes are only ever hinted to the agent
 when this pack is on.
-
-### git_tools_enabled = true
-
-Expose git-aware tools (they still obey the sandbox allowlist).
 
 ### subagent_task_enabled = false
 

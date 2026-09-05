@@ -12,7 +12,7 @@
 | Twin → params what-if (city/human twin data → sim params, real-data scenarios) | open (was Option A) | twin modules + kernel retrieve |
 | Baseline-vs-policy compare + visual diff (non-technical policy UI) | open (was Option B) | connector compare_runs |
 | Self-evolution loop (auto-summarize learnings, hypothesis→sim→validate, recursive refinement) | open (was Option C) | hypothesis engine + compression |
-| Independent RNG for heal/trade/produce (reproduce/survival/move done) | open | simulation_model rng plumbing |
+| Deterministic init placement (route `get_random_position` + factory ages through model rng; `uuid4` ids excluded from summaries) | open | agent_factory/spatial plumbing |
 | Side-effect-free behaviours (return-intent child; model applies spawn, ReproductionEngine-style) | open | reproduce path |
 | Individual variation: fertility trait + lifespan distribution + categorized death causes | open (Phase 2, minus gender auto-adjust) | unit traits schema |
 | Environment: carrying capacity + adaptability trait + fertility-gradient prospecting move (no A* dep) | open (Phase 3 core, no GIS) | spatial + resource engine |

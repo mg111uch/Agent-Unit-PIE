@@ -93,7 +93,12 @@ class TradeBehaviorAg(BaseBehavior):
 
         rng = world_state.get("rng")
         if rng is None:
-            rng = model.random if model is not None and hasattr(model, "random") else np.random.RandomState(world_state.get("seed", None))
+            rng = model.random if model is not None and hasattr(model, "random") else None
+        if rng is None:
+            seed = world_state.get("seed")
+            if seed is None:
+                raise ValueError("trade_ag needs deterministic rng: pass world_state['rng']")
+            rng = np.random.RandomState(seed)
         # rng kept for future stochastic choice; sorting is deterministic
         sorted_agents = sorted(
             all_agents, key=lambda a: a.get_resource("wealth", 0), reverse=True

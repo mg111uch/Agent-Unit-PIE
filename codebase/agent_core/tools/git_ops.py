@@ -5,12 +5,32 @@ from __future__ import annotations
 import os
 import subprocess
 
-from agent_core.config import GIT_TOOLS_ENABLED
+from agent_core.config import GIT_TOOLS_ENABLED, CONFIG_MD_PATH, SECRETS_PATTERNS
 from agent_core.workspace import WORKSPACE_ROOT, to_relative
+
+_SECRET_DEFAULTS = (".env", "secret", "token", "credential", ".pem", ".key")
+
+
+def _git_enabled_now() -> bool:
+    """Re-read the flag per call so config.md flips apply without restart."""
+    try:
+        import json as _json
+        import re as _re
+        with open(CONFIG_MD_PATH, "r", encoding="utf-8") as _f:
+            for _line in _f:
+                _m = _re.match(r"^### git_tools_enabled\s*=\s*(.+)$", _line.strip())
+                if _m:
+                    try:
+                        return bool(_json.loads(_m.group(1).strip()))
+                    except ValueError:
+                        return _m.group(1).strip().lower() == "true"
+    except Exception:
+        pass
+    return bool(GIT_TOOLS_ENABLED)
 
 
 def _check_git_enabled() -> str | None:
-    if not GIT_TOOLS_ENABLED:
+    if not _git_enabled_now():
         return "Git tools are disabled. Set git_tools_enabled: true in config.md to enable."
     if not os.path.isdir(os.path.join(WORKSPACE_ROOT, ".git")):
         return "Not a git repository (no .git directory found in workspace root)."
@@ -76,6 +96,12 @@ def git_diff(input_data=None) -> str:
     if staged:
         args.append("--staged")
     if path:
+        try:
+            from agent_core.workspace import resolve as _resolve
+            _full = _resolve(path)
+            path = to_relative(_full)
+        except Exception as e:
+            return f"Error: invalid path for git diff: {e}"
         args.append("--")
         args.append(path)
     return _run_git(args)
@@ -106,12 +132,31 @@ def git_commit(input_data) -> str:
     if error:
         return error
 
+    preview = ""
     if add_all:
-        add_result = _run_git(["add", "-A"])
-        if "Exit code:" in add_result and "Exit code: 0" not in add_result:
-            return f"git add failed:\n{add_result}"
+        pre = _run_git(["status", "--porcelain"])
+        if not pre.strip() or pre.strip() == "(No output)":
+            return "Nothing to commit (working tree clean)."
+        preview = f"Staged snapshot preview:\n{pre}\n---\n"
+        add_out = _run_git(["add", "-A"])
+        # structured rc check via a probe (output format carries exit marker)
+        if "[Exit code:" in add_out and "Exit code: 0" not in add_out:
+            return f"git add failed:\n{add_out}"
+        staged = _run_git(["diff", "--cached", "--name-only"])
+        if "[Exit code:" in staged and "Exit code: 0" not in staged:
+            return f"git add failed:\n{staged}"
+        patterns = list(SECRETS_PATTERNS or []) + list(_SECRET_DEFAULTS)
+        hits = [ln.strip() for ln in staged.splitlines()
+                if ln.strip() and not ln.startswith(("[", "("))
+                and any(p.lower() in ln.strip().lower() for p in patterns)]
+        if hits:
+            _run_git(["reset"])
+            return ("Commit aborted: staged files look secret-bearing:\n"
+                    + "\n".join(f"  {h}" for h in hits)
+                    + "\nUnstaged via `git reset`. Remove them or commit selectively.")
 
-    return _run_git(["commit", "-m", message])
+    result = _run_git(["commit", "-m", message])
+    return preview + result if preview else result
 
 
 def git_log(input_data=None) -> str:

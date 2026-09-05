@@ -58,7 +58,7 @@ Goal-autonomous research using the shared agent loop.
 | Pattern Auto-Detection | Simulation signals → kernel pattern engine (population_trends, resource_cycles, collapse_signals), closes simulation → cognition loop |
 | Reproduction & Mating | Fertile window 15–50, `mate_radius`/`mate_global_fallback`/`require_opposite_gender`, `births_total`/`deaths_total` cumulative, independent `model.random` RNG |
 | Single Spawn Path | Single `add_unit` path via `position`/`state`/`behaviors`/`resources` + `behaviours/reproduce` child `{unit_id,position,behaviors,state,resources}` — code is source |
-| Independent RNG | `world_state["rng"]=model.random` used by `reproduce`/`survival`/`move` (remaining `heal`/`trade`/`produce` pending) |
+| Independent RNG | `world_state["rng"]=model.random` used by all stochastic behaviours (`reproduce`/`survival`/`move`/`heal`/`trade_ag`/`produce`); missing rng raises instead of silent unseeded fallback; same-seed runs reproduce identical summaries |
 | Behavior Error Logging | `simulation_model.py:255` logs `behavior {name} {unit} failed` instead of silent `pass` |
 | Smoke Test | `tests/test_popula_dyn_smoke.py` — same-cell 2 fertile `birth_rate 1.0` → `births_total>=1`, cumulative vs last-step, RNG independence |
 | Signals & Trends | `population_growth`, `mortality_event`, `resource_scarcity`, `prosperity`, `population_decline`, `healthcare_gap`, `trade_gap`, `population_trend_declining` |

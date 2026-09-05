@@ -121,8 +121,17 @@ class SpatialEngine:
         x, y = pos
         return 0 <= x < self.width and 0 <= y < self.height
 
-    def get_random_position(self) -> Tuple[int, int]:
-        """Get a random position on the grid."""
+    def get_random_position(self, rng=None) -> Tuple[int, int]:
+        """Get a random position on the grid.
+
+        Pass the model's rng for deterministic runs; global np.random
+        is a last resort (nondeterministic) kept for ad-hoc use.
+        """
+        if rng is not None:
+            return (
+                int(rng.randint(self.width)),
+                int(rng.randint(self.height)),
+            )
         import numpy as np
         return (
             np.random.randint(self.width),
