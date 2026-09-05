@@ -199,11 +199,6 @@ print(r.run_once())   # single snapshot; use r.loop() to poll till close
 "
 ```
 
-## Next (new session pickup)
+## Next
 
-Status: 0 PAPER_READY after ~180 candidates (breakout + ML-top3 families both negative net of ₹60/trade). Ledger: `market.db:research_runs` (`res_20260903_113818`, PAUSED_USER); shards pruned to 50, full record in ledger. Suite 23/23 green. All P1–P12 shipped (features table above); open items in `roadmap.md` → Next up, details in `FixesIssues.md`.
-1. Seed new families — mean-reversion and MA-trend symbolic + ML model/features variants via `seeds=[...]`; breakout lineage is retired, don't revive it.
-2. Pin a dataset: `data/datasets.py:register_dataset("...","MY_UNIVERSE_200","1D")`, then bounded day/overnight `run_job` with `dataset="marketdb"`; monitor with `run_status`.
-3. On first PAPER_READY (post-falsification): human approves → `paper.trader.step` daily on live bars → `report` scale verdict → capital.yaml step.
-4. Keep 15m recorder running for future intraday entries; daily remains the research timeframe.
-5. Research backlog, in order: LEVEL-0 family IC gate → feature-attribution findings → portfolio simulator + portfolio-level allocation.
+Moved to `status.md` (single task source). Keep the 15m recorder running for future intraday entries; daily remains the research timeframe.

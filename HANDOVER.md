@@ -2,8 +2,14 @@
 
 Point your agent harness to this file to start autonomous research development. Static pointers (no duplication) — follow links.
 
-## Task — Iter7 (next) — Iter4-6 DONE, post_commit active
-Iter4 `popula_dyn@735cf9a` `harvest/produce/trade` double-count fix, Iter5 `a5f9752` `regrow` fertility sync, Iter6 `9ff8ff1` `consume/survival` graded starvation. Workflow `research_development.json@cd57976` adds bottom `post_commit` node (`loop→post_commit→orient/stop`, `research_development.md#post-commit`): handover is pointer only, history via `data/kernel.db` hydration. Next: `develop_orient({"query":"resource/scarcity graded starvation follow-up","simulator":"popula_dyn"})` via unified loop — no history copy.
+## Modules (co-development — task source is each module's status.md, not here)
+
+| Module | Simulator | Task source (Next) | Roadmap | Shipped docs |
+|---|---|---|---|---|
+| Population sim | `popula_dyn` | `system_devpt_reports/populaDyn_simu/status.md` → Next | `system_devpt_reports/populaDyn_simu/roadmap.md` | `.../populaDyn_simu/README.md` |
+| Stock analyser | `stock_analyser` | `system_devpt_reports/stock_analyser/status.md` → Next | `system_devpt_reports/stock_analyser/roadmap.md` | `.../stock_analyser/README.md` |
+
+Rule: fresh agent picks a module, reads its status.md `## Next` for the task, then follows the unified loop below. Status.md is the single task source — never duplicate next-tasks here; history via `data/kernel.db` (+ `data/market.db` ledger for stock) hydration.
 
 Follow the unified loop in `data/workflows/research_development.json` (see `research_development.md` for node contracts) strictly via `develop.*` primitives — LLM thinks inside workflow, `workflow_engine` enforces transitions. No steps duplicated here — read workflow files.
 
@@ -13,22 +19,22 @@ Follow the unified loop in `data/workflows/research_development.json` (see `rese
 cd /home/manigupt/Hello/Agentic_Unit_PIE
 conda run -n myenv AGENT_SKIP_AUTH=true python codebase/server.py  # if using agent_core harness (optional)
 # Verify state (<2KB) without starting server:
-conda run -n myenv python -c "import sys;sys.path.insert(0,'codebase');from development.development_state import state_text;print(state_text('popula_dyn'))"
+conda run -n myenv python -c "import sys;sys.path.insert(0,'codebase');from development.development_state import state_text;print(state_text('popula_dyn'));print(state_text('stock_analyser'))"
 ```
 
 ## Context Links (read in order — minimal for new sessions)
 
-1. `data/workflows/research_development.json` + `research_development.md` — **Top-level 12-node loop** `start→orient→version_sync→hypothesis→decide_branch→{experiment,modify_code}→update_knowledge→evaluate→validate→loop→stop` (subgraphs: `kernel_ops.json`, `popu_sim_dev.json`). Contracts: `{id,goal,inputs,preconditions,actions,outputs,success,failure,next,mdRef}` via `development/contracts.py`.
+1. `data/workflows/research_development.json` + `research_development.md` — **Top-level 12-node loop** `start→orient→version_sync→hypothesis→decide_branch→{experiment,modify_code}→update_knowledge→evaluate→validate→loop→stop` (subgraphs: `kernel_ops.json`, `popu_sim_dev.json`, `stock_analyser_dev.json`). Contracts: `{id,goal,inputs,preconditions,actions,outputs,success,failure,next,mdRef}` via `development/contracts.py`.
 2. `system_devpt_reports/kernel/README.md` + `usage.md` — Kernel capabilities & per-sim lineage/validity/retrieval docs (lazy-load only when task touches `kernel/**`, topics, signals, logs).
 
 Plan-mode rule: do NOT re-verify checklist steps 1-5 by reading 10+ implementation files (`development/*`, `kernel/*`). Trust `workflow_engine.enforces transitions`; read extra files only when hypothesis gated to that path.
 
 ## Core Invariants (do not reinvent)
 
-- **Git = syntactic lineage** `sim@commit` via `kernel/git_version.py:sim_commit(sim)` scoped `simulators/<sim>` (prevents `virtual_silicon` bump); fallback hash.
+- **Git = syntactic lineage** `sim@commit` via `kernel/git_version.py:sim_commit(sim)` scoped per-sim patterns (`simulators/<sim>/**`, `modules/stock_analyser/**` via manifest); fallback hash.
 - **Kernel = semantic validity** `ACTIVE→HISTORICAL` per-sim concept-level (`kernel/validity.py:mark_stale_findings` + `affected_by` via ontology-aware `_load_ontology_concepts()` from `modules/simulators/<sim>/ontology.yaml`).
 - **Consolidated = materialized view** `kernel/compression_engine.py:recompute_consolidated` (`<2` remaining → `HISTORICAL`, else recomputed `avg_delta`).
-- **Single persistence** `data/kernel.db` (SQLite) — no second store (simulation_runs, semantic_nodes, workflow_states all there).
+- **Single persistence** `data/kernel.db` (SQLite) — no second store (simulation_runs, semantic_nodes, workflow_states all there; stock research ledger lives in `data/market.db` as domain store, findings mirrored to kernel).
 - **Renderer** `data/workflows/workflow_graph.html?graph=research_development.json` handles both legacy array and dict contract nodes.
 
 ## Opencode Loop (5 steps, use `develop.*` — hides shell)

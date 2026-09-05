@@ -1,5 +1,5 @@
 # populaDyn Simulation Status
-_Last verified: 2026-07-23_
+_Last verified: 2026-09-05_
 > Capability claims are hypotheses. Re-validate: `python scripts/validate_capabilities.py`
 
 ## Current Capability
@@ -9,7 +9,19 @@ _Last verified: 2026-07-23_
 
 ## Known Gaps
 - Many simulation features are stubs — high
-- No test suite for simulation modules — med
+- Init placement not yet deterministic (`uuid4` ids, factory/global RNG paths) — med
+- heal/trade/produce return-intent intents still open (reproduce pattern done) — med
 
 ## Recent Changes (newest first, max 10)
-- (No recent changes tracked in this format yet)
+- `6d8535e` return-intent spawn: model-owned `add_unit`, deterministic `child-s{step}-{n}` ids
+- `70871fa` scarcity sweep finding: survival peaks near metabolism 1.2, collapses beyond 1.7 (`hyp_scarcity_sweep_07` supported 4/4)
+- `a65da61` RNG determinism: heal/trade_ag/produce raise without rng; same-seed runs identical
+- `c524281` kernel isolation + 7 popula signal types + per-sim state
+- Iter4-6 DONE: double-count fix (`735cf9a`), regrow fertility sync (`a5f9752`), graded starvation (`9ff8ff1`)
+
+## Next (single source for the next task — agents pull from here, not HANDOVER)
+1. heal/trade/produce return-intent intents (model applies; reproduce pattern above).
+2. Denser scarcity sweep m0.9–1.5 (peak precision; 4-point curve flatters).
+3. Metrics DataFrame + CSV export (Phase 7 data half).
+4. Individual variation: fertility trait + lifespan distribution.
+5. Details in `roadmap.md` → Next up. Shipped items move to `README.md` Features Overview.
