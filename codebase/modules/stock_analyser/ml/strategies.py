@@ -70,8 +70,24 @@ def quick_screen(strategy_d: Dict[str, Any], bars: Dict[str, List[Dict]],
     fam = strategy_d.get("meta", {}).get("family", "sym")
     _, val = _split(bars, 0.7)
     if fam == "ml":
+        import pandas as pd
         dates = sorted({b["ts"] for bl in val.values() for b in bl})
-        sigs = ml_signals(strategy_d, val, live_from=dates[0] if dates else "")
+        live = dates[0] if dates else ""
+        m = strategy_d.get("meta", {}) or {}
+        # train on full history strictly before val (val-only panel starves
+        # training: past would be empty by construction); score mapped onto
+        # val bars with pre-live masking, so no peek.
+        df_all = pd.DataFrame(_panel_rows(bars))
+        past = df_all[df_all["ts"] < live] if live else df_all
+        if df_all.empty or len(past) < 50:
+            sigs = {s: [False] * len(bl) for s, bl in val.items()}
+        else:
+            model = train_ranker(past, top_n=m.get("top_n", 5),
+                                 model=m.get("model", "hgb"),
+                                 feats=m.get("features"),
+                                 max_depth=m.get("max_depth", 3))
+            sigs = top_n_signals(add_scores(model, df_all), val,
+                                 top_n=m.get("top_n", 5), live_from=live)
         res = run_backtest(ml_exits(strategy_d), val, start_cash=start_cash,
                            min_bars=0, signals=sigs)
     else:
