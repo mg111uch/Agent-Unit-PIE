@@ -91,6 +91,29 @@ AGENT_CONFIGS = {
             "wealth": 5.0,
         },
     },
+    "firm": {
+        "unit_type": "firm",
+        "behaviors": [
+            "move",
+            "hire",
+            "invest",
+        ],
+        "initial_state": {
+            "payroll_fund": 100.0,
+            "wage_offer": 5.0,
+            "min_skill": 0.3,
+            "max_hires_per_step": 2,
+            "hire_radius": 2,
+            "invest_threshold": 20.0,
+            "invest_amount": 10.0,
+            "capital_stock": 0.0,
+            "wealth": 100.0,
+            "alive": True,
+        },
+        "initial_resources": {
+            "wealth": 100.0,
+        },
+    },
     "land": {
         "unit_type": "land",
         "behaviors": [
@@ -142,7 +165,9 @@ def create_unit_config(
     config = AGENT_CONFIGS[agent_type].copy()
 
     rng = np.random.RandomState(seed)
-    unit_id = str(uuid.uuid4())
+    # deterministic when caller passes unit_id (model-owned counter);
+    # uuid fallback preserves standalone use
+    unit_id = overrides.pop("unit_id", None) or str(uuid.uuid4())
 
     unit_config = {
         "unit_id": unit_id,
@@ -155,6 +180,9 @@ def create_unit_config(
     if agent_type == "farmer":
         initial_state.setdefault("age", rng.randint(15, 40))
         initial_state.setdefault("gender", rng.choice(["M", "F"]))
+        # individual variation: fertility multiplier + drawn lifespan
+        initial_state.setdefault("fertility", round(float(rng.uniform(0.5, 1.5)), 3))
+        initial_state.setdefault("lifespan", int(min(85, max(40, rng.normal(60, 8)))))
 
     for key, value in overrides.items():
         if key in initial_state:

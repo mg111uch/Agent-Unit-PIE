@@ -56,6 +56,23 @@ FEATURES: Dict[str, dict] = {
             {"op": "rolling_min", "args": [{"field": "low"}, {"const": 60}]}]}]},
     "dist_high": _sub1(_ratio({"field": "close"},
                               {"op": "rolling_max", "args": [{"field": "high"}, {"const": 20}]})),
+    # Phase 1 (FixesIssues #6): data before model — vol-normalized momentum,
+    # drawdown distance, short-vs-long reversal, range-per-unit-vol.
+    "mom_vol_20": {"op": "div", "args": [
+        _sub1(_ratio({"field": "close"}, _lag("close", 20))),
+        {"op": "rolling_std", "args": [{"field": "returns"}, {"const": 20}]}]},
+    "dd_high_60": _sub1(_ratio({"field": "close"},
+                               {"op": "rolling_max", "args": [{"field": "high"}, {"const": 60}]})),
+    "rev_5_20": {"op": "sub", "args": [
+        _sub1(_ratio({"field": "close"}, _lag("close", 5))),
+        _sub1(_ratio({"field": "close"}, _lag("close", 20)))]},
+    "range_vol": {"op": "div", "args": [
+        {"op": "div", "args": [
+            {"op": "sub", "args": [
+                {"op": "rolling_max", "args": [{"field": "high"}, {"const": 20}]},
+                {"op": "rolling_min", "args": [{"field": "low"}, {"const": 20}]}]},
+            {"field": "close"}]},
+        {"op": "rolling_std", "args": [{"field": "returns"}, {"const": 20}]}]},
 }
 
 

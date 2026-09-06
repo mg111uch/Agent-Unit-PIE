@@ -8,10 +8,23 @@ Point your agent harness to this file to start autonomous research development. 
 |---|---|---|---|---|
 | Population sim | `popula_dyn` | `system_devpt_reports/populaDyn_simu/status.md` → Next | `system_devpt_reports/populaDyn_simu/roadmap.md` | `.../populaDyn_simu/README.md` |
 | Stock analyser | `stock_analyser` | `system_devpt_reports/stock_analyser/status.md` → Next | `system_devpt_reports/stock_analyser/roadmap.md` | `.../stock_analyser/README.md` |
+| Economy (Moonshot) | `economy` (+`popula_dyn` firm side) | `system_devpt_reports/economy/status.md` → Next | `system_devpt_reports/economy/roadmap.md` | `.../economy/README.md` |
 
 Rule: fresh agent picks a module, reads its status.md `## Next` for the task, then follows the unified loop below. Status.md is the single task source — never duplicate next-tasks here; history via `data/kernel.db` (+ `data/market.db` ledger for stock) hydration.
 
 Follow the unified loop in `data/workflows/research_development.json` (see `research_development.md` for node contracts) strictly via `develop.*` primitives — LLM thinks inside workflow, `workflow_engine` enforces transitions. No steps duplicated here — read workflow files.
+
+## Execution Mode — Ask First
+
+Fresh agents must ask user before iteration 2+:
+`ask_user_question: Which execution mode? [Proceed stepwise with report after each step (inspect anomalies before next step) | Silent steps until validate (report only at loop)]`
+Default is stepwise with report (safer for first MODEL fix). Respect choice for all subsequent `develop.*` calls in that iteration.
+
+## Execution Mode — Ask First (mandatory for fresh agents)
+
+Before starting work, ask the user:
+`Which execution mode? [Single session: do module work here directly | Module workers: launch one persistent worker per module (same task_id resumed per module), main session acts as orchestrator only]`
+Default if no answer: module workers (proven pattern — one task_id per module: economy `ses_f892f855dffe9TPkdf76m05zG0`). Orchestrator verifies every worker leg (smoke + harness + line limits) before close, syncs status/README/roadmap docs, never bypasses gates.
 
 ## Quick Start (conda env `myenv`)
 
@@ -77,8 +90,4 @@ Repeat same task from clean context; harness `development/eval_harness.py:run_al
 - Kernel/sim isolation, lineage, docs freshness → check `report_freshness_tool` / `report_schema_check_tool` first (via `develop_validate`).
 - Never hand-edit `data/topics/*/graph.json` (derived view).
 
-## Execution Mode — Ask First
 
-Fresh agents must ask user before iteration 2+:
-`ask_user_question: Which execution mode? [Proceed stepwise with report after each step (inspect anomalies before next step) | Silent steps until validate (report only at loop)]`
-Default is stepwise with report (safer for first MODEL fix). Respect choice for all subsequent `develop.*` calls in that iteration.

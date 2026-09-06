@@ -49,13 +49,16 @@ Failure `no_gap` → re-orient with broader query.
 
 ## Decide Branch
 
-Deterministic branch (FixesIssues #3):
+Deterministic branch (FixesIssues #3 + paradigm search):
 
 ```
 param uncertainty? → experiment (L1-L2)
+wrong abstraction? → propose_architecture → modify_code (leap, ARCHITECTURE hypothesis)
 model/code deficiency? → modify_code → sim path (L3)
 kernel/workflow deficiency? → modify_code → workflow L4 / kernel L5-L6
 ```
+
+Leap gate: `develop_propose_architecture({hypothesis_id, leap_proposal≥20 chars})` advances `decide_branch→propose_architecture→modify_code`. Use for stock family jumps (rules→factors→ML→deep) and popula epoch jumps (behaviours→macro→epoch engine).
 
 Outputs `branch`. Next is `experiment` or `modify_code`. `validation_gate.required_level(path)` maps `simulators/*→3`, `data/workflows→4`, `kernel→6`; ceiling `DEFAULT_CEILING=3` (sim autonomous, L4+ gated, L5-6 human approval).
 

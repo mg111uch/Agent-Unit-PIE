@@ -46,10 +46,6 @@ class ProduceBehavior(BaseBehavior):
             rng = np.random.RandomState(seed)
         if rng.random() < production_rate:
             inventory += 1
-            unit.set_state("inventory", inventory)
-
-            if model and hasattr(model, "tools_produced"):
-                model.tools_produced += 1
 
         neighbors = grid.get_neighbors(position, moore=True, radius=1, include_center=False)
         potential_customers = [
@@ -61,19 +57,29 @@ class ProduceBehavior(BaseBehavior):
         ]
 
         if inventory <= 0 or not potential_customers:
+            # return-intent: model owns inventory + tools_produced counting.
+            # Craft-only (no sale yet) still reports tool_produced, as before.
+            if inventory > unit.get_state("inventory", 0):
+                return {"state_updates": {"inventory": inventory},
+                        "events": [{"event_type": "tool_produced"}]}
             return {}
 
         customer = potential_customers[rng.randint(len(potential_customers))]
-        customer.modify_resource("wealth", -tool_cost)
-        customer.set_state(
-            "skill", customer.get_state("skill", 0.5) + tool_quality
-        )
-        unit.set_state("inventory", inventory - 1)
-
+        # return-intent: model applies customer effects + own inventory/wealth
         return {
+            "state_updates": {"inventory": inventory - 1},
             "resource_updates": {
                 "wealth": tool_cost
             },
+            "unit_effects": [
+                {
+                    "unit_id": customer.unit_id,
+                    "state_updates": {
+                        "skill": customer.get_state("skill", 0.5) + tool_quality
+                    },
+                    "resource_updates": {"wealth": -tool_cost},
+                }
+            ],
             "events": [
                 {
                     "event_type": "tool_produced",

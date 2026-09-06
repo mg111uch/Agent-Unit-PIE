@@ -1,9 +1,9 @@
 {
   "nodes": [
     {
-      "name": "Init",
+      "name": "run_policy_metabolism90 Findings",
       "side": "argument",
-      "premise": "Initial seed node for popu_sim topic. Simulation topic for population dynamics experimentation.",
+      "premise": "Status: IMPROVED\nPopulation: 64 (baseline 41) +56.1%\nDeaths: 64 (STABLE vs baseline 67)\n Births: 78\n Wealth: 1599.7 (baseline 3103.6)\n AvgSkill: 0.56\n Signals: healthcare_gap=0 intensity=6.0\n Interpretation: Wealth decline may indicate resource depletion",
       "evidence": [],
       "examples": [],
       "sources": [],
@@ -11,29 +11,9 @@
       "confidence": 1.0
     },
     {
-      "name": "popula_dyn consolidated IMPROVED (2 runs, avg 25.0%)",
-      "side": "consolidated",
-      "premise": "Consolidated popula_dyn: IMPROVED over 2 runs; outcomes IMPROVED; avg delta 25.0%; sources test_improved_0,test_improved_1",
-      "evidence": [],
-      "examples": [],
-      "sources": [],
-      "discipline": "",
-      "confidence": 0.9
-    },
-    {
-      "name": "popula_dyn consolidated COLLAPSED (2 runs, avg -32.5%)",
-      "side": "consolidated",
-      "premise": "Consolidated popula_dyn: COLLAPSED over 2 runs; avg delta -32.5%; sources test_c_2,test_c_3 (recomputed)",
-      "evidence": [],
-      "examples": [],
-      "sources": [],
-      "discipline": "",
-      "confidence": 0.9
-    },
-    {
-      "name": "run_basic Findings",
+      "name": "run_policy_metabolism100 Findings",
       "side": "argument",
-      "premise": "Status: STABLE\nPopulation: 5 (baseline 0) +0.0%\nDeaths: 9 (SPIKED vs baseline 0)\n Births: 0\n Wealth: 1102.5 (baseline 0.0)\n AvgSkill: 0.66\n Signals: prosperity=220.50886321448147 intensity=5.0; population_decline=5 intensity=8.0(HIGH); population_trend_declining=5 intensity=5.0\n Interpretation: Zero births suggest fertile window or partner availability bottleneck; Death spike likely caused by wealth-based starvation multiplier",
+      "premise": "Status: IMPROVED\nPopulation: 64 (baseline 41) +56.1%\nDeaths: 64 (STABLE vs baseline 67)\n Births: 78\n Wealth: 1423.3 (baseline 3103.6)\n AvgSkill: 0.56\n Signals: healthcare_gap=0 intensity=6.0\n Interpretation: Wealth decline may indicate resource depletion",
       "evidence": [],
       "examples": [],
       "sources": [],
@@ -41,9 +21,9 @@
       "confidence": 1.0
     },
     {
-      "name": "run_policy_birth06 Findings",
+      "name": "run_policy_metabolism110 Findings",
       "side": "argument",
-      "premise": "Status: IMPROVED\nPopulation: 8 (baseline 5) +60.0%\nDeaths: 3 (REDUCED vs baseline 9)\n Births: 0\n Wealth: 1308.0 (baseline 1102.5)\n AvgSkill: 0.56\n Signals: prosperity=163.50453610422778 intensity=5.0; population_decline=8 intensity=8.0(HIGH); population_trend_declining=8 intensity=5.0\n Interpretation: Zero births suggest fertile window or partner availability bottleneck",
+      "premise": "Status: IMPROVED\nPopulation: 64 (baseline 41) +56.1%\nDeaths: 64 (STABLE vs baseline 67)\n Births: 78\n Wealth: 1248.2 (baseline 3103.6)\n AvgSkill: 0.56\n Signals: resource_scarcity=19.503341879244754 intensity=7.0(HIGH); healthcare_gap=0 intensity=6.0\n Interpretation: Wealth decline may indicate resource depletion",
       "evidence": [],
       "examples": [],
       "sources": [],
@@ -51,9 +31,9 @@
       "confidence": 1.0
     },
     {
-      "name": "run_policy_birth08 Findings",
+      "name": "run_policy_metabolism120 Findings",
       "side": "argument",
-      "premise": "Status: COLLAPSED\nPopulation: 2 (baseline 5) -60.0%\nDeaths: 33 (SPIKED vs baseline 9)\n Births: 0\n Wealth: 871.7 (baseline 1102.5)\n AvgSkill: 0.70\n Signals: prosperity=435.8473467036253 intensity=5.0; population_decline=2 intensity=8.0(HIGH); population_trend_declining=2 intensity=5.0\n Interpretation: Zero births suggest fertile window or partner availability bottleneck; Death spike likely caused by wealth-based starvation multiplier; Wealth decline may indicate resource depletion",
+      "premise": "Status: IMPROVED\nPopulation: 64 (baseline 41) +56.1%\nDeaths: 64 (STABLE vs baseline 67)\n Births: 78\n Wealth: 1073.2 (baseline 3103.6)\n AvgSkill: 0.56\n Signals: resource_scarcity=16.76946880062066 intensity=7.0(HIGH); healthcare_gap=0 intensity=6.0\n Interpretation: Wealth decline may indicate resource depletion",
       "evidence": [],
       "examples": [],
       "sources": [],
@@ -61,9 +41,9 @@
       "confidence": 1.0
     },
     {
-      "name": "run_policy_birth10 Findings",
+      "name": "run_policy_metabolism130 Findings",
       "side": "argument",
-      "premise": "Status: IMPROVED\nPopulation: 11 (baseline 5) +120.0%\nDeaths: 6 (REDUCED vs baseline 9)\n Births: 0\n Wealth: 1533.8 (baseline 1102.5)\n AvgSkill: 0.50\n Signals: prosperity=139.4336755198664 intensity=5.0; population_decline=11 intensity=8.0(HIGH); population_trend_declining=11 intensity=5.0\n Interpretation: Zero births suggest fertile window or partner availability bottleneck",
+      "premise": "Status: IMPROVED\nPopulation: 64 (baseline 41) +56.1%\nDeaths: 64 (STABLE vs baseline 67)\n Births: 78\n Wealth: 898.0 (baseline 3103.6)\n AvgSkill: 0.56\n Signals: resource_scarcity=14.031786732860425 intensity=7.0(HIGH); healthcare_gap=0 intensity=6.0\n Interpretation: Wealth decline may indicate resource depletion",
       "evidence": [],
       "examples": [],
       "sources": [],
@@ -71,19 +51,9 @@
       "confidence": 1.0
     },
     {
-      "name": "popula_dyn consolidated IMPROVED (2 runs, avg 150.0%)",
-      "side": "consolidated",
-      "premise": "Consolidated popula_dyn: IMPROVED over 2 runs; outcomes IMPROVED; avg delta 150.0%; sources argu_popu_sim_run_policy_metabolism07_Findings,argu_popu_sim_run_policy_metabolism12_Findings",
-      "evidence": [],
-      "examples": [],
-      "sources": [],
-      "discipline": "",
-      "confidence": 0.9
-    },
-    {
-      "name": "run_policy_birth12 Findings",
+      "name": "run_policy_metabolism140 Findings",
       "side": "argument",
-      "premise": "Status: IMPROVED\nPopulation: 10 (baseline 5) +100.0%\nDeaths: 3 (REDUCED vs baseline 9)\n Births: 0\n Wealth: 1571.8 (baseline 1102.5)\n AvgSkill: 0.62\n Signals: prosperity=157.18236774643083 intensity=5.0; population_decline=10 intensity=8.0(HIGH); population_trend_declining=10 intensity=5.0\n Interpretation: Zero births suggest fertile window or partner availability bottleneck",
+      "premise": "Status: IMPROVED\nPopulation: 64 (baseline 41) +56.1%\nDeaths: 64 (STABLE vs baseline 67)\n Births: 78\n Wealth: 720.8 (baseline 3103.6)\n AvgSkill: 0.56\n Signals: resource_scarcity=11.26299443242329 intensity=7.0(HIGH); healthcare_gap=0 intensity=6.0\n Interpretation: Wealth decline may indicate resource depletion",
       "evidence": [],
       "examples": [],
       "sources": [],
@@ -91,9 +61,9 @@
       "confidence": 1.0
     },
     {
-      "name": "run_policy_materadius01 Findings",
+      "name": "run_policy_metabolism150 Findings",
       "side": "argument",
-      "premise": "Status: STABLE\nPopulation: 73 (baseline 90) -18.9%\nDeaths: 63 (STABLE vs baseline 56)\n Births: 86\n Wealth: 4963.5 (baseline 5652.3)\n AvgSkill: 0.56\n Signals: prosperity=67.99334621159514 intensity=5.0; healthcare_gap=0 intensity=6.0\n Interpretation: No obvious failure mode detected",
+      "premise": "Status: IMPROVED\nPopulation: 62 (baseline 41) +51.2%\nDeaths: 61 (STABLE vs baseline 67)\n Births: 73\n Wealth: 544.9 (baseline 3103.6)\n AvgSkill: 0.56\n Signals: resource_scarcity=8.788633376509809 intensity=7.0(HIGH); healthcare_gap=0 intensity=6.0\n Interpretation: Wealth decline may indicate resource depletion",
       "evidence": [],
       "examples": [],
       "sources": [],
@@ -101,9 +71,9 @@
       "confidence": 1.0
     },
     {
-      "name": "run_policy_materadius05 Findings",
+      "name": "run_policy_metabolism170 Findings",
       "side": "argument",
-      "premise": "Status: DEGRADED\nPopulation: 70 (baseline 90) -22.2%\nDeaths: 72 (STABLE vs baseline 56)\n Births: 92\n Wealth: 4586.8 (baseline 5652.3)\n AvgSkill: 0.54\n Signals: prosperity=65.52505848591386 intensity=5.0; healthcare_gap=0 intensity=6.0\n Interpretation: No obvious failure mode detected",
+      "premise": "Status: DEGRADED\nPopulation: 28 (baseline 41) -31.7%\nDeaths: 84 (STABLE vs baseline 67)\n Births: 62\n Wealth: 280.1 (baseline 3103.6)\n AvgSkill: 0.59\n Signals: resource_scarcity=10.001792143895532 intensity=7.0(HIGH); healthcare_gap=0 intensity=6.0; population_trend_declining=28 intensity=5.0\n Interpretation: Wealth decline may indicate resource depletion",
       "evidence": [],
       "examples": [],
       "sources": [],
@@ -111,119 +81,9 @@
       "confidence": 1.0
     },
     {
-      "name": "popula_dyn consolidated STABLE (2 runs, avg -9.4%)",
-      "side": "consolidated",
-      "premise": "Consolidated popula_dyn: STABLE over 2 runs; outcomes STABLE; avg delta -9.4%; sources argu_popu_sim_run_basic_Findings,argu_popu_sim_run_policy_materadius01_Findings",
-      "evidence": [],
-      "examples": [],
-      "sources": [],
-      "discipline": "",
-      "confidence": 0.9
-    },
-    {
-      "name": "run_policy_metabolism05 Findings",
+      "name": "run_policy_metabolism200 Findings",
       "side": "argument",
-      "premise": "Status: IMPROVED\nPopulation: 140 (baseline 41) +241.5%\nDeaths: 79 (STABLE vs baseline 67)\n Births: 169\n Wealth: 8849.9 (baseline 3103.6)\n AvgSkill: 0.55\n Signals: prosperity=63.21343317091595 intensity=5.0; healthcare_gap=0 intensity=6.0\n Interpretation: No obvious failure mode detected",
-      "evidence": [],
-      "examples": [],
-      "sources": [],
-      "discipline": "",
-      "confidence": 1.0
-    },
-    {
-      "name": "run_policy_metabolism10 Findings",
-      "side": "argument",
-      "premise": "Status: IMPROVED\nPopulation: 140 (baseline 41) +241.5%\nDeaths: 79 (STABLE vs baseline 67)\n Births: 169\n Wealth: 7358.4 (baseline 3103.6)\n AvgSkill: 0.55\n Signals: prosperity=52.560267570680026 intensity=5.0; healthcare_gap=0 intensity=6.0\n Interpretation: No obvious failure mode detected",
-      "evidence": [],
-      "examples": [],
-      "sources": [],
-      "discipline": "",
-      "confidence": 1.0
-    },
-    {
-      "name": "run_policy_metabolism20 Findings",
-      "side": "argument",
-      "premise": "Status: IMPROVED\nPopulation: 140 (baseline 41) +241.5%\nDeaths: 79 (STABLE vs baseline 67)\n Births: 169\n Wealth: 4338.1 (baseline 3103.6)\n AvgSkill: 0.55\n Signals: healthcare_gap=0 intensity=6.0\n Interpretation: No obvious failure mode detected",
-      "evidence": [],
-      "examples": [],
-      "sources": [],
-      "discipline": "",
-      "confidence": 1.0
-    },
-    {
-      "name": "run_policy_metabolism06 Findings",
-      "side": "argument",
-      "premise": "Status: IMPROVED\nPopulation: 140 (baseline 41) +241.5%\nDeaths: 79 (STABLE vs baseline 67)\n Births: 169\n Wealth: 3796.7 (baseline 3103.6)\n AvgSkill: 0.55\n Signals: healthcare_gap=0 intensity=6.0\n Interpretation: No obvious failure mode detected",
-      "evidence": [],
-      "examples": [],
-      "sources": [],
-      "discipline": "",
-      "confidence": 1.0
-    },
-    {
-      "name": "run_policy_metabolism25 Findings",
-      "side": "argument",
-      "premise": "Status: DEGRADED\nPopulation: 22 (baseline 41) -46.3%\nDeaths: 107 (SPIKED vs baseline 67)\n Births: 79\n Wealth: 160.3 (baseline 3103.6)\n AvgSkill: 0.52\n Signals: resource_scarcity=7.28448641131648 intensity=7.0(HIGH); population_decline=22 intensity=8.0(HIGH); healthcare_gap=0 intensity=6.0; population_trend_declining=22 intensity=5.0\n Interpretation: Wealth decline may indicate resource depletion",
-      "evidence": [],
-      "examples": [],
-      "sources": [],
-      "discipline": "",
-      "confidence": 1.0
-    },
-    {
-      "name": "run_policy_metabolism35 Findings",
-      "side": "argument",
-      "premise": "Status: DEGRADED\nPopulation: 32 (baseline 41) -22.0%\nDeaths: 107 (SPIKED vs baseline 67)\n Births: 89\n Wealth: 143.8 (baseline 3103.6)\n AvgSkill: 0.51\n Signals: resource_scarcity=4.49225711117591 intensity=7.0(HIGH); healthcare_gap=0 intensity=6.0; population_trend_declining=32 intensity=5.0\n Interpretation: Wealth decline may indicate resource depletion",
-      "evidence": [],
-      "examples": [],
-      "sources": [],
-      "discipline": "",
-      "confidence": 1.0
-    },
-    {
-      "name": "popula_dyn consolidated DEGRADED (2 runs, avg -34.1%)",
-      "side": "consolidated",
-      "premise": "Consolidated popula_dyn: DEGRADED over 2 runs; outcomes DEGRADED; avg delta -34.1%; sources argu_popu_sim_run_policy_metabolism25_Findings,argu_popu_sim_run_policy_metabolism35_Findings",
-      "evidence": [],
-      "examples": [],
-      "sources": [],
-      "discipline": "",
-      "confidence": 0.9
-    },
-    {
-      "name": "run_policy_metabolism07 Findings",
-      "side": "argument",
-      "premise": "Status: IMPROVED\nPopulation: 140 (baseline 41) +241.5%\nDeaths: 79 (STABLE vs baseline 67)\n Births: 169\n Wealth: 3299.2 (baseline 3103.6)\n AvgSkill: 0.55\n Signals: healthcare_gap=0 intensity=6.0\n Interpretation: No obvious failure mode detected",
-      "evidence": [],
-      "examples": [],
-      "sources": [],
-      "discipline": "",
-      "confidence": 1.0
-    },
-    {
-      "name": "run_policy_metabolism27 Findings",
-      "side": "argument",
-      "premise": "Status: DEGRADED\nPopulation: 12 (baseline 41) -70.7%\nDeaths: 101 (SPIKED vs baseline 67)\n Births: 63\n Wealth: 157.2 (baseline 3103.6)\n AvgSkill: 0.50\n Signals: resource_scarcity=13.102777357287136 intensity=7.0(HIGH); population_decline=12 intensity=8.0(HIGH)\n Interpretation: Wealth decline may indicate resource depletion",
-      "evidence": [],
-      "examples": [],
-      "sources": [],
-      "discipline": "",
-      "confidence": 1.0
-    },
-    {
-      "name": "run_policy_metabolism12 Findings",
-      "side": "argument",
-      "premise": "Status: IMPROVED\nPopulation: 65 (baseline 41) +58.5%\nDeaths: 64 (STABLE vs baseline 67)\n Births: 79\n Wealth: 1067.4 (baseline 3103.6)\n AvgSkill: 0.53\n Signals: resource_scarcity=16.421478448844525 intensity=7.0(HIGH); healthcare_gap=0 intensity=6.0; population_trend_declining=65 intensity=5.0\n Interpretation: Wealth decline may indicate resource depletion",
-      "evidence": [],
-      "examples": [],
-      "sources": [],
-      "discipline": "",
-      "confidence": 1.0
-    },
-    {
-      "name": "run_policy_metabolism17 Findings",
-      "side": "argument",
-      "premise": "Status: DEGRADED\nPopulation: 22 (baseline 41) -46.3%\nDeaths: 90 (STABLE vs baseline 67)\n Births: 62\n Wealth: 286.6 (baseline 3103.6)\n AvgSkill: 0.60\n Signals: resource_scarcity=13.025021898544416 intensity=7.0(HIGH); population_decline=22 intensity=8.0(HIGH); healthcare_gap=0 intensity=6.0; population_trend_declining=22 intensity=5.0\n Interpretation: Wealth decline may indicate resource depletion",
+      "premise": "Status: COLLAPSED\nPopulation: 2 (baseline 41) -95.1%\nDeaths: 78 (STABLE vs baseline 67)\n Births: 30\n Wealth: 159.0 (baseline 3103.6)\n AvgSkill: 0.50\n Signals: prosperity=79.51963920170252 intensity=5.0; population_decline=2 intensity=8.0(HIGH)\n Interpretation: Wealth decline may indicate resource depletion",
       "evidence": [],
       "examples": [],
       "sources": [],
@@ -233,83 +93,73 @@
   ],
   "edges": [
     {
-      "source": "run_policy_birth06 Findings",
-      "target": "run_policy_birth08 Findings",
+      "source": "run_policy_metabolism170 Findings",
+      "target": "run_policy_metabolism90 Findings",
       "relation": "contradicts"
     },
     {
-      "source": "run_policy_birth08 Findings",
-      "target": "run_policy_birth06 Findings",
+      "source": "run_policy_metabolism170 Findings",
+      "target": "run_policy_metabolism100 Findings",
       "relation": "contradicts"
     },
     {
-      "source": "run_policy_materadius05 Findings",
-      "target": "run_policy_materadius01 Findings",
+      "source": "run_policy_metabolism170 Findings",
+      "target": "run_policy_metabolism110 Findings",
       "relation": "contradicts"
     },
     {
-      "source": "run_policy_metabolism25 Findings",
-      "target": "run_policy_metabolism05 Findings",
+      "source": "run_policy_metabolism170 Findings",
+      "target": "run_policy_metabolism120 Findings",
       "relation": "contradicts"
     },
     {
-      "source": "run_policy_metabolism25 Findings",
-      "target": "run_policy_metabolism10 Findings",
+      "source": "run_policy_metabolism170 Findings",
+      "target": "run_policy_metabolism130 Findings",
       "relation": "contradicts"
     },
     {
-      "source": "run_policy_metabolism25 Findings",
-      "target": "run_policy_metabolism20 Findings",
+      "source": "run_policy_metabolism170 Findings",
+      "target": "run_policy_metabolism140 Findings",
       "relation": "contradicts"
     },
     {
-      "source": "run_policy_metabolism25 Findings",
-      "target": "popula_dyn consolidated IMPROVED (2 runs, avg 150.0%)",
+      "source": "run_policy_metabolism170 Findings",
+      "target": "run_policy_metabolism150 Findings",
       "relation": "contradicts"
     },
     {
-      "source": "run_policy_metabolism25 Findings",
-      "target": "run_policy_metabolism06 Findings",
+      "source": "run_policy_metabolism200 Findings",
+      "target": "run_policy_metabolism90 Findings",
       "relation": "contradicts"
     },
     {
-      "source": "run_policy_metabolism35 Findings",
-      "target": "run_policy_metabolism05 Findings",
+      "source": "run_policy_metabolism200 Findings",
+      "target": "run_policy_metabolism100 Findings",
       "relation": "contradicts"
     },
     {
-      "source": "run_policy_metabolism35 Findings",
-      "target": "run_policy_metabolism10 Findings",
+      "source": "run_policy_metabolism200 Findings",
+      "target": "run_policy_metabolism110 Findings",
       "relation": "contradicts"
     },
     {
-      "source": "run_policy_metabolism35 Findings",
-      "target": "run_policy_metabolism20 Findings",
+      "source": "run_policy_metabolism200 Findings",
+      "target": "run_policy_metabolism120 Findings",
       "relation": "contradicts"
     },
     {
-      "source": "run_policy_metabolism35 Findings",
-      "target": "popula_dyn consolidated IMPROVED (2 runs, avg 150.0%)",
+      "source": "run_policy_metabolism200 Findings",
+      "target": "run_policy_metabolism130 Findings",
       "relation": "contradicts"
     },
     {
-      "source": "run_policy_metabolism35 Findings",
-      "target": "run_policy_metabolism06 Findings",
+      "source": "run_policy_metabolism200 Findings",
+      "target": "run_policy_metabolism140 Findings",
       "relation": "contradicts"
     },
     {
-      "source": "run_policy_metabolism27 Findings",
-      "target": "run_policy_metabolism07 Findings",
-      "relation": "contradicts"
-    },
-    {
-      "source": "run_policy_metabolism17 Findings",
-      "target": "run_policy_metabolism12 Findings",
-      "relation": "contradicts"
-    },
-    {
-      "source": "run_policy_metabolism17 Findings",
-      "target": "popula_dyn consolidated IMPROVED (2 runs, avg 150.0%)",
+      "source": "run_policy_metabolism200 Findings",
+      "target": "run_policy_metabolism150 Findings",
       "relation": "contradicts"
     }
   ]

@@ -50,6 +50,7 @@ Goal-autonomous research using the shared agent loop.
 | Hot-Reload | Auto-detect tool module file changes and reload without restart; explicit `kernel_reload` and `hot_reload` tools |
 | Behavior Registry | Pluggable registry with modular `behaviours/` (move, harvest, consume_metabolism, reproduce, survival, heal, produce, trade_ag, regrow) |
 | Agent Factory | Typed agents `farmer`/`healer`/`toolmaker`/`trader`/`land` via `create_unit_config`, `get_agent_behaviors`, `list_agent_types` |
+| Firm Behaviours | `firm` agent (`move`/`hire`/`invest`): hires willing nearby humans into payroll, converts surplus wealth to `capital_stock`; per-step `firms_hires`/`firms_invested` + cumulative `firms_hires_total`/`firms_invested_total` counters + `Firms_Hired`/`Hired_Cumul`/`Capital_Stock` reporters |
 | Spatial Engine | Toroidal grid with `place_agent`/`remove_agent`/`move_agent`, `get_neighbors`/`get_neighborhood`/`get_cell_list_contents`, `summary` (`human_occupied_cells`/`human_units` separate from land) |
 | Simulation Model | Unit initialization, `BehaviorRegistry` + `SpatialEngine` orchestration, stepwise `step`/`run`, `DataCollector` (Population, Wealth, Births/Births_Cumul, Deaths/Deaths_Cumul) |
 | WorldEngine Integration | `simulation_model` constructor param, `process_simulation()` tick, `with_agricultural_simulation(params)`, `health_check` |
@@ -61,6 +62,19 @@ Goal-autonomous research using the shared agent loop.
 | Independent RNG | `world_state["rng"]=model.random` used by all stochastic behaviours (`reproduce`/`survival`/`move`/`heal`/`trade_ag`/`produce`); missing rng raises instead of silent unseeded fallback; same-seed runs reproduce identical summaries |
 | Behavior Error Logging | `simulation_model.py:255` logs `behavior {name} {unit} failed` instead of silent `pass` |
 | Smoke Test | `tests/test_popula_dyn_smoke.py` — same-cell 2 fertile `birth_rate 1.0` → `births_total>=1`, cumulative vs last-step, RNG independence |
+| Paradigm Search (Phase0) | `ARCHITECTURE` hypothesis + `develop_propose_architecture` gate: `decide_branch→propose_architecture→modify_code` for epoch jumps (behaviours→macro→epoch engine) |
+| Epoch Engine (Phase3) | `core/epoch.py`: 5 regimes, 6 macro vars, constraint gates, multi-scale `run_until_transition`, `compile_epoch` calibration/scenario; `SimulationModel.epoch` |
+| Sim Falsification (Adds) | `core/falsify.py`: `falsify_run` seed-shift/perturb/halves attacks on passers, parity with stock |
+| Policy DSL + SocietyState (PhaseA) | `core/policy.py`: 5 mechanisms→deltas + schedule/fiscal; `core/society.py`: gini/age/food/skilled/health |
+| Scenario Engine (PhaseB) | `core/scenarios.py`: `branch` baseline→policies + `score_policy` welfare vs gini/food/fiscal |
+| Robustness (PhaseC) | `effect_chains` side-effect search + `sensitivity` assumption grid with pass-rate gate |
+| Policy Screen | `screen_policy`: registry-hit or static gates pre-simulation (0.2ms) |
+| Death Causes | starvation/old_age/hazard split + counters/columns (reconciles with deaths) |
+| Deterministic Init | model-owned `u00001…` ids + rng-routed placement (same-seed id sets identical) |
+| Policy Registry | `policy_id` content-hash + memo in `branch()` (dedup identical proposals) |
+| Metrics Export | 22-col `data.csv`: 14 engine + 8 SocietyState series via cached `society_snapshot` (incl. `Healed_Cumul`; health index uses cumulative healings) |
+| Individual Variation | heritable `fertility` trait + drawn `lifespan`; `survival` per-unit limit (real age pyramid) |
+| Return-Intent Behaviours | `reproduce`/`heal`/`trade_ag`/`produce` return intents only; model applies `spawn`/`unit_effects`/counters (deterministic, double-credit fixed) |
 | Signals & Trends | `population_growth`, `mortality_event`, `resource_scarcity`, `prosperity`, `population_decline`, `healthcare_gap`, `trade_gap`, `population_trend_declining` |
 
 ---

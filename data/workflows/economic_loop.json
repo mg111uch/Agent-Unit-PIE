@@ -1,0 +1,37 @@
+{
+  "meta": {
+    "id": "economic_loop",
+    "goal": "Moonshot economic loop — opportunity to money to twin to learning, then loop",
+    "subgraphs": [],
+    "phase": "Phase 6",
+    "engine_map": "observe_market..rank=economy.scoring/challenge, simulate=popula_dyn enterprise_sim/scenarios (manual), execute=capital.approve_action (human gate), reconcile_money=capital/execution, update_twin=twin_bridge"
+  },
+  "nodes": [
+    {"id":"observe_market","goal":"Read market/twin signals for candidate gaps","inputs":[],"preconditions":[],"actions":["twin_snapshot","ledger_read"],"outputs":["signals"],"success":["signals_ready"],"failure":["no_signal"],"next":["discover_opportunity"]},
+    {"id":"discover_opportunity","goal":"Frame a gap as an Opportunity object","inputs":["signals"],"preconditions":["signals_ready"],"actions":["make_opportunity"],"outputs":["opp_id"],"success":["opp_recorded"],"failure":["no_opp"],"next":["estimate_economics"]},
+    {"id":"estimate_economics","goal":"Score the opportunity (economy.scoring)","inputs":["opp_id"],"preconditions":["opp_recorded"],"actions":["score_opportunity","challenge"],"outputs":["score","verdict"],"success":["scored"],"failure":["rejected"],"next":["simulate"]},
+    {"id":"simulate","goal":"Enterprise_sim/scenario check (manual hook for now)","inputs":["opp_id","score"],"preconditions":["scored"],"actions":["twin_to_params","branch"],"outputs":["sim_outcome"],"success":["simulated"],"failure":["sim_crash"],"next":["rank"]},
+    {"id":"rank","goal":"Rank scored opps, pick one to pursue","inputs":["score","sim_outcome"],"preconditions":["simulated"],"actions":["rank"],"outputs":["winner_id"],"success":["ranked"],"failure":["none_viable"],"next":["create_real_task"]},
+    {"id":"create_real_task","goal":"Create the real Task with budget and verification","inputs":["winner_id"],"preconditions":["ranked"],"actions":["make_task","record_task"],"outputs":["task_id"],"success":["task_created"],"failure":["over_budget"],"next":["execute"]},
+    {"id":"execute","goal":"Execute spend behind the human gate","inputs":["task_id"],"preconditions":["task_created"],"actions":["propose_action","approve_action"],"outputs":["tx_id"],"success":["approved"],"failure":["blocked"],"next":["collect_outcome"]},
+    {"id":"collect_outcome","goal":"Collect actual revenue and cost","inputs":["tx_id"],"preconditions":["approved"],"actions":["observe"],"outputs":["actual_revenue","actual_cost"],"success":["collected"],"failure":["no_data"],"next":["reconcile_money"]},
+    {"id":"reconcile_money","goal":"Post profit/loss delta (capital/execution)","inputs":["tx_id","actual_revenue","actual_cost"],"preconditions":["collected"],"actions":["record_outcome_tx"],"outputs":["profit"],"success":["reconciled"],"failure":["gate_denied"],"next":["update_twin"]},
+    {"id":"update_twin","goal":"Mirror outcome into twin timeline/economy","inputs":["profit"],"preconditions":["reconciled"],"actions":["record_outcome","sync_economy"],"outputs":["twin_updated"],"success":["synced"],"failure":["no_twin"],"next":["learn"]},
+    {"id":"learn","goal":"Keep what worked, note what failed","inputs":["profit","twin_updated"],"preconditions":["synced"],"actions":["note_lesson"],"outputs":["lesson"],"success":["learned"],"failure":[],"next":["scale_abandon_pivot"]},
+    {"id":"scale_abandon_pivot","goal":"Scale, abandon, or pivot — then loop","inputs":["lesson"],"preconditions":["learned"],"actions":["decide"],"outputs":["decision"],"success":["decided"],"failure":[],"next":["observe_market"]}
+  ],
+  "edges": [
+    ["observe_market","discover_opportunity","",[]],
+    ["discover_opportunity","estimate_economics","",[]],
+    ["estimate_economics","simulate","",[]],
+    ["simulate","rank","",[]],
+    ["rank","create_real_task","",[]],
+    ["create_real_task","execute","",[]],
+    ["execute","collect_outcome","",[]],
+    ["collect_outcome","reconcile_money","",[]],
+    ["reconcile_money","update_twin","",[]],
+    ["update_twin","learn","",[]],
+    ["learn","scale_abandon_pivot","",[]],
+    ["scale_abandon_pivot","observe_market","loop",[]]
+  ]
+}

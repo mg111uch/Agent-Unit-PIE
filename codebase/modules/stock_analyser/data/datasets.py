@@ -59,3 +59,20 @@ def list_datasets(db_path: str | None = None) -> List[Dict[str, Any]]:
         con.close()
     return [{"id": r[0], "name": r[1], "universe": r[2], "timeframe": r[3],
              "start_ts": r[4], "end_ts": r[5]} for r in rows]
+
+
+# Phase 1 (FixesIssues #7): fixed regime windows so edge must persist across time.
+REGIMES: List[Dict[str, str]] = [
+    {"name": "regime_2015_2019", "start_ts": "2015-01-01", "end_ts": "2019-12-31"},
+    {"name": "regime_2020_2021", "start_ts": "2020-01-01", "end_ts": "2021-12-31"},
+    {"name": "regime_2022_2023", "start_ts": "2022-01-01", "end_ts": "2023-12-31"},
+    {"name": "regime_2024_2026", "start_ts": "2024-01-01", "end_ts": "2026-12-31"},
+]
+
+
+def ensure_regime_datasets(universe: str, timeframe: str = "1D",
+                           db_path: str | None = None) -> List[str]:
+    """Register one dataset per regime window. Idempotent (INSERT OR REPLACE)."""
+    return [register_dataset(r["name"], universe, timeframe,
+                             r["start_ts"], r["end_ts"], db_path=db_path)
+            for r in REGIMES]

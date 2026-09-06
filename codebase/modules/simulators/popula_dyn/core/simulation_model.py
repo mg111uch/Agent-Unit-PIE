@@ -23,6 +23,7 @@ import pandas as pd
 from modules.simulators.popula_dyn.behavior_registry import BehaviorRegistry
 from modules.simulators.popula_dyn.core.spatial_engine import SpatialEngine
 from modules.simulators.popula_dyn.core.unit_agent import UnitAgent
+from modules.simulators.popula_dyn.core.society import society_state
 from modules.simulators.popula_dyn.core.agent_factory import (
     AGENT_CONFIGS,
     create_unit_config,
@@ -51,14 +52,23 @@ class SimulationModel:
         )
         self.step_count = 0
         self._spawn_counter = 0
+        self._id_counter = 0  # deterministic init ids u00001… (uuid fallback untouched)
+        self.epoch = params.get("epoch", "Agricultural")  # Phase 3: macro regime var
         self.births = 0
         self.deaths = 0
         self.births_total = 0
         self.deaths_total = 0
+        self.death_causes = {"starvation": 0, "old_age": 0, "hazard": 0}
+        self.death_causes_total = {"starvation": 0, "old_age": 0, "hazard": 0}
         self.successful_healings = 0
+        self.successful_healings_total = 0
         self.tools_produced = 0
         self.trades_executed = 0
         self.wealth_traded = 0
+        self.firms_hires = 0
+        self.firms_hires_total = 0
+        self.firms_invested = 0
+        self.firms_invested_total = 0
         self._init_units()
         self.datacollector = DataCollector(
             model_reporters={
@@ -67,17 +77,38 @@ class SimulationModel:
                 "Avg_Skill": lambda m: m.get_average_skill(),
                 "Births": "births",
                 "Deaths": "deaths",
+                "Deaths_Starvation": lambda m: m.death_causes["starvation"],
+                "Deaths_OldAge": lambda m: m.death_causes["old_age"],
+                "Deaths_Hazard": lambda m: m.death_causes["hazard"],
                 "Births_Cumul": "births_total",
                 "Deaths_Cumul": "deaths_total",
                 "Healer_Count": lambda m: m.get_unit_type_count("specialist", "heal"),
                 "Toolmaker_Count": lambda m: m.get_unit_type_count("specialist", "produce"),
                 "Trader_Count": lambda m: m.get_unit_type_count("specialist", "trade_ag"),
                 "Successful_Healings": "successful_healings",
+                "Healed_Cumul": "successful_healings_total",
                 "Tools_Produced": "tools_produced",
                 "Trades_Executed": "trades_executed",
                 "Wealth_Traded": "wealth_traded",
+                "Firms_Hired": "firms_hires",
+                "Hired_Cumul": "firms_hires_total",
+                "Capital_Stock": lambda m: sum(
+                    float(u.get_state("capital_stock", 0) or 0)
+                    for u in m.units.values()
+                    if u.unit_type == "firm" and u.alive),
+                # SocietyState per-step series (policy curves, not just endpoints)
+                "Gini": lambda m: m.society_snapshot()["gini"],
+                "Food_Security": lambda m: m.society_snapshot()["food_security"],
+                "Skilled_Share": lambda m: m.society_snapshot()["skilled_share"],
+                "Health_Index": lambda m: m.society_snapshot()["health_index"],
+                "Wealth_PerCapita": lambda m: (m.society_snapshot()["wealth_total"]
+                                               / max(1, m.society_snapshot()["population"])),
+                "Sex_M": lambda m: m.get_sex_count("M"),
+                "Sex_F": lambda m: m.get_sex_count("F"),
             }
         )
+        self._soc_cache: Dict[str, Any] = {}
+        self._soc_step = -1
     def _init_units(self) -> None:
         """Initialize all units from agent configs."""
         params = self.params
@@ -107,8 +138,7 @@ class SimulationModel:
                 unit.resources["crops"] = float(fertility)
         initial_pop = params.get("initial_pop", PARAMS["initial_pop"])
         for _ in range(initial_pop):
-            x = rng.randint(0, grid_width)
-            y = rng.randint(0, grid_height)
+            x, y = self.spatial_engine.get_random_position(rng)
             # Phase C: concentrate initial ages in fertile window for overlapping generations
             if rng.random() < 0.8:
                 age = rng.randint(15, 40)
@@ -126,8 +156,7 @@ class SimulationModel:
             unit.set_state("gender", gender)
         initial_healers = params.get("initial_healers", PARAMS["initial_healers"])
         for _ in range(initial_healers):
-            x = rng.randint(0, grid_width)
-            y = rng.randint(0, grid_height)
+            x, y = self.spatial_engine.get_random_position(rng)
             unit = self._create_unit(
                 "healer",
                 position=(x, y),
@@ -137,8 +166,7 @@ class SimulationModel:
             )
         initial_toolmakers = params.get("initial_toolmakers", PARAMS["initial_toolmakers"])
         for _ in range(initial_toolmakers):
-            x = rng.randint(0, grid_width)
-            y = rng.randint(0, grid_height)
+            x, y = self.spatial_engine.get_random_position(rng)
             unit = self._create_unit(
                 "toolmaker",
                 position=(x, y),
@@ -149,8 +177,7 @@ class SimulationModel:
             )
         initial_traders = params.get("initial_traders", PARAMS["initial_traders"])
         for _ in range(initial_traders):
-            x = rng.randint(0, grid_width)
-            y = rng.randint(0, grid_height)
+            x, y = self.spatial_engine.get_random_position(rng)
             unit = self._create_unit(
                 "trader",
                 position=(x, y),
@@ -167,11 +194,13 @@ class SimulationModel:
         **overrides,
     ) -> UnitAgent:
         """Create and register a unit."""
+        self._id_counter += 1
         config = create_unit_config(
             agent_type=agent_type,
             model=self,
             position=position,
             seed=seed,
+            unit_id=f"u{self._id_counter:05d}",
             **overrides,
         )
         unit = UnitAgent(
@@ -209,10 +238,13 @@ class SimulationModel:
         """Advance simulation by one tick."""
         self.births = 0
         self.deaths = 0
+        self.death_causes = {"starvation": 0, "old_age": 0, "hazard": 0}
         self.successful_healings = 0
         self.tools_produced = 0
         self.trades_executed = 0
         self.wealth_traded = 0
+        self.firms_hires = 0
+        self.firms_invested = 0
         world_state = {
             "params": self.params,
             "grid": self.spatial_engine,
@@ -288,6 +320,15 @@ class SimulationModel:
         resource_updates = result.get("resource_updates", {})
         for key, value in resource_updates.items():
             unit.modify_resource(key, value)
+        # cross-unit intents: model applies by id (skip missing/dead)
+        for eff in result.get("unit_effects", []) or []:
+            target = self.units.get((eff or {}).get("unit_id", ""))
+            if target is None or not target.alive:
+                continue
+            for key, value in (eff.get("state_updates", {}) or {}).items():
+                target.set_state(key, value)
+            for key, value in (eff.get("resource_updates", {}) or {}).items():
+                target.modify_resource(key, value)
         events = result.get("events", [])
         for event in events:
             event_type = event.get("event_type")
@@ -295,15 +336,26 @@ class SimulationModel:
                 # births owned by add_unit only; event is informational
                 pass
             elif event_type == "death":
-                # deaths owned by sweep only
-                pass
+                # categorized causes owned here (per-step + cumulative)
+                reason = event.get("reason", "hazard")
+                if reason not in self.death_causes:
+                    reason = "hazard"
+                self.death_causes[reason] += 1
+                self.death_causes_total[reason] += 1
             elif event_type == "healed":
                 self.successful_healings += 1
+                self.successful_healings_total += 1
             elif event_type == "tool_produced":
                 self.tools_produced += 1
             elif event_type == "trade_executed":
                 self.trades_executed += 1
                 self.wealth_traded += event.get("amount", 0)
+            elif event_type == "hired":
+                self.firms_hires += 1
+                self.firms_hires_total += 1
+            elif event_type == "invested":
+                self.firms_invested += 1
+                self.firms_invested_total += 1
     def run(self, years: Optional[int] = None) -> None:
         """Run simulation for specified years."""
         years = years or self.params.get("years", PARAMS["years"])
@@ -352,6 +404,19 @@ class SimulationModel:
             if u.alive:
                 count += 1
         return count
+    def get_sex_count(self, gender: str) -> int:
+        """Alive humans by gender (metrics split)."""
+        return sum(1 for u in self.units.values()
+                   if u.unit_type == "human" and u.alive
+                   and u.get_state("gender") == gender)
+
+    def society_snapshot(self) -> Dict[str, Any]:
+        """Cached-per-step SocietyState (one unit scan shared by all reporters)."""
+        if self._soc_step != self.step_count:
+            self._soc_cache = society_state(self)
+            self._soc_step = self.step_count
+        return self._soc_cache
+
     def get_dataframe(self) -> pd.DataFrame:
         """Get collected data as dataframe."""
         return self.datacollector.get_model_vars_dataframe()
@@ -360,6 +425,7 @@ class SimulationModel:
         """Get simulation summary."""
         return {
             "step_count": self.step_count,
+            "epoch": getattr(self, "epoch", "Agricultural"),
             "total_units": len(self.units),
             "population": self.get_population_count(),
             "total_wealth": self.get_total_wealth(),

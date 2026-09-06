@@ -4617,3 +4617,6 @@ That should become the north-star objective of the stock research engine.
 Your current code already has enough infrastructure to move in this direction without redesigning everything: the shared loop, stock connector, research ledger, ML dataset/ranker, screening, OOS validation, findings and paper gate are already present. 
 
 The next plan should therefore be a **P13–P19 refinement plus a redefinition of `research/job.py` as an adaptive alpha-discovery scheduler**, rather than another wholesale rewrite.
+
+--------
+

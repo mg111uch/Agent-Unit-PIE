@@ -66,18 +66,30 @@ class ReproduceBehavior(BaseBehavior):
             return {}
 
         rng = model.random if model is not None and hasattr(model, "random") else np.random.RandomState(world_state.get("seed", None))
-        if rng.random() >= params.get("birth_rate", 0.04):
+        # individual variation: couple-mean fertility scales birth probability
+        fert = (unit.get_state("fertility", 1.0)
+                + sum(n.get_state("fertility", 1.0) for n in potential_partners)
+                / max(1, len(potential_partners))) / 2
+        if rng.random() >= params.get("birth_rate", 0.04) * fert:
             return {}
 
         partner = potential_partners[rng.randint(len(potential_partners))]
         child_skill = (unit.get_state("skill", 0.5) + partner.get_state("skill", 0.5)) / 2
+        # heritable variation: mean parental traits, small mutation on lifespan
+        child_fert = min(2.0, max(0.3, (unit.get_state("fertility", 1.0)
+                                        + partner.get_state("fertility", 1.0)) / 2))
+        child_life = int(min(85, max(40, (unit.get_state("lifespan", 60)
+                                          + partner.get_state("lifespan", 60)) / 2
+                                         + rng.normal(0, 3))))
 
         # return-intent: model owns spawn (deterministic id + add_unit)
         child_data = {
             "unit_type": "human",
             "position": position,
             "behaviors": ["move", "harvest", "consume_metabolism", "reproduce", "survival"],
-            "state": {"age": 0, "gender": rng.choice(["M", "F"]), "skill": child_skill, "position": position},
+            "state": {"age": 0, "gender": rng.choice(["M", "F"]), "skill": child_skill,
+                      "fertility": round(child_fert, 3), "lifespan": child_life,
+                      "position": position},
             "resources": {"wealth": 5.0},
             "alive": True,
         }

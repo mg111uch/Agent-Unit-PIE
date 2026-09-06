@@ -10,3 +10,5 @@ encoding_cache
 cache
 atlas_output/
 generated_reports/
+data/market.db
+data/units/

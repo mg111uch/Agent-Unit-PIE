@@ -22,6 +22,53 @@ def strategy_hash(d: Dict[str, Any]) -> str:
     return hashlib.sha256(json.dumps(canon, sort_keys=True).encode()).hexdigest()[:16]
 
 
+def _corr(xs: List[float], ys: List[float]) -> float:
+    n = len(xs)
+    if n < 10:
+        return 0.0
+    mx, my = sum(xs) / n, sum(ys) / n
+    dx = [x - mx for x in xs]
+    dy = [y - my for y in ys]
+    den = (sum(a * a for a in dx) * sum(b * b for b in dy)) ** 0.5
+    return sum(a * b for a, b in zip(dx, dy)) / den if den else 0.0
+
+
+def rank_validation(bars: Dict[str, List], lookback: int = 20, top_n: int = 5,
+                    hold: int = 5, cfg: Dict[str, Any] | None = None) -> Dict[str, Any]:
+    """Cross-sectional rank validation (Adds): is there rank edge, not just a
+    single-symbol curve-fit? Each date: rank symbols by trailing `lookback`
+    return, hold top_n for `hold` bars vs bottom_n. Reports mean spread,
+    hit-rate, mean rank IC. Date-aligned; symbols missing a date sit out."""
+    cfg = cfg or {}
+    px: Dict[str, Dict[str, float]] = {}
+    for s, bl in bars.items():
+        for b in bl:
+            if b.get("close"):
+                px.setdefault(s, {})[b["ts"]] = float(b["close"])
+    dates = sorted({d for m in px.values() for d in m})
+    spreads, ics, n = [], [], 0
+    for i in range(lookback, len(dates) - hold):
+        d0, d1, d2 = dates[i - lookback], dates[i], dates[i + hold]
+        uni = [(s, m[d1] / m[d0] - 1, m[d2] / m[d1] - 1)
+               for s, m in px.items() if d0 in m and d1 in m and d2 in m and m[d0] > 0]
+        if len(uni) < max(4, top_n * 2):
+            continue
+        uni.sort(key=lambda t: t[1])
+        lo, hi = uni[:top_n], uni[-top_n:]
+        spreads.append(sum(t[2] for t in hi) / top_n - sum(t[2] for t in lo) / top_n)
+        ranks = {s: r for r, (s, _, _) in enumerate(uni)}
+        ics.append(_corr([ranks[s] for s, _, _ in uni], [f for _, _, f in uni]))
+        n += 1
+    mean_sp = sum(spreads) / len(spreads) if spreads else 0.0
+    hit = sum(1 for x in spreads if x > 0) / len(spreads) if spreads else 0.0
+    mean_ic = sum(ics) / len(ics) if ics else 0.0
+    ok = (n >= int(cfg.get("rank_min_periods", 20)) and mean_sp > 0
+          and hit >= float(cfg.get("rank_min_hit", 0.55)))
+    return {"pass": ok, "mean_spread": round(mean_sp, 4), "hit_rate": round(hit, 3),
+            "mean_rank_ic": round(mean_ic, 4), "periods": n,
+            "params": {"lookback": lookback, "top_n": top_n, "hold": hold}}
+
+
 def seal(strategy_d: Dict[str, Any], cut: str, oos_frac: float) -> Dict[str, Any]:
     return {"strategy_hash": strategy_hash(strategy_d), "cut": cut, "oos_frac": oos_frac}
 

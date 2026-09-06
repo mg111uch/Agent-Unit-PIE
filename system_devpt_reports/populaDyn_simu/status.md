@@ -1,5 +1,5 @@
 # populaDyn Simulation Status
-_Last verified: 2026-09-05_
+_Last verified: 2026-09-06_
 > Capability claims are hypotheses. Re-validate: `python scripts/validate_capabilities.py`
 
 ## Current Capability
@@ -13,6 +13,24 @@ _Last verified: 2026-09-05_
 - heal/trade/produce return-intent intents still open (reproduce pattern done) — med
 
 ## Recent Changes (newest first, max 10)
+- `Det-init` DONE: model-owned `u00001…` init ids (uuid fallback kept) + placement via `get_random_position(rng)`; same-seed id sets identical
+- `Death-causes` DONE: starvation/old_age/hazard split at death + per-step/cumul counters and columns (1+9+16=26 reconciles); answers what kills units under each policy
+- `Screen` analytical policy screen DONE: `screen_policy` (registry-hit → memoized verdict; static gates on mechanism/fiscal/duration; 0.2ms, mirrors stock alpha gate)
+- `Recalibrate` under variation: plateau 0.9–1.4 (pop 64), softening 1.5 (62), cliff 1.7 (28), collapse 2.0 (pop 2). Shape holds, collapse sharper — curve adopted as epoch calibration baseline
+- `Variation` DONE: heritable fertility trait (couple-mean scales birth p, inherited ±clamp) + drawn lifespan N(60,8)∈[40,85] in `survival` (elder share 0.03→0.26); determinism intact
+- `Healings-fix` cumulative `successful_healings_total` (+`Healed_Cumul` col, 22 cols); health index stable, mirrors births/deaths pattern
+- `Metrics-export` DONE: 7 per-step SocietyState columns (Gini/Food/Skilled/Health/Wealth_pc/Sex_M/F) via cached `society_snapshot` (one scan/step); `data.csv` now 21 cols, determinism intact
+- `Sweep-dense` m0.9–1.5 SEEDED (seed 7): flat pop 67 plateau (no 1.2 peak — prior unseeded peak was seed noise); cliff replicates at m1.7 (pop 22) / m2.0 (pop 6). Curve corrected: plateau→cliff, not peak→collapse
+- `Return-intent` heal/trade/produce converted: `unit_effects` cross-unit intents applied by model (reproduce pattern); healer double-credit fixed; determinism verified
+- `Registry` policy registry: `policy_id` content-hash + JSON memo in `branch()` (identical proposals dedup, stock-like); fiscal persistence + meso parked in roadmap
+- `PhaseC-robust` robustness: `effect_chains` (direct/secondary/distributional/unintended) + `sensitivity` (assumption grid, pass-rate gate) in `core/scenarios.py`
+- `PhaseB-scenarios` scenario engine: `core/scenarios.py` (`branch` baseline→A/B/C via per-step params + `score_policy` welfare subject to gini/food/fiscal)
+- `PhaseA-policy` Policy DSL + SocietyState: `core/policy.py` (5 mechanisms→param deltas, schedule, fiscal; unsupported raise) + `core/society.py` (gini/age/food/skilled/health)
+- `Adds-falsify` sim falsification parity: `core/falsify.py` (`falsify_run`: seed-shift/perturb/halves, stock mirror)
+- `Phase3-epoch` epoch engine live: `core/epoch.py` (EPOCHS×5, macro_state×6, constraint gates, `run_until_transition` multi-scale, `compile_epoch` calibration/scenario) + `SimulationModel.epoch`
+- `Phase2-stock-only` no sim change; popula leap work starts Phase3
+- `Phase1-stock-only` no sim change; leap branch ready for epoch jumps (Phase3-4 next)
+- `Phase0-leap` paradigm-search branch live: `decide_branch→propose_architecture→modify_code` via `develop_propose_architecture` (epoch jumps: behaviours→macro→epoch engine)
 - `6d8535e` return-intent spawn: model-owned `add_unit`, deterministic `child-s{step}-{n}` ids
 - `70871fa` scarcity sweep finding: survival peaks near metabolism 1.2, collapses beyond 1.7 (`hyp_scarcity_sweep_07` supported 4/4)
 - `a65da61` RNG determinism: heal/trade_ag/produce raise without rng; same-seed runs identical
@@ -20,8 +38,6 @@ _Last verified: 2026-09-05_
 - Iter4-6 DONE: double-count fix (`735cf9a`), regrow fertility sync (`a5f9752`), graded starvation (`9ff8ff1`)
 
 ## Next (single source for the next task — agents pull from here, not HANDOVER)
-1. heal/trade/produce return-intent intents (model applies; reproduce pattern above).
-2. Denser scarcity sweep m0.9–1.5 (peak precision; 4-point curve flatters).
-3. Metrics DataFrame + CSV export (Phase 7 data half).
+1. Roadmap Next up (twin what-if / baseline-vs-policy UI / self-evolution loop pick one).
 4. Individual variation: fertility trait + lifespan distribution.
 5. Details in `roadmap.md` → Next up. Shipped items move to `README.md` Features Overview.

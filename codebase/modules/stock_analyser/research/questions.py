@@ -27,3 +27,27 @@ def next_questions(failures: List[Dict] = [], findings: List[Dict] = [],
         out.append({"kind": "followup",
                     "question": f"Does {findings[0].get('claim', '?')[:120]} hold out-of-sample?"})
     return out
+
+
+# Phase 1 (FixesIssues #3): baseline ladder L0-L2. Higher levels (ML/deep) only
+# activate when lower-level evidence justifies escalation.
+BASELINE_LADDER: List[Dict[str, str]] = [
+    {"level": "L0", "name": "buy_hold",
+     "question": "Does buy-and-hold on {universe} beat cash over each regime?"},
+    {"level": "L1", "name": "momentum",
+     "question": "Does cross-sectional momentum (top-N by ret_20) beat L0 on {universe}?"},
+    {"level": "L1", "name": "reversal",
+     "question": "Does short-run reversal (bottom-N by ret_5) beat L0 on {universe}?"},
+    {"level": "L2", "name": "momentum_liquidity",
+     "question": "Does momentum × liquidity filter (vol_ratio) survive costs on {universe}?"},
+    {"level": "L2", "name": "momentum_vol_regime",
+     "question": "Does momentum conditioned on vol_20 regime persist on {universe}?"},
+]
+
+
+def baseline_ladder(universe: str = "MY_RESEARCH_UNIVERSE") -> List[Dict[str, Any]]:
+    """Ordered L0-L2 directed questions; climb before trying ML."""
+    return [{"kind": "directed", "level": b["level"], "baseline": b["name"],
+             "universe": universe,
+             "question": b["question"].format(universe=universe)}
+            for b in BASELINE_LADDER]

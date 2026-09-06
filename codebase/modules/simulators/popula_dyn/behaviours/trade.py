@@ -115,19 +115,17 @@ class TradeBehaviorAg(BaseBehavior):
         margin = trade_amount * trade_margin
         transfer = trade_amount - margin
 
-        richest.modify_resource("wealth", -trade_amount)
-        poorest.modify_resource("wealth", transfer)
-
-        if model:
-            if hasattr(model, "trades_executed"):
-                model.trades_executed += 1
-            if hasattr(model, "wealth_traded"):
-                model.wealth_traded += trade_amount
-
+        # return-intent: model applies counterparty effects (no direct mutation)
         return {
             "resource_updates": {
                 "wealth": margin
             },
+            "unit_effects": [
+                {"unit_id": richest.unit_id,
+                 "resource_updates": {"wealth": -trade_amount}},
+                {"unit_id": poorest.unit_id,
+                 "resource_updates": {"wealth": transfer}},
+            ],
             "events": [
                 {
                     "event_type": "trade_executed",

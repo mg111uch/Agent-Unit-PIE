@@ -45,10 +45,12 @@ class SurvivalBehavior(BaseBehavior):
         elif wealth < 2.0:
             death_prob *= 2.0
 
-        if age > 60:
+        # individual variation: per-unit drawn lifespan (falls back to max_age)
+        lifespan = unit.get_state("lifespan", params.get("max_age", 60))
+        if age > lifespan - 10:
             death_prob *= 1.5
 
-        if age > params.get("max_age", 60):
+        if age > lifespan:
             death_prob = 1.0
 
         death_prob += death_prob_modifier
@@ -59,11 +61,18 @@ class SurvivalBehavior(BaseBehavior):
             rng = model.random if model is not None and hasattr(model, "random") else np.random.RandomState(world_state.get("seed", None))
         if rng.random() < death_prob:
             unit.alive = False
+            # categorized cause (policy analysis: what kills units?)
+            if wealth <= 0:
+                reason = "starvation"
+            elif age > unit.get_state("lifespan", params.get("max_age", 60)):
+                reason = "old_age"
+            else:
+                reason = "hazard"
             return {
                 "events": [
                     {
                         "event_type": "death",
-                        "reason": "age_or_starvation",
+                        "reason": reason,
                     }
                 ]
             }

@@ -98,9 +98,9 @@ def develop_hypothesis(input_data) -> str:
     if not hid:
         return "Error: 'hypothesis_id' required"
     # map shorthand type
-    type_map={"WORLD":"world_hypothesis","MODEL":"model_hypothesis","DEVELOPMENT":"development_hypothesis","world_hypothesis":"world_hypothesis","model_hypothesis":"model_hypothesis","development_hypothesis":"development_hypothesis","workflow_hypothesis":"workflow_hypothesis","kernel_hypothesis":"kernel_hypothesis"}
+    type_map={"WORLD":"world_hypothesis","MODEL":"model_hypothesis","DEVELOPMENT":"development_hypothesis","ARCHITECTURE":"architecture_hypothesis","world_hypothesis":"world_hypothesis","model_hypothesis":"model_hypothesis","development_hypothesis":"development_hypothesis","architecture_hypothesis":"architecture_hypothesis","workflow_hypothesis":"workflow_hypothesis","kernel_hypothesis":"kernel_hypothesis"}
     htype=type_map.get(htype, htype)
-    if htype not in ("world_hypothesis","model_hypothesis","workflow_hypothesis","kernel_hypothesis","development_hypothesis","pattern_inference"):
+    if htype not in ("world_hypothesis","model_hypothesis","workflow_hypothesis","kernel_hypothesis","development_hypothesis","architecture_hypothesis","pattern_inference"):
         htype="model_hypothesis"
     try:
         from kernel.hypothesis.hypothesis_engine import hypothesis_engine
@@ -383,12 +383,36 @@ def develop_commit(input_data) -> str:
     except Exception as e:
         return f"Error in develop_commit: {e}"
 
+def develop_propose_architecture(input_data) -> str:
+    """Paradigm search gate: architecture_hypothesis must justify leap before modify_code."""
+    _ensure_paths()
+    if isinstance(input_data, str):
+        try: input_data=json.loads(input_data)
+        except: input_data={}
+    d=input_data or {}
+    hid=d.get("hypothesis_id")
+    if not hid:
+        return "Error: 'hypothesis_id' required"
+    proposal=d.get("leap_proposal") or d.get("proposal") or ""
+    sim=d.get("simulator","popula_dyn")
+    if len(proposal) < 20:
+        return "Error: leap_proposal >=20 chars required (what abstraction is wrong + replacement)"
+    try:
+        workflow_engine=_wf()
+        if workflow_engine.current=="decide_branch" and "propose_architecture" in workflow_engine.allowed():
+            workflow_engine.advance("propose_architecture", produced={"branch":"architecture"}, success="branch_chosen")
+        if workflow_engine.current=="propose_architecture":
+            workflow_engine.advance("modify_code", produced={"leap_proposal":proposal}, success="leap_justified")
+        return json.dumps({"hypothesis_id":hid,"leap_proposal":proposal[:300],"allowed":workflow_engine.allowed()}, separators=(",",":"))
+    except Exception as e:
+        return f"Error in develop_propose_architecture: {e}"
+
 # map for registry
 DEVELOP_TOOLS = {
     "develop_state": develop_state,
     "develop_orient": develop_orient,
     "develop_hypothesis": develop_hypothesis,
-    "develop_experiment": develop_experiment,
+    "develop_propose_architecture": develop_propose_architecture,    "develop_experiment": develop_experiment,
     "develop_analyze": develop_analyze,
     "develop_modify_simulator": develop_modify_simulator,
     "develop_modify_kernel": develop_modify_kernel,

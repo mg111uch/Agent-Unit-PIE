@@ -71,3 +71,26 @@ NOVELTY_KINDS = {"ml": ("features", "model"),
 def novelty_kind(is_ml: bool, rng: random.Random) -> str:
     pool = NOVELTY_KINDS["ml"] if is_ml else NOVELTY_KINDS["sym"]
     return rng.choice(pool)
+
+
+# Phase 2 (FixesIssues #3/#9): ladder gating. ML only when L0-L2 evidence
+# justifies escalation; never "ML failed → bigger ML".
+LADDER = ["baseline", "sym", "ml"]
+
+
+def gate_families(families: List[str], evidence: Dict[str, Any] | None,
+                  cap: Dict[str, Any] | None = None) -> Dict[str, Any]:
+    """Filter families by ladder evidence. evidence: {l2_best_ic, l2_best_spread}."""
+    ev, gated, reasons = evidence or {}, [], {}
+    ic = float(ev.get("l2_best_ic", 0) or 0)
+    sp = float(ev.get("l2_best_spread", 0) or 0)
+    min_ic = float((cap or {}).get("ladder_min_ic", 0.02))
+    min_sp = float((cap or {}).get("ladder_min_spread", 0.15))
+    ml_ok = ic >= min_ic or sp >= min_sp or bool(ev.get("force_ml"))
+    for f in families:
+        if (f == "ml" or f.startswith("ml")) and not ml_ok:
+            reasons[f] = f"gated: L2 ic={ic} spread={sp} below min"
+            continue
+        gated.append(f)
+    return {"allowed": gated or [f for f in families if not f.startswith("ml")] or families,
+            "ml_allowed": ml_ok, "reasons": reasons}

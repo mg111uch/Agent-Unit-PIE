@@ -31,6 +31,8 @@ from .survival import SurvivalBehavior, RegenerateEnergyBehavior
 from .heal import HealBehavior
 from .produce import ProduceBehavior
 from .trade import TradeBehavior, TradeBehaviorAg
+from .hire import HireBehavior
+from .invest import InvestBehavior
 from .learn import LearnBehavior
 from .regrow import RegrowBehavior
 
@@ -48,6 +50,8 @@ __all__ = [
     "ProduceBehavior",
     "TradeBehavior",
     "TradeBehaviorAg",
+    "HireBehavior",
+    "InvestBehavior",
     "LearnBehavior",
     "RegrowBehavior",
 ]

@@ -3,7 +3,9 @@
 - Seeds: base strategies (symbolic + ML). Allocator weights families by prior ×
   success-rate + exploration bonus (research/allocate.py); explore/exploit/validate split.
 - Screen: alpha gate + 1 cheap backtest; only passers pay for full validation (locked OOS).
-- Retirement: a family with `retire_after` consecutive REJECTs stops spawning.
+- Retirement: a family with `retire_after` consecutive REJECTs stops spawning;
+  `screened_retire_after` consecutive SCREENEDs (cheap-gate stall, no learning)
+  retires it too — screens now count.
 - Ledger (market.db): runs, candidates (with family + verdict), hash dedup.
 """
 from __future__ import annotations
@@ -149,6 +151,28 @@ def family_rejects(run_id: str, family: str, db_path: str | None = None) -> int:
     return n
 
 
+def family_stalls(run_id: str, family: str, db_path: str | None = None) -> int:
+    """Leading consecutive SCREENEDs for a family (DUPLICATE skipped, REJECT breaks).
+
+    A family that never passes the cheap gate is not learning — stall streaks
+    count toward retirement via `screened_retire_after`."""
+    con = _con(db_path)
+    try:
+        rows = con.execute("SELECT verdict FROM research_candidates WHERE run_id=? AND family=?"
+                           " ORDER BY id DESC", (run_id, family)).fetchall()
+    finally:
+        con.close()
+    n = 0
+    for (v,) in rows:
+        if v == "SCREENED":
+            n += 1
+        elif v == "DUPLICATE":
+            continue
+        else:
+            break
+    return n
+
+
 def _prepare_base(base_d: Dict[str, Any], cap: Dict[str, Any]) -> Dict[str, Any]:
     d = dict(base_d)
     d.setdefault("max_positions", cap.get("max_positions", 8))
@@ -160,14 +184,18 @@ def run_job(objective: str, base_strategy: Dict[str, Any] | None = None,
             symbols: List[str] | None = None, universe: str = "MY_RESEARCH_UNIVERSE",
             budget: int = 20, seed: int = 1, timeframe: str = "1D", dataset: str = "csv",
             db_path: str | None = None, mode: str = "day", run_id: str | None = None,
-            max_hours: float = 0, seeds: List[Dict[str, Any]] | None = None) -> Dict[str, Any]:
-    """budget<=0 + max_hours>0 = overnight open-ended until time cap or Ctrl-C."""
+            max_hours: float = 0, seeds: List[Dict[str, Any]] | None = None,
+            start: str = "", end: str = "", n: int = 252) -> Dict[str, Any]:
+    """budget<=0 + max_hours>0 = overnight open-ended until time cap or Ctrl-C.
+
+    start/end/n scope the bars window (regime-scoped research, e.g. 2020–2023)."""
     cap = load_capital()
     syms = symbols or resolve_universe(universe) or ["RELIANCE"]
     fam_bases = [_prepare_base(s, cap) for s in (seeds or ([base_strategy] if base_strategy else []))]
     if not fam_bases:
         raise ValueError("seeds (or base_strategy) required")
     retire_after = int(cap.get("retire_after", 25))
+    screened_retire_after = int(cap.get("screened_retire_after", 40))
     rid = start_run(objective, universe, mode, budget, db_path, run_id)
     seen = tested_hashes(rid, db_path)
     con0 = _con(db_path)
@@ -179,8 +207,8 @@ def run_job(objective: str, base_strategy: Dict[str, Any] | None = None,
         con0.close()
     conn = StockConnector(db_path=db_path)
     start_cash = float(cap.get("capital", 50000))
-    bars = conn._bars({"dataset": dataset, "symbols": syms, "n": 252, "timeframe": timeframe,
-                       "seed": seed, "universe": universe})
+    bars = conn._bars({"dataset": dataset, "symbols": syms, "n": n, "timeframe": timeframe,
+                       "seed": seed, "universe": universe, "start": start, "end": end})
     data_hash, code_ver = data_fingerprint(bars), code_version()
     dataset_id = f"{dataset}:{timeframe}:{data_hash}"
     quality = getattr(conn, "_quality", {})
@@ -222,7 +250,8 @@ def run_job(objective: str, base_strategy: Dict[str, Any] | None = None,
                 status = "PAUSED_TIME"
                 break
             live_fams = [f for f in live_fams
-                         if family_rejects(rid, family_of(fam_bases[f]), db_path) < retire_after]
+                         if family_rejects(rid, family_of(fam_bases[f]), db_path) < retire_after
+                         and family_stalls(rid, family_of(fam_bases[f]), db_path) < screened_retire_after]
             if not live_fams:
                 status = "ALL_RETIRED"
                 break

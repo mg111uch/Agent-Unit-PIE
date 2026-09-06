@@ -37,6 +37,8 @@ from modules.simulators.popula_dyn.behaviours import (
     ProduceBehavior,
     TradeBehavior,
     TradeBehaviorAg,
+    HireBehavior,
+    InvestBehavior,
     LearnBehavior,
     RegrowBehavior,
 )
@@ -74,6 +76,8 @@ class BehaviorRegistry:
         self.register_behavior(HealBehavior())
         self.register_behavior(ProduceBehavior())
         self.register_behavior(TradeBehaviorAg())
+        self.register_behavior(HireBehavior())
+        self.register_behavior(InvestBehavior())
         self.register_behavior(RegrowBehavior())
 
     def register_behavior(self, behavior: BaseBehavior) -> None:

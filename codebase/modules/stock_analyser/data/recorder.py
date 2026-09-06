@@ -14,7 +14,12 @@ from .providers import UpstoxStub
 
 IST = timezone(timedelta(hours=5, minutes=30))
 INDEX_SYMBOLS = ("NIFTY", "BANKNIFTY")
-YAHOO_MAP = {"NIFTY": "^NSEI", "BANKNIFTY": "^NSEBANK"}
+YAHOO_MAP = {"NIFTY": "^NSEI", "BANKNIFTY": "^NSEBANK",
+             "NIFTY_AUTO": "^CNXAUTO", "NIFTY_IT": "^CNXIT",
+             "NIFTY_PHARMA": "^CNXPHARMA", "NIFTY_FMCG": "^CNXFMCG",
+             "NIFTY_METAL": "^CNXMETAL", "NIFTY_ENERGY": "^CNXENERGY"}
+SECTORAL_SYMBOLS = ("NIFTY_AUTO", "NIFTY_IT", "NIFTY_PHARMA", "NIFTY_FMCG",
+                    "NIFTY_METAL", "NIFTY_ENERGY")
 
 
 def market_open(now: datetime | None = None) -> bool:

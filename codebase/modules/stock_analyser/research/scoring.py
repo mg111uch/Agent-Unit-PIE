@@ -69,3 +69,35 @@ def score(strategy_d: Dict[str, Any], stages: Dict[str, Any],
           "rob": round(min(1.25, rob), 3), "dd": round(dd, 4),
           "cx": cx, "gap": round(gap, 3), "n": n, "drag": round(drag, 2)}
     return {"score": round(total, 3), "breakdown": bd}
+
+
+def info_value(stages: Dict[str, Any], cfg: Dict[str, Any] | None = None) -> float:
+    """Phase 2 (FixesIssues #8): information value 0..1 — regime persistence
+    + perturbation spread. High when edge holds across WF legs even if small."""
+    cfg = cfg or {}
+    wf = stages.get("walk_forward") or {}
+    pert = stages.get("perturbation") or {}
+    wavgs = [x or 0 for x in (wf.get("avg_nets") or [])]
+    pavgs = [x or 0 for x in (pert.get("avg_nets") or [])]
+    persist = (sum(1 for x in wavgs if x > 0) / len(wavgs)) if wavgs else 0.0
+    if pavgs:
+        m = sum(pavgs) / len(pavgs)
+        var = sum((x - m) ** 2 for x in pavgs) / len(pavgs)
+        spread = 1.0 / (1.0 + math.sqrt(var) / 50.0)
+    else:
+        spread = 0.0
+    return round(0.6 * persist + 0.4 * spread, 3)
+
+
+def score_with_info(strategy_d: Dict[str, Any], stages: Dict[str, Any],
+                    cfg: Dict[str, Any] | None = None) -> Dict[str, Any]:
+    """score + info_gain/compute: rank by value per cost, not raw edge."""
+    cfg = cfg or {}
+    base = score(strategy_d, stages, cfg)
+    info = info_value(stages, cfg)
+    cost = float(stages.get("compute_s") or cfg.get("compute_s") or 1.0)
+    w = float(cfg.get("score_w_info", 0.5))
+    total = base["score"] + w * info - 0.01 * math.log1p(max(0.0, cost))
+    bd = dict(base["breakdown"])
+    bd["info"] = info
+    return {"score": round(total, 3), "breakdown": bd}

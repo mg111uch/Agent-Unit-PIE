@@ -58,17 +58,19 @@ class HealBehavior(BaseBehavior):
             return {}
 
         patient = potential_patients[rng.randint(len(potential_patients))]
-        patient.set_state("death_prob_modifier", -0.5)
-        patient.modify_resource("wealth", -healing_cost)
-        unit.modify_resource("wealth", healing_cost)
 
-        if model and hasattr(model, "successful_healings"):
-            model.successful_healings += 1
-
+        # return-intent: model applies patient effects + own wealth (no direct mutation)
         return {
             "resource_updates": {
                 "wealth": healing_cost
             },
+            "unit_effects": [
+                {
+                    "unit_id": patient.unit_id,
+                    "state_updates": {"death_prob_modifier": -0.5},
+                    "resource_updates": {"wealth": -healing_cost},
+                }
+            ],
             "events": [
                 {
                     "event_type": "healed",
