@@ -81,6 +81,9 @@ class ReproduceBehavior(BaseBehavior):
         child_life = int(min(85, max(40, (unit.get_state("lifespan", 60)
                                           + partner.get_state("lifespan", 60)) / 2
                                          + rng.normal(0, 3))))
+        # inheritance: 5 percent bequest from each parent (conserving, model-applied)
+        bequest = round((unit.get_resource("wealth", 0)
+                         + partner.get_resource("wealth", 0)) * 0.05, 2)
 
         # return-intent: model owns spawn (deterministic id + add_unit)
         child_data = {
@@ -90,12 +93,18 @@ class ReproduceBehavior(BaseBehavior):
             "state": {"age": 0, "gender": rng.choice(["M", "F"]), "skill": child_skill,
                       "fertility": round(child_fert, 3), "lifespan": child_life,
                       "position": position},
-            "resources": {"wealth": 5.0},
+            "resources": {"wealth": round(5.0 + bequest, 2)},
             "alive": True,
         }
 
         return {
             "spawn": child_data,
+            "unit_effects": [
+                {"unit_id": unit.unit_id,
+                 "resource_updates": {"wealth": round(-bequest / 2, 2)}},
+                {"unit_id": partner.unit_id,
+                 "resource_updates": {"wealth": round(-bequest / 2, 2)}},
+            ],
             "events": [
                 {
                     "event_type": "birth",

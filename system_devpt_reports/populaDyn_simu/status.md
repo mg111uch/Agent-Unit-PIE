@@ -13,6 +13,7 @@ _Last verified: 2026-09-06_
 - heal/trade/produce return-intent intents still open (reproduce pattern done) — med
 
 ## Recent Changes (newest first, max 10)
+- `Inheritance` via LOOP (hyp_inheritance_01→modify_code→validate→loop, all develop.*): 5%-per-parent bequest, conserving via unit_effects; kids 5.0→~15.0 at parental wealth 100; determinism intact
 - `Det-init` DONE: model-owned `u00001…` init ids (uuid fallback kept) + placement via `get_random_position(rng)`; same-seed id sets identical
 - `Death-causes` DONE: starvation/old_age/hazard split at death + per-step/cumul counters and columns (1+9+16=26 reconciles); answers what kills units under each policy
 - `Screen` analytical policy screen DONE: `screen_policy` (registry-hit → memoized verdict; static gates on mechanism/fiscal/duration; 0.2ms, mirrors stock alpha gate)
@@ -38,6 +39,6 @@ _Last verified: 2026-09-06_
 - Iter4-6 DONE: double-count fix (`735cf9a`), regrow fertility sync (`a5f9752`), graded starvation (`9ff8ff1`)
 
 ## Next (single source for the next task — agents pull from here, not HANDOVER)
-1. Roadmap Next up (twin what-if / baseline-vs-policy UI / self-evolution loop pick one).
+1. Roadmap Next up pick one: baseline-vs-policy UI / self-evolution loop / environment / economy (twin deferred, det-init shipped).
 4. Individual variation: fertility trait + lifespan distribution.
 5. Details in `roadmap.md` → Next up. Shipped items move to `README.md` Features Overview.

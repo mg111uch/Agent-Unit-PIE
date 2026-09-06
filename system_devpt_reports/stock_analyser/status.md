@@ -26,7 +26,8 @@ _Last verified: 2026-09-06_
 - Retirement never fires — FIXED (this session): `family_stalls` + `screened_retire_after` 40; screens now count.
 
 ## Next (single source for the next task — agents pull from here, not HANDOVER)
-1. ML retry on regime datasets + 4 new features (mom_vol_20/dd_high_60/rev_5_20/range_vol), gated by `rank_validation` before full validation (regime datasets + features DONE this session).
+0. FIRST: check background ML regime retry `res_20260906_115605` (budget 20, 2020–23 window) — query `market.db:research_candidates` verdicts. If COMPLETE: write outcome into Current State above, then proceed below. If RUNNING: proceed below, re-check before closing.
+1. Regime-scoped ML retry `res_20260906_115605` (budget 20, 2020–23, hgb-heavy): check verdicts when COMPLETE, record outcome above; then sector-relative features (stock−sector return using 6 sectorals) before any new sweep.
 2. Dedup-before-screen (hash check before backtest).
 3. Denser ML sweep (model/features/top-N variants via `seeds=[...]`).
 4. On first PAPER_READY (post-falsification): human approves → `paper.trader.step` daily → `report` → capital.yaml step.
