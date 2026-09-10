@@ -22,6 +22,42 @@
       "stance": "disagree",
       "confidence": 0.9,
       "last_updated": "2026-08-27T14:03:12.993960"
+    },
+    "FeatA": {
+      "history": [
+        {
+          "stance": "agree",
+          "confidence": 0.9,
+          "timestamp": "2026-09-09T16:09:58.243253"
+        }
+      ],
+      "stance": "agree",
+      "confidence": 0.9,
+      "last_updated": "2026-09-09T16:09:58.243253"
+    },
+    "FeatC": {
+      "history": [
+        {
+          "stance": "agree",
+          "confidence": 0.9,
+          "timestamp": "2026-09-09T16:09:58.398394"
+        }
+      ],
+      "stance": "agree",
+      "confidence": 0.9,
+      "last_updated": "2026-09-09T16:09:58.398394"
+    },
+    "drift_phase2b_style": {
+      "history": [
+        {
+          "stance": "agree",
+          "confidence": 0.9,
+          "timestamp": "2026-09-09T17:53:48.774710"
+        }
+      ],
+      "stance": "agree",
+      "confidence": 0.9,
+      "last_updated": "2026-09-09T17:53:48.774710"
     }
   }
 }

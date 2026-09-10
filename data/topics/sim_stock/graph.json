@@ -1,10 +1,11 @@
 {
   "nodes": [
     {
-      "name": "stock_run_basic",
+      "name": "stock_run_basic_0t_0r",
       "side": "neutral",
       "premise": "smoke premise",
       "evidence": [],
+      "status": "HYPOTHESIS",
       "examples": [],
       "sources": [],
       "discipline": "",

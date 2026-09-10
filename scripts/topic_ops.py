@@ -61,6 +61,12 @@ def build_parser():
     pn.add_argument("--force", action="store_true", help="force add even if contradicts prior claim (requires user approval)")
     pn.add_argument("--type", dest="node_type", default=None, help="node_type: argument|observation|hypothesis (default argument, observation if --metadata given)")
     pn.add_argument("--metadata", default=None, help="JSON string for typed observation metadata, e.g. '{\"observation\":{\"metric\":\"population\",\"outcome\":\"COLLAPSED\"}}'")
+    pn.add_argument("--stance", default=None, choices=["agree", "disagree", "neutral"],
+                    help="record stance right away (default: agree for side=decision, none otherwise)")
+    pn.add_argument("--supersedes", default=None, metavar="NAME",
+                    help="bypass similarity gate as explicit refinement; marks NAME superseded (history kept)")
+    pn.add_argument("--evidence", action="append", default=[], dest="evidence",
+                    help="cross-topic pointer TOPIC:NAME (repeatable)")
 
     pe = sub.add_parser("add-edge", parents=[common],
                         help="append an edge (skips duplicate triples)")
@@ -68,8 +74,18 @@ def build_parser():
     pe.add_argument("--source", required=True)
     pe.add_argument("--target", required=True)
     pe.add_argument("--relation", required=True,
-                    choices=["contradicts", "requires", "supports"])
+                    choices=["contradicts", "requires", "supports", "supersedes"])
     pe.add_argument("--force", action="store_true", help="force add even if contradicts prior claim")
+
+    pn2 = sub.add_parser("neighbors", parents=[common],
+                         help="in-topic edges + cross-topic evidence pointers for a node")
+    topic_arg(pn2)
+    pn2.add_argument("--name", required=True)
+
+    pb = sub.add_parser("batch", parents=[common],
+                        help="many nodes+edges in one process: --file JSON {topic?,nodes:[],edges:[]} (single hydrate)")
+    pb.add_argument("--file", required=True)
+    pb.add_argument("--topic", required=False, default=None)
 
     pl = sub.add_parser("list", parents=[common], help="list nodes")
     topic_arg(pl)
@@ -119,6 +135,50 @@ def _g(args, flag):
     return getattr(args, flag, False)
 
 
+def _run_batch(args):
+    """One hydrate, many mutations; single export per touched topic."""
+    try:
+        spec = json.loads(Path(args.file).read_text(encoding="utf-8"))
+    except Exception as e:
+        raise TopicStoreError(f"Invalid batch file: {e}")
+    default_topic = getattr(args, "topic", None) or spec.get("topic")
+    if _g(args, "dry_run"):
+        n = len(spec.get("nodes", [])) + len(spec.get("edges", []))
+        return [{"kind": "batch_dry_run", "topic": default_topic or "",
+                 "ops": n}]
+    changes, touched = [], set()
+    for item in spec.get("nodes", []):
+        t = item.get("topic") or default_topic
+        if not t:
+            raise TopicStoreError("batch node missing topic (no --topic and no item.topic)")
+        res = ts.add_node(t, {"name": item["name"], "side": item.get("side", "argument"),
+                              "premise": item.get("premise", ""),
+                              "sources": item.get("sources", []),
+                              "confidence": item.get("confidence", 1.0),
+                              "metadata": item.get("metadata"),
+                              "evidence": item.get("evidence", []),
+                              "supersedes": item.get("supersedes"),
+                              "type": item.get("type")},
+                          write=False, force=item.get("force", False))
+        if res.get("kind") == "node_added":
+            stance = item.get("stance") or ("agree" if item.get("side") == "decision" else None)
+            if stance:
+                ts.set_stance(t, item["name"], stance)
+        touched.add(t)
+        changes.append({**res, "topic": t})
+    for item in spec.get("edges", []):
+        t = item.get("topic") or default_topic
+        if not t:
+            raise TopicStoreError("batch edge missing topic (no --topic and no item.topic)")
+        res = ts.add_edge(t, item["source"], item["target"], item["relation"],
+                          write=False, force=item.get("force", False))
+        touched.add(t)
+        changes.append({**res, "topic": t})
+    for t in sorted(touched):
+        ts.write_export(t)
+    return changes
+
+
 def run(args):
     # all CLI ops use RO hydrate to avoid persistent WAL creation on pure inspections
     # writes (add/delete) will still persist via semantic_memory -> memory_engine -> kernel_db (persistent)
@@ -132,9 +192,26 @@ def run(args):
         return contras, []
     # add-node may bootstrap a new topic; topics/doctor need no topic;
     # everything else requires the topic to exist
-    if (args.cmd not in ("add-node", "topics", "doctor", "signals", "check", "delete-topic")
+    if (args.cmd not in ("add-node", "batch", "topics", "doctor", "signals", "check", "delete-topic")
             and not ts.has_topic(args.topic)):
         raise TopicStoreError(f"Topic not found: {args.topic}")
+    if args.cmd == "neighbors":
+        nb = ts.neighbors(args.topic, args.name)
+        if _g(args, "json"):
+            print(json.dumps(nb))
+        elif not _g(args, "quiet"):
+            print(f"  {nb['topic']}:{nb['name']} [{nb['status']}]")
+            for e in nb["out_edges"]:
+                print(f"    --{e['relation']}--> {e['target']}")
+            for e in nb["in_edges"]:
+                print(f"    <--{e['relation']}-- {e['source']}")
+            for c in nb["cites"]:
+                print(f"    cites {c['topic']}:{c['node']}")
+            for c in nb["cited_by"]:
+                print(f"    cited_by {c['topic']}:{c['node']}")
+        return [], [{"kind": "neighbors", "topic": args.topic, "name": args.name}]
+    if args.cmd == "batch":
+        return [], _run_batch(args)
     if args.cmd == "topics":
         return [], _emit_topics(_g(args, "json"), _g(args, "quiet"))
     if args.cmd == "delete-topic":
@@ -163,15 +240,21 @@ def run(args):
                 "sources": list(args.sources),
                 "confidence": float(args.confidence),
                 "metadata": meta,
+                "evidence": list(getattr(args, "evidence", []) or []),
+                "supersedes": getattr(args, "supersedes", None),
                 "type": getattr(args, "node_type", None) or ("observation" if meta else "argument")}
         if _g(args, "dry_run"):
             exists = ts.find_node(args.topic, args.name) is not None
             return [], [{"kind": "node_skipped" if exists else "node_added",
-                         "name": args.name}]
+                          "name": args.name}]
         res = ts.add_node(args.topic, node, force=getattr(args, "force", False))
         if res.get("kind") == "blocked_contradiction":
             print(f"BLOCKED: {res['reason']}\nconflicts: {res['conflicts']}\nHint: resolve prior claim(s) or re-run with --force after user approval.", file=sys.stderr)
             return [], [res]
+        # stance defaults to agree for decisions so contradicts edges can fire
+        stance = getattr(args, "stance", None) or ("agree" if args.side == "decision" else None)
+        if stance and res.get("kind") == "node_added":
+            res["stance"] = ts.set_stance(args.topic, args.name, stance).get("stance")
         return [], [res]
 
     if args.cmd == "add-edge":

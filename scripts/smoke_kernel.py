@@ -147,6 +147,30 @@ def main():
           "node_skipped" in kinds and not any(k.endswith("_added") for k in kinds),
           str(sorted(kinds)))
 
+    # S8 supersedes refinement path (no gate block, prior marked, gate skips it)
+    r1 = ts.add_node(SMOKE_TOPIC, {"name": "RefineA", "premise": "lap counts use checkpoints"})
+    check("refine base added", r1.get("kind") == "node_added")
+    r2 = ts.add_node(SMOKE_TOPIC, {"name": "RefineB", "premise": "lap counts use start line crossings",
+                                   "side": "decision", "supersedes": "RefineA"})
+    check("supersedes bypasses gate", r2.get("kind") == "node_added"
+          and r2.get("supersedes") == "RefineA")
+    old = ts.find_node(SMOKE_TOPIC, "RefineA")
+    check("prior marked superseded",
+          old is not None and ts.node_status(old) == "superseded")
+    # stance default: decisions auto-agree so contradicts edges can fire
+    ts.set_stance(SMOKE_TOPIC, "RefineB", "agree")
+    ts.add_edge(SMOKE_TOPIC, "ClaimA", "RefineA", "contradicts")
+    sup_neg = ts.check_contradictions(SMOKE_TOPIC, ("ClaimA", "RefineA"))
+    check("superseded endpoint stays silent", sup_neg == [])
+    # S9 evidence pointers + neighbors across topics
+    ts.add_node(SMOKE_TOPIC, {"name": "PlayX", "premise": "pace beats parking",
+                              "evidence": [f"{SMOKE_TOPIC}:RefineB", "ghost_topic:Nope"]})
+    nb = ts.neighbors(SMOKE_TOPIC, "PlayX")
+    back = ts.neighbors(SMOKE_TOPIC, "RefineB")
+    check("evidence cites + cited_by",
+          any(c.get("node") == "RefineB" for c in nb["cites"])
+          and any(c.get("node") == "PlayX" for c in back["cited_by"]))
+
     # cleanup
     _cleanup_smoke_topic()
     for wal in ("-wal", "-shm"):

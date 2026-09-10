@@ -10,6 +10,7 @@ Trade behaviors - exchange resources between units.
 import numpy as np
 
 from .base_behavior import BaseBehavior
+from modules.simulators.popula_dyn.core.scarcity import barter_price, local_scarcity
 
 
 class TradeBehavior(BaseBehavior):
@@ -113,7 +114,10 @@ class TradeBehaviorAg(BaseBehavior):
             return {}
 
         margin = trade_amount * trade_margin
-        transfer = trade_amount - margin
+        # barter market: local scarcity prices the transfer (dear food → less moves)
+        sc = local_scarcity(grid, position, params, trade_range)
+        price = barter_price(1.0, sc, params.get("barter_sensitivity", 1.0))
+        transfer = round((trade_amount - margin) / price, 2)
 
         # return-intent: model applies counterparty effects (no direct mutation)
         return {
@@ -132,6 +136,14 @@ class TradeBehaviorAg(BaseBehavior):
                     "from": richest.unit_id,
                     "to": poorest.unit_id,
                     "amount": transfer,
+                    "price": price,
                 }
-            ]
+            ],
+            "signals": [
+                {
+                    "signal_type": "market_activity",
+                    "strength": 0.6,
+                    "decay_rate": 0.04,
+                }
+            ],
         }

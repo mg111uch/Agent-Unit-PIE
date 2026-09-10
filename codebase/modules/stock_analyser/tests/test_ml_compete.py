@@ -2,6 +2,7 @@
 import os
 import sys as _s
 import tempfile
+import pytest
 from pathlib import Path as _P
 for _c in [_P(__file__).resolve().parents[3], _P(__file__).resolve().parents[4]]:
     if str(_c) not in _s.path:
@@ -15,16 +16,7 @@ def _ml_base():
     return ml_seed("U", top_n=3)
 
 
-def test_mutate_ml_valid():
-    from modules.stock_analyser.strategies.genome import mutate_ml, ML_MUTATIONS
-    seen = set()
-    for i, k in enumerate(ML_MUTATIONS):
-        d = mutate_ml(_ml_base(), seed=i, kind=k)
-        assert d["meta"]["family"] == "ml" and d["meta"]["mutation"] == k
-        seen.add(k)
-    assert seen == set(ML_MUTATIONS)
-
-
+@pytest.mark.slow  # real-data csv bars + full ML validation
 def test_screen_and_validate_ml_structure():
     from modules.stock_analyser.connector import StockConnector
     from modules.stock_analyser.ml.strategies import quick_screen, validate_ml

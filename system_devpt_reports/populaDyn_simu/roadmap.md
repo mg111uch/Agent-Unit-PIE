@@ -11,12 +11,9 @@
 | Twin → params what-if (city/human twin data → sim params, real-data scenarios) | open (was Option A) | twin modules + kernel retrieve |
 | Baseline-vs-policy compare + visual diff (non-technical policy UI) | open (was Option B) | connector compare_runs |
 | Self-evolution loop (auto-summarize learnings, hypothesis→sim→validate, recursive refinement) | open (was Option C) | hypothesis engine + compression |
-| Environment: carrying capacity + adaptability trait + fertility-gradient prospecting move (no A* dep) | open (Phase 3 core, no GIS) | spatial + resource engine |
-| Economy: supply-demand scarcity↔vital-rates + barter markets + inheritance (wealth/skill to children) | open (Phase 4 + high-value upgrades) | trade/produce behaviours |
 | Seasonal yields + soil degradation/fallow + weather shocks + pollution feedback | open (top realism upgrades) | regrow + environment |
 | Specialist reproduction with role mutation + overwork deaths | open | agent factory |
 | Innovator agent (learn/optimize: R&D boosts skill caps) + Ecologist (heals fertility, forecasts yield) | open (composable behaviours only) | behaviour registry |
-| Fiscal ledger persistence (policy runs → queryable record, cost vs benefit across sessions) | deferred (fiscal in score/table suffices until overnight sweeps) | policy registry above |
 | Meso agents on demand (household/institution layers only when a policy needs them, e.g. taxation) | deferred (micro+macro answer current questions) | driving policy question |
 
 ## Deferred (not done — game layer / hardcoded civ / heavy geo)

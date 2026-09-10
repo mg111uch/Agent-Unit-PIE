@@ -5,7 +5,10 @@ for _c in [_P(__file__).resolve().parents[3], _P(__file__).resolve().parents[4]]
     if str(_c) not in _s.path:
         _s.path.insert(0, str(_c))
 
+import pytest
 
+
+@pytest.mark.slow  # real market.db panel builds
 def test_panel_shape_and_no_nans():
     from modules.stock_analyser.ml.dataset import build_panel, FEATURES
     df = build_panel(["RELIANCE", "TCS", "INFY"])
@@ -14,6 +17,7 @@ def test_panel_shape_and_no_nans():
     assert ((df["fwd_ret"] > -1.0) & (df["fwd_ret"] < 5.0)).all()
 
 
+@pytest.mark.slow  # real market.db panel builds
 def test_features_are_causal():
     """Row i from full history == row i from history truncated at i (no peek)."""
     from modules.stock_analyser.ml.dataset import symbol_frame, FEATURES
@@ -28,6 +32,7 @@ def test_features_are_causal():
             assert abs(f[k] - r[k]) < 1e-9, (k, r["ts"])
 
 
+@pytest.mark.slow  # real market.db panel builds
 def test_embargo_split_has_gaps():
     from datetime import datetime
     from modules.stock_analyser.ml.dataset import build_panel, split_panel

@@ -16,12 +16,12 @@ ML_MODELS = ("hgb", "rf", "ridge")
 
 
 def ml_seed(universe: str = "MY_UNIVERSE_200", top_n: int = 5) -> Dict[str, Any]:
-    from ..ml.dataset import FEATURES
+    from ..ml.dataset import FEATURES, REL_FEATURES
     return {"name": "ml_ranker", "universe": universe, "timeframe": "1D",
             "flat_cost": 0.0,
             "meta": {"family": "ml", "model": "hgb", "top_n": top_n, "max_depth": 3,
-                     "features": list(FEATURES), **{k: v for k, v in ML_DEFAULTS.items()
-                                                    if k not in ("model", "top_n", "max_depth")}}}
+                     "features": list(FEATURES) + list(REL_FEATURES), **{k: v for k, v in ML_DEFAULTS.items()
+                                                     if k not in ("model", "top_n", "max_depth")}}}
 
 
 def mutate_ml(strategy_d: Dict[str, Any], seed: int = 0, kind: str | None = None) -> Dict[str, Any]:
@@ -44,12 +44,13 @@ def mutate_ml(strategy_d: Dict[str, Any], seed: int = 0, kind: str | None = None
                                                  + rng.uniform(-0.05, 0.05))), 3)
         m["max_positions"] = max(1, min(8, m.get("max_positions", 3) + rng.choice([-1, 1])))
     elif kind == "features":
-        from ..ml.dataset import FEATURES
-        cur = m.get("features", list(FEATURES))
+        from ..ml.dataset import FEATURES, REL_FEATURES
+        pool = list(FEATURES) + list(REL_FEATURES)
+        cur = m.get("features", pool)
         if len(cur) > 5 and rng.random() < 0.7:
             cur = [f for f in cur if f != rng.choice(cur)]
         else:
-            cur = list(FEATURES)
+            cur = list(pool)
         m["features"] = cur
     elif kind == "model":
         cur = m.get("model", "hgb")

@@ -1,0 +1,86 @@
+{
+  "nodes": [
+    {
+      "name": "parity_action_space",
+      "side": "decision",
+      "premise": "Assert policy outputs == env action count before any training. Drift evidence: PolicyNet 7 vs decode 0-8 hid brake actions; fixed to 9. Dota2: match hybrid action-space size. Rocket: match gimbal/throttle bins.",
+      "evidence": [],
+      "examples": [],
+      "sources": [],
+      "discipline": "",
+      "confidence": 1.0
+    },
+    {
+      "name": "clean_eval_selection",
+      "side": "decision",
+      "premise": "Never rank on noisy rollouts. Re-eval top-K candidates deterministic (noise 0, 3 eps); elites/saves/early-stop on clean fitness. Drift evidence: 40pct-noise fitness claimed 1.5 laps, true policy 0 laps.",
+      "evidence": [],
+      "examples": [],
+      "sources": [],
+      "discipline": "",
+      "confidence": 1.0
+    },
+    {
+      "name": "diversity_pressure",
+      "side": "decision",
+      "premise": "Entropy and unique-action tiebreak in rank key demotes single-action collapse. Drift evidence: all-action-6 wall crash at 246,142. Key shape is task, activity, survival, unique, entropy, minus risk.",
+      "evidence": [],
+      "examples": [],
+      "sources": [],
+      "discipline": "",
+      "confidence": 1.0
+    },
+    {
+      "name": "activity_gate",
+      "side": "decision",
+      "premise": "Rank activity before survival so parking or timeout sitting cannot win. Drift evidence: brake-sit 4000 steps outranked movers until dist metric added. Dota2: reward turtling only with map control. Rocket: hovering is not landing.",
+      "evidence": [],
+      "examples": [],
+      "sources": [],
+      "discipline": "",
+      "confidence": 1.0
+    },
+    {
+      "name": "reward_asymmetry",
+      "side": "decision",
+      "premise": "Terminal failure penalty must exceed max achievable bonus or suicide loops pay. Drift evidence: lap 750 vs off-track 1000, no double bonus. Rocket: crash penalty must exceed landing bonus intermediates.",
+      "evidence": [],
+      "examples": [],
+      "sources": [],
+      "discipline": "",
+      "confidence": 1.0
+    },
+    {
+      "name": "verify_standard",
+      "side": "decision",
+      "premise": "Claim results only from deterministic eval with trajectory log: noise 0, fixed seed, per-step CSV with positions, crash-point summary. Drift evidence: traj_eval.csv exposed 0-lap truth behind 1.5-lap noisy claim.",
+      "evidence": [],
+      "examples": [],
+      "sources": [],
+      "discipline": "",
+      "confidence": 1.0
+    },
+    {
+      "name": "ci_hygiene",
+      "side": "decision",
+      "premise": "Training entry must be CI-safe: no input prompts, model paths anchored to code dir, seed and duration flags, stdout guard under pytest. Drift evidence: train hygiene v1 plus viz-seconds auto-exit.",
+      "evidence": [],
+      "examples": [],
+      "sources": [],
+      "discipline": "",
+      "confidence": 1.0
+    }
+  ],
+  "edges": [
+    {
+      "source": "activity_gate",
+      "target": "clean_eval_selection",
+      "relation": "requires"
+    },
+    {
+      "source": "verify_standard",
+      "target": "clean_eval_selection",
+      "relation": "requires"
+    }
+  ]
+}

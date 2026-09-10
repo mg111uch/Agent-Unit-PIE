@@ -8,7 +8,7 @@ import math
 from typing import Dict, List, Any
 from ..features.algebra import evaluate, columns_from_bars, _eval
 from ..strategies.model import Strategy
-from .costs import trade_cost
+from .costs import trade_cost, floor_qty
 from ..config import load_capital
 
 
@@ -141,8 +141,8 @@ def run_backtest(strategy: Strategy, bars_by_symbol: Dict[str, List[Dict[str, An
                     frac = strategy.position_frac
                 alloc = (cash + sum(p["qty"] * p["last_px"]
                                     for p in positions.values())) * frac
-                qty = alloc / b["open"] if b["open"] > 0 else 0
-                if qty <= 0:
+                qty = floor_qty(alloc / b["open"]) if b["open"] > 0 else 0
+                if qty < 1:
                     continue
                 cost = trade_cost(qty * b["open"], flat, strategy.fee_bps, strategy.slippage_bps) / 2
                 cash -= qty * b["open"] + cost  # pay notional + costs, not costs alone
@@ -160,6 +160,13 @@ def _metrics(trades: List[Dict], eq: List[float], start: float,
     n = len(trades)
     rets = [t["ret"] for t in trades]
     nets = [t.get("net", 0.0) for t in trades]
+    try:
+        from datetime import date as _date
+        holds = [(_date.fromisoformat(t["t_out"][:10])
+                  - _date.fromisoformat(t["t_in"][:10])).days for t in trades]
+        avg_hold = round(sum(holds) / n, 1) if n else 0.0
+    except Exception:
+        avg_hold = 0.0
     wins = sum(1 for r in rets if r > 0)
     avg = sum(rets) / n if n else 0.0
     med = sorted(rets)[n // 2] if n else 0.0
@@ -179,4 +186,5 @@ def _metrics(trades: List[Dict], eq: List[float], start: float,
             "cagr": round(cagr, 4), "final_equity": round(eq[-1], 2) if eq else start,
             "total_costs": round(total_costs, 2),
             "net_profit": round(sum(nets), 2),
+            "avg_hold_days": avg_hold,
             "avg_net_per_trade": round(sum(nets) / n, 2) if n else 0.0}

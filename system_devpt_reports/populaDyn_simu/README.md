@@ -75,6 +75,8 @@ Goal-autonomous research using the shared agent loop.
 | Metrics Export | 22-col `data.csv`: 14 engine + 8 SocietyState series via cached `society_snapshot` (incl. `Healed_Cumul`; health index uses cumulative healings) |
 | Individual Variation | heritable `fertility` trait + drawn `lifespan`; `survival` per-unit limit (real age pyramid) |
 | Inheritance | 5%-per-parent wealth bequest at birth, conserving via `unit_effects` |
+| Environment | per-cell carrying capacity caps regrow + heritable `adaptability` trait + `prospect` fertility-gradient move (no A*); `Prospect_Moves`/`Capacity_Capped` counters, `Avg_Adaptability` column |
+| Supply-Demand | `core/scarcity.py` index (food-pc + cap pressure) damps births / raises deaths + scarcity-priced barter in `trade_ag`/`produce` (price in events); `Scarcity` column |
 | Return-Intent Behaviours | `reproduce`/`heal`/`trade_ag`/`produce` return intents only; model applies `spawn`/`unit_effects`/counters (deterministic, double-credit fixed) |
 | Signals & Trends | `population_growth`, `mortality_event`, `resource_scarcity`, `prosperity`, `population_decline`, `healthcare_gap`, `trade_gap`, `population_trend_declining` |
 

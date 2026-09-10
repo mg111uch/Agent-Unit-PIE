@@ -20,12 +20,24 @@ modules:
   move:
     concepts: [spatial, population_decline, mobility]
     outputs: [position]
+  prospect:
+    concepts: [spatial, resource_scarcity, mobility]
+    outputs: [position]
+  environment:
+    concepts: [environment, resource_scarcity, mortality]
+    outputs: [resource_level]
   heal:
     concepts: [healthcare_gap, mortality, health]
     outputs: [health, deaths]
   trade:
     concepts: [trade_gap, wealth]
     outputs: [wealth, trade_volume]
+  barter:
+    concepts: [trade_gap, wealth, resource_scarcity]
+    outputs: [wealth, trade_volume]
+  scarcity:
+    concepts: [resource_scarcity, mortality, fertility]
+    outputs: [deaths, births]
   starvation:
     concepts: [mortality, population_decline]
     outputs: [deaths, population]

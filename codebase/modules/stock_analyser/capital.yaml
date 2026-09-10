@@ -1,5 +1,8 @@
 capital: 50000
 flat_cost_per_roundtrip: 60
+# research capital ladder: near-miss probe suggests min capital on these steps
+research_min_capital: 25000
+research_max_capital: 100000
 max_positions: 8
 min_history_bars: 60
 scale_step: 25000
@@ -11,3 +14,9 @@ screen_min_avg_net: -30.0
 scale_min_closed_trades: 10
 scale_min_avg_net_per_trade: 90
 scale_max_drawdown: -0.15
+# paper execution: True = FILL/CLOSE + mark at live CMP; False = next-open parity
+paper_use_cmp: true
+# settlement: T1_EPI (EPI same-day proceeds, large broker) or T1 (strict, blocked 1 day)
+settlement_mode: T1_EPI
+# retired trees: exit-only (fills pending + exits, no new signals) for strategy rotation
+retired_trees: []

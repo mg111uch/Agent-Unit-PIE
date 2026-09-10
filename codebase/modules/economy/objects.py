@@ -1,4 +1,4 @@
-"""Phase 1 Economic Object Model: Actor/Opportunity/Task/Transaction.
+"""Phase 1 Economic Object Model: Unit/Opportunity/Task/Transaction.
 
 IDs are content-hash (same style as popula_dyn policy_id): e.g.
 opp_<12hex> = sha256(canonical fields). Re-make → same id (idempotent).
@@ -10,7 +10,7 @@ import json
 from dataclasses import asdict, dataclass, field
 from typing import Any, Dict, List
 
-ACTOR_KINDS = ("person", "firm", "agent", "org", "region")
+UNIT_KINDS = ("person", "firm", "agent", "org", "region")
 
 
 def _hid(prefix: str, canon: Dict[str, Any]) -> str:
@@ -19,8 +19,8 @@ def _hid(prefix: str, canon: Dict[str, Any]) -> str:
 
 
 @dataclass
-class Actor:
-    actor_id: str
+class Unit:
+    unit_id: str
     kind: str
     name: str
     region: str = ""
@@ -38,6 +38,8 @@ class Opportunity:
     startup_cost: float
     time_to_revenue: str = ""
     moonshot_relevance: float = 0.0
+    scalability: float = 0.0
+    adjacency: float = 0.0
 
 
 @dataclass
@@ -65,14 +67,14 @@ class Transaction:
         return d
 
 
-def validate_actor(a: Dict[str, Any]) -> Dict[str, Any]:
+def validate_unit(a: Dict[str, Any]) -> Dict[str, Any]:
     for k in ("kind", "name"):
         if not a.get(k) or not isinstance(a[k], str):
-            raise ValueError(f"actor missing/bad '{k}'")
-    if a["kind"] not in ACTOR_KINDS:
-        raise ValueError(f"actor kind '{a['kind']}' not in {ACTOR_KINDS}")
+            raise ValueError(f"unit missing/bad '{k}'")
+    if a["kind"] not in UNIT_KINDS:
+        raise ValueError(f"unit kind '{a['kind']}' not in {UNIT_KINDS}")
     if "capabilities" in a and not isinstance(a["capabilities"], list):
-        raise ValueError("actor 'capabilities' must be a list")
+        raise ValueError("unit 'capabilities' must be a list")
     return a
 
 
@@ -87,6 +89,10 @@ def validate_opportunity(o: Dict[str, Any]) -> Dict[str, Any]:
     mr = o.get("moonshot_relevance", 0.0)
     if not isinstance(mr, (int, float)) or not 0.0 <= mr <= 1.0:
         raise ValueError("opportunity 'moonshot_relevance' must be in [0,1]")
+    for k in ("scalability", "adjacency"):
+        v = o.get(k, 0.0)
+        if not isinstance(v, (int, float)) or not 0.0 <= v <= 1.0:
+            raise ValueError(f"opportunity '{k}' must be in [0,1]")
     return o
 
 
@@ -111,31 +117,38 @@ def validate_tx(x: Dict[str, Any]) -> Dict[str, Any]:
     return x
 
 
-def make_actor(kind: str, name: str, region: str = "",
-               capabilities: List[str] | None = None) -> Actor:
+def make_unit(kind: str, name: str, region: str = "",
+               capabilities: List[str] | None = None) -> Unit:
     caps = list(capabilities or [])
     d = {"kind": kind, "name": name, "region": region, "capabilities": caps}
-    validate_actor(d)
-    return Actor(actor_id=_hid("act_", d), kind=kind, name=name,
+    validate_unit(d)
+    # id prefix stays "act_" so pre-rename rows keep identical ids.
+    return Unit(unit_id=_hid("act_", d), kind=kind, name=name,
                  region=region, capabilities=caps)
 
 
 def make_opportunity(problem: str, customer: str, price: float, cost: float,
                      startup_cost: float, time_to_revenue: str = "",
                      moonshot_relevance: float = 0.0,
-                     margin: float | None = None) -> Opportunity:
+                     margin: float | None = None,
+                     scalability: float = 0.0,
+                     adjacency: float = 0.0) -> Opportunity:
     m = (price - cost) / price if margin is None and price else (margin or 0.0)
     d = {"problem": problem, "customer": customer, "price": price, "cost": cost,
          "margin": m, "startup_cost": startup_cost,
          "time_to_revenue": time_to_revenue,
-         "moonshot_relevance": moonshot_relevance}
+         "moonshot_relevance": moonshot_relevance,
+         "scalability": scalability, "adjacency": adjacency}
     validate_opportunity(d)
-    canon = {**d, "margin": round(float(m), 6)}
+    canon = {**d, "margin": round(float(m), 6),
+             "scalability": float(scalability), "adjacency": float(adjacency)}
     return Opportunity(opportunity_id=_hid("opp_", canon), problem=problem,
                        customer=customer, price=float(price), cost=float(cost),
                        margin=float(m), startup_cost=float(startup_cost),
                        time_to_revenue=time_to_revenue,
-                       moonshot_relevance=float(moonshot_relevance))
+                       moonshot_relevance=float(moonshot_relevance),
+                       scalability=float(scalability),
+                       adjacency=float(adjacency))
 
 
 def make_task(objective: str, budget: float, deadline: str = "",

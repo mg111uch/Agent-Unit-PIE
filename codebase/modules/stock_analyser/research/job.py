@@ -180,15 +180,48 @@ def _prepare_base(base_d: Dict[str, Any], cap: Dict[str, Any]) -> Dict[str, Any]
     return d
 
 
+def _pilot_bars(bars: Dict[str, List], k: int) -> Dict[str, List]:
+    names = sorted(bars)
+    stride = max(1, len(names) // k)  # stratified: every stride-th symbol
+    pick = names[::stride][:k] if len(names) > k else names
+    return {s: bars[s] for s in pick}
+
+
+def _pilot_or_full(cand_d: Dict[str, Any], bars: Dict[str, List], start_cash: float,
+                   is_ml: bool, k: int, enabled: bool) -> Dict[str, Any]:
+    """Pilot gate: only structural LOW_N_IS on a stratified subset skips full.
+
+    NEG_IS never pilot-kills (bench showed pilot NEG_IS vs full UNSTABLE:
+    subset sign flips, would risk killing future winners)."""
+    if not enabled or len(bars) <= k:
+        from ..ml.strategies import validate_ml as _vml
+        if is_ml:
+            return _vml(cand_d, bars, start_cash)
+        return validate_strategy(strategy_from_dict(cand_d), bars, start_cash=start_cash)
+    pb = _pilot_bars(bars, k)
+    from ..ml.strategies import validate_ml as _vml
+    pv = (_vml(cand_d, pb, start_cash) if is_ml
+          else validate_strategy(strategy_from_dict(cand_d), pb, start_cash=start_cash))
+    if pv.get("verdict") == "REJECT" and pv.get("reason") == "LOW_N_IS":
+        pv = dict(pv)
+        pv["pilot_kill"] = True
+        return pv
+    return (_vml(cand_d, bars, start_cash) if is_ml
+            else validate_strategy(strategy_from_dict(cand_d), bars, start_cash=start_cash))
+
+
 def run_job(objective: str, base_strategy: Dict[str, Any] | None = None,
             symbols: List[str] | None = None, universe: str = "MY_RESEARCH_UNIVERSE",
             budget: int = 20, seed: int = 1, timeframe: str = "1D", dataset: str = "csv",
             db_path: str | None = None, mode: str = "day", run_id: str | None = None,
             max_hours: float = 0, seeds: List[Dict[str, Any]] | None = None,
-            start: str = "", end: str = "", n: int = 252) -> Dict[str, Any]:
+            start: str = "", end: str = "", n: int = 252,
+            pilot_symbols: int = 50, pilot_enable: bool = True) -> Dict[str, Any]:
     """budget<=0 + max_hours>0 = overnight open-ended until time cap or Ctrl-C.
 
-    start/end/n scope the bars window (regime-scoped research, e.g. 2020–2023)."""
+    start/end/n scope the bars window (regime-scoped research, e.g. 2020–2023).
+    pilot: screen-passers first validate on sorted(bars)[:pilot_symbols]; only
+    pilot IS-survivors pay for the full-universe validate (3-4x saving)."""
     cap = load_capital()
     syms = symbols or resolve_universe(universe) or ["RELIANCE"]
     fam_bases = [_prepare_base(s, cap) for s in (seeds or ([base_strategy] if base_strategy else []))]
@@ -207,7 +240,9 @@ def run_job(objective: str, base_strategy: Dict[str, Any] | None = None,
         con0.close()
     conn = StockConnector(db_path=db_path)
     start_cash = float(cap.get("capital", 50000))
-    bars = conn._bars({"dataset": dataset, "symbols": syms, "n": n, "timeframe": timeframe,
+    from ..constants import is_tradable as _tr
+    _syms, _idx_drop = [s for s in syms if _tr(s)], sorted(s for s in syms if not _tr(s))
+    bars = conn._bars({"dataset": dataset, "symbols": _syms, "n": n, "timeframe": timeframe,
                        "seed": seed, "universe": universe, "start": start, "end": end})
     data_hash, code_ver = data_fingerprint(bars), code_version()
     dataset_id = f"{dataset}:{timeframe}:{data_hash}"
@@ -217,6 +252,12 @@ def run_job(objective: str, base_strategy: Dict[str, Any] | None = None,
         g = _qgate(bars, cap)
         bars, quality = g["bars"], {"excluded": g["excluded"], "mixed": g["mixed"],
                                     "dropped_forming": g["dropped_forming"]}
+        from ..research.liquidity import tradable_filter as _tradfilter
+        bars, _untrad = _tradfilter(bars, start_cash * 0.2, cap)
+        quality.update({k: v for k, v in (("untradable", _untrad),
+                                          ("indices_dropped", _idx_drop)) if v})
+        data_hash = data_fingerprint(bars)  # lineage covers the tradable set
+        dataset_id = f"{dataset}:{timeframe}:{data_hash}"
         if not g["ok"]:
             con = _con(db_path)
             try:
@@ -229,6 +270,13 @@ def run_job(objective: str, base_strategy: Dict[str, Any] | None = None,
                     "results": []}
     t_end = time.time() + max_hours * 3600 if max_hours > 0 else 0
     open_ended = budget <= 0
+    if dataset != "synthetic" and any(
+            (s.get("meta", {}) or {}).get("family") == "ml" for s in fam_bases):
+        try:  # warm shared panel once (~100s cold); all ML candidates reuse it
+            from ..ml.strategies import _panel_rows as _warm_panel
+            _warm_panel(bars)
+        except Exception:
+            pass
     results, i, status = [], 0, "COMPLETE"
     elites: Dict[str, Dict] = {}
     try:
@@ -296,7 +344,11 @@ def run_job(objective: str, base_strategy: Dict[str, Any] | None = None,
                     mutate(strategy_from_dict(parent_d), seed + i + 999, None).to_dict()
                 h, fam_now, kind = _hash(cand_d), family_of(cand_d), "exploit-fallback"
             i += 1
-            if h in seen:
+            from .dedup import seen_global as _seen_global, record_dup as _record_dup
+            if h in seen or _seen_global(h, db_path):
+                seen.add(h)
+                results.append(_record_dup(rid, h, cand_d, fam_now, kind, mode, db_path,
+                                           data_hash, code_ver, dataset_id, seed + i))
                 continue
             seen.add(h)
             from .firewall import fingerprints as _fps, check_seal_binding as _sealbind
@@ -348,9 +400,20 @@ def run_job(objective: str, base_strategy: Dict[str, Any] | None = None,
                                 "oos_net": None, "summary": ""})
                 continue
             if is_ml:
-                v = validate_ml(cand_d, bars, start_cash)
+                v = _pilot_or_full(cand_d, bars, start_cash, True, pilot_symbols,
+                                   pilot_enable)
             else:
-                v = validate_strategy(strategy_from_dict(cand_d), bars, start_cash=start_cash)
+                v = _pilot_or_full(cand_d, bars, start_cash, False, pilot_symbols,
+                                   pilot_enable)
+            if v.get("verdict") == "REJECT" and v.get("reason"):
+                cand_d = dict(cand_d)  # surface gate in ledger strategy_json
+                cand_d["meta"] = {**(cand_d.get("meta") or {}),
+                                  "reject_reason": str(v["reason"])[:24]}
+            if v.get("verdict") == "REJECT" and v.get("reason") in ("NEG_IS", "NEG_OOS") and not v.get("pilot_kill"):
+                from ..research.capital_ladder import suggest_and_confirm as _ladder
+                _sug = _ladder(cand_d, v, bars, is_ml, start_cash, cap)
+                if _sug.get("suggested_min_capital"):
+                    cand_d["meta"] = {**(cand_d.get("meta") or {}), **_sug}
             if v.get("verdict") == "PAPER_READY" and v.get("seal"):
                 cand_d = dict(cand_d)
                 _seal = dict(v["seal"])
@@ -400,6 +463,11 @@ def run_job(objective: str, base_strategy: Dict[str, Any] | None = None,
     finally:
         con.close()
     ready = [r for r in results if r["verdict"] == "PAPER_READY"]
+    try:  # every batch lands in-kernel for future retrieval (best-effort)
+        from ..kernel_bridge import register_episode_finding
+        register_episode_finding(episode_summary(rid, db_path))
+    except Exception:
+        pass
     return {"run_id": rid, "status": status, "tested_this_session": len(results),
             "tested_total": done, "paper_ready": len(ready), "capital": start_cash,
             "quality": quality, "seed": seed, "data_hash": data_hash,

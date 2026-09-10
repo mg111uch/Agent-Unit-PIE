@@ -1,15 +1,15 @@
-"""Twin-bridge Phase A: digital twins -> economy Actors (read-only vs twins).
+"""Twin-bridge Phase A: digital twins -> economy Units (read-only vs twins).
 Phase B: CityTwin -> popula_dyn SimulationModel params + epoch heuristic.
 
 No twin edits, no kernel imports, no score persistence. Missing twin
-fields are omitted from capabilities (never invented); the Actor stays
-valid. Uses objects.make_actor + ledger.record_actor (idempotent).
+fields are omitted from capabilities (never invented); the Unit stays
+valid. Uses objects.make_unit + ledger.record_unit (idempotent).
 """
 from __future__ import annotations
 from dataclasses import asdict
 from typing import Any, Dict, List, Optional
 from . import ledger
-from .objects import make_actor
+from .objects import make_unit
 
 
 def _top(d: Any, n: int) -> List[str]:
@@ -29,8 +29,8 @@ def _size_band(n: Any) -> str:
     return "size:xl"
 
 
-def city_to_actor(twin: Any) -> Dict[str, Any]:
-    """CityTwin -> Actor dict (kind=region). Caps: top-3 industries,
+def city_to_unit(twin: Any) -> Dict[str, Any]:
+    """CityTwin -> Unit dict (kind=region). Caps: top-3 industries,
     labor band from employment_rate, infra power/water presence flags."""
     p = getattr(twin, "profile", {}) or {}
     eco = getattr(twin, "economic_model", {}) or {}
@@ -45,11 +45,11 @@ def city_to_actor(twin: Any) -> Dict[str, Any]:
         caps.append("infra:power")
     if infra.get("water_network"):
         caps.append("infra:water")
-    return asdict(make_actor("region", str(name), region, caps))
+    return asdict(make_unit("region", str(name), region, caps))
 
 
-def company_to_actor(twin: Any) -> Dict[str, Any]:
-    """CompanyTwin -> Actor dict (kind=firm). Caps: industry,
+def company_to_unit(twin: Any) -> Dict[str, Any]:
+    """CompanyTwin -> Unit dict (kind=firm). Caps: industry,
     top-3 employee_distribution keys (skill proxy), employee size band."""
     p = getattr(twin, "profile", {}) or {}
     org = getattr(twin, "organization_model", {}) or {}
@@ -59,18 +59,18 @@ def company_to_actor(twin: Any) -> Dict[str, Any]:
     band = _size_band(p.get("employees"))
     if band:
         caps.append(band)
-    return asdict(make_actor("firm", str(name), p.get("country") or "", caps))
+    return asdict(make_unit("firm", str(name), p.get("country") or "", caps))
 
 
 def snapshot_to_ledger(twin: Any, db_path: Optional[str] = None) -> str:
-    """Record twin-derived Actor; idempotent via INSERT OR IGNORE. Returns actor_id."""
+    """Record twin-derived Unit; idempotent via INSERT OR IGNORE. Returns unit_id."""
     if hasattr(twin, "company_id"):
-        a = company_to_actor(twin)
+        a = company_to_unit(twin)
     elif hasattr(twin, "city_id"):
-        a = city_to_actor(twin)
+        a = city_to_unit(twin)
     else:
         raise ValueError("twin has neither company_id nor city_id")
-    return ledger.record_actor(a, db_path)
+    return ledger.record_unit(a, db_path)
 
 
 def twin_to_params(twin: Any, base: Optional[Dict[str, Any]] = None):

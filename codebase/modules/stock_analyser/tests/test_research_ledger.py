@@ -27,7 +27,7 @@ def test_ledger_resume_and_dedup():
     assert len(tested_hashes(r1["run_id"], db)) == 3
     r2 = run_job("t", base, syms, budget=6, seed=1, dataset="synthetic",
                  db_path=db, run_id=r1["run_id"])
-    assert 1 <= r2["tested_this_session"] <= 3  # skips tested; rng collisions dedup too
+    assert r2["tested_this_session"] == 6  # dedup-before-screen: revisits recorded as DUPLICATE, no silent burn
     total = 3 + r2["tested_this_session"]
     assert run_status(r1["run_id"], db)["tested"] == total
-    assert len(tested_hashes(r1["run_id"], db)) == total
+    assert 3 <= len(tested_hashes(r1["run_id"], db)) <= total  # DUPLICATEs share hashes

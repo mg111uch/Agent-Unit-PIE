@@ -80,7 +80,8 @@ def run_locked_oos(strategy: Strategy, oos: Dict[str, List],
                 "reason": "strategy mutated after seal; new lineage required"}
     r = run_backtest(strategy, oos, start_cash=start_cash, min_bars=0)
     return {k: r.get(k) for k in ("n", "sharpe", "max_dd", "cagr",
-                                  "avg_net_per_trade", "net_profit")}
+                                  "avg_net_per_trade", "net_profit",
+                                  "avg_hold_days")}
 
 
 def _split(bars: Dict[str, List], frac: float) -> tuple:
@@ -94,7 +95,7 @@ def _split(bars: Dict[str, List], frac: float) -> tuple:
 
 def validate_strategy(strategy: Strategy, bars: Dict[str, List[Dict[str, Any]]],
                       oos_frac: float = 0.2, start_cash: float = 50000.0,
-                      min_bars: int | None = None) -> Dict[str, Any]:
+                      min_bars: int | None = None, early_kill: bool = True) -> Dict[str, Any]:
     if (strategy.meta or {}).get("oos_seal"):
         return {"verdict": "REJECT", "reason": "MUTATED_AFTER_SEAL",
                 "robustness": 0.0, "seal": (strategy.meta or {})["oos_seal"]}
@@ -111,9 +112,19 @@ def validate_strategy(strategy: Strategy, bars: Dict[str, List[Dict[str, Any]]],
     cut = dates[max(5, int(len(dates) * (1 - oos_frac)) - 1)] if dates else ""
     sealed = seal(strategy.to_dict(), cut, oos_frac)
     stages["seal"] = sealed
+    stages["cut"] = cut  # IS/OOS leg scoping for capital-ladder probe
     base = run_backtest(strategy, train, start_cash=start_cash, min_bars=0)
     stages["backtest"] = {k: base.get(k) for k in ("n", "sharpe", "max_dd", "cagr",
-                                                   "avg_net_per_trade", "net_profit")}
+                                                   "avg_net_per_trade", "net_profit",
+                                                   "avg_hold_days")}
+    if early_kill:  # IS-dead pays 1 backtest, not ~10 (batch-2: most REJECTs here)
+        _bn, _bnet = base.get("n", 0) or 0, base.get("avg_net_per_trade", 0) or 0
+        if _bn < MIN_TRADES or not _bnet > 0:
+            stages.update(verdict="REJECT",
+                          reason="LOW_N_IS" if _bn < MIN_TRADES else "NEG_IS",
+                          robustness=0.0, perturbation={"avg_nets": [], "stable": False},
+                          walk_forward={"avg_nets": []}, locked_oos={})
+            return stages
     s2 = copy.deepcopy(strategy)
     s2.fee_bps, s2.slippage_bps = stressed_costs(strategy.fee_bps, strategy.slippage_bps)
     if hasattr(s2, "flat_cost") and s2.flat_cost:
@@ -160,6 +171,19 @@ def validate_strategy(strategy: Strategy, bars: Dict[str, List[Dict[str, Any]]],
           and base_net > 0
           and stages["perturbation"]["stable"])
     stages["verdict"] = "PAPER_READY" if ok else "REJECT"
+    if not ok and "reason" not in stages:
+        if (locked.get("n", 0) or 0) < 5:
+            stages["reason"] = "LOW_N_OOS"
+        elif not oos_net > 0:
+            stages["reason"] = "NEG_OOS"
+        elif not (base.get("max_dd", 0) or 0) >= MAX_DD:
+            stages["reason"] = "DEEP_DD"
+        elif (base.get("n", 0) or 0) < MIN_TRADES:
+            stages["reason"] = "LOW_N_IS"
+        elif not base_net > 0:
+            stages["reason"] = "NEG_IS"
+        else:
+            stages["reason"] = "UNSTABLE"
     stages["robustness"] = round(sum(1 for v in [ok, stages["perturbation"]["stable"],
         oos_net > 0, (stress.get("avg_net_per_trade", 0) or 0) > 0] if v) / 4, 2)
     if ok:

@@ -6,10 +6,10 @@ Artifacts pickle to run shards.
 """
 from __future__ import annotations
 from typing import Any, Dict, List
-from .dataset import FEATURES
+from .dataset import FEATURES, REL_FEATURES
 from .family import train as _train_family, attribution as _attribution, MODELS
 
-FEATS = list(FEATURES)
+FEATS = list(FEATURES) + list(REL_FEATURES)
 DEFAULTS = {"max_depth": 3, "learning_rate": 0.05, "max_iter": 200,
             "l2_regularization": 1.0, "random_state": 7}
 

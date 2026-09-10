@@ -100,7 +100,9 @@ def register_finding(claim: str, experiments: List[str], metrics: Dict[str, Any]
             "created_at": datetime.now(timezone.utc).isoformat(), "topic": TOPIC}
     try:
         from modules.argu_god.engine import topic_store as ts
-        nid = f"stock_{experiments[0]}" if experiments else f"stock_{abs(hash(claim)) % 10**8}"
+        tag = experiments[0] if experiments else f"{abs(hash(claim)) % 10**8}"
+        n, ready = metrics.get("tested", 0), metrics.get("paper_ready", 0)
+        nid = f"stock_{tag}_{n}t_{ready}r"  # unique per session state (resumes re-register)
         node_dict = {"name": nid, "premise": claim[:500], "type": "simulation_observation",
                      "metadata": {"experiments": experiments, "metrics": metrics,
                                   "universe": universe, "timeframe": timeframe,

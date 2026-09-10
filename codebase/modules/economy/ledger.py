@@ -11,13 +11,14 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 SCHEMA = """
-CREATE TABLE IF NOT EXISTS actors(
-  actor_id TEXT PRIMARY KEY, kind TEXT, name TEXT, region TEXT,
+CREATE TABLE IF NOT EXISTS units(
+  unit_id TEXT PRIMARY KEY, kind TEXT, name TEXT, region TEXT,
   capabilities_json TEXT DEFAULT '[]');
 CREATE TABLE IF NOT EXISTS opportunities(
   opportunity_id TEXT PRIMARY KEY, problem TEXT, customer TEXT,
   price REAL, cost REAL, margin REAL, startup_cost REAL,
-  time_to_revenue TEXT DEFAULT '', moonshot_relevance REAL DEFAULT 0.0);
+  time_to_revenue TEXT DEFAULT '', moonshot_relevance REAL DEFAULT 0.0,
+  scalability REAL DEFAULT 0.0, adjacency REAL DEFAULT 0.0);
 CREATE TABLE IF NOT EXISTS tasks(
   task_id TEXT PRIMARY KEY, objective TEXT, budget REAL,
   deadline TEXT DEFAULT '', verification TEXT DEFAULT '', reward REAL DEFAULT 0.0);
@@ -52,9 +53,35 @@ def ensure_schema(db_path: Optional[str] = None) -> str:
     try:
         con.executescript(SCHEMA)
         con.commit()
+        _migrate_units(con)
+        _migrate_opportunities(con)
+        con.commit()
     finally:
         con.close()
     return str(get_db_path(db_path))
+
+
+def _migrate_opportunities(con: sqlite3.Connection) -> None:
+    """Add scalability/adjacency to pre-7-factor DBs. Fresh DBs no-op."""
+    try:
+        cols = {r[1] for r in con.execute("PRAGMA table_info(opportunities)").fetchall()}
+        if "scalability" not in cols:
+            con.execute("ALTER TABLE opportunities ADD COLUMN scalability REAL DEFAULT 0.0")
+        if "adjacency" not in cols:
+            con.execute("ALTER TABLE opportunities ADD COLUMN adjacency REAL DEFAULT 0.0")
+    except Exception:
+        pass
+
+
+def _migrate_units(con: sqlite3.Connection) -> None:
+    """Legacy actors -> units, data-preserving. actors table never dropped."""
+    try:
+        tables = {r[0] for r in con.execute(
+            "SELECT name FROM sqlite_master WHERE type='table'").fetchall()}
+        if "actors" in tables and "units" in tables:
+            con.execute("INSERT OR IGNORE INTO units SELECT * FROM actors")
+    except Exception:
+        pass  # fresh DBs have no actors table; nothing to carry over
 
 
 def _row(con: sqlite3.Connection, q: str, args: tuple) -> Optional[Dict[str, Any]]:
@@ -63,16 +90,17 @@ def _row(con: sqlite3.Connection, q: str, args: tuple) -> Optional[Dict[str, Any
     return dict(r) if r else None
 
 
-def record_actor(a: Any, db_path: Optional[str] = None) -> str:
+def record_unit(a: Any, db_path: Optional[str] = None) -> str:
     d = asdict(a) if not isinstance(a, dict) else dict(a)
     con = connect(db_path)
     try:
         con.executescript(SCHEMA)
-        con.execute("INSERT OR IGNORE INTO actors VALUES(?,?,?,?,?)",
-                    (d["actor_id"], d["kind"], d["name"], d.get("region", ""),
+        _migrate_units(con)
+        con.execute("INSERT OR IGNORE INTO units VALUES(?,?,?,?,?)",
+                    (d["unit_id"], d["kind"], d["name"], d.get("region", ""),
                      json.dumps(d.get("capabilities", []))))
         con.commit()
-        return d["actor_id"]
+        return d["unit_id"]
     finally:
         con.close()
 
@@ -82,10 +110,15 @@ def record_opportunity(o: Any, db_path: Optional[str] = None) -> str:
     con = connect(db_path)
     try:
         con.executescript(SCHEMA)
-        con.execute("INSERT OR IGNORE INTO opportunities VALUES(?,?,?,?,?,?,?,?,?)",
-                    (d["opportunity_id"], d["problem"], d["customer"], d["price"],
-                     d["cost"], d["margin"], d["startup_cost"],
-                     d.get("time_to_revenue", ""), d.get("moonshot_relevance", 0.0)))
+        _migrate_opportunities(con)
+        con.execute(
+            "INSERT OR IGNORE INTO opportunities(opportunity_id,problem,customer,"
+            "price,cost,margin,startup_cost,time_to_revenue,moonshot_relevance,"
+            "scalability,adjacency) VALUES(?,?,?,?,?,?,?,?,?,?,?)",
+            (d["opportunity_id"], d["problem"], d["customer"], d["price"],
+             d["cost"], d["margin"], d["startup_cost"],
+             d.get("time_to_revenue", ""), d.get("moonshot_relevance", 0.0),
+             d.get("scalability", 0.0), d.get("adjacency", 0.0)))
         con.commit()
         return d["opportunity_id"]
     finally:
@@ -123,10 +156,10 @@ def record_tx(x: Any, db_path: Optional[str] = None) -> str:
         con.close()
 
 
-def get_actor(aid: str, db_path: Optional[str] = None) -> Optional[Dict[str, Any]]:
+def get_unit(uid: str, db_path: Optional[str] = None) -> Optional[Dict[str, Any]]:
     con = connect(db_path)
     try:
-        r = _row(con, "SELECT * FROM actors WHERE actor_id=?", (aid,))
+        r = _row(con, "SELECT * FROM units WHERE unit_id=?", (uid,))
         if r:
             r["capabilities"] = json.loads(r.pop("capabilities_json", "[]"))
         return r
@@ -159,7 +192,7 @@ def get_tx(txid: str, db_path: Optional[str] = None) -> Optional[Dict[str, Any]]
 
 
 def list_table(table: str, db_path: Optional[str] = None) -> List[Dict[str, Any]]:
-    assert table in ("actors", "opportunities", "tasks", "transactions")
+    assert table in ("units", "opportunities", "tasks", "transactions")
     con = connect(db_path)
     try:
         con.row_factory = sqlite3.Row

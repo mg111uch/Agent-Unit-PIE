@@ -25,7 +25,7 @@ DATA_ROOT = Path(_CODEBASE).parent / "data"
 TOPICS_DIR = DATA_ROOT / "topics"
 BELIEF_PATH = DATA_ROOT / "mindmaps" / "local_user" / "belief_state.json"
 
-RELATIONS = {"contradicts", "requires", "supports"}
+RELATIONS = {"contradicts", "requires", "supports", "supersedes"}
 
 
 class TopicStoreError(Exception):
@@ -153,6 +153,43 @@ def find_node(topic: str, name: str):
     return None
 
 
+def node_status(node) -> str:
+    """Lifecycle status: active (default) or superseded (excluded from gate)."""
+    md = getattr(node, "metadata", {}) or {}
+    return md.get("status", "active")
+
+
+def mark_superseded(topic: str, name: str, write: bool = True) -> dict:
+    """Mark a node superseded (new measurement won); persists + re-exports."""
+    node = find_node(topic, name)
+    if node is None:
+        raise TopicStoreError(f"Unknown node in topic {topic!r}: {name!r}")
+    if not isinstance(node.metadata, dict):
+        node.metadata = {}
+    node.metadata["status"] = "superseded"
+    memory_engine.save_object("semantic", node.node_id, node.to_dict())
+    if write:
+        write_export(topic)
+    return {"kind": "node_superseded", "name": name}
+
+
+def _parse_evidence(items) -> tuple:
+    """Parse TOPIC:NAME pointers; returns (evidence_list, warnings)."""
+    ev, warns = [], []
+    for item in items or []:
+        if ":" not in item:
+            warns.append(f"bad evidence pointer {item!r}; want TOPIC:NAME")
+            continue
+        t, n = item.split(":", 1)
+        if not t or not n:
+            warns.append(f"bad evidence pointer {item!r}; want TOPIC:NAME")
+            continue
+        if find_node(t, n) is None:
+            warns.append(f"dangling evidence pointer {item!r} (stored anyway)")
+        ev.append({"topic": t, "node": n})
+    return ev, warns
+
+
 def has_topic(topic: str) -> bool:
     if any(n.topic_id == topic for n in semantic_memory.nodes.values()):
         return True
@@ -210,11 +247,13 @@ def export_graph(topic: str) -> dict:
     name_by_id, nodes = {}, []
     for n in _topic_nodes(topic):
         name_by_id[n.node_id] = n.title
+        md = getattr(n, "metadata", {}) or {}
         nodes.append({
             "name": n.title,
             "side": n.concepts[0] if n.concepts else "neutral",
             "premise": n.content,
-            "evidence": [],
+            "evidence": md.get("evidence", []),
+            "status": md.get("status", "active"),
             "examples": [],
             "sources": n.source_refs,
             "discipline": "",
@@ -284,7 +323,14 @@ def add_node(topic: str, node: dict, write: bool = True, force: bool = False) ->
         raise TopicStoreError("Node requires a 'name' field")
     if find_node(topic, name):
         return {"kind": "node_skipped", "name": name}
-    if not force and topic not in ("_smoke_k",):
+    evidence, warnings = _parse_evidence(node.get("evidence"))
+    # --supersedes: explicit refinement path that bypasses the similarity gate
+    # (new measurement wins; prior node marked superseded, never silently edited)
+    supersedes = node.get("supersedes")
+    if supersedes and not force:
+        if find_node(topic, supersedes) is None:
+            raise TopicStoreError(f"Unknown node in topic {topic!r}: {supersedes!r}")
+    if not force and not supersedes and topic not in ("_smoke_k",):
         try:
             from kernel.hypothesis.contradiction_gate import check_topic_contradiction
             blocked, conflicts = check_topic_contradiction(topic, name, node.get("premise", ""), node.get("metadata"))
@@ -297,7 +343,7 @@ def add_node(topic: str, node: dict, write: bool = True, force: bool = False) ->
                     pass
                 else:
                     return {"kind": "blocked_contradiction", "name": name,
-                            "reason": "New claim contradicts existing claim. Resolve prior claim or re-run with force=True after user approval.",
+                            "reason": "New claim contradicts existing claim. Resolve prior claim (add-node --supersedes NAME) or re-run with force=True after user approval.",
                             "conflicts": conflicts}
         except Exception:
             pass
@@ -306,9 +352,12 @@ def add_node(topic: str, node: dict, write: bool = True, force: bool = False) ->
     # normalize wrapped observation
     if isinstance(meta, dict) and "observation" in meta:
         meta = meta
+    if evidence:
+        meta = dict(meta)
+        meta["evidence"] = evidence
     semantic_memory.create_node(
         node_id=node_id,
-        node_type=node.get("type", "observation" if node.get("metadata") else "argument"),
+        node_type=node.get("type") or ("observation" if node.get("metadata") else "argument"),
         title=name,
         content=node.get("premise", ""),
         concepts=[node.get("side", "neutral")],
@@ -320,9 +369,18 @@ def add_node(topic: str, node: dict, write: bool = True, force: bool = False) ->
         metadata=meta,
     )
     _persist_embedding(node_id, f"{name} {node.get('premise','')}")
+    out = {"kind": "node_added", "name": name}
+    if warnings:
+        out["warnings"] = warnings
+    if supersedes:
+        edge = add_edge(topic, name, supersedes, "supersedes", write=False)
+        marked = mark_superseded(topic, supersedes, write=False)
+        out["supersedes"] = supersedes
+        out["edge"] = edge.get("kind")
+        out["prior"] = marked.get("kind")
     if write:
         write_export(topic)
-    return {"kind": "node_added", "name": name}
+    return out
 
 
 def add_edge(topic: str, source: str, target: str, relation: str,
@@ -348,9 +406,13 @@ def add_edge(topic: str, source: str, target: str, relation: str,
         metadata={"writer": "topic_store"},
         topic_id=topic,
     )
+    out = {"kind": "edge_added", "source": source, "target": target}
+    if relation == "supersedes":
+        marked = mark_superseded(topic, target, write=False)
+        out["prior"] = marked.get("kind")
     if write:
         write_export(topic)
-    return {"kind": "edge_added", "source": source, "target": target}
+    return out
 
 
 def check_contradictions(topic: str, names, beliefs=None) -> list:
@@ -369,6 +431,35 @@ def check_contradictions(topic: str, names, beliefs=None) -> list:
         return []
     return [(r.claim_a_title, r.claim_b_title)
             for r in detect_contradictions(believed)]
+
+
+def neighbors(topic: str, name: str) -> dict:
+    """In-topic edges + cross-topic evidence pointers (both directions)."""
+    node = find_node(topic, name)
+    if node is None:
+        raise TopicStoreError(f"Unknown node in topic {topic!r}: {name!r}")
+    out_edges, in_edges = [], []
+    for e in semantic_memory.edges.values():
+        if e.topic_id != topic:
+            continue
+        if e.source_node_id == node.node_id:
+            tgt = semantic_memory.nodes.get(e.target_node_id)
+            out_edges.append({"target": tgt.title if tgt else e.target_node_id,
+                              "relation": e.relation_type})
+        elif e.target_node_id == node.node_id:
+            src = semantic_memory.nodes.get(e.source_node_id)
+            in_edges.append({"source": src.title if src else e.source_node_id,
+                             "relation": e.relation_type})
+    md = getattr(node, "metadata", {}) or {}
+    cites = md.get("evidence", []) or []
+    cited_by = [{"topic": n.topic_id, "node": n.title}
+                for n in semantic_memory.nodes.values()
+                if any(isinstance(x, dict) and x.get("topic") == topic
+                       and x.get("node") == name
+                       for x in ((getattr(n, "metadata", {}) or {}).get("evidence", []) or []))]
+    return {"topic": topic, "name": name, "status": node_status(node),
+            "out_edges": out_edges, "in_edges": in_edges,
+            "cites": cites, "cited_by": cited_by}
 
 
 def emit_contradiction_signal(pair, topic: str):

@@ -1,0 +1,165 @@
+{
+  "nodes": [
+    {
+      "name": "drift_phase1_survival_fitness",
+      "side": "argument",
+      "premise": "Phase1: fitness sort by (laps, steps_survived, -offtrack_deaths); ignore drift_score until basic driving stable. From code_fixes.md items 2,5,7.",
+      "evidence": [],
+      "status": "active",
+      "examples": [],
+      "sources": [],
+      "discipline": "",
+      "confidence": 1.0
+    },
+    {
+      "name": "drift_offtrack_death",
+      "side": "argument",
+      "premise": "GameState: off-track returns -1000 and done=True immediately; reset on done; count deaths for fitness penalty. code_fixes.md item 3.",
+      "evidence": [],
+      "status": "active",
+      "examples": [],
+      "sources": [],
+      "discipline": "",
+      "confidence": 1.0
+    },
+    {
+      "name": "drift_exploration_pop35",
+      "side": "argument",
+      "premise": "GA: pop 35, elitism 4, random_injection 0.15, eval_noise 0.4, 10 episodes per env, 4000 step timeout. code_fixes.md items 4,5,7,8.",
+      "evidence": [],
+      "status": "active",
+      "examples": [],
+      "sources": [],
+      "discipline": "",
+      "confidence": 1.0
+    },
+    {
+      "name": "drift_fix_9action_nowrap",
+      "side": "decision",
+      "premise": "Fix 2026-09-09: PolicyNet 9 outputs matching decode 0-8, randint 0-9; remove screen wrap so off-track triggers death; clip obs; DEFAULT_TRACK simple_oval.json.",
+      "evidence": [],
+      "status": "active",
+      "examples": [],
+      "sources": [],
+      "discipline": "",
+      "confidence": 1.0
+    },
+    {
+      "name": "drift_reward_lap_v2",
+      "side": "decision",
+      "premise": "Reward v2: living -0.1, forward clip 5px, drift cap 25, lap 750<1000 offtrack, no double bonus; lap progress hybrid dist/2000+0.005, min 200 ticks, dot-product direction gate.",
+      "evidence": [],
+      "status": "active",
+      "examples": [],
+      "sources": [],
+      "discipline": "",
+      "confidence": 1.0
+    },
+    {
+      "name": "drift_train_hygiene_v1",
+      "side": "decision",
+      "premise": "Train hygiene: no input() prompts, model paths in training dir, --generations/--train_duration/--seed/--model-dir, N_ACTIONS=9 MAX_STEPS=4000 consts, stdout guard for pytest.",
+      "evidence": [],
+      "status": "active",
+      "examples": [],
+      "sources": [],
+      "discipline": "",
+      "confidence": 1.0
+    },
+    {
+      "name": "drift_smoke_20260909",
+      "side": "decision",
+      "premise": "Smoke gens=2 envs=1: Gen1 best laps=0.5 steps=1334; Gen2 best laps=1.5 steps=710; avg laps 0.06->0.19. Fixes verified: 9-action, no-wrap death, reward v2. Models in training/*.pth.",
+      "evidence": [],
+      "status": "active",
+      "examples": [],
+      "sources": [],
+      "discipline": "",
+      "confidence": 1.0
+    },
+    {
+      "name": "drift_viz_track_fix",
+      "side": "decision",
+      "premise": "visualize_model drew gray+car only; switched to env.render() full scene (track+car+HUD). Verified on DISPLAY=:0.",
+      "evidence": [],
+      "status": "active",
+      "examples": [],
+      "sources": [],
+      "discipline": "",
+      "confidence": 1.0
+    },
+    {
+      "name": "drift_traj_truth_20260909",
+      "side": "argument",
+      "premise": "Deterministic eval (noise=0, 5 eps): 0 laps, crash (246,142) at step 111 every ep; policy argmax stuck on action 6 (accel+right) 100%. Noisy training fitness (40%% noise) inflated 1.5 laps. Need clean-eval selection + action-diversity pressure before Phase-2 drift.",
+      "evidence": [],
+      "status": "active",
+      "examples": [],
+      "sources": [],
+      "discipline": "",
+      "confidence": 1.0
+    },
+    {
+      "name": "drift_clean_select_v1",
+      "side": "decision",
+      "premise": "Selection on clean eval: top-8 noisy candidates re-evaluated noise=0 x3eps; rank by (laps,steps,unique,entropy,-deaths) via _fit_key; best-saves/early-stop on clean; policy-action histogram (noise excluded) with unique/entropy per agent.",
+      "evidence": [],
+      "status": "active",
+      "examples": [],
+      "sources": [],
+      "discipline": "",
+      "confidence": 1.0
+    },
+    {
+      "name": "drift_parking_gate",
+      "side": "decision",
+      "premise": "Brake-parking exploit fixed with dist metric in rank key. Relaunch seed7 x3 gens.",
+      "evidence": [],
+      "status": "active",
+      "examples": [],
+      "sources": [],
+      "discipline": "",
+      "confidence": 1.0
+    },
+    {
+      "name": "drift_smoke_correction",
+      "side": "decision",
+      "premise": "Correction: drift_smoke_20260909 clean laps 1.5 were noisy-rollout artifacts. Deterministic re-eval showed 0 laps with wall crash, then brake-parking. Do not cite 1.5 as policy quality.",
+      "evidence": [],
+      "status": "active",
+      "examples": [],
+      "sources": [],
+      "discipline": "",
+      "confidence": 1.0
+    },
+    {
+      "name": "drift_phase1_verified",
+      "side": "decision",
+      "premise": "Phase-1 verified deterministic: 5 laps x5 eps, 0 offtrack, actions 6/2/0 mixed, full-track bbox, traj_smoke3.csv. Gates worked: dist killed parking, clean-select killed noise luck.",
+      "evidence": [],
+      "status": "active",
+      "examples": [],
+      "sources": [],
+      "discipline": "",
+      "confidence": 1.0
+    },
+    {
+      "name": "drift_phase2b_style",
+      "side": "decision",
+      "premise": "Style rebalance: drift scale 3.0 cap 60, rank laps-drift-dist, early-stop 8. Phase-2a sped up to 6 laps but drift fell 9 to 7pct.",
+      "evidence": [],
+      "status": "active",
+      "examples": [],
+      "sources": [],
+      "discipline": "",
+      "confidence": 1.0
+    }
+  ],
+  "edges": [
+    {
+      "source": "drift_smoke_correction",
+      "target": "drift_smoke_20260909",
+      "relation": "contradicts"
+    }
+  ]
+}

@@ -5,7 +5,10 @@ for _c in [_P(__file__).resolve().parents[3], _P(__file__).resolve().parents[4]]
     if str(_c) not in _s.path:
         _s.path.insert(0, str(_c))
 
+import pytest
 
+
+@pytest.mark.slow  # trains + backtests on real market.db data
 def test_ranker_end_to_end_on_real_data():
     from modules.stock_analyser.ml.dataset import build_panel, split_panel
     from modules.stock_analyser.ml.ranker import (train_ranker, add_scores, top_n_signals,

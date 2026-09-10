@@ -38,8 +38,12 @@ class StockConnector:
                     syms = list(snap) if snap else (
                         resolve_universe(d["universe"], db_path=self.db_path) or syms)
                 tf = str(p.get("timeframe") or d.get("timeframe") or tf)
-            out = {}
+            from .constants import is_tradable as _tradable
+            out, _idx = {}, []
             for s in syms:
+                if not _tradable(s):
+                    _idx.append(s)
+                    continue
                 rows = S.query_equity(f"NSE:{s}", tf, db_path=self.db_path)
                 if p.get("start"):
                     rows = [r for r in rows if r["ts"] >= p["start"]]
@@ -55,7 +59,14 @@ class StockConnector:
                 from .data.quality import gate as _gate
                 g = _gate(bars, _cap())
                 self._quality = {"excluded": g["excluded"], "mixed": g["mixed"],
-                                 "dropped_forming": g["dropped_forming"]}
+                                 "dropped_forming": g["dropped_forming"],
+                                 "indices_dropped": _idx}
+                if ds != "synthetic":
+                    from .research.liquidity import tradable_filter as _tf
+                    _cc = _cap()
+                    bars, _untrad = _tf(g["bars"], float(_cc.get("capital", 50000)) * 0.2, _cc)
+                    self._quality["untradable"] = _untrad
+                    return bars
                 return g["bars"]
             except Exception:
                 return bars

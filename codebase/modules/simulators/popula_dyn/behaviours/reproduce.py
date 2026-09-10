@@ -70,14 +70,23 @@ class ReproduceBehavior(BaseBehavior):
         fert = (unit.get_state("fertility", 1.0)
                 + sum(n.get_state("fertility", 1.0) for n in potential_partners)
                 / max(1, len(potential_partners))) / 2
-        if rng.random() >= params.get("birth_rate", 0.04) * fert:
+        # scarcity↔vital-rates: dear food lowers birth probability
+        sc = world_state.get("scarcity", 0.0)
+        try:
+            sc_damp = 1.0 - float(params.get("scarcity_fertility", 0.5)) * float(sc)
+        except (TypeError, ValueError):
+            sc_damp = 1.0
+        if rng.random() >= max(0.0, params.get("birth_rate", 0.04) * fert * sc_damp):
             return {}
 
         partner = potential_partners[rng.randint(len(potential_partners))]
         child_skill = (unit.get_state("skill", 0.5) + partner.get_state("skill", 0.5)) / 2
         # heritable variation: mean parental traits, small mutation on lifespan
         child_fert = min(2.0, max(0.3, (unit.get_state("fertility", 1.0)
-                                        + partner.get_state("fertility", 1.0)) / 2))
+                                         + partner.get_state("fertility", 1.0)) / 2))
+        child_adapt = min(1.5, max(0.5, (unit.get_state("adaptability", 1.0)
+                                         + partner.get_state("adaptability", 1.0)) / 2
+                                        + rng.normal(0, 0.05)))
         child_life = int(min(85, max(40, (unit.get_state("lifespan", 60)
                                           + partner.get_state("lifespan", 60)) / 2
                                          + rng.normal(0, 3))))
@@ -89,9 +98,10 @@ class ReproduceBehavior(BaseBehavior):
         child_data = {
             "unit_type": "human",
             "position": position,
-            "behaviors": ["move", "harvest", "consume_metabolism", "reproduce", "survival"],
+            "behaviors": ["move", "prospect", "harvest", "consume_metabolism", "reproduce", "survival"],
             "state": {"age": 0, "gender": rng.choice(["M", "F"]), "skill": child_skill,
                       "fertility": round(child_fert, 3), "lifespan": child_life,
+                      "adaptability": round(float(child_adapt), 3),
                       "position": position},
             "resources": {"wealth": round(5.0 + bequest, 2)},
             "alive": True,

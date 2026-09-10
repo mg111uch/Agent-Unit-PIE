@@ -167,6 +167,9 @@ def _compatible_for_contradiction(new_meta: Dict, existing_node) -> bool:
         validity = md.get("validity", {}) if isinstance(md, dict) else {}
         if validity.get("status") == "HISTORICAL":
             return False
+        # superseded nodes are settled history, never block refinements
+        if isinstance(md, dict) and md.get("status") == "superseded":
+            return False
         # version compatibility per-sim
         new_ver = new_meta.get("version_id")
         ex_ver = obs.get("version_id") or validity.get("valid_for_version")
@@ -257,6 +260,8 @@ def check_topic_contradiction(topic: str, name: str, premise: str, new_metadata:
     new_combined = f"{name} {premise}"
     new_vec = _embed(new_combined)
     for n in semantic_memory.search_by_topic(topic):
+        if isinstance(getattr(n, "metadata", {}), dict) and n.metadata.get("status") == "superseded":
+            continue  # settled history never blocks refinements
         existing_combined = f"{n.title} {n.content}"
         is_obs_node = n.node_type in OBSERVATION_TYPES or _extract_observation_meta(n) is not None
         # use stored BLOB if available for fast path

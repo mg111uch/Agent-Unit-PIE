@@ -9,8 +9,10 @@ Point your agent harness to this file to start autonomous research development. 
 | Population sim | `popula_dyn` | `system_devpt_reports/populaDyn_simu/status.md` → Next | `system_devpt_reports/populaDyn_simu/roadmap.md` | `.../populaDyn_simu/README.md` |
 | Stock analyser | `stock_analyser` | `system_devpt_reports/stock_analyser/status.md` → Next | `system_devpt_reports/stock_analyser/roadmap.md` | `.../stock_analyser/README.md` |
 | Economy (Moonshot) | `economy` (+`popula_dyn` firm side) | `system_devpt_reports/economy/status.md` → Next | `system_devpt_reports/economy/roadmap.md` | `.../economy/README.md` |
+| FireFlow app (external) | `external:/home/manigupt/Hello/reddit-clone` | `roadmap.md` (`Now` marker) in external repo — docs live in-repo | `roadmap.md` in external repo | `README.md` in external repo |
+| Control-works (external) | `external:/home/manigupt/Hello/control-works` | `roadmap.md` (`Now` marker) in external repo — docs live in-repo | `roadmap.md` per-subdir slices in external repo | `README.md` in external repo |
 
-Rule: fresh agent picks a module, reads its status.md `## Next` for the task, then follows the unified loop below. Status.md is the single task source — never duplicate next-tasks here; history via `data/kernel.db` (+ `data/market.db` ledger for stock) hydration.
+Rule: fresh agent picks a module, reads its status.md `## Next` for the task, then follows the unified loop below. Status.md is the single task source — never duplicate next-tasks here; history via `data/kernel.db` (+ `data/market.db` ledger for stock) hydration. Exception: external modules (FireFlow, control-works) use their in-repo `roadmap.md` `Now` marker as task source; worker reaches them via absolute path + `bash workdir` (workspace-relative tools reject outside-root paths); kernel tags `fireflow_app` / `controlworks_<subdir>`; zero git (content-hash lineage); never touch personal files (`ToDo.md`, `name_ideas.md`).
 
 Follow the unified loop in `data/workflows/research_development.json` (see `research_development.md` for node contracts) strictly via `develop.*` primitives — LLM thinks inside workflow, `workflow_engine` enforces transitions. No steps duplicated here — read workflow files.
 
@@ -48,6 +50,7 @@ Plan-mode rule: do NOT re-verify checklist steps 1-5 by reading 10+ implementati
 - **Kernel = semantic validity** `ACTIVE→HISTORICAL` per-sim concept-level (`kernel/validity.py:mark_stale_findings` + `affected_by` via ontology-aware `_load_ontology_concepts()` from `modules/simulators/<sim>/ontology.yaml`).
 - **Consolidated = materialized view** `kernel/compression_engine.py:recompute_consolidated` (`<2` remaining → `HISTORICAL`, else recomputed `avg_delta`).
 - **Single persistence** `data/kernel.db` (SQLite) — no second store (simulation_runs, semantic_nodes, workflow_states all there; stock research ledger lives in `data/market.db` as domain store, findings mirrored to kernel).
+- **Kernel in the loop** every research batch auto-registers one episode finding (`register_episode_finding(episode_summary(rid))` at `run_job` end; topic `sim_stock`); retrieve via `topic_store` hydrate→find/list before new research so contradictions (`contradiction_gate`) and prior evidence guide hypotheses. Durable record is `generic_memory`, not `graph.json` (regenerated view).
 - **Renderer** `data/workflows/workflow_graph.html?graph=research_development.json` handles both legacy array and dict contract nodes.
 
 ## Opencode Loop (5 steps, use `develop.*` — hides shell)

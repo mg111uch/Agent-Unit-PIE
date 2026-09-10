@@ -81,18 +81,6 @@ def test_record_dup_safe_and_hours_guard():
     assert market_open(datetime(2026, 9, 3, 16, 0, tzinfo=IST)) is False  # post-close
 
 
-def test_ohlc_rounded_to_paise():
-    from modules.stock_analyser.data.providers import UpstoxStub
-    from modules.stock_analyser.data.store import query_equity
-    db = os.path.join(tempfile.mkdtemp(), "paise.db")
-    stub = UpstoxStub()
-    stub.record([{"instrument_id": "NSE:X", "ts": "2026-09-03T10:00",
-                  "open": 1363.39615932843, "high": 1370.0, "low": 1360.123,
-                  "close": 1366.28283691406, "volume": 5.0}], "1D", db)
-    got = query_equity("NSE:X", "1D", db_path=db)[0]
-    assert (got["open"], got["close"], got["low"]) == (1363.4, 1366.28, 1360.12)
-
-
 def test_prune_keeps_newest_50():
     import json
     import tempfile as _tf

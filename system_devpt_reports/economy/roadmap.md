@@ -4,11 +4,7 @@
 
 ## Next up
 
-_All phases shipped — rows moved to README.md per file rule. Open work: none._
-
-| Item | Status | Depends on |
-|---|---|---|
-| (none — pick next Moonshot slice: India-wide supplier graph, export engine, or fiscal persistence) | open | — |
+_Open work: none (fiscal persistence shipped 2026-09-08 — see README)._
 
 ## Deferred (out of scope for now)
 

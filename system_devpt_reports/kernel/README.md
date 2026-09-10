@@ -53,3 +53,5 @@
 | Capability Regression Signal | `validate_capabilities` detects regressions (previously-`supported` caps now FAIL, via citation_cache) and emits a `capability_regression` kernel signal |
 | Tool-Bypass Detection | `scripts/detect_tool_bypass.py` surfaces repeated raw Reads on atlas-indexed files via `pattern_engine.detect_repeated_events` |
 | Project Health Index | `scripts/render_index.py` writes a `generated_reports/INDEX.md` health badge from report inventory + schema check + capability validation |
+| Supersedes Refinements | `topic_ops.py add-node --supersedes NAME` bypasses the similarity gate, marks the prior node `superseded` (exported status, gate-skipped, history kept); `--stance` (decisions default `agree`) lets `contradicts` detection fire |
+| Cross-Topic Evidence | `--evidence TOPIC:NAME` pointers stored in node metadata, both directions via `topic_ops.py neighbors`; `batch --file spec.json` runs many mutations in one hydrate |

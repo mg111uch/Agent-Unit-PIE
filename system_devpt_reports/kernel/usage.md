@@ -185,8 +185,10 @@ Gate logic lives in `codebase/kernel/hypothesis/contradiction_gate.py:67`:
 
 | Command | Flags | Notes |
 |---|---|---|
-| `add-node` | `--topic --name --premise [--side decision\|argument\|pro\|con\|neutral] [--source]... [--confidence F] [--type observation\|argument] [--metadata JSON] [--force]` | idempotent by node name; per-sim `observation` with `metadata={observation:{simulator,version_id,outcome}, validity:{status}}`; without `--force` blocks if `contradiction_gate` finds symbolic/version-aware conflict |
-| `add-edge` | `--topic --source --target --relation {contradicts,requires,supports} [--force]` | idempotent triple; detection on `contradicts` |
+| `add-node` | `--topic --name --premise [--side decision\|argument\|pro\|con\|neutral] [--source]... [--confidence F] [--type observation\|argument] [--metadata JSON] [--stance agree\|disagree\|neutral] [--supersedes NAME] [--evidence TOPIC:NAME]... [--force]` | idempotent by node name; decisions auto-stance `agree` (so `contradicts` edges fire); `--supersedes` bypasses the similarity gate and marks the prior node `superseded` (history kept, gate skips it); per-sim `observation` with `metadata={observation:{simulator,version_id,outcome}, validity:{status}}` |
+| `add-edge` | `--topic --source --target --relation {contradicts,requires,supports,supersedes} [--force]` | idempotent triple; detection on `contradicts`; `supersedes` marks target superseded |
+| `neighbors` | `--topic --name [--json]` | in-topic edges + cross-topic `evidence` pointers both directions |
+| `batch` | `--file spec.json [--topic T]` | many nodes+edges in one process (single hydrate); spec `{topic?,nodes:[{name,premise,side,sources,confidence,type,metadata,evidence,stance,supersedes,force}],edges:[{source,target,relation,force}]}` |
 | `set-stance` | `--topic --name --stance {agree,disagree,neutral} [--confidence F]` | records stance in `belief_state.json` for contradiction detection |
 | `check` | `--topic --claims A,B [--json]` | CLI wrapper for `check_contradictions`; same detector as debate loop |
 | `signals` | `[--json]` | lists `contradiction_detected_*` ids from episodic memory |

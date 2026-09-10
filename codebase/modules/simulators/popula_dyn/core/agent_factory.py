@@ -24,6 +24,7 @@ AGENT_CONFIGS = {
         "unit_type": "human",
         "behaviors": [
             "move",
+            "prospect",
             "harvest",
             "consume_metabolism",
             "reproduce",
@@ -182,6 +183,7 @@ def create_unit_config(
         initial_state.setdefault("gender", rng.choice(["M", "F"]))
         # individual variation: fertility multiplier + drawn lifespan
         initial_state.setdefault("fertility", round(float(rng.uniform(0.5, 1.5)), 3))
+        initial_state.setdefault("adaptability", round(float(rng.uniform(0.5, 1.5)), 3))
         initial_state.setdefault("lifespan", int(min(85, max(40, rng.normal(60, 8)))))
 
     for key, value in overrides.items():

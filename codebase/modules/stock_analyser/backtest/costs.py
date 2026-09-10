@@ -37,6 +37,15 @@ def realistic_breakdown(notional: float, cfg=None) -> dict:
             "impact": round(impact, 2), "total": round(total, 2)}
 
 
+def floor_qty(raw: float) -> int:
+    """NSE cash equities: whole shares only — always round down, never up."""
+    import math
+    try:
+        return max(0, int(math.floor(float(raw) + 1e-9)))
+    except Exception:
+        return 0
+
+
 def sized_frac(base_frac: float, atr: float | None, price: float | None, cfg=None) -> float:
     """ATR vol-target: scale base_frac by target/(atr/price), clamped. Off when target<=0."""
     cfg = cfg or {}

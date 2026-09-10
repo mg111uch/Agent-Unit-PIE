@@ -11,7 +11,8 @@ DEFAULTS: Dict[str, Any] = {
     "cost_stt_bps": 2.5, "cost_stamp_bps": 0.3, "cost_exch_bps": 0.35,
     "cost_sebi_bps": 0.02, "cost_slip_bps": 5.0, "cost_impact_bps": 8.0,
     "sizing_vol_target": 0, "sizing_min_k": 0.25, "sizing_max_k": 2.0,
-    "paper_max_gap": 0.15, "paper_stale_days": 5,
+    "paper_max_gap": 0.15, "paper_stale_days": 5, "paper_use_cmp": True,
+    "settlement_mode": "T1_EPI", "retired_trees": [],
     "liq_max_participation": 0.05, "liq_min_adv": 50000, "liq_min_price": 10.0,
     "liq_max_spread": 0.08, "liq_adv_window": 20,
 }

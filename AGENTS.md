@@ -20,6 +20,7 @@ cd /home/manigupt/Hello/Agentic_Unit_PIE/codebase/agent_tools/atlas_tools && pyt
 - Ask the user before installing modules and libraries.
 - No frontend tests, no playwright tests.
 - Smoke tests are allowed. Keep them small.
+- Run tests only when absolutely necessary, never after every trivial edit. Docs-only/comment/log-message changes: no tests. Logic changes: run affected tests only (fast tier, e.g. `pytest -m "not slow"`); full/slow suites run in background pre-sweep or pre-close, never inline, never alongside another long job.
 - Optimize for handling large codebases while maintaining output quality.
 - Generate code which is less verbose to save tokens without compromising on functionality.
 - Max 400–500 lines per file (including tests & comments).

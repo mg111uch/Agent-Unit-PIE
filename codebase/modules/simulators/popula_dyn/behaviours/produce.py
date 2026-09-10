@@ -7,6 +7,7 @@ Produce behavior - create tools/goods for trade.
 import numpy as np
 
 from .base_behavior import BaseBehavior
+from modules.simulators.popula_dyn.core.scarcity import barter_price, local_scarcity
 
 
 class ProduceBehavior(BaseBehavior):
@@ -48,12 +49,15 @@ class ProduceBehavior(BaseBehavior):
             inventory += 1
 
         neighbors = grid.get_neighbors(position, moore=True, radius=1, include_center=False)
+        # barter market: tools cost more when local food is scarce
+        sc = local_scarcity(grid, position, params, 1)
+        price = barter_price(tool_cost, sc, params.get("barter_sensitivity", 1.0))
         potential_customers = [
             n
             for n in neighbors
             if n.unit_type == "human"
             and n.alive
-            and n.get_resource("wealth", 0) >= tool_cost
+            and n.get_resource("wealth", 0) >= price
         ]
 
         if inventory <= 0 or not potential_customers:
@@ -69,7 +73,7 @@ class ProduceBehavior(BaseBehavior):
         return {
             "state_updates": {"inventory": inventory - 1},
             "resource_updates": {
-                "wealth": tool_cost
+                "wealth": price
             },
             "unit_effects": [
                 {
@@ -77,13 +81,14 @@ class ProduceBehavior(BaseBehavior):
                     "state_updates": {
                         "skill": customer.get_state("skill", 0.5) + tool_quality
                     },
-                    "resource_updates": {"wealth": -tool_cost},
+                    "resource_updates": {"wealth": -price},
                 }
             ],
             "events": [
                 {
                     "event_type": "tool_produced",
                     "customer_id": customer.unit_id,
+                    "price": price,
                 }
             ]
         }

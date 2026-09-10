@@ -28,9 +28,21 @@ def symbol_liquidity(bl: List[Dict], notional: float,
             "participation": round(part, 4)}
 
 
+def tradable_filter(bars: Dict[str, List[Dict]], notional: float,
+                    cfg: Dict[str, Any] | None = None) -> tuple:
+    """Pre-research universe filter: drop sub-min-ADV symbols no size can trade.
+
+    Fixes the whole-universe gate blocking every candidate; per-candidate
+    participation discipline stays in gate(). Returns (kept, dropped)."""
+    cfg = cfg or {}
+    _min = float(cfg.get("liq_min_adv", 50000))
+    drop = sorted(s for s, bl in bars.items()
+                  if symbol_liquidity(bl, notional, cfg)["adv"] < _min)
+    return {s: bl for s, bl in bars.items() if s not in drop}, drop
+
+
 def gate(bars: Dict[str, List[Dict]], position_frac: float, start_cash: float,
          cfg: Dict[str, Any] | None = None) -> Dict[str, Any]:
-    cfg = cfg or {}
     max_part = float(cfg.get("liq_max_participation", 0.05))
     min_adv = float(cfg.get("liq_min_adv", 50000))
     min_px = float(cfg.get("liq_min_price", 10.0))

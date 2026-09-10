@@ -13,6 +13,8 @@ _Last verified: 2026-09-06_
 - heal/trade/produce return-intent intents still open (reproduce pattern done) — med
 
 ## Recent Changes (newest first, max 10)
+- `Supply-demand` DONE: `core/scarcity.py` index (food-pc vs baseline + cap pressure) feeds vital rates (scarcity damps births, raises deaths — direction-verified) + barter pricing in `trade_ag`/`produce` via local scarcity (price in events); `Scarcity` column (34 total); determinism intact
+- `Environment` DONE: per-cell carrying capacity caps regrow ceiling + heritable `adaptability` trait (buffers hardship mortality, mirror fertility pattern) + `prospect` fertility-gradient hill-climb (no A*); `Prospect_Moves`/`Capacity_Capped` counters + 5 new columns (33 total); determinism intact
 - `Inheritance` via LOOP (hyp_inheritance_01→modify_code→validate→loop, all develop.*): 5%-per-parent bequest, conserving via unit_effects; kids 5.0→~15.0 at parental wealth 100; determinism intact
 - `Det-init` DONE: model-owned `u00001…` init ids (uuid fallback kept) + placement via `get_random_position(rng)`; same-seed id sets identical
 - `Death-causes` DONE: starvation/old_age/hazard split at death + per-step/cumul counters and columns (1+9+16=26 reconciles); answers what kills units under each policy

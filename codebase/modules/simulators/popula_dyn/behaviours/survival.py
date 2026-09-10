@@ -45,6 +45,11 @@ class SurvivalBehavior(BaseBehavior):
         elif wealth < 2.0:
             death_prob *= 2.0
 
+        # adaptability trait buffers hardship mortality (mirror fertility scaling)
+        if wealth < 2.0:
+            adapt = max(0.5, min(1.5, float(unit.get_state("adaptability", 1.0))))
+            death_prob /= adapt
+
         # individual variation: per-unit drawn lifespan (falls back to max_age)
         lifespan = unit.get_state("lifespan", params.get("max_age", 60))
         if age > lifespan - 10:
@@ -54,6 +59,12 @@ class SurvivalBehavior(BaseBehavior):
             death_prob = 1.0
 
         death_prob += death_prob_modifier
+        # scarcity↔vital-rates: dear food raises mortality (mirror adaptability)
+        sc = world_state.get("scarcity", 0.0)
+        try:
+            death_prob *= 1.0 + float(params.get("scarcity_mortality", 1.0)) * float(sc)
+        except (TypeError, ValueError):
+            pass
         death_prob = max(0.0, death_prob)
 
         rng = world_state.get("rng")

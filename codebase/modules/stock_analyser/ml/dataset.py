@@ -75,14 +75,28 @@ FEATURES: Dict[str, dict] = {
         {"op": "rolling_std", "args": [{"field": "returns"}, {"const": 20}]}]},
 }
 
+# Sector/market-relative (cross-sectional, trailing-only; computed in
+# symbol_frame from bench_map, NOT algebra — needs index bars).
+REL_FEATURES = ("rel_mkt_5", "rel_mkt_20", "rel_sec_20", "sec_disp_20")
+ALL_FEATURES = (*FEATURES, *REL_FEATURES)
 
-def symbol_frame(bars: List[Dict], fwd: int = 5, warmup: int = 65) -> List[Dict]:
-    """One symbol -> feature rows. Drops warmup head and label-unknown tail."""
+
+def _ret(closes, i, n):
+    c0, c1 = closes[i - n] if i - n >= 0 else None, closes[i]
+    return None if not c0 or not c1 or c0 == 0 else (c1 - c0) / c0
+
+
+def symbol_frame(bars: List[Dict], fwd: int = 5, warmup: int = 65,
+                 bench: Dict | None = None, need_label: bool = True) -> List[Dict]:
+    """One symbol -> feature rows. Drops warmup head and (if need_label)
+    label-unknown tail. Serving (scoring) uses need_label=False: prediction
+    needs trailing-only features, never future labels."""
     cols = columns_from_bars(bars)
     series = {name: evaluate(expr, cols) for name, expr in FEATURES.items()}
     closes = cols["close"]
     out = []
-    for i in range(warmup, len(bars) - fwd):
+    end = len(bars) - fwd if need_label else len(bars)
+    for i in range(warmup, end):
         row = {"ts": bars[i]["ts"]}
         ok = True
         for name, s in series.items():
@@ -91,24 +105,43 @@ def symbol_frame(bars: List[Dict], fwd: int = 5, warmup: int = 65) -> List[Dict]
                 ok = False
                 break
             row[name] = float(v)
-        c0, c1 = closes[i], closes[i + fwd]
-        if not ok or c0 is None or c1 is None or c0 == 0:
+        if not ok:
             continue
-        row["fwd_ret"] = float(c1 - c0) / float(c0)
+        if need_label:
+            c0, c1 = closes[i], closes[i + fwd]
+            if c0 is None or c1 is None or c0 == 0:
+                continue
+            row["fwd_ret"] = float(c1 - c0) / float(c0)
+        else:
+            c0 = closes[i]
+            row["fwd_ret"] = None
+        b = (bench or {}).get(bars[i]["ts"]) or {}
+        r5, r20 = _ret(closes, i, 5), _ret(closes, i, 20)
+        row["rel_mkt_5"] = float((r5 or 0.0) - b.get("mkt_5", 0.0))
+        row["rel_mkt_20"] = float((r20 or 0.0) - b.get("mkt_20", 0.0))
+        row["rel_sec_20"] = float((r20 or 0.0) - b.get("sec_20", 0.0))
+        row["sec_disp_20"] = float(b.get("sec_disp_20", 0.0))
         out.append(row)
     return out
 
 
 def build_panel(symbols: List[str], db_path: str | None = None, timeframe: str = "1D",
-                fwd: int = 5, warmup: int = 30):
+                fwd: int = 5, warmup: int = 30, include_relative: bool = True):
     """(symbol, date) panel as pandas DataFrame. Empty when no data."""
     import pandas as pd
+    try:
+        bench = None
+        if include_relative:
+            from .sectors import bench_map as _bm
+            bench = _bm(db_path, timeframe) or None
+    except Exception:
+        bench = None
     rows = []
     for s in symbols:
         bars = query_equity(f"NSE:{s}", timeframe, db_path=db_path)
-        for r in symbol_frame(bars, fwd, warmup):
+        for r in symbol_frame(bars, fwd, warmup, bench):
             rows.append({"symbol": s, **r})
-    cols = ["symbol", "ts", *FEATURES, "fwd_ret"]
+    cols = ["symbol", "ts", *FEATURES, *REL_FEATURES, "fwd_ret"]
     return pd.DataFrame(rows, columns=cols) if rows else pd.DataFrame(columns=cols)
 
 

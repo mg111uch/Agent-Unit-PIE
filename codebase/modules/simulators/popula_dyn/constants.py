@@ -28,4 +28,12 @@ PARAMS: Dict[str, Any] = {
     "toolmaker_cost": 1.0,
     "trader_margin": 0.05,
     "trader_range": 2,
+    "carrying_capacity_per_cell": 4,
+    "prospect_enabled": True,
+    "prospect_prob": 0.5,
+    "prospect_threshold": 0.5,
+    "scarcity_food_baseline": 5.0,
+    "scarcity_mortality": 1.0,
+    "scarcity_fertility": 0.5,
+    "barter_sensitivity": 1.0,
 }

@@ -1,6 +1,6 @@
-"""Phase 7 industrial graph lite: supplier/capability queries over Actors.
+"""Phase 7 industrial graph lite: supplier/capability queries over Units.
 
-No new tables: capabilities indexed in-memory from the actors table.
+No new tables: capabilities indexed in-memory from the units table.
 Pure reads + in-memory BFS; never writes. SQLite/market.db only.
 """
 from __future__ import annotations
@@ -10,9 +10,9 @@ from typing import Dict, List, Optional
 from . import ledger
 
 
-def _actors(db_path: Optional[str] = None) -> List[Dict]:
+def _units(db_path: Optional[str] = None) -> List[Dict]:
     ledger.ensure_schema(db_path)  # empty ledger -> empties, not a crash
-    rows = ledger.list_table("actors", db_path)
+    rows = ledger.list_table("units", db_path)
     for r in rows:
         try:
             r["capabilities"] = json.loads(r.pop("capabilities_json", "[]"))
@@ -23,20 +23,20 @@ def _actors(db_path: Optional[str] = None) -> List[Dict]:
 
 def find_suppliers(capability: str, region: Optional[str] = None,
                    db_path: Optional[str] = None) -> List[Dict]:
-    """Actors holding `capability` (region filter optional), most capable first
+    """Units holding `capability` (region filter optional), most capable first
     (capability count desc = versatility proxy; stable for ties)."""
-    hits = [a for a in _actors(db_path)
+    hits = [a for a in _units(db_path)
             if capability in (a.get("capabilities") or [])
             and (region is None or a.get("region") == region)]
     return sorted(hits, key=lambda a: -len(a.get("capabilities") or []))
 
 
 def capability_map(db_path: Optional[str] = None) -> Dict[str, List[str]]:
-    """{capability: sorted [actor_ids]} over all recorded actors."""
+    """{capability: sorted [unit_ids]} over all recorded units."""
     m: Dict[str, List[str]] = {}
-    for a in _actors(db_path):
+    for a in _units(db_path):
         for c in a.get("capabilities") or []:
-            m.setdefault(c, []).append(a["actor_id"])
+            m.setdefault(c, []).append(a["unit_id"])
     return {k: sorted(v) for k, v in m.items()}
 
 
@@ -49,10 +49,10 @@ def gaps(product_caps: List[str],
 
 def dependency_path(target_cap: str, max_depth: int = 4,
                     db_path: Optional[str] = None) -> List[str]:
-    """BFS over co-occurrence (caps sharing actors): [target, ..., base],
+    """BFS over co-occurrence (caps sharing units): [target, ..., base],
     where base = first dead-end leaf. [] if target has no suppliers."""
     co: Dict[str, set] = {}
-    for a in _actors(db_path):
+    for a in _units(db_path):
         caps = a.get("capabilities") or []
         for c in caps:
             co.setdefault(c, set()).update(k for k in caps if k != c)

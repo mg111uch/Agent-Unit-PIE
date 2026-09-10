@@ -1,23 +1,19 @@
 # Economy Status
 _Last verified: 2026-09-06_
 
+> Agent rule: Recent holds max 5 entries (newest first). Shipped detail lives in README Features — never duplicate the full ship list here; drop oldest when adding.
+
 ## Current State
-- Phase 1 shipped + verified (objects.py 158 + ledger.py 168 lines, smoke ok, harness 5/5).
-- Moonshot plan approved: Phases 1–7.
+- Economic layer live: object model + ledger, opportunity engine, twin sync both ways, firm hire/invest, capital books + approval gate, execution pipeline, economic loop subgraph, industrial graph lite, barter kernel, fiscal ledger (all rows in README Features; smoke ok, harness 5/5 at ship time).
 
 ## Next (single source for the next task)
-_All Moonshot Phases 1–7 + twin-bridge A–C shipped. Next slice TBD (supplier graph expansion, export engine, or fiscal persistence)._
+_Economic core + twin sync + fiscal record shipped. Next slice TBD (supplier graph expansion or export engine)._
 
-## Recent
-- 2026-09-06: Phase 1 shipped — objects.py + ledger.py, smoke ok, harness 5/5.
-- 2026-09-06: Phase 2 shipped — scoring.py + challenge.py, smoke ok, harness 5/5.
-- 2026-09-06: Twin-bridge A shipped — twin_bridge.py, smoke ok, harness 5/5.
-- 2026-09-06: Twin-bridge B shipped — params+epoch in twin_bridge.py, smoke ok, harness 5/5.
-- 2026-09-06: Twin-bridge C shipped — record_outcome/sync_economy, smoke ok, harness 5/5.
-- 2026-09-06: Phase 3 shipped — firm hire/invest in popula_dyn, smoke ok, harness 5/5.
-- 2026-09-06: Phase 4 shipped — capital.py cash books + approval gate, smoke ok, harness 5/5.
-- 2026-09-06: Phase 5 shipped — execution.py pipeline, smoke ok, harness 5/5.
-- 2026-09-06: Phase 6 shipped — economic_loop.json validated + walked, smoke ok, harness 5/5.
-- 2026-09-06: Phase 7 shipped — industrial.py graph queries, smoke ok, harness 5/5.
+## Recent (newest first, max 5)
+- 2026-09-09: Opportunity engine 7-factor — scalability/adjacency added (objects/ledger/scoring/challenge + FireFlow thin proxy via score_cli, no duplicated weights); tmp-DB smoke ok.
+- 2026-09-08: Fiscal ledger shipped — fiscal.py (fiscal_runs in market.db, record_fiscal/query_fiscal, net column) wired into execution.record_outcome_tx; smoke ok on tmp DB (net=15, idempotent), sim determinism intact.
+- 2026-09-08: Barter kernel shipped — scoring.barter_price over popula_dyn scarcity, no ledger writes, sim direction-verified.
+- 2026-09-08: Actor→Unit rename shipped — objects/ledger (units table + actors→units migration, actors never dropped) + all callers; tmp-DB smoke ok.
+- 2026-09-06: Industrial graph lite shipped — industrial.py graph queries, smoke ok, harness 5/5.
 
 (End of file)

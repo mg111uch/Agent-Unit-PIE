@@ -13,22 +13,31 @@
 | Strategy object + genome mutate | no arbitrary Python |
 | Backtest 1D/15m, fill open t+1 | ATR stops, costs, long-only |
 | Validation (stress/perturb/WF/sealed-OOS/falsify) | hard OOS seal (MUTATED_AFTER_SEAL); passers-only attacks |
+| Validation fast path | early-kill on IS-dead (1 backtest, not ~10); stratified LOW_N-only pilot; shared feature-panel cache + job warm-up; val-slice from cached rows; shared stress/locked signals (27m→~12s/iter, verdicts unchanged) |
+| ML train/serve split | trains on labeled past, scores label-free frame (`need_label=False`) so live bars are scorable; was blind to latest 5 sessions |
 | ResearchScore (multi-objective + complexity) | eco/stab/rob − DD/cx/gap/drag; elites rank by score |
 | Cheap alpha gate | hierarchical L0 (IC/rank-spread/interaction/tiny-ML); any-level pass |
 | Adaptive allocator (bandit + priors + novelty) | explore/exploit/validate; ML-aware dedup hash |
-| ML family (hgb/rf/ridge) + 15-feature pool | rank fwd_ret, top-N policy; per-validation attribution |
+| ML family (hgb/rf/ridge) + 23-feature pool | rank fwd_ret, top-N policy; per-validation attribution; 4 sector-relative (stock−NIFTY/sector, `ml/sectors.py`) |
 | Data-quality gate | trims live forming bar; adj-mix flag; INSUFFICIENT_DATA |
+| Validation reject reasons | LOW_N_OOS/NEG_OOS/DEEP_DD/LOW_N_IS/NEG_IS/UNSTABLE + `meta.reject_reason` in ledger |
 | Realistic costs + vol sizing | STT/stamp/impact breakdown; shared ATR sizing (engine + paper) |
 | Determinism + ledger provenance | run seed→bars; data_hash + code_version per candidate |
 | Paper parity guards | max_positions cap; bar-count hold; stale/action guards |
 | Research firewall (provenance + seal binding) | 7 hashes/candidate incl. signal_hash; sealed lineage frozen to data+code |
-| Candidate dedup (canonical + behavioral) | normalized-AST hash; identical signal stream → DUPLICATE |
+| Candidate dedup (canonical + behavioral) | normalized-AST hash; identical signal stream → DUPLICATE; cross-run exact-hash dedup-before-screen (`research/dedup.py`) |
+| Capital ladder probe | cost-killed near-miss (gross>0, NEG_IS/NEG_OOS) gets breakeven estimate + 1 confirmation backtest on 25k→100k rungs; suggestion in `meta.suggested_min_capital`, verdict stays REJECT (`research/capital_ladder.py`) |
+| Tradability filter + index guard | sub-min-ADV names pre-dropped (`tradable_filter`); canonical `INDEX_SYMBOLS` excluded from connector/run_job/ML panel/paper buys; exits never blocked |
+| Test tiers | 5 real-data tests marked `slow`; gate = `pytest -m "not slow"` (~19s); slow lane background pre-sweep; affected-tests-only |
 | Liquidity/capacity gate | ADV/participation/spread/price; ILLIQUID blocks PAPER_READY |
 | Dataset registry + marketdb source | `research_datasets` pins; full-history marketdb reads |
 | Research episodes | one bounded job + one kernel finding; 1000s evals stay in-engine |
 | Paper reality check | backtest-vs-paper deviation → REVALIDATED/DEGRADED/REJECTED |
+| Paper league (4 trees, full notional each) | `paper/league.py:step_all/league_report`; manual live fills (`log_live_fill`, mode PAPER/LIVE); twin divergence (`live_vs_paper`) |
+| League CLI | `paper/cli.py portfolio` (positions + day/overall PnL) / `next` (evening step + tomorrow's buys w/ sizes) |
+| Avg hold metric | `avg_hold_days` in engine metrics → backtest/locked stages (sym + ML) |
 | PIT universe + snapshots | `resolve_asof`; registry pins members + snapshot hash |
-| Kernel bridge (sim_stock) | signals + findings + run shards |
+| Kernel bridge (sim_stock) | signals + findings + run shards; every `run_job` auto-registers one episode finding (unique session node id) |
 | develop_experiment dispatch | no popula import for stock |
 | Overnight job | 1–100 exps, CPU-first |
 | Paper gate | human_approved required; live = NotImplemented |
@@ -75,7 +84,9 @@
 | `connector.py` | `run_and_extract` / `run_episode` / `register_to_kernel` for develop.*; datasets synthetic/csv/marketdb (+registry pin) |
 | `research/questions.py` | questions from objectives, observations, gaps |
 | `research/job.py` | day + overnight resumable jobs; bandit allocation; score-ranked elites; seeded RNG; firewall seal binding; ledger in market.db (full strategy_json + 6 provenance hashes) |
-| `ml/dataset.py` | 15-feature panel on algebra primitives; fwd-5 labels; embargoed splits |
+| `research/dedup.py` | cross-run exact-hash `seen_global` probe for dedup-before-screen |
+| `ml/dataset.py` | 19-feature panel on algebra primitives + 4 sector-relative; fwd-5 labels; embargoed splits |
+| `ml/sectors.py` | NIFTY + 6 sectoral trailing-return bench map (causal, DB-backed, {} fallback) |
 | `ml/ranker.py` | family-dispatched ranker (hgb/rf/ridge); top-N signals via engine hook; pickle artifacts |
 | `ml/strategies.py` | ML validation (screen→dropout→stress→locked test→falsify); sealed embargo; attribution |
 | `research/job.py` | families compete via bandit; tiered screen (alpha→quick→full); retirement after 25 consecutive REJECTs |
@@ -84,7 +95,9 @@
 | `data/universe.py` | `import_universe[_file]` for hand-picked lists; DB-first resolve |
 | `tests/test_research_ledger.py` | import, resume, hash-dedup |
 | `paper.py` | PAPER_READY propose; **human_approved required** |
-| `paper/gate.py` + `paper/trader.py` | proposal gate; paper trader mirroring backtest (next-open fill, frozen ATR, max_positions cap, bar-count hold, stale/action guards); ledger + scale report |
+| `paper/gate.py` + `paper/trader.py` | proposal gate; paper trader mirroring backtest (next-open fill, frozen ATR, max_positions cap, bar-count hold, stale/action guards); SIGNAL lines preview `~shares @ ~Rs` (close proxy); mode PAPER/LIVE; ledger + scale report |
+| `paper/league.py` | `step_all` (N trees, full notional each) + `league_report` rank; `log_live_fill` manual live fills; `live_vs_paper` twin divergence |
+| `paper/cli.py` | `portfolio` (positions + day/overall PnL, PAPER/LIVE split) / `next` (evening step + tomorrow's buys) |
 | `capital.yaml` + `config.py` | capital 50000, Rs60 flat/trade, max 8 positions, Rs25000 steps |
 | `backtest/costs.py` | flat Rs/trade (default) or bps fallback; realistic STT/stamp/impact breakdown; ATR vol sizing |
 | `tests/test_capital.py` | flat costs, config, net tracking, paper ledger |
@@ -201,6 +214,13 @@ r = Recorder(index_symbols=('NIFTY','BANKNIFTY'),
              timeframe='15m', poll_s=180)
 print(r.run_once())   # single snapshot; use r.loop() to poll till close
 "
+```
+
+## Paper league CLI (from workspace root)
+
+```bash
+conda run -n myenv python codebase/modules/stock_analyser/paper/cli.py portfolio  # positions + day/overall PnL per tree
+conda run -n myenv python codebase/modules/stock_analyser/paper/cli.py next       # run each evening after close: steps trees, prints tomorrow's buys w/ sizes
 ```
 
 ## Next

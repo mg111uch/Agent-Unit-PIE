@@ -24,6 +24,7 @@ from modules.simulators.popula_dyn.behavior_registry import BehaviorRegistry
 from modules.simulators.popula_dyn.core.spatial_engine import SpatialEngine
 from modules.simulators.popula_dyn.core.unit_agent import UnitAgent
 from modules.simulators.popula_dyn.core.society import society_state
+from modules.simulators.popula_dyn.core.scarcity import scarcity_index
 from modules.simulators.popula_dyn.core.agent_factory import (
     AGENT_CONFIGS,
     create_unit_config,
@@ -69,6 +70,11 @@ class SimulationModel:
         self.firms_hires_total = 0
         self.firms_invested = 0
         self.firms_invested_total = 0
+        self.prospect_moves = 0
+        self.prospect_moves_total = 0
+        self.capacity_capped = 0
+        self.capacity_capped_total = 0
+        self.scarcity_index = 0.0
         self._init_units()
         self.datacollector = DataCollector(
             model_reporters={
@@ -96,6 +102,16 @@ class SimulationModel:
                     float(u.get_state("capital_stock", 0) or 0)
                     for u in m.units.values()
                     if u.unit_type == "firm" and u.alive),
+                "Prospect_Moves": "prospect_moves",
+                "Prospected_Cumul": "prospect_moves_total",
+                "Capacity_Capped": "capacity_capped",
+                "Capped_Cumul": "capacity_capped_total",
+                "Scarcity": "scarcity_index",
+                "Avg_Adaptability": lambda m: float(sum(
+                    float(u.get_state("adaptability", 1.0) or 1.0)
+                    for u in m.units.values()
+                    if u.unit_type == "human" and u.alive)
+                    / max(1, m.get_population_count())),
                 # SocietyState per-step series (policy curves, not just endpoints)
                 "Gini": lambda m: m.society_snapshot()["gini"],
                 "Food_Security": lambda m: m.society_snapshot()["food_security"],
@@ -236,6 +252,7 @@ class SimulationModel:
 
     def step(self) -> None:
         """Advance simulation by one tick."""
+        self.scarcity_index = scarcity_index(self, self.params)
         self.births = 0
         self.deaths = 0
         self.death_causes = {"starvation": 0, "old_age": 0, "hazard": 0}
@@ -245,10 +262,13 @@ class SimulationModel:
         self.wealth_traded = 0
         self.firms_hires = 0
         self.firms_invested = 0
+        self.prospect_moves = 0
+        self.capacity_capped = 0
         world_state = {
             "params": self.params,
             "grid": self.spatial_engine,
             "model": self,
+            "scarcity": self.scarcity_index,
             "seed": self.random.randint(0, 1000000),
             "rng": self.random,
         }
@@ -356,6 +376,12 @@ class SimulationModel:
             elif event_type == "invested":
                 self.firms_invested += 1
                 self.firms_invested_total += 1
+            elif event_type == "prospected":
+                self.prospect_moves += 1
+                self.prospect_moves_total += 1
+            elif event_type == "capacity_capped":
+                self.capacity_capped += 1
+                self.capacity_capped_total += 1
     def run(self, years: Optional[int] = None) -> None:
         """Run simulation for specified years."""
         years = years or self.params.get("years", PARAMS["years"])
