@@ -52,6 +52,31 @@ def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
+_STAGE_ORDER = ("iter_start", "mutated", "gated", "alpha", "screen",
+                "validated", "ladder", "backtest", "recorded")
+_STAGE_LABEL = {"mutated": "choose_mutate", "gated": "dedup_seal_sigfp",
+                "alpha": "alpha_gate", "screen": "quick_screen",
+                "validated": "validate", "ladder": "ladder",
+                "backtest": "backtest", "recorded": "record"}
+
+
+def _flush_time(rid: str, i: int, name: str, mutation: str, verdict: str,
+                ts: Dict[str, float]) -> None:
+    """One JSONL line per candidate: per-stage seconds + total. Best-effort."""
+    try:
+        keys = [k for k in _STAGE_ORDER if k in ts]
+        stages = {_STAGE_LABEL[keys[j + 1]]: round(ts[keys[j + 1]] - ts[keys[j]], 2)
+                  for j in range(len(keys) - 1)}
+        with open(f"/tmp/opencode/research_timing_{rid}.jsonl", "a") as f:
+            f.write(json.dumps({"rid": rid, "i": i, "strategy": name,
+                                "mutation": mutation, "verdict": verdict,
+                                "stages": stages,
+                                "total_s": round(ts[keys[-1]] - ts[keys[0]], 2)
+                                if len(keys) > 1 else 0.0}) + "\n")
+    except Exception:
+        pass
+
+
 def _hash(strategy_d: Dict[str, Any]) -> str:
     from ..features.algebra import canonical as _canon
     m = strategy_d.get("meta", {}) or {}
@@ -240,6 +265,7 @@ def run_job(objective: str, base_strategy: Dict[str, Any] | None = None,
         con0.close()
     conn = StockConnector(db_path=db_path)
     start_cash = float(cap.get("capital", 50000))
+    t_setup = time.perf_counter()
     from ..constants import is_tradable as _tr
     _syms, _idx_drop = [s for s in syms if _tr(s)], sorted(s for s in syms if not _tr(s))
     bars = conn._bars({"dataset": dataset, "symbols": _syms, "n": n, "timeframe": timeframe,
@@ -277,6 +303,8 @@ def run_job(objective: str, base_strategy: Dict[str, Any] | None = None,
             _warm_panel(bars)
         except Exception:
             pass
+    _flush_time(rid, 0, "_setup", "-", "SETUP",
+                {"iter_start": t_setup, "recorded": time.perf_counter()})
     results, i, status = [], 0, "COMPLETE"
     elites: Dict[str, Dict] = {}
     try:
@@ -305,6 +333,7 @@ def run_job(objective: str, base_strategy: Dict[str, Any] | None = None,
                 break
             from .allocate import choose as _choose, family_stats as _fstats
             from .allocate import novelty_kind as _nkind
+            ts = {"iter_start": time.perf_counter()}
             rng = random.Random(seed + i)
             live_names = [family_of(fam_bases[f]) for f in live_fams]
             stats = _fstats(rid, sorted(set(live_names)), db_path)
@@ -344,11 +373,13 @@ def run_job(objective: str, base_strategy: Dict[str, Any] | None = None,
                     mutate(strategy_from_dict(parent_d), seed + i + 999, None).to_dict()
                 h, fam_now, kind = _hash(cand_d), family_of(cand_d), "exploit-fallback"
             i += 1
+            ts["mutated"] = time.perf_counter()
             from .dedup import seen_global as _seen_global, record_dup as _record_dup
             if h in seen or _seen_global(h, db_path):
                 seen.add(h)
                 results.append(_record_dup(rid, h, cand_d, fam_now, kind, mode, db_path,
                                            data_hash, code_ver, dataset_id, seed + i))
+                _flush_time(rid, i, cand_d.get("name", "?"), kind, "DUPLICATE", ts)
                 continue
             seen.add(h)
             from .firewall import fingerprints as _fps, check_seal_binding as _sealbind
@@ -369,6 +400,7 @@ def run_job(objective: str, base_strategy: Dict[str, Any] | None = None,
                 results.append({"strategy": cand_d.get("name"), "mutation": kind,
                                 "verdict": "DUPLICATE", "alloc": mode,
                                 "avg_net": None, "oos_net": None, "summary": ""})
+                _flush_time(rid, i, cand_d.get("name", "?"), kind, "DUPLICATE", ts)
                 continue
             if _sigfp:
                 seen_signals.add(_sigfp)
@@ -379,25 +411,31 @@ def run_job(objective: str, base_strategy: Dict[str, Any] | None = None,
                 results.append({"strategy": cand_d.get("name"), "mutation": kind,
                                 "verdict": "REJECT", "reason": _reason, "alloc": mode,
                                 "avg_net": None, "oos_net": None, "summary": ""})
+                _flush_time(rid, i, cand_d.get("name", "?"), kind, "REJECT", ts)
                 continue
+            ts["gated"] = time.perf_counter()
             ag = alpha_gate(cand_d, bars, cap)
+            ts["alpha"] = time.perf_counter()
             if not ag["pass"]:
                 _record(rid, h, cand_d, fam_now, kind, "SCREENED",
                         None, None, 0.0, db_path, data_hash, code_ver, *_prov, _sigfp)
                 results.append({"strategy": cand_d.get("name"), "mutation": kind,
                                 "verdict": "SCREENED", "avg_net": None, "alloc": mode,
                                 "oos_net": None, "summary": f"alpha_gate {ag['metrics']}"[:150]})
+                _flush_time(rid, i, cand_d.get("name", "?"), kind, "SCREENED", ts)
                 continue
             from ..ml.strategies import quick_screen, validate_ml
             scr = quick_screen(cand_d, bars, start_cash,
                                min_trades=int(cap.get("screen_min_trades", 3)),
                                min_avg_net=float(cap.get("screen_min_avg_net", -30.0)))
+            ts["screen"] = time.perf_counter()
             if not scr["pass"]:
                 _record(rid, h, cand_d, fam_now, kind, "SCREENED",
                         scr["avg_net"], None, 0.0, db_path, data_hash, code_ver, *_prov, _sigfp)
                 results.append({"strategy": cand_d.get("name"), "mutation": kind,
                                 "verdict": "SCREENED", "avg_net": scr["avg_net"], "alloc": mode,
                                 "oos_net": None, "summary": ""})
+                _flush_time(rid, i, cand_d.get("name", "?"), kind, "SCREENED", ts)
                 continue
             if is_ml:
                 v = _pilot_or_full(cand_d, bars, start_cash, True, pilot_symbols,
@@ -405,6 +443,7 @@ def run_job(objective: str, base_strategy: Dict[str, Any] | None = None,
             else:
                 v = _pilot_or_full(cand_d, bars, start_cash, False, pilot_symbols,
                                    pilot_enable)
+            ts["validated"] = time.perf_counter()
             if v.get("verdict") == "REJECT" and v.get("reason"):
                 cand_d = dict(cand_d)  # surface gate in ledger strategy_json
                 cand_d["meta"] = {**(cand_d.get("meta") or {}),
@@ -414,6 +453,7 @@ def run_job(objective: str, base_strategy: Dict[str, Any] | None = None,
                 _sug = _ladder(cand_d, v, bars, is_ml, start_cash, cap)
                 if _sug.get("suggested_min_capital"):
                     cand_d["meta"] = {**(cand_d.get("meta") or {}), **_sug}
+            ts["ladder"] = time.perf_counter()
             if v.get("verdict") == "PAPER_READY" and v.get("seal"):
                 cand_d = dict(cand_d)
                 _seal = dict(v["seal"])
@@ -441,12 +481,16 @@ def run_job(objective: str, base_strategy: Dict[str, Any] | None = None,
                     summary = conn.run_and_extract(params, exp_id)
             except Exception as e:
                 summary = f"error: {e}"
+            ts["backtest"] = time.perf_counter()
             results.append({"strategy": cand_d.get("name"), "mutation": kind,
                             "verdict": v.get("verdict"), "alloc": mode,
                             "avg_net": (v.get("backtest") or {}).get("avg_net_per_trade"),
                             "oos_net": oos.get("avg_net_per_trade"),
                             "score": ((v.get("research_score") or {}).get("score")),
                             "summary": summary[:150]})
+            ts["recorded"] = time.perf_counter()
+            _flush_time(rid, i, cand_d.get("name", "?"), kind,
+                        v.get("verdict") or "?", ts)
             score = ((v.get("research_score") or {}).get("score")
                      if (v.get("research_score") or {}).get("score") is not None
                      else (oos.get("avg_net_per_trade") or -1e18))

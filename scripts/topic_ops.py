@@ -245,8 +245,21 @@ def run(args):
                 "type": getattr(args, "node_type", None) or ("observation" if meta else "argument")}
         if _g(args, "dry_run"):
             exists = ts.find_node(args.topic, args.name) is not None
+            # run the gate so dry-run predicts the real verdict (would-block)
+            would_block, gate_conflicts = False, []
+            if not exists:
+                try:
+                    from kernel.hypothesis.contradiction_gate import check_topic_contradiction
+                    would_block, gate_conflicts = check_topic_contradiction(
+                        args.topic, args.name, args.premise, meta)
+                    gate_conflicts = [
+                        {k: c.get(k) for k in ("node_id", "title", "similarity", "symbolic", "duplicate_hint")}
+                        for c in gate_conflicts]
+                except Exception:
+                    pass
             return [], [{"kind": "node_skipped" if exists else "node_added",
-                          "name": args.name}]
+                          "name": args.name, "would_block": would_block,
+                          "conflicts": gate_conflicts}]
         res = ts.add_node(args.topic, node, force=getattr(args, "force", False))
         if res.get("kind") == "blocked_contradiction":
             print(f"BLOCKED: {res['reason']}\nconflicts: {res['conflicts']}\nHint: resolve prior claim(s) or re-run with --force after user approval.", file=sys.stderr)
@@ -374,8 +387,13 @@ def report(args, changes, contradictions):
         for c in changes:
             kind = c.get("kind", "")
             if kind == "node_dry_run":
-                print(f"  {kind:20s} node={c.get('node_id')} topic={c.get('topic')} "
-                      f"edges={c.get('edges_to_delete', 0)}")
+                if "name" in c:  # add-node dry-run carries gate verdict
+                    wb = c.get("would_block")
+                    extra = "" if wb is None else f" would_block={wb}"
+                    print(f"  {kind:20s} name={c.get('name')}{extra}")
+                else:  # delete-node dry-run
+                    print(f"  {kind:20s} node={c.get('node_id')} topic={c.get('topic')} "
+                          f"edges={c.get('edges_to_delete', 0)}")
             elif kind == "topic_dry_run":
                 print(f"  {kind:20s} topic={c.get('topic')} "
                       f"nodes={c.get('nodes_to_delete', 0)} edges={c.get('edges_to_delete', 0)}")
@@ -395,6 +413,8 @@ def report(args, changes, contradictions):
             else:
                 label = c.get("name") or c.get("source") or c.get("topic") or c.get("node_id") or c.get("edge_id") or ""
                 extra = f" -> {c['stance']}" if kind == "stance_set" else ""
+                if "would_block" in c:
+                    extra += f" would_block={c['would_block']}"
                 print(f"  {kind:12s} {label}{extra}")
         for pair, sid in zip(contradictions, signals):
             print(f"  CONTRADICTION: {pair[0]} <-> {pair[1]}  signal={sid}")

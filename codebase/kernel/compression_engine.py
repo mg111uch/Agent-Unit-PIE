@@ -180,7 +180,7 @@ class CompressionEngine:
                     if len(grp) < 2:
                         continue
                     outcome = grp[0].metadata.get("observation", {}).get("outcome", "unknown")
-                    deltas = [g.metadata["observation"].get("delta", 0) for g in grp if isinstance(g.metadata.get("observation"), dict)]
+                    deltas = [g.metadata.get("observation",{}).get("delta", 0) for g in grp if isinstance(g.metadata.get("observation"), dict)]
                     avg_delta = round(sum(deltas)/len(deltas), 1) if deltas else 0
                     src_ids = [g.node_id for g in grp]
                     src_vers = sorted(set((g.metadata.get("observation", {}) or {}).get("version_id") or g.metadata.get("validity", {}).get("valid_for_version", "") for g in grp if ((g.metadata.get("observation", {}) or {}).get("version_id") or g.metadata.get("validity", {}).get("valid_for_version"))))
@@ -196,9 +196,9 @@ class CompressionEngine:
                     con_id = f"consolidated_{sim}_{outcome}_{key.replace(':','_')}"
                     existing = semantic_memory.get_node(con_id)
                     title = f"{sim} consolidated {outcome} ({len(grp)} runs, avg {avg_delta}%)"
-                    content = f"Consolidated {sim}: {outcome} over {len(grp)} runs; outcomes {','.join(sorted(set(o for o in [g.metadata['observation'].get('outcome') for g in grp] if o)))}; avg delta {avg_delta}%; sources {','.join(s.node_id for s in grp[:3])}"
+                    content = f"Consolidated {sim}: {outcome} over {len(grp)} runs; outcomes {','.join(sorted(set(o for o in [(g.metadata.get('observation',{}) or {}).get('outcome') for g in grp] if o)))}; avg delta {avg_delta}%; sources {','.join(s.node_id for s in grp[:3])}"
                     meta = {
-                        "observation": {"simulator": sim, "version_id": cur_ver, "outcome": outcome, "consolidated": True, "source_count": len(grp), "avg_delta": avg_delta, "horizon": grp[0].metadata["observation"].get("horizon")},
+                        "observation": {"simulator": sim, "version_id": cur_ver, "outcome": outcome, "consolidated": True, "source_count": len(grp), "avg_delta": avg_delta, "horizon": (grp[0].metadata.get("observation",{}) or {}).get("horizon")},
                         "validity": {"valid_for_version": cur_ver, "status": "ACTIVE", "simulator": sim},
                         "consolidated_from": src_ids,
                         "source_findings": src_ids,
@@ -286,7 +286,7 @@ class CompressionEngine:
                     # if only 0-1 remaining, optionally remove to avoid clutter — keep HISTORICAL for traceability
                     continue
                 # recompute from remaining
-                deltas = [r.metadata["observation"].get("delta", 0) for r in remaining if isinstance(r.metadata.get("observation"), dict)]
+                deltas = [r.metadata.get("observation",{}).get("delta", 0) for r in remaining if isinstance(r.metadata.get("observation"), dict)]
                 avg_delta = round(sum(deltas)/len(deltas), 1) if deltas else 0
                 outcome = remaining[0].metadata.get("observation", {}).get("outcome", "unknown")
                 try:

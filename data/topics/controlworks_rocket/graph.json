@@ -1,0 +1,60 @@
+{
+  "nodes": [
+    {
+      "name": "rocket2D_module_onboarded",
+      "side": "decision",
+      "premise": "rocket2D second adopter of module.json loop: topic controlworks_rocket, README Next task source, content-hash lineage, train/train_vec/play commands, 5-target <50m gates.",
+      "evidence": [],
+      "status": "active",
+      "examples": [],
+      "sources": [],
+      "discipline": "",
+      "confidence": 1.0
+    },
+    {
+      "name": "rocket_artifacts_canonical",
+      "side": "decision",
+      "premise": "Weights+run outputs canonical in models/ (train.py/puffer_train.py default out, --model-dir override); shell logs in logs/; main.py legacy rocket_policy.pth path dormant.",
+      "evidence": [],
+      "status": "active",
+      "examples": [],
+      "sources": [],
+      "discipline": "",
+      "confidence": 1.0
+    },
+    {
+      "name": "rocket fuel-mix eval + staged tolerance",
+      "side": "neutral",
+      "premise": "",
+      "evidence": [],
+      "status": "active",
+      "examples": [],
+      "sources": [],
+      "discipline": "",
+      "confidence": 1.0
+    },
+    {
+      "name": "rocket fuelmix train 120ep done",
+      "side": "neutral",
+      "premise": "",
+      "evidence": [],
+      "status": "active",
+      "examples": [],
+      "sources": [],
+      "discipline": "",
+      "confidence": 1.0
+    },
+    {
+      "name": "rocket: return spikes are lottery, hover is the exploit",
+      "side": "neutral",
+      "premise": "",
+      "evidence": [],
+      "status": "active",
+      "examples": [],
+      "sources": [],
+      "discipline": "",
+      "confidence": 1.0
+    }
+  ],
+  "edges": []
+}

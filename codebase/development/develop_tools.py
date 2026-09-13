@@ -50,21 +50,40 @@ def develop_orient(input_data) -> str:
         except: input_data={}
     q=(input_data or {}).get("query","population")
     sim=(input_data or {}).get("simulator","popula_dyn")
+    mod=(input_data or {}).get("module")
     limit=int((input_data or {}).get("limit",5))
     workflow_engine=_wf()
     from development.development_state import generate_state
+    # module-native descriptors (module.json in the module dir) generalize the
+    # loop beyond sims: topic, task source, lineage, commands, node bypasses.
+    mod_ctx=None
+    if mod:
+        try:
+            from development.module_registry import (load_module, module_version,
+                module_task_snippet, module_topic_nodes, applicable_nodes)
+            spec=load_module(mod)
+            if not (input_data or {}).get("simulator") and spec.get("simulator"):
+                sim=spec["simulator"]
+            mod_ctx={"name":spec["name"],"kind":spec["kind"],"topic":spec["topic"],
+                "version":module_version(spec),"task":module_task_snippet(spec),
+                "memory":module_topic_nodes(spec),"commands":spec.get("commands",{}),
+                "skip_nodes":spec.get("skip_nodes",[]),
+                "metric_gates":spec.get("metric_gates",{})}
+        except Exception as e:
+            mod_ctx={"error":str(e)}
     # advance engine if at start/orient
     if workflow_engine.current in ("start","loop"):
         try: workflow_engine.advance("orient")
         except: pass
-    # kernel retrieve per-sim (best effort)
+    # kernel retrieve per-sim (best effort); externals use topic memory instead
     ctx={}
-    try:
-        from kernel.retrieval.retrieval_engine import retrieval_engine
-        res=retrieval_engine.search(query=q, limit=limit, simulator=sim, include_historical=False)
-        ctx={"hits":[{"id":r.item_id,"score":round(r.score,2)} for r in res]}
-    except Exception as e:
-        ctx={"error":str(e)}
+    if not (mod_ctx and mod_ctx.get("kind")=="external" and "error" not in mod_ctx):
+        try:
+            from kernel.retrieval.retrieval_engine import retrieval_engine
+            res=retrieval_engine.search(query=q, limit=limit, simulator=sim, include_historical=False)
+            ctx={"hits":[{"id":r.item_id,"score":round(r.score,2)} for r in res]}
+        except Exception as e:
+            ctx={"error":str(e)}
     if workflow_engine.current=="orient":
         try: workflow_engine.advance("version_sync", produced={"context": ctx}, success="context_found")
         except Exception as e: ctx["advance"]=str(e)
@@ -82,7 +101,17 @@ def develop_orient(input_data) -> str:
         except Exception:
             pass
     st=generate_state(sim)
-    return json.dumps({"context":ctx,"state":st,"allowed":workflow_engine.allowed()}, separators=(",",":"))
+    allowed=workflow_engine.allowed()
+    out={"context":ctx,"state":st,"allowed":allowed}
+    if mod_ctx:
+        try:
+            from development.module_registry import applicable_nodes
+            out["module"]=mod_ctx
+            out["applicable"]=applicable_nodes(
+                {"skip_nodes":mod_ctx.get("skip_nodes",[])},allowed)
+        except Exception:
+            out["module"]=mod_ctx
+    return json.dumps(out, separators=(",",":"))
 
 def develop_hypothesis(input_data) -> str:
     """Phase E: create or attach hypothesis and advance hypothesis->decide_branch."""
@@ -144,6 +173,17 @@ def _validate_run_id(run_id: str, simulator: str) -> str | None:
     # baseline allowed
     if run_id == "run_basic":
         return None
+    # externals (control-works) use content-hash lineage, not run_policy naming — allow freer ids
+    try:
+        from kernel.simulator_registry import discover_simulators
+        native = discover_simulators()
+        if simulator not in native and simulator != "stock_analyser":
+            # external module: allow alphanum + _ - . (e.g. curric24, rocket_warmstart)
+            if re.match(r"^[a-zA-Z0-9][a-zA-Z0-9_\-\.]{1,64}$", run_id):
+                return None
+            return f"run_id '{run_id}' invalid for external '{simulator}' (need alphanum/_/-., 2-65 chars)"
+    except Exception:
+        pass
     # policy: run_policy_{param}{int} — rate*100 encoded without dot, e.g. 0.08→08, 0.10→10
     pat = r"^run_policy_[a-z_]+[0-9]+$"
     if not re.match(pat, run_id):
@@ -168,6 +208,21 @@ def develop_experiment(input_data) -> str:
     # allow from decide_branch or hypothesis if needed
     if workflow_engine.current not in ("decide_branch","experiment"):
         # try to move to experiment if allowed
+        pass
+    # external modules: don't route through SimulationConnector — record as external experiment
+    try:
+        from kernel.simulator_registry import discover_simulators as _disc
+        _native = _disc()
+        if sim not in _native and sim != "stock_analyser":
+            # treat as external: just register finding stub and advance workflow
+            if workflow_engine.current=="decide_branch" and "experiment" in workflow_engine.allowed():
+                try: workflow_engine.advance("experiment", produced={"branch":"experiment"}, success="branch_chosen")
+                except: pass
+            if workflow_engine.current=="experiment":
+                try: workflow_engine.advance("update_knowledge", produced={"run_id":run_id,"finding_id":run_id}, success="finding_registered")
+                except: pass
+            return json.dumps({"status":"completed","run_id":run_id,"finding":run_id,"summary":f"external {sim} experiment {run_id} params={params}","register":"external_no_kernel"}, separators=(",",":"))
+    except Exception:
         pass
     try:
         if sim == "stock_analyser":
@@ -220,9 +275,20 @@ def develop_analyze(input_data) -> str:
             sigs = _SC2(simulator=sim).get_signals(run_id) if run_id else []
             comp: Any = {"note": "stock: no compression"}
         else:
-            from modules.simulators.simulation_connector import SimulationConnector
-            conn=SimulationConnector(simulator=sim)
-            sigs=conn.get_signals(run_id) if run_id else []
+            # external modules have no SimulationConnector — skip signals
+            try:
+                from kernel.simulator_registry import discover_simulators as _disc2
+                _native2 = _disc2()
+                if sim not in _native2:
+                    sigs = []
+                else:
+                    from modules.simulators.simulation_connector import SimulationConnector
+                    conn=SimulationConnector(simulator=sim)
+                    sigs=conn.get_signals(run_id) if run_id else []
+            except Exception:
+                from modules.simulators.simulation_connector import SimulationConnector
+                conn=SimulationConnector(simulator=sim)
+                sigs=conn.get_signals(run_id) if run_id else []
         # compression (materialized view already via validity, but explicit; skip for stock)
         if sim != "stock_analyser":
             try:

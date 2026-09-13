@@ -160,7 +160,8 @@ def step(strategy_d: Dict[str, Any], symbols: List[str], db_path: str | None = N
         # 1. fills: CMP intraday when available, else first open after signal (parity)
         use_cmp = bool(cap.get("paper_use_cmp", True))
         settle_mode = str(cap.get("settlement_mode", "T1_EPI"))
-        retired = strat.name in (cap.get("retired_trees") or [])
+        from .trees import is_exit_only as _exo
+        retired = _exo(strat.name, cap, db_path)
         if retired:
             log.append(f"RETIRED {strat.name} exit-only (no new signals)")
         cmps: Dict[str, Dict] = {}

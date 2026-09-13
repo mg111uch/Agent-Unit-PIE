@@ -161,3 +161,15 @@ generate_state("popula_dyn")  # hydrated loop→post_commit→orient
 - **Harness:** `codebase/development/eval_harness.py` `run_all()` — 5 tests: `workflow_conformance` (legal path + illegal `start→experiment` blocked), `recovery` (missing params → Error), `adversarial_lineage` (5 invariants), `workflow_evolution` (detect inefficiency), `research_loop` (state budget). Extend for `FixesIssues #9` self-improvement benchmark (repeat same task from clean context, measure `iterations_to_solution`, `workflow_violations`).
 
 Contracts: every node `{id,goal,inputs,preconditions,actions,outputs,success,failure,next,mdRef,subgraph}` validated by `development/contracts.py` (`validate_workflow` supports legacy array + dict).
+
+## Modules Beyond Sims (native + external)
+
+Any training module joins the loop via a `module.json` in its own dir (see `codebase/development/module_registry.py`): `topic`, `task_source` (status `## Next` or roadmap `Now` marker), `lineage` (`git` scoped patterns | `content_hash` globs), `commands` (train/eval/test), `skip_nodes` bypasses, `metric_gates`. Native: `codebase/modules/simulators/popula_dyn/module.json`. External: absolute path, e.g. `control-works/.../drift_racer/module.json` (zero git, `ch@hash` lineage).
+
+```python
+develop_orient({"query":"drift reward","module":"/home/manigupt/Hello/control-works/arcade_games/drift_racer"})
+# → {module:{kind,topic,version,task,memory,commands,skip_nodes,metric_gates}, applicable:[...], allowed:[...]}
+develop_orient({"query":"population","module":"popula_dyn"})  # native: git lineage + sim retrieval
+```
+
+Externals skip sim retrieval (topic memory instead); `applicable` = engine `allowed` minus `skip_nodes` (no engine change). Workers run `commands` via `bash workdir`; findings register to the module topic each run.

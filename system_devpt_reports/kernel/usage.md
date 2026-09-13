@@ -168,7 +168,7 @@ Same for simulation hypotheses via `kernel/hypothesis/hypothesis_engine.py:creat
 Gate logic lives in `codebase/kernel/hypothesis/contradiction_gate.py:67`:
 
 - **Symbolic tier** (observations, per-sim): `_symbolic_contradicts` on typed `observation` (`metric, outcome INCREASE vs DECREASE, baseline, horizon`) — embeddings only retrieve candidates, never decide. Guarded by `_compatible_for_contradiction` (same `simulator`, `ACTIVE`, `is_compatible(version)`).
-- **Token Jaccard** on title/premise (`set(lower().split())` overlap) + **negation heuristic** (`not`/`no`/`never`/`fail` XOR) for hypotheses/interpretations. Thresholds: `sim>0.3` with opposite polarity, or `title_sim>0.8`, flags `blocked_contradiction`.
+- **Token Jaccard** on title/premise (`set(lower().split())` overlap) + **negation heuristic** (`not`/`no`/`never`/`fail` XOR) for hypotheses/interpretations. Write-gate blocks only on `(opposite polarity AND sim>0.6)` or `sim>0.85`, where `sim=max(jaccard,(embedding_cosine+1)/2)`. Mere resemblance to a `contradicts`-edge endpoint never blocks (correction-rich topics would self-poison); explicit `contradicts` edges fire detection at `add-edge` time instead.
 - **Per-sim strict isolation**: two findings from different simulators or incompatible Git lineage never contradict, even with opposite outcomes.
 - **Not vector embeddings.** `codebase/modules/argu_god/engine/vector_store.py:1-46` does provide ChromaDB + `all-MiniLM-L6-v2` embeddings (`embed()`/`search_similar()`) for semantic retrieval/duplicate detection (`dedup.py`), but the autonomous gate does **not** call it today to avoid model load/latency.
 

@@ -1,12 +1,14 @@
 """User CLI for the paper league. Run from workspace root (/home/manigupt/Hello/Agentic_Unit_PIE):
 
-  conda run -n myenv python codebase/modules/stock_analyser/paper/cli.py portfolio
+  conda run -n myenv python codebase/modules/stock_analyser/paper/cli.py trees
+  conda run -n myenv python codebase/modules/stock_analyser/paper/cli.py portfolio [--tree T1/batch3]
   conda run -n myenv python codebase/modules/stock_analyser/paper/cli.py next
-  conda run -n myenv python codebase/modules/stock_analyser/paper/cli.py portfolio --trees TREE1 TREE2
+  conda run -n myenv python codebase/modules/stock_analyser/paper/cli.py promote --run <rid> --policy <name>
+  conda run -n myenv python codebase/modules/stock_analyser/paper/cli.py migrate --from A --to B
 
-portfolio: open positions + per-position/day/overall PnL per tree (PAPER/LIVE split).
-next: step all trees on today's closed bars, print tomorrow's buy list w/ sizes.
-Run `next` once each evening after market close; `portfolio` anytime.
+trees: list policy trees (ACTIVE/DEMOTING; DEAD hidden). portfolio: one tree's
+subtrees (default: newest non-DEAD). next: step non-DEAD trees. promote: new
+tree from a COMPLETE run's top-3 PAPER_READY (run-gated).
 """
 from __future__ import annotations
 import argparse
@@ -39,7 +41,7 @@ def _closes(symbols: List[str], db_path: str | None, n: int = 2) -> Dict[str, li
 
 
 def portfolio(trees: List[str], db_path: str | None = None,
-              use_live: bool = False) -> Dict[str, Any]:
+              use_live: bool = False, tree_id: str | None = None) -> Dict[str, Any]:
     from modules.stock_analyser.data.store import connect, ensure_schema
     from modules.stock_analyser.config import load_capital
     ensure_schema(db_path)
@@ -85,7 +87,8 @@ def portfolio(trees: List[str], db_path: str | None = None,
                          or "?")[:10]
             finally:
                 _con.close()
-        out = {"as_of": today, "trees": [], "cmp": cmp_src, "price_mode": live_mode}
+        out = {"as_of": today, "trees": [], "cmp": cmp_src, "price_mode": live_mode,
+               "tree_id": tree_id}
         for t in trees:
             t_out: Dict[str, Any] = {"strategy": t, "modes": {}}
             for mode in ("PAPER", "LIVE"):
@@ -169,6 +172,8 @@ def print_portfolio(p: Dict[str, Any]) -> None:
            else f" +CMP-cache({len(cmp)})" if mode == "cache"
            else " (closed bars)")
     print(f"PORTFOLIO as of {p['as_of']}{tag} (base Rs50000/tree)")
+    if p.get("tree_id"):
+        print(f"TREE {p['tree_id']}")
     for t in p["trees"]:
         print(f"== {t['strategy']}")
         for mode, m in t["modes"].items():
@@ -238,12 +243,94 @@ def migrate(from_tree: str, to_tree: str, db_path: str | None = None) -> Dict[st
             "new_pending": [r[0] for r in new]}
 
 
-def next_day(trees: List[str], db_path: str | None = None) -> Dict[str, Any]:
-    """Step all trees on today's closed bars; print tomorrow's shopping list."""
+def cmd_trees(db_path: str | None = None) -> None:
+    from modules.stock_analyser.paper.trees import list_trees, members
+    from modules.stock_analyser.data.store import connect
+    trees = list_trees(db_path)
+    if not trees:
+        print("(no trees — using legacy flat league)")
+        return
+    rows = [["Tree", "Policy", "Run", "Status", "Subtrees", "Open", "Holding"]]
+    con = connect(db_path)
+    try:
+        for t in trees:
+            syms = members(t["tree_id"], db_path)
+            n_open, hold = 0, 0.0
+            if syms:
+                q = ",".join("?" * len(syms))
+                for sym, qty, px_in in con.execute(
+                        f"SELECT symbol,qty,px_in FROM paper_trades WHERE strategy IN ({q})"
+                        " AND status='OPEN'", syms).fetchall():
+                    n_open += 1
+                    hold += (qty or 0) * (px_in or 0)
+            rows.append([t["tree_id"], t["policy"] or "-", (t["run_id"] or "-")[:18],
+                         t["status"], str(len(syms)), str(n_open), f"{hold:.0f}"])
+    finally:
+        con.close()
+    for line in _table(rows):
+        print(line)
+
+
+def cmd_promote(run_id: str, policy: str, db_path: str | None = None) -> Dict[str, Any]:
+    """Run-gated promotion: COMPLETE run -> new tree of top-3 PAPER_READY by oos_net."""
+    import json
+    from modules.stock_analyser.data.store import connect, ensure_schema
+    from modules.stock_analyser.paper.trees import create_tree
+    ensure_schema(db_path)
+    con = connect(db_path)
+    try:
+        r = con.execute("SELECT status FROM research_runs WHERE id=?", (run_id,)).fetchone()
+        if not r:
+            print(f"REFUSE unknown run {run_id}")
+            return {"error": "unknown run"}
+        if r[0] != "COMPLETE":
+            print(f"REFUSE run {run_id} status {r[0]} (need COMPLETE)")
+            return {"error": f"run {r[0]}"}
+        rows = con.execute("SELECT strategy_json,oos_net,avg_net FROM research_candidates"
+                           " WHERE run_id=? AND verdict='PAPER_READY'", (run_id,)).fetchall()
+    finally:
+        con.close()
+    cands = []
+    for sj, oos, avg in rows:
+        try:
+            cands.append((json.loads(sj).get("name", "?"), oos, avg))
+        except Exception:
+            continue
+    cands.sort(key=lambda c: ((c[1] if c[1] is not None else -1e18),
+                              (c[2] if c[2] is not None else -1e18)), reverse=True)
+    top = [c[0] for c in cands[:3]]
+    if not top:
+        print(f"REFUSE run {run_id} has no PAPER_READY")
+        return {"error": "no paper_ready"}
+    out = create_tree(policy, run_id, top, db_path)
+    print(f"NEW TREE {out['tree_id']} from {run_id}: {', '.join(top)}")
+    return out
+
+
+def resolve_tree(sel: str | None, db_path: str | None = None) -> tuple:
+    """Tree selector -> (tree_id, member strategies). Default: newest non-DEAD."""
+    from modules.stock_analyser.paper.trees import default_tree, members, list_trees
+    if sel:
+        for t in list_trees(db_path, include_dead=True):
+            if t["tree_id"] == sel or t["tree_id"].endswith(f"/{sel}"):
+                return t["tree_id"], members(t["tree_id"], db_path)
+        print(f"WARN unknown tree {sel}")
+        return sel, []
+    d = default_tree(db_path)
+    if d:
+        return d["tree_id"], members(d["tree_id"], db_path)
+    return None, list(LEAGUE)  # pre-bootstrap fallback
+
+
+def next_day(trees: List[str] | None = None, db_path: str | None = None) -> Dict[str, Any]:
+    """Step non-DEAD trees; sweep DEMOTING-flat trees to DEAD."""
     import json
     import sqlite3
     from modules.stock_analyser.data.universe import resolve_universe
     from modules.stock_analyser.paper.league import step_all
+    from modules.stock_analyser.paper.trees import live_strategies, sweep_dead
+    if not trees:
+        trees = live_strategies(db_path) or list(LEAGUE)
     db = sqlite3.connect("data/market.db")
     strats = []
     for n in trees:
@@ -261,31 +348,49 @@ def next_day(trees: List[str], db_path: str | None = None) -> Dict[str, Any]:
     for name, r in out["trees"].items():
         print(f"== {name}: {r.get('status')}")
         for a in r.get("actions", []):
-            if a.startswith(("SIGNAL", "FILL", "CLOSE")):
+            if a.startswith(("SIGNAL", "FILL", "CLOSE", "RETIRED", "SKIP")):
                 print(f"   {a}")
+    for tid in sweep_dead(db_path):
+        print(f"DEAD {tid} (flat — hidden from portfolio)")
     return out
 
 
 def main(argv: List[str] | None = None) -> None:
     ap = argparse.ArgumentParser(prog="paper.cli")
     sub = ap.add_subparsers(dest="cmd", required=True)
-    p1 = sub.add_parser("portfolio", help="positions + PnL per tree")
-    p1.add_argument("--trees", nargs="*", default=LEAGUE)
+    p1 = sub.add_parser("portfolio", help="one tree's subtree positions")
+    p1.add_argument("--trees", nargs="*", default=None)
+    p1.add_argument("--tree", default=None, help="tree id (see trees cmd)")
     p1.add_argument("--db", default=None)
     p1.add_argument("--live", action="store_true",
                     help="fetch fresh CMP; default shows last fetched CMP (no network)")
-    p2 = sub.add_parser("next", help="step trees, show tomorrow's buys")
-    p2.add_argument("--trees", nargs="*", default=LEAGUE)
+    p2 = sub.add_parser("next", help="step non-DEAD trees")
+    p2.add_argument("--trees", nargs="*", default=None)
     p2.add_argument("--db", default=None)
     p3 = sub.add_parser("migrate", help="rotation plan old tree -> new tree")
     p3.add_argument("--from", dest="from_tree", required=True)
     p3.add_argument("--to", dest="to_tree", required=True)
     p3.add_argument("--db", default=None)
+    p4 = sub.add_parser("trees", help="list policy trees")
+    p4.add_argument("--db", default=None)
+    p5 = sub.add_parser("promote", help="new tree from a COMPLETE run's top-3")
+    p5.add_argument("--run", required=True)
+    p5.add_argument("--policy", required=True)
+    p5.add_argument("--db", default=None)
     a = ap.parse_args(argv)
     if a.cmd == "portfolio":
-        print_portfolio(portfolio(a.trees, db_path=a.db, use_live=bool(a.live)))
+        if a.trees:
+            print_portfolio(portfolio(a.trees, db_path=a.db, use_live=bool(a.live)))
+        else:
+            tid, syms = resolve_tree(a.tree, db_path=a.db)
+            print_portfolio(portfolio(syms, db_path=a.db,
+                                      use_live=bool(a.live), tree_id=tid))
     elif a.cmd == "migrate":
         migrate(a.from_tree, a.to_tree, db_path=a.db)
+    elif a.cmd == "trees":
+        cmd_trees(db_path=a.db)
+    elif a.cmd == "promote":
+        cmd_promote(a.run, a.policy, db_path=a.db)
     else:
         next_day(a.trees, db_path=a.db)
 

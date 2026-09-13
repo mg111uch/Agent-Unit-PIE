@@ -58,6 +58,234 @@
       "stance": "agree",
       "confidence": 0.9,
       "last_updated": "2026-09-09T17:53:48.774710"
+    },
+    "drift_models_canonical": {
+      "history": [
+        {
+          "stance": "agree",
+          "confidence": 0.9,
+          "timestamp": "2026-09-11T14:01:28.162643"
+        }
+      ],
+      "stance": "agree",
+      "confidence": 0.9,
+      "last_updated": "2026-09-11T14:01:28.162643"
+    },
+    "drift_fit_survival_first": {
+      "history": [
+        {
+          "stance": "agree",
+          "confidence": 0.9,
+          "timestamp": "2026-09-11T14:01:29.581710"
+        }
+      ],
+      "stance": "agree",
+      "confidence": 0.9,
+      "last_updated": "2026-09-11T14:01:29.581710"
+    },
+    "forfeit_accrued_on_termination": {
+      "history": [
+        {
+          "stance": "agree",
+          "confidence": 0.9,
+          "timestamp": "2026-09-11T14:01:49.838918"
+        }
+      ],
+      "stance": "agree",
+      "confidence": 0.9,
+      "last_updated": "2026-09-11T14:01:49.838918"
+    },
+    "drift_tracks_canonical": {
+      "history": [
+        {
+          "stance": "agree",
+          "confidence": 0.9,
+          "timestamp": "2026-09-11T14:16:19.240485"
+        }
+      ],
+      "stance": "agree",
+      "confidence": 0.9,
+      "last_updated": "2026-09-11T14:16:19.240485"
+    },
+    "drift_angle_wrap_fix": {
+      "history": [
+        {
+          "stance": "agree",
+          "confidence": 0.9,
+          "timestamp": "2026-09-11T14:16:19.381181"
+        }
+      ],
+      "stance": "agree",
+      "confidence": 0.9,
+      "last_updated": "2026-09-11T14:16:19.381181"
+    },
+    "drift_death_forfeit": {
+      "history": [
+        {
+          "stance": "agree",
+          "confidence": 0.9,
+          "timestamp": "2026-09-11T14:16:19.504735"
+        }
+      ],
+      "stance": "agree",
+      "confidence": 0.9,
+      "last_updated": "2026-09-11T14:16:19.504735"
+    },
+    "drift_log_streaming": {
+      "history": [
+        {
+          "stance": "agree",
+          "confidence": 0.9,
+          "timestamp": "2026-09-11T14:16:19.611167"
+        }
+      ],
+      "stance": "agree",
+      "confidence": 0.9,
+      "last_updated": "2026-09-11T14:16:19.611167"
+    },
+    "drift_pool_workers": {
+      "history": [
+        {
+          "stance": "agree",
+          "confidence": 0.9,
+          "timestamp": "2026-09-11T14:16:19.736959"
+        }
+      ],
+      "stance": "agree",
+      "confidence": 0.9,
+      "last_updated": "2026-09-11T14:16:19.736959"
+    },
+    "drift_raycast_batch": {
+      "history": [
+        {
+          "stance": "agree",
+          "confidence": 0.9,
+          "timestamp": "2026-09-11T14:16:19.863228"
+        }
+      ],
+      "stance": "agree",
+      "confidence": 0.9,
+      "last_updated": "2026-09-11T14:16:19.863228"
+    },
+    "rocket2D_module_onboarded": {
+      "history": [
+        {
+          "stance": "agree",
+          "confidence": 0.9,
+          "timestamp": "2026-09-11T16:02:15.086695"
+        }
+      ],
+      "stance": "agree",
+      "confidence": 0.9,
+      "last_updated": "2026-09-11T16:02:15.086695"
+    },
+    "rocket_artifacts_canonical": {
+      "history": [
+        {
+          "stance": "agree",
+          "confidence": 0.9,
+          "timestamp": "2026-09-11T16:02:28.015172"
+        }
+      ],
+      "stance": "agree",
+      "confidence": 0.9,
+      "last_updated": "2026-09-11T16:02:28.015172"
+    },
+    "drift_stagnation_kill": {
+      "history": [
+        {
+          "stance": "agree",
+          "confidence": 0.9,
+          "timestamp": "2026-09-11T16:39:35.116180"
+        }
+      ],
+      "stance": "agree",
+      "confidence": 0.9,
+      "last_updated": "2026-09-11T16:39:35.116180"
+    },
+    "drift_fit_reward_first": {
+      "history": [
+        {
+          "stance": "agree",
+          "confidence": 0.9,
+          "timestamp": "2026-09-11T16:52:15.117605"
+        }
+      ],
+      "stance": "agree",
+      "confidence": 0.9,
+      "last_updated": "2026-09-11T16:52:15.117605"
+    },
+    "drift_probe3_specialist": {
+      "history": [
+        {
+          "stance": "agree",
+          "confidence": 0.9,
+          "timestamp": "2026-09-11T17:24:42.881940"
+        }
+      ],
+      "stance": "agree",
+      "confidence": 0.9,
+      "last_updated": "2026-09-11T17:24:42.881940"
+    },
+    "stagnation_kill_lesson": {
+      "history": [
+        {
+          "stance": "agree",
+          "confidence": 0.9,
+          "timestamp": "2026-09-11T17:41:11.590625"
+        }
+      ],
+      "stance": "agree",
+      "confidence": 0.9,
+      "last_updated": "2026-09-11T17:41:11.590625"
+    },
+    "curriculum_gate_lesson": {
+      "history": [
+        {
+          "stance": "agree",
+          "confidence": 0.9,
+          "timestamp": "2026-09-11T17:41:25.570439"
+        }
+      ],
+      "stance": "agree",
+      "confidence": 0.9,
+      "last_updated": "2026-09-11T17:41:25.570439"
+    },
+    "parallel_agent_eval_lesson": {
+      "history": [
+        {
+          "stance": "agree",
+          "confidence": 0.9,
+          "timestamp": "2026-09-11T17:41:39.060916"
+        }
+      ],
+      "stance": "agree",
+      "confidence": 0.9,
+      "last_updated": "2026-09-11T17:41:39.060916"
+    },
+    "checkpoint_resume_lesson": {
+      "history": [
+        {
+          "stance": "agree",
+          "confidence": 0.9,
+          "timestamp": "2026-09-11T17:41:52.748177"
+        }
+      ],
+      "stance": "agree",
+      "confidence": 0.9,
+      "last_updated": "2026-09-11T17:41:52.748177"
+    },
+    "drift_curric6_2lap": {
+      "history": [
+        {
+          "stance": "agree",
+          "confidence": 0.9,
+          "timestamp": "2026-09-11T18:42:05.676790"
+        }
+      ],
+      "stance": "agree",
+      "confidence": 0.9,
+      "last_updated": "2026-09-11T18:42:05.676790"
     }
   }
 }

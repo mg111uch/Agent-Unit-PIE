@@ -30,7 +30,17 @@
 | Portfolio simulator (multi-strategy, correlation-aware) | deferred | validated strategy pool |
 | ML predictors (LSTM/Transformer/XGB) | deferred | deliberate: classical ML + features first |
 | RL / policy learning | deferred (FixesIssues #10: needs simulator + reward + execution realism first) | validated strategy pool + deep-ML edge |
-| Paper-trading live loop + simulator feedback | V1 engine built; awaiting first PAPER_READY strategy | approve strategy → daily `paper.trader.step` → `report` |
 | Live execution | blocked | human approval boundary; separate permissioned system |
+
+## New (proposed from this session's shipped work)
+
+| Item | Why | Depends on |
+|---|---|---|
+| Legacy tree completion report | DEMOTING trees need bars-held vs max_hold, expected completion date, auto `reality.check` on DEAD | `paper/trees.py` sweep_dead hook |
+| Research timing dashboard | iter-1 showed setup 146s (bars + panel warm) dominating; per-stage JSONL exists but no rollup/persisted panel cache | timing log aggregator |
+| Stale RUNNING reaper | killed launches leave `RUNNING` rows with 0 done (e.g. `res_20260910_113737`); auto-mark dead on next run start | run startup check |
+| T+0 eligibility routing | T+0 beta covers growing scrip list; route eligible names via T+0 when broker supports, rest T1_EPI | eligible-securities list + broker flag |
+| CMP/history adj-mix guard | live CMP is unadjusted, history is `yahoo-adj`; corporate actions silently skew marks and stop levels | declared price-basis item above |
+| Scale-gate watch | auto-flag trees nearing ≥10 closed / avg ≥Rs90 instead of manual checks | `report()` thresholds |
 
 (End of file)

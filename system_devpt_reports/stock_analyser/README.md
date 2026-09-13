@@ -33,8 +33,11 @@
 | Dataset registry + marketdb source | `research_datasets` pins; full-history marketdb reads |
 | Research episodes | one bounded job + one kernel finding; 1000s evals stay in-engine |
 | Paper reality check | backtest-vs-paper deviation → REVALIDATED/DEGRADED/REJECTED |
-| Paper league (4 trees, full notional each) | `paper/league.py:step_all/league_report`; manual live fills (`log_live_fill`, mode PAPER/LIVE); twin divergence (`live_vs_paper`) |
-| League CLI | `paper/cli.py portfolio` (positions + day/overall PnL) / `next` (evening step + tomorrow's buys w/ sizes) |
+| Policy trees (1 policy = top-3 subtrees) | `paper/trees.py` registry ACTIVE→DEMOTING→DEAD; run-gated `promote` (top-3 PAPER_READY by oos_net); `sweep_dead` hides flat trees; trader exit-only via registry |
+| Paper-trading live loop (shipped) | winner approved → daily `next` + CMP fills + `report`; T1/batch3 live with 11 OPEN lots |
+| Paper league (full notional per subtree) | `paper/league.py:step_all/league_report`; manual live fills (`log_live_fill`, mode PAPER/LIVE); twin divergence (`live_vs_paper`) |
+| League CLI | `paper/cli.py trees` (list) / `portfolio [--tree ID] [--live]` (one tree, ASCII tables, cached CMP) / `next` (non-DEAD step + DEAD sweep) / `promote --run --policy` / `migrate --from --to` |
+| Settlement-honest paper (T1_EPI) | NSE T+1 + Oct-24 EPI 100% same-day; `_settled_cash` caps fills (`SKIP funds in settlement`, PENDING retries); `settled cash` per tree in portfolio |
 | Avg hold metric | `avg_hold_days` in engine metrics → backtest/locked stages (sym + ML) |
 | PIT universe + snapshots | `resolve_asof`; registry pins members + snapshot hash |
 | Kernel bridge (sim_stock) | signals + findings + run shards; every `run_job` auto-registers one episode finding (unique session node id) |
@@ -95,11 +98,13 @@
 | `data/universe.py` | `import_universe[_file]` for hand-picked lists; DB-first resolve |
 | `tests/test_research_ledger.py` | import, resume, hash-dedup |
 | `paper.py` | PAPER_READY propose; **human_approved required** |
-| `paper/gate.py` + `paper/trader.py` | proposal gate; paper trader mirroring backtest (next-open fill, frozen ATR, max_positions cap, bar-count hold, stale/action guards); SIGNAL lines preview `~shares @ ~Rs` (close proxy); mode PAPER/LIVE; ledger + scale report |
-| `paper/league.py` | `step_all` (N trees, full notional each) + `league_report` rank; `log_live_fill` manual live fills; `live_vs_paper` twin divergence |
-| `paper/cli.py` | `portfolio` (positions + day/overall PnL, PAPER/LIVE split) / `next` (evening step + tomorrow's buys) |
-| `capital.yaml` + `config.py` | capital 50000, Rs60 flat/trade, max 8 positions, Rs25000 steps |
-| `backtest/costs.py` | flat Rs/trade (default) or bps fallback; realistic STT/stamp/impact breakdown; ATR vol sizing |
+| `paper/gate.py` + `paper/trader.py` | proposal gate; live-CMP execution (NSE quote → Yahoo-1m, 60s cache, `live_prices` persist); whole-share floor sizing; frozen ATR, max_positions cap, bar-count hold, stale/action/settlement guards; SIGNAL preview `~N shares`; mode PAPER/LIVE; ledger + scale + settled-cash report |
+| `paper/league.py` | `step_all` (non-DEAD trees, full notional per subtree) + `league_report` rank; `log_live_fill` (floored qty); `live_vs_paper` twin divergence |
+| `paper/trees.py` | policy-tree registry + members; run-gated `create_tree`; `demote` splinter; `sweep_dead`; `default_tree` (newest ACTIVE); `live_strategies` |
+| `paper/cli.py` | `trees` / `portfolio --tree [--live]` (day/holding/unreal/settled-cash + position tables w/ Status) / `next` / `promote` / `migrate` |
+| `capital.yaml` + `config.py` | capital 50000, Rs60 flat/trade, max 8 positions, Rs25000 steps; `paper_use_cmp`, `settlement_mode` (T1_EPI/T1), `retired_trees` manual override |
+| `backtest/costs.py` | flat Rs/trade (default) or bps fallback; realistic STT/stamp/impact breakdown; ATR vol sizing; shared `floor_qty` (whole shares, backtest + paper) |
+| `data/live.py` | live CMP (NSE → Yahoo-1m, 60s proc cache); `save/load_cmps` in `live_prices` for no-network portfolio |
 | `tests/test_capital.py` | flat costs, config, net tracking, paper ledger |
 | `tests/test_stock_analyser_smoke.py` | synthetic → backtest → finding |
 | `data/workflows/stock_analyser_dev.json` | subgraph for research_development |
@@ -219,8 +224,12 @@ print(r.run_once())   # single snapshot; use r.loop() to poll till close
 ## Paper league CLI (from workspace root)
 
 ```bash
-conda run -n myenv python codebase/modules/stock_analyser/paper/cli.py portfolio  # positions + day/overall PnL per tree
-conda run -n myenv python codebase/modules/stock_analyser/paper/cli.py next       # run each evening after close: steps trees, prints tomorrow's buys w/ sizes
+conda run -n myenv python codebase/modules/stock_analyser/paper/cli.py trees                    # list policy trees
+conda run -n myenv python codebase/modules/stock_analyser/paper/cli.py portfolio                 # newest ACTIVE tree (cached CMP)
+conda run -n myenv python codebase/modules/stock_analyser/paper/cli.py portfolio --tree T1/batch3 --live  # fresh CMP
+conda run -n myenv python codebase/modules/stock_analyser/paper/cli.py next                     # evenings: steps non-DEAD, sweeps flat→DEAD
+conda run -n myenv python codebase/modules/stock_analyser/paper/cli.py promote --run <rid> --policy <name>  # new tree from COMPLETE run
+conda run -n myenv python codebase/modules/stock_analyser/paper/cli.py migrate --from A --to B  # rotation plan
 ```
 
 ## Next

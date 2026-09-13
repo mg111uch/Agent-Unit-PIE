@@ -1,6 +1,72 @@
 {
   "nodes": [
     {
+      "name": "stock_run_basic",
+      "side": "neutral",
+      "premise": "smoke premise",
+      "evidence": [],
+      "status": "HYPOTHESIS",
+      "examples": [],
+      "sources": [],
+      "discipline": "",
+      "confidence": 1.0
+    },
+    {
+      "name": "stock_res_20260908_rel_b1",
+      "side": "neutral",
+      "premise": "Stock episode res_20260908_rel_b1: 20 candidates on MY_UNIVERSE_200 \u2192 1 PAPER_READY ['ml_ridge_rel_t5~top_n8']; verdicts {'REJECT': 13, 'PAPER_READY': 1, 'SCREENED': 2}; families {'ml': 16}",
+      "evidence": [],
+      "status": "SUPPORTED",
+      "examples": [],
+      "sources": [],
+      "discipline": "",
+      "confidence": 1.0
+    },
+    {
+      "name": "stock_paper_ml_ridge_rel_t5_top_n8",
+      "side": "neutral",
+      "premise": "PAPER_READY ml_ridge_rel_t5~top_n8 (ridge top-4, 23 rel feats, 2020-23): IS +66.9/trade, OOS +417.2/trade, robustness 1.0, survived falsify+liquidity; sector-relative features broke the NEG_IS regime",
+      "evidence": [],
+      "status": "SUPPORTED",
+      "examples": [],
+      "sources": [],
+      "discipline": "",
+      "confidence": 1.0
+    },
+    {
+      "name": "stock_perf_opt_20260909",
+      "side": "neutral",
+      "premise": "ML validate cost 27min/iter to ~12s steady-state via early-kill, stratified LOW_N-only pilot, shared feature-panel cache, val-slice from cached rows, shared stress/locked signals; verdicts unchanged",
+      "evidence": [],
+      "status": "SUPPORTED",
+      "examples": [],
+      "sources": [],
+      "discipline": "",
+      "confidence": 1.0
+    },
+    {
+      "name": "stock_batch3_res_20260908_rel_b1",
+      "side": "neutral",
+      "premise": "Stock episode batch3_res_20260908_rel_b1: 20 candidates on MY_UNIVERSE_200 \u2192 1 PAPER_READY ['ml_ridge_rel_t5~top_n8']; verdicts {'REJECT': 13, 'PAPER_READY': 1, 'SCREENED': 2}; families {'ml': 16}",
+      "evidence": [],
+      "status": "SUPPORTED",
+      "examples": [],
+      "sources": [],
+      "discipline": "",
+      "confidence": 1.0
+    },
+    {
+      "name": "stock_res_20260909_110809_0t_0r",
+      "side": "neutral",
+      "premise": "Stock episode res_20260909_110809: 0 candidates on U \u2192 0 PAPER_READY []; verdicts {'REJECT': 25}; families {'sym:dead': 25}",
+      "evidence": [],
+      "status": "REFUTED",
+      "examples": [],
+      "sources": [],
+      "discipline": "",
+      "confidence": 1.0
+    },
+    {
       "name": "stock_run_basic_0t_0r",
       "side": "neutral",
       "premise": "smoke premise",
@@ -10,6 +76,28 @@
       "sources": [],
       "discipline": "",
       "confidence": 1.0
+    },
+    {
+      "name": "stock_res_20260910_114005_1t_0r",
+      "side": "neutral",
+      "premise": "Stock episode res_20260910_114005: 1 candidates on MY_UNIVERSE_200 \u2192 0 PAPER_READY []; verdicts {'DUPLICATE': 1}; families {'ml': 1}",
+      "evidence": [],
+      "status": "HYPOTHESIS",
+      "examples": [],
+      "sources": [],
+      "discipline": "",
+      "confidence": 1.0
+    },
+    {
+      "name": "stock_analyser consolidated unknown (8 runs, avg 0%)",
+      "side": "consolidated",
+      "premise": "Consolidated stock_analyser: unknown over 8 runs; outcomes ; avg delta 0%; sources argu_sim_stock_stock_run_basic,argu_sim_stock_stock_res_20260908_rel_b1,argu_sim_stock_stock_paper_ml_ridge_rel_t5_top_n8",
+      "evidence": [],
+      "status": "active",
+      "examples": [],
+      "sources": [],
+      "discipline": "",
+      "confidence": 0.9
     }
   ],
   "edges": []

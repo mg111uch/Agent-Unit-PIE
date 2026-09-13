@@ -60,7 +60,7 @@
       "side": "decision",
       "premise": "Train hygiene: no input() prompts, model paths in training dir, --generations/--train_duration/--seed/--model-dir, N_ACTIONS=9 MAX_STEPS=4000 consts, stdout guard for pytest.",
       "evidence": [],
-      "status": "active",
+      "status": "superseded",
       "examples": [],
       "sources": [],
       "discipline": "",
@@ -148,6 +148,293 @@
       "side": "decision",
       "premise": "Style rebalance: drift scale 3.0 cap 60, rank laps-drift-dist, early-stop 8. Phase-2a sped up to 6 laps but drift fell 9 to 7pct.",
       "evidence": [],
+      "status": "superseded",
+      "examples": [],
+      "sources": [],
+      "discipline": "",
+      "confidence": 1.0
+    },
+    {
+      "name": "drift_models_canonical",
+      "side": "decision",
+      "premise": "Weights: single canonical codebase/training/models/ (abspath MODEL_DIR, legacy read-only fallback); deleted scattered codebase/, training/, phase3/*.pth copies.",
+      "evidence": [],
+      "status": "active",
+      "examples": [],
+      "sources": [
+        "control-works/arcade_games/drift_racer/codebase/training/train_nn.py"
+      ],
+      "discipline": "",
+      "confidence": 1.0
+    },
+    {
+      "name": "drift_fit_survival_first",
+      "side": "decision",
+      "premise": "Rank key now (laps,min_laps,-deaths,reward,dist,steps,drift,unique,entropy); drift only breaks ties after survival. Replaces laps-drift-dist order.",
+      "evidence": [],
+      "status": "superseded",
+      "examples": [],
+      "sources": [
+        "control-works/arcade_games/drift_racer/codebase/training/train_nn.py"
+      ],
+      "discipline": "",
+      "confidence": 1.0
+    },
+    {
+      "name": "drift_tracks_canonical",
+      "side": "decision",
+      "premise": "Pool proc layouts generate into codebase/tracks/ (visible to TrackLoader); removed training/proc_tracks + phase3/proc_tracks stashes; proc_11 promoted to tracks/.",
+      "evidence": [],
+      "status": "active",
+      "examples": [],
+      "sources": [
+        "control-works/arcade_games/drift_racer/codebase/training/train_nn.py"
+      ],
+      "discipline": "",
+      "confidence": 1.0
+    },
+    {
+      "name": "drift_angle_wrap_fix",
+      "side": "decision",
+      "premise": "car.py drift_angle now wrapped abs((h-v+180)%360-180) in [0,180]; old single-if gave 720->-360, letting multi-spin deltas score as drift.",
+      "evidence": [],
+      "status": "active",
+      "examples": [],
+      "sources": [
+        "control-works/arcade_games/drift_racer/codebase/models/car.py"
+      ],
+      "discipline": "",
+      "confidence": 1.0
+    },
+    {
+      "name": "drift_death_forfeit",
+      "side": "decision",
+      "premise": "Off-track death forfeits accrued drift gains (step returns -1000-forfeit, episode drift nets -1000). Fixes suicide farming (+4200-5500/ep vs -1000 fine).",
+      "evidence": [],
+      "status": "active",
+      "examples": [],
+      "sources": [
+        "control-works/arcade_games/drift_racer/codebase/models/game_state.py"
+      ],
+      "discipline": "",
+      "confidence": 1.0
+    },
+    {
+      "name": "drift_log_streaming",
+      "side": "decision",
+      "premise": "run_train.sh uses conda run --no-capture-output; logs stream live instead of 0 bytes until process exit.",
+      "evidence": [],
+      "status": "active",
+      "examples": [],
+      "sources": [
+        "control-works/arcade_games/drift_racer/codebase/training/run_train.sh"
+      ],
+      "discipline": "",
+      "confidence": 1.0
+    },
+    {
+      "name": "drift_pool_workers",
+      "side": "decision",
+      "premise": "Agent rollouts over --workers processes (default cpu_count-1), per-(gen,agent) reseed, torch threads=1; --workers 1 = serial fallback.",
+      "evidence": [],
+      "status": "active",
+      "examples": [],
+      "sources": [
+        "control-works/arcade_games/drift_racer/codebase/training/train_nn.py"
+      ],
+      "discipline": "",
+      "confidence": 1.0
+    },
+    {
+      "name": "drift_raycast_batch",
+      "side": "decision",
+      "premise": "Numpy batch collision (Track.is_on_track_batch) + lockstep marching in RayCaster; bit-identical outputs (0.000 max diff, 160 poses x 4 tracks), 3.11->1.02ms/call.",
+      "evidence": [],
+      "status": "active",
+      "examples": [],
+      "sources": [
+        "control-works/arcade_games/drift_racer/codebase/utils/ray_caster.py",
+        "control-works/arcade_games/drift_racer/codebase/models/track.py"
+      ],
+      "discipline": "",
+      "confidence": 1.0
+    },
+    {
+      "name": "drift_pilot_2gen_analysis",
+      "side": "argument",
+      "premise": "2-gen pilot issues: death pays (+4200-5500/ep vs -1000), policy 70-90%% action6 constant-right arc, fitness tiebreak crowned drift_ratio 0.91 at 0 laps; eval oval dies step175@(353,141), proc11 step118@(316,103), fully deterministic.",
+      "evidence": [],
+      "status": "active",
+      "examples": [],
+      "sources": [],
+      "discipline": "",
+      "confidence": 1.0
+    },
+    {
+      "name": "drift_opt1_1gen",
+      "side": "argument",
+      "premise": "Post-fix 1-gen: 13.9min; per-step throughput ~3-4x up but seeded survivors avg 948 steps vs 175 pre-fix, so survivor-longevity ate the gain. Next bottleneck: episode length (MAX_STEPS 4000); propose stagnation kill (no new checkpoint for N steps).",
+      "evidence": [],
+      "status": "active",
+      "examples": [],
+      "sources": [],
+      "discipline": "",
+      "confidence": 1.0
+    },
+    {
+      "name": "drift_stagnation_kill",
+      "side": "decision",
+      "premise": "600-tick no-new-checkpoint kill (laps reset too), counted as death. opt2 1-gen 4.8min vs opt1 13.9min (2.9x, clean A/B). Also: raycaster scalar fallback for tracks w/o batch method (test mocks). Full suite 127 passed.",
+      "evidence": [],
+      "status": "active",
+      "examples": [],
+      "sources": [],
+      "discipline": "",
+      "confidence": 1.0
+    },
+    {
+      "name": "drift_parker_regression",
+      "side": "argument",
+      "premise": "Survival-first key crowned a parker: opt1 on oval is 100%% action0, speed 0, killed by stagnation at 601. Propose rank (laps,min_laps,reward,dist,steps,-deaths,drift): forfeit makes reward death-aware, so reward should precede death count.",
+      "evidence": [],
+      "status": "active",
+      "examples": [],
+      "sources": [],
+      "discipline": "",
+      "confidence": 1.0
+    },
+    {
+      "name": "drift_fit_reward_first",
+      "side": "decision",
+      "premise": "Rank key now (laps,min_laps,reward,dist,steps,-deaths,drift,unique,entropy): forfeit makes reward death-aware so parkers lose to movers. TPS now exact substeps. opt3 1-gen 5.2min.",
+      "evidence": [],
+      "status": "active",
+      "examples": [],
+      "sources": [],
+      "discipline": "",
+      "confidence": 1.0
+    },
+    {
+      "name": "drift_probe3_specialist",
+      "side": "decision",
+      "premise": "3-gen probe (16.4min): gen1-2 parkers, gen3 oval driver (5 training laps, eval 1 lap/378 steps, 4 actions, speed 2.2) but proc_11 brake-parks (100%% action7, minlap 0 population-wide). Reward-first key validated; min_laps toothless when nobody solves hard track. Next: curriculum (oval mastery gate before pool expansion).",
+      "evidence": [],
+      "status": "active",
+      "examples": [],
+      "sources": [],
+      "discipline": "",
+      "confidence": 1.0
+    },
+    {
+      "name": "drift_curric6_2lap",
+      "side": "decision",
+      "premise": "6-gen curriculum run (43min, oval-only throughout: mastery 3.0 never hit): gen1 mover, gen2 slider, gen3 breakthrough 2-lap driver (uniq4/ent1.07), gens4-6 champ frozen, avg laps 0.06->0.09. Canonical best: oval 2 laps/2525 steps; proc_11 unseen, stagnates at 693. checkpoint.pt saved for resume.",
+      "evidence": [],
+      "status": "active",
+      "examples": [],
+      "sources": [],
+      "discipline": "",
+      "confidence": 1.0
+    },
+    {
+      "name": "drift_gen7_timing_obs",
+      "side": "argument",
+      "premise": "Timing observation supporting drift_curric6_2lap: gen7 resume single-gen took 482.2s oval-only (3 workers x 4 envs, pop35 noisy + top8 clean), best clean laps 2.0 avg 0.09, noisy rollout dominates wall time; gens 8-12 est ~40min oval-only.",
+      "evidence": [],
+      "status": "active",
+      "examples": [],
+      "sources": [
+        "training/logs/curric_gen7.log"
+      ],
+      "discipline": "",
+      "confidence": 1.0
+    },
+    {
+      "name": "drift_gens8_12_curric_expand",
+      "side": "argument",
+      "premise": "Gens 8-12 done in 34.6m total: gen8 breakthrough 4.0 laps triggered CURRICULUM expansion to [simple_oval,proc_11,proc_12]; gens 9-12 best 2.0/2.0/4.0/3.0 but minlap 0.0 throughout. New champ eval: oval 1 lap/515 steps (fast), proc_11 dies step 161 off-track, holdout_99 dies step 159 off-track -- faster oval, worse transfer than gen7 champ; uniq collapsed 3->1, ent 0.49. Next: force generalists via raise mutation/noise; eval minlap-gated selection.",
+      "evidence": [],
+      "status": "active",
+      "examples": [],
+      "sources": [
+        "training/logs/curric12.log"
+      ],
+      "discipline": "",
+      "confidence": 1.0
+    },
+    {
+      "name": "drift_racer test iteration 127 passed",
+      "side": "argument",
+      "premise": "drift_racer ch@8e6be72754d3: descriptor test (pytest codebase/tests/ -q, workdir arcade_games/drift_racer) -> 127 passed in 1.76s. Roadmap Now=integration wiring only; arcade slice=harness env. Next: eval-only rollout simple_oval/holdout_99.",
+      "evidence": [],
+      "status": "active",
+      "examples": [],
+      "sources": [
+        "/home/manigupt/Hello/control-works/arcade_games/drift_racer/module.json"
+      ],
+      "discipline": "",
+      "confidence": 0.9
+    },
+    {
+      "name": "drift_racer curric16 gens 13-16 done",
+      "side": "neutral",
+      "premise": "",
+      "evidence": [],
+      "status": "active",
+      "examples": [],
+      "sources": [],
+      "discipline": "",
+      "confidence": 1.0
+    },
+    {
+      "name": "drift transfer eval gen16 vs best",
+      "side": "neutral",
+      "premise": "",
+      "evidence": [],
+      "status": "active",
+      "examples": [],
+      "sources": [],
+      "discipline": "",
+      "confidence": 1.0
+    },
+    {
+      "name": "drift metric honesty + plot fixes",
+      "side": "neutral",
+      "premise": "",
+      "evidence": [],
+      "status": "active",
+      "examples": [],
+      "sources": [],
+      "discipline": "",
+      "confidence": 1.0
+    },
+    {
+      "name": "drift: pool-lap selection breeds specialists",
+      "side": "neutral",
+      "premise": "",
+      "evidence": [],
+      "status": "active",
+      "examples": [],
+      "sources": [],
+      "discipline": "",
+      "confidence": 1.0
+    },
+    {
+      "name": "drift gens 17-20 done, selection fixed",
+      "side": "neutral",
+      "premise": "",
+      "evidence": [],
+      "status": "active",
+      "examples": [],
+      "sources": [],
+      "discipline": "",
+      "confidence": 1.0
+    },
+    {
+      "name": "drift brake incentive fix",
+      "side": "neutral",
+      "premise": "",
+      "evidence": [],
       "status": "active",
       "examples": [],
       "sources": [],
@@ -160,6 +447,31 @@
       "source": "drift_smoke_correction",
       "target": "drift_smoke_20260909",
       "relation": "contradicts"
+    },
+    {
+      "source": "drift_models_canonical",
+      "target": "drift_train_hygiene_v1",
+      "relation": "supersedes"
+    },
+    {
+      "source": "drift_fit_survival_first",
+      "target": "drift_phase2b_style",
+      "relation": "supersedes"
+    },
+    {
+      "source": "drift_pilot_2gen_analysis",
+      "target": "drift_death_forfeit",
+      "relation": "supports"
+    },
+    {
+      "source": "drift_pilot_2gen_analysis",
+      "target": "drift_fit_survival_first",
+      "relation": "supports"
+    },
+    {
+      "source": "drift_fit_reward_first",
+      "target": "drift_fit_survival_first",
+      "relation": "supersedes"
     }
   ]
 }

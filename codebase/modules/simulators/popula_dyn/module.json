@@ -1,0 +1,1 @@
+{"commands": {}, "kind": "native_sim", "lineage": {"patterns": ["codebase/modules/simulators/popula_dyn/**"], "strategy": "git"}, "metric_gates": {}, "name": "popula_dyn", "simulator": "popula_dyn", "skip_nodes": [], "task_source": {"file": "system_devpt_reports/populaDyn_simu/status.md", "marker": "", "section": "## Next"}, "topic": "popu_sim"}

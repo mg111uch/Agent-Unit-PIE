@@ -31,6 +31,12 @@ CREATE TABLE IF NOT EXISTS paper_trades(
  id INTEGER PRIMARY KEY AUTOINCREMENT, strategy TEXT, symbol TEXT,
  t_in TEXT, t_out TEXT, qty REAL, px_in REAL, px_out REAL,
  net REAL, cost REAL, status TEXT DEFAULT 'OPEN', created_at TEXT DEFAULT '');
+CREATE TABLE IF NOT EXISTS paper_trees(
+ tree_id TEXT PRIMARY KEY, policy TEXT, run_id TEXT,
+ status TEXT DEFAULT 'ACTIVE', created_at TEXT DEFAULT '');
+CREATE TABLE IF NOT EXISTS paper_tree_members(
+ tree_id TEXT, strategy TEXT, added_at TEXT DEFAULT '',
+ PRIMARY KEY(tree_id, strategy));
 CREATE TABLE IF NOT EXISTS research_runs(
  id TEXT PRIMARY KEY, objective TEXT, universe TEXT, mode TEXT DEFAULT 'day',
  budget INTEGER DEFAULT 20, done INTEGER DEFAULT 0, status TEXT DEFAULT 'RUNNING',

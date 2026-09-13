@@ -31,6 +31,7 @@ Also give suggestions for this workflow optimization, patterns which could be av
 
 # GROK session
 grok --resume 01a06170-e581-7360-b166-0688bfda701e
+hermes --resume 20260912_134837_3e8849
 
 # Questions
 

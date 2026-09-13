@@ -171,6 +171,12 @@ def main():
           any(c.get("node") == "RefineB" for c in nb["cites"])
           and any(c.get("node") == "PlayX" for c in back["cited_by"]))
 
+    # S10 proximity-to-edge must not block: ClaimC resembles ClaimA (which
+    # sits on a contradicts edge) but opposes nothing -> node_added.
+    r3 = ts.add_node(SMOKE_TOPIC, {"name": "ClaimC", "premise": "A refined further"})
+    check("edge proximity does not block writes", r3.get("kind") == "node_added",
+          str(r3.get("kind")))
+
     # cleanup
     _cleanup_smoke_topic()
     for wal in ("-wal", "-shm"):
