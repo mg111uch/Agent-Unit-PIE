@@ -72,7 +72,7 @@ class TrendDetector:
                     float(signal.value)
                 )
                 timestamps.append(
-                    signal.timestamps.created_at_unix
+                    getattr(signal, "timestamp", "")
                 )
                 valid_signals.append(
                     signal

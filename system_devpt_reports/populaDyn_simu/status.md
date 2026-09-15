@@ -1,5 +1,5 @@
 # populaDyn Simulation Status
-_Last verified: 2026-09-06_
+_Last verified: 2026-09-15_
 > Capability claims are hypotheses. Re-validate: `python scripts/validate_capabilities.py`
 
 ## Current Capability
@@ -41,6 +41,6 @@ _Last verified: 2026-09-06_
 - Iter4-6 DONE: double-count fix (`735cf9a`), regrow fertility sync (`a5f9752`), graded starvation (`9ff8ff1`)
 
 ## Next (single source for the next task — agents pull from here, not HANDOVER)
-1. Roadmap Next up pick one: baseline-vs-policy UI / self-evolution loop / environment / economy (twin deferred, det-init shipped).
+1. Twin loop live (2026-09-15): Kanpur + Delhi replicas calibrate → baseline (4% pop error) → policy experiments + contrast lab, all via existing scenarios/branch/score (sim unchanged). Next: real city data for conf≤0.35 placeholders; baseline-vs-policy UI still deferred.
 4. Individual variation: fertility trait + lifespan distribution.
 5. Details in `roadmap.md` → Next up. Shipped items move to `README.md` Features Overview.

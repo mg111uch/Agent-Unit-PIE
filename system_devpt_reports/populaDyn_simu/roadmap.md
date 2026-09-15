@@ -8,7 +8,6 @@
 
 | Item | Status | Depends on |
 |---|---|---|
-| Twin → params what-if (city/human twin data → sim params, real-data scenarios) | open (was Option A) | twin modules + kernel retrieve |
 | Baseline-vs-policy compare + visual diff (non-technical policy UI) | open (was Option B) | connector compare_runs |
 | Self-evolution loop (auto-summarize learnings, hypothesis→sim→validate, recursive refinement) | open (was Option C) | hypothesis engine + compression |
 | Seasonal yields + soil degradation/fallow + weather shocks + pollution feedback | open (top realism upgrades) | regrow + environment |

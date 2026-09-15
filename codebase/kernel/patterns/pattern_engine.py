@@ -106,10 +106,10 @@ class PatternEngine:
             pattern_type=pattern_type,
             title=title,
             description=description,
-            source_ids=source_ids,
             category=category,
             subtype=subtype,
         )
+        pattern.metadata.extra["source_ids"] = list(source_ids or [])
         pattern.metrics.confidence = confidence
         pattern.metrics.importance = importance
         pattern.metadata.tags.extend(

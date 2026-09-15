@@ -254,6 +254,37 @@ class EventEngine:
                     f"{str(e)}"
                 )
                 traceback.print_exc()
+    # QUERY (serves TimelineRetriever.retrieve_events)
+    def query_events(
+        self,
+        start_time: Optional[str] = None,
+        end_time: Optional[str] = None,
+        event_types: Optional[List[str]] = None,
+        unit_id: Optional[str] = None,
+        limit: int = 100,
+    ) -> List[Dict[str, Any]]:
+        events = self.recent_events
+        if event_types:
+            events = [
+                e for e in events
+                if e.event_type in event_types
+            ]
+        if unit_id:
+            events = [
+                e for e in events
+                if getattr(e.source, 'source_id', None) == unit_id
+            ]
+        if start_time:
+            events = [
+                e for e in events
+                if (e.timestamp or '') >= start_time
+            ]
+        if end_time:
+            events = [
+                e for e in events
+                if (e.timestamp or '') <= end_time
+            ]
+        return [e.to_dict() for e in events[-limit:]]
     # SEARCH
     def get_recent_events(
         self,

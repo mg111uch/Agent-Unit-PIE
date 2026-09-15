@@ -36,7 +36,7 @@
 | Policy trees (1 policy = top-3 subtrees) | `paper/trees.py` registry ACTIVE→DEMOTING→DEAD; run-gated `promote` (top-3 PAPER_READY by oos_net); `sweep_dead` hides flat trees; trader exit-only via registry |
 | Paper-trading live loop (shipped) | winner approved → daily `next` + CMP fills + `report`; T1/batch3 live with 11 OPEN lots |
 | Paper league (full notional per subtree) | `paper/league.py:step_all/league_report`; manual live fills (`log_live_fill`, mode PAPER/LIVE); twin divergence (`live_vs_paper`) |
-| League CLI | `paper/cli.py trees` (list) / `portfolio [--tree ID] [--live]` (one tree, ASCII tables, cached CMP) / `next` (non-DEAD step + DEAD sweep) / `promote --run --policy` / `migrate --from --to` |
+| League CLI | `paper/cli.py trees` (list) / `portfolio [--tree ID] [--live]` (one tree, ASCII tables, cached CMP; --live backfills holdings bars + fresh CMP) / `backfill [--universe/--symbols]` (daily bars top-up, default MY_UNIVERSE_200) / `next` (non-DEAD step + DEAD sweep) / `promote --run --policy` / `migrate --from --to` |
 | Settlement-honest paper (T1_EPI) | NSE T+1 + Oct-24 EPI 100% same-day; `_settled_cash` caps fills (`SKIP funds in settlement`, PENDING retries); `settled cash` per tree in portfolio |
 | Avg hold metric | `avg_hold_days` in engine metrics → backtest/locked stages (sym + ML) |
 | PIT universe + snapshots | `resolve_asof`; registry pins members + snapshot hash |
@@ -101,7 +101,7 @@
 | `paper/gate.py` + `paper/trader.py` | proposal gate; live-CMP execution (NSE quote → Yahoo-1m, 60s cache, `live_prices` persist); whole-share floor sizing; frozen ATR, max_positions cap, bar-count hold, stale/action/settlement guards; SIGNAL preview `~N shares`; mode PAPER/LIVE; ledger + scale + settled-cash report |
 | `paper/league.py` | `step_all` (non-DEAD trees, full notional per subtree) + `league_report` rank; `log_live_fill` (floored qty); `live_vs_paper` twin divergence |
 | `paper/trees.py` | policy-tree registry + members; run-gated `create_tree`; `demote` splinter; `sweep_dead`; `default_tree` (newest ACTIVE); `live_strategies` |
-| `paper/cli.py` | `trees` / `portfolio --tree [--live]` (day/holding/unreal/settled-cash + position tables w/ Status) / `next` / `promote` / `migrate` |
+| `paper/cli.py` | `trees` / `portfolio --tree [--live]` (day/holding/unreal/settled-cash + position tables w/ Status, Hold Days) / `backfill --universe/--symbols` / `next` / `promote` / `migrate` |
 | `capital.yaml` + `config.py` | capital 50000, Rs60 flat/trade, max 8 positions, Rs25000 steps; `paper_use_cmp`, `settlement_mode` (T1_EPI/T1), `retired_trees` manual override |
 | `backtest/costs.py` | flat Rs/trade (default) or bps fallback; realistic STT/stamp/impact breakdown; ATR vol sizing; shared `floor_qty` (whole shares, backtest + paper) |
 | `data/live.py` | live CMP (NSE → Yahoo-1m, 60s proc cache); `save/load_cmps` in `live_prices` for no-network portfolio |
@@ -226,7 +226,10 @@ print(r.run_once())   # single snapshot; use r.loop() to poll till close
 ```bash
 conda run -n myenv python codebase/modules/stock_analyser/paper/cli.py trees                    # list policy trees
 conda run -n myenv python codebase/modules/stock_analyser/paper/cli.py portfolio                 # newest ACTIVE tree (cached CMP)
-conda run -n myenv python codebase/modules/stock_analyser/paper/cli.py portfolio --tree T1/batch3 --live  # fresh CMP
+conda run -n myenv python codebase/modules/stock_analyser/paper/cli.py portfolio --tree T1/batch3 --live  # backfill holdings bars + fresh CMP
+conda run -n myenv python codebase/modules/stock_analyser/paper/cli.py backfill                 # backfill MY_UNIVERSE_200 (200 syms, span 1mo)
+conda run -n myenv python codebase/modules/stock_analyser/paper/cli.py backfill --universe NIFTY_200 --span 1y  # first-ever full fill
+conda run -n myenv python codebase/modules/stock_analyser/paper/cli.py backfill --symbols RELIANCE INFY  # ad-hoc top-up
 conda run -n myenv python codebase/modules/stock_analyser/paper/cli.py next                     # evenings: steps non-DEAD, sweeps flat→DEAD
 conda run -n myenv python codebase/modules/stock_analyser/paper/cli.py promote --run <rid> --policy <name>  # new tree from COMPLETE run
 conda run -n myenv python codebase/modules/stock_analyser/paper/cli.py migrate --from A --to B  # rotation plan

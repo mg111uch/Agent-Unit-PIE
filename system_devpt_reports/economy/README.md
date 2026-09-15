@@ -19,6 +19,8 @@
 | Industrial graph lite (supplier/capability queries) | `industrial.py` suppliers/map/gaps/paths, no new tables |
 | Fiscal ledger (runs → queryable cost-vs-benefit record) | `fiscal.py` record_fiscal/query_fiscal, `fiscal_runs` in market.db |
 | Barter kernel: scarcity-priced exchange (no currency) | `scoring.barter_price` wrapper over popula_dyn `core/scarcity.py`; used by sim `trade_ag`/`produce`, no ledger writes |
+| Economic event adapter (FireFlow-shaped → kernel bus) | `event_adapter.py` translates `PaymentSettled` payloads (score_cli proxy pattern, no external calls) into kernel event + `capital_flow` signal via `kernel_bus` |
+| Opportunity evidence + expected value | `scoring.score_with_evidence`: {confidence, evidence_age, evidence_count, source_diversity} gates/scales the 7-factor score (no-evidence PASS capped at WATCH) + EV = P×contribution − loss − opportunity_cost |
 
 ## Identity
 

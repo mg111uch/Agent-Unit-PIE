@@ -75,3 +75,49 @@ def barter_price(base: Any, scarcity: Any, sensitivity: Any = 1.0) -> float:
     """
     from modules.simulators.popula_dyn.core.scarcity import barter_price as _bp
     return _bp(base, scarcity, sensitivity)
+
+
+def evidence_block(confidence: float = 0.5, evidence_age_days: float = 365,
+                   evidence_count: int = 0, source_diversity: int = 1) -> Dict[str, Any]:
+    """Evidence quality for an opportunity. Pure data, no scoring change."""
+    return {"confidence": _clamp(confidence),
+            "evidence_age_days": max(0.0, float(evidence_age_days)),
+            "evidence_count": max(0, int(evidence_count)),
+            "source_diversity": max(1, int(source_diversity))}
+
+
+def expected_value(p_success: float, contribution: float, loss: float,
+                   opportunity_cost: float = 0.0) -> float:
+    """EV = P(success)x contribution - loss - opportunity_cost."""
+    p = _clamp(p_success)
+    return round(p * float(contribution) - float(loss) - float(opportunity_cost), 2)
+
+
+def score_with_evidence(opp: Any, unit: Any = None,
+                        evidence: Dict[str, Any] | None = None,
+                        contribution: float = 1000.0,
+                        opportunity_cost: float = 0.0) -> Dict[str, Any]:
+    """7-factor score intact; evidence gates/scales it, never replaces it.
+
+    No/weak evidence caps the verdict at WATCH (never PASS on a hunch);
+    otherwise the score scales by an evidence factor. EV reported alongside.
+    """
+    base = score_opportunity(opp, unit)
+    ev = evidence_block(**(evidence or {}))
+    o = _d(opp)
+    factor = round(ev["confidence"]
+                   * (1.0 / (1.0 + ev["evidence_age_days"] / 180.0))
+                   * min(1.0, ev["evidence_count"] / 3.0)
+                   * min(1.0, ev["source_diversity"] / 2.0), 3)
+    gated_score = round(base["score"] * factor, 3)
+    verdict = base["verdict"]
+    if ev["evidence_count"] == 0 or ev["confidence"] < 0.2:
+        verdict = "WATCH" if verdict == "PASS" else verdict
+    elif gated_score < WATCH_AT:
+        verdict = "REJECT"
+    ev_value = expected_value(ev["confidence"], contribution,
+                              float(o.get("startup_cost", 0) or 0),
+                              opportunity_cost)
+    return {**base, "verdict": verdict, "gated_score": gated_score,
+            "evidence_factor": factor, "evidence": ev,
+            "expected_value": ev_value}

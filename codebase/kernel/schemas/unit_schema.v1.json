@@ -1,0 +1,83 @@
+{
+  "fields": {
+    "UnitBehavior": [
+      "behavior_id",
+      "behavior_type",
+      "enabled",
+      "metadata",
+      "priority"
+    ],
+    "UnitIdentity": [
+      "created_at",
+      "name",
+      "source",
+      "unit_id",
+      "unit_type"
+    ],
+    "UnitMemory": [
+      "episodic",
+      "hypothesis_refs",
+      "pattern_refs",
+      "semantic"
+    ],
+    "UnitMetadata": [
+      "confidence",
+      "created_at",
+      "labels",
+      "source_refs",
+      "tags",
+      "updated_at"
+    ],
+    "UnitRelation": [
+      "metadata",
+      "relation_id",
+      "relation_type",
+      "strength",
+      "target_unit_id"
+    ],
+    "UnitResources": [
+      "resources"
+    ],
+    "UnitSchema": [
+      "behaviors",
+      "identity",
+      "memory",
+      "metadata",
+      "relations",
+      "resources",
+      "signals",
+      "state",
+      "traits"
+    ],
+    "UnitSignalRef": [
+      "confidence",
+      "signal_id",
+      "signal_type",
+      "timestamp"
+    ],
+    "UnitState": [
+      "active",
+      "energy",
+      "health",
+      "lifecycle_stage",
+      "location",
+      "stability",
+      "timestamp"
+    ],
+    "UnitTraits": [
+      "traits"
+    ]
+  },
+  "required": [
+    "behaviors",
+    "identity",
+    "memory",
+    "metadata",
+    "relations",
+    "resources",
+    "signals",
+    "state",
+    "traits"
+  ],
+  "schema_version": "1.0.0"
+}

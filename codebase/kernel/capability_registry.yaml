@@ -1,0 +1,73 @@
+# capability_registry.yaml — Phase 0 activation registry (read-only, no behavior change).
+# Method (2026-09-15): one entry per .py under codebase/kernel/ (66 files).
+# Status evidence: rg "from kernel\.|import kernel" over codebase/ + scripts/ (kernel-internal excluded).
+# ACTIVE = hot research-loop path; PARTIALLY_ACTIVE = >=1 external importer but peripheral;
+# DORMANT = zero external importers, tests-only, or 0-line stub. inputs/outputs best-effort (tbd = unknown).
+# Consumers key: research_loop, agent_loop, argu_god, stock_analyser, simulators, ops_tooling.
+- {id: core.package_init, owner: kernel, inputs: [tbd], outputs: [tbd], event_triggers: [], status: DORMANT, consumers: []}
+- {id: core.compression_engine, owner: kernel, inputs: [observations, patterns], outputs: [consolidated_view], event_triggers: [consolidation_requested], status: ACTIVE, consumers: [research_loop]}
+- {id: core.context_builder, owner: kernel, inputs: [tbd], outputs: [llm_context], event_triggers: [], status: DORMANT, consumers: []}
+- {id: core.git_version, owner: kernel, inputs: [sim_id], outputs: [commit, version_meta], event_triggers: [], status: ACTIVE, consumers: [research_loop, stock_analyser, digital_twins]}
+- {id: core.observation_pipeline, owner: kernel, inputs: [raw_observation], outputs: [observation], event_triggers: [observation_received], status: PARTIALLY_ACTIVE, consumers: [kernel_bus], note: bus uses normalize; popula_dyn event_bridge injectable seam remains}
+- {id: core.ontology_registry, owner: kernel, inputs: [ontology_query], outputs: [ontology_entry], event_triggers: [], status: PARTIALLY_ACTIVE, consumers: [agent_loop]}
+- {id: core.simulation_version, owner: kernel, inputs: [sim_id, code_state], outputs: [version_id, lineage], event_triggers: [code_changed], status: ACTIVE, consumers: [research_loop, simulators]}
+- {id: core.simulator_registry, owner: kernel, inputs: [tbd], outputs: [simulator_list, sim_topic], event_triggers: [], status: ACTIVE, consumers: [research_loop, simulators]}
+- {id: core.unit_registry, owner: kernel, inputs: [unit], outputs: [unit_state], event_triggers: [], status: PARTIALLY_ACTIVE, consumers: [digital_twins], note: twins ensure_unit lazy-imports UnitRegistry; Phase 2 live wiring}
+- {id: core.validity, owner: kernel, inputs: [finding, concepts], outputs: [validity_status], event_triggers: [concept_changed], status: DORMANT, consumers: [], note: twin_versioning mirrors ACTIVE->HISTORICAL blocks; mark_stale_findings still sim-scoped}
+- {id: config.kernel_config, owner: kernel.config, inputs: [tbd], outputs: [config], event_triggers: [], status: DORMANT, consumers: []}
+- {id: config.ontology_config, owner: kernel.config, inputs: [tbd], outputs: [tbd], event_triggers: [], status: DORMANT, consumers: [], note: empty stub}
+- {id: events.event_engine, owner: kernel.events, inputs: [event], outputs: [persisted_event], event_triggers: [event_published], status: ACTIVE, consumers: [agent_loop, ops_tooling, digital_twins]}
+- {id: core.kernel_bus, owner: kernel, inputs: [event, signal, observation], outputs: [event_id, signal_id], event_triggers: [event_published, signal_published], status: PARTIALLY_ACTIVE, consumers: [economy, digital_twins]}
+- {id: events.event_extractor, owner: kernel.events, inputs: [raw_observation], outputs: [canonical_event], event_triggers: [], status: PARTIALLY_ACTIVE, consumers: [economy]}
+- {id: events.timeline_engine, owner: kernel.events, inputs: [event], outputs: [timeline_entry], event_triggers: [event_published], status: PARTIALLY_ACTIVE, consumers: [ops_tooling]}
+- {id: extractors.signal_extractor, owner: kernel.extractors, inputs: [text, observation], outputs: [signal], event_triggers: [node_added], status: PARTIALLY_ACTIVE, consumers: [argu_god]}
+- {id: extractors.pattern_extractor, owner: kernel.extractors, inputs: [tbd], outputs: [tbd], event_triggers: [], status: DORMANT, consumers: [], note: empty stub}
+- {id: extractors.hypothesis_extractor, owner: kernel.extractors, inputs: [tbd], outputs: [tbd], event_triggers: [], status: DORMANT, consumers: [], note: empty stub}
+- {id: hypothesis.hypothesis_engine, owner: kernel.hypothesis, inputs: [evidence, context], outputs: [hypothesis], event_triggers: [], status: ACTIVE, consumers: [research_loop, agent_loop, ops_tooling]}
+- {id: hypothesis.contradiction_gate, owner: kernel.hypothesis, inputs: [claim, topic], outputs: [verdict], event_triggers: [claim_proposed], status: ACTIVE, consumers: [research_loop, argu_god, simulators]}
+- {id: hypothesis.confidence_engine, owner: kernel.hypothesis, inputs: [tbd], outputs: [confidence], event_triggers: [], status: DORMANT, consumers: []}
+- {id: hypothesis.validation_engine, owner: kernel.hypothesis, inputs: [tbd], outputs: [tbd], event_triggers: [], status: DORMANT, consumers: [], note: empty stub}
+- {id: memory.episodic_memory, owner: kernel.memory, inputs: [episode], outputs: [finding], event_triggers: [run_completed], status: ACTIVE, consumers: [research_loop, simulators]}
+- {id: memory.memory_engine, owner: kernel.memory, inputs: [node], outputs: [stored_node], event_triggers: [node_added], status: ACTIVE, consumers: [research_loop, argu_god, ops_tooling, digital_twins]}
+- {id: memory.semantic_memory, owner: kernel.memory, inputs: [node, edge], outputs: [semantic_state], event_triggers: [node_added], status: ACTIVE, consumers: [research_loop, argu_god, ops_tooling]}
+- {id: memory.working_memory, owner: kernel.memory, inputs: [item], outputs: [context], event_triggers: [], status: ACTIVE, consumers: [agent_loop, research_loop]}
+- {id: memory.pattern_memory, owner: kernel.memory, inputs: [tbd], outputs: [tbd], event_triggers: [], status: DORMANT, consumers: [], note: empty stub}
+- {id: ontology.event_types, owner: kernel.ontology, inputs: [tbd], outputs: [event_type_def], event_triggers: [], status: DORMANT, consumers: []}
+- {id: ontology.unit_types, owner: kernel.ontology, inputs: [tbd], outputs: [unit_type_def], event_triggers: [], status: DORMANT, consumers: []}
+- {id: ontology.behavior_types, owner: kernel.ontology, inputs: [tbd], outputs: [behavior_type_def], event_triggers: [], status: DORMANT, consumers: []}
+- {id: ontology.pattern_types, owner: kernel.ontology, inputs: [tbd], outputs: [pattern_type_def], event_triggers: [], status: DORMANT, consumers: []}
+- {id: ontology.relation_types, owner: kernel.ontology, inputs: [tbd], outputs: [relation_type_def], event_triggers: [], status: DORMANT, consumers: []}
+- {id: ontology.signal_types, owner: kernel.ontology, inputs: [tbd], outputs: [signal_type_def], event_triggers: [], status: DORMANT, consumers: []}
+- {id: ontology.resource_types, owner: kernel.ontology, inputs: [tbd], outputs: [resource_type_def], event_triggers: [], status: DORMANT, consumers: []}
+- {id: ontology.hypothesis_types, owner: kernel.ontology, inputs: [tbd], outputs: [tbd], event_triggers: [], status: DORMANT, consumers: [], note: empty stub}
+- {id: patterns.pattern_engine, owner: kernel.patterns, inputs: [signal], outputs: [pattern], event_triggers: [signal_created], status: PARTIALLY_ACTIVE, consumers: [ops_tooling, digital_twins]}
+- {id: patterns.anomaly_detector, owner: kernel.patterns, inputs: [tbd], outputs: [anomaly], event_triggers: [], status: DORMANT, consumers: []}
+- {id: patterns.trend_detector, owner: kernel.patterns, inputs: [signals], outputs: [trend], event_triggers: [], status: PARTIALLY_ACTIVE, consumers: [digital_twins]}
+- {id: patterns.contradiction_detector, owner: kernel.patterns, inputs: [belief], outputs: [contradiction], event_triggers: [], status: PARTIALLY_ACTIVE, consumers: [argu_god]}
+- {id: patterns.causal_engine, owner: kernel.patterns, inputs: [tbd], outputs: [tbd], event_triggers: [], status: DORMANT, consumers: [], note: empty stub}
+- {id: persistence.db, owner: kernel.persistence, inputs: [record], outputs: [stored_record], event_triggers: [], status: ACTIVE, consumers: [research_loop, agent_loop, argu_god, stock_analyser, simulators, ops_tooling]}
+- {id: persistence.package_init, owner: kernel.persistence, inputs: [tbd], outputs: [tbd], event_triggers: [], status: DORMANT, consumers: [], note: empty stub}
+- {id: retrieval.retrieval_engine, owner: kernel.retrieval, inputs: [query], outputs: [retrieval_result], event_triggers: [], status: ACTIVE, consumers: [research_loop, agent_loop]}
+- {id: retrieval.semantic_retriever, owner: kernel.retrieval, inputs: [query], outputs: [semantic_hits], event_triggers: [], status: ACTIVE, consumers: [argu_god]}
+- {id: retrieval.unit_retriever, owner: kernel.retrieval, inputs: [unit_id], outputs: [unit_state], event_triggers: [], status: PARTIALLY_ACTIVE, consumers: [digital_twins]}
+- {id: retrieval.pattern_retriever, owner: kernel.retrieval, inputs: [pattern_type], outputs: [pattern], event_triggers: [], status: PARTIALLY_ACTIVE, consumers: [digital_twins]}
+- {id: retrieval.hierarchy_retriever, owner: kernel.retrieval, inputs: [tbd], outputs: [hierarchy], event_triggers: [], status: DORMANT, consumers: []}
+- {id: retrieval.relation_retriever, owner: kernel.retrieval, inputs: [tbd], outputs: [relations], event_triggers: [], status: DORMANT, consumers: []}
+- {id: retrieval.timeline_retriever, owner: kernel.retrieval, inputs: [unit_id, event_types], outputs: [timeline], event_triggers: [], status: PARTIALLY_ACTIVE, consumers: [digital_twins]}
+- {id: schemas.event_schema, owner: kernel.schemas, inputs: [event_data], outputs: [validated_event], event_triggers: [], status: PARTIALLY_ACTIVE, consumers: [ops_tooling]}
+- {id: schemas.unit_schema, owner: kernel.schemas, inputs: [tbd], outputs: [unit_record], event_triggers: [], status: DORMANT, consumers: []}
+- {id: schemas.signal_schema, owner: kernel.schemas, inputs: [tbd], outputs: [validated_signal], event_triggers: [], status: DORMANT, consumers: []}
+- {id: schemas.pattern_schema, owner: kernel.schemas, inputs: [tbd], outputs: [validated_pattern], event_triggers: [], status: DORMANT, consumers: []}
+- {id: schemas.relation_schema, owner: kernel.schemas, inputs: [tbd], outputs: [validated_relation], event_triggers: [], status: DORMANT, consumers: []}
+- {id: schemas.hypothesis_schema, owner: kernel.schemas, inputs: [tbd], outputs: [validated_hypothesis], event_triggers: [], status: DORMANT, consumers: []}
+- {id: schemas.simulation_schema, owner: kernel.schemas, inputs: [run_data], outputs: [version, finding, validity], event_triggers: [], status: ACTIVE, consumers: [research_loop]}
+- {id: schemas.memory_schema, owner: kernel.schemas, inputs: [tbd], outputs: [tbd], event_triggers: [], status: DORMANT, consumers: [], note: empty stub}
+- {id: schemas.export_json, owner: kernel.schemas, inputs: [unit_schema], outputs: [unit_schema_json, unit_schema_v1_json], event_triggers: [], status: DORMANT, consumers: []}
+- {id: signals.signal_engine, owner: kernel.signals, inputs: [signal], outputs: [persisted_signal], event_triggers: [signal_published], status: ACTIVE, consumers: [agent_loop, stock_analyser, simulators, digital_twins]}
+- {id: signals.signal_router, owner: kernel.signals, inputs: [signal], outputs: [subscriber_list], event_triggers: [signal_published], status: PARTIALLY_ACTIVE, consumers: [economy]}
+- {id: signals.signal_validator, owner: kernel.signals, inputs: [signal], outputs: [validation_result], event_triggers: [], status: DORMANT, consumers: []}
+- {id: signals.belief_signal_handler, owner: kernel.signals, inputs: [belief_signal], outputs: [tbd], event_triggers: [signal_published], status: PARTIALLY_ACTIVE, consumers: [agent_loop]}
+- {id: utils.ids, owner: kernel.utils, inputs: [tbd], outputs: [id], event_triggers: [], status: PARTIALLY_ACTIVE, consumers: [agent_loop]}
+- {id: utils.logger, owner: kernel.utils, inputs: [tbd], outputs: [tbd], event_triggers: [], status: DORMANT, consumers: []}
+- {id: utils.paths, owner: kernel.utils, inputs: [tbd], outputs: [path], event_triggers: [], status: DORMANT, consumers: []}
+- {id: utils.timestamps, owner: kernel.utils, inputs: [tbd], outputs: [timestamp], event_triggers: [], status: DORMANT, consumers: []}

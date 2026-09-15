@@ -220,7 +220,7 @@ class SignalEngine:
             for signal
             in self.recent_signals
             if (
-                signal.source_unit_id
+                getattr(signal.source, 'source_id', None)
                 == source_unit_id
             )
         ]
@@ -286,9 +286,11 @@ class SignalEngine:
             event_type=event_type,
             title=title,
             description=description,
-            source_unit_id=signal.source_unit_id,
+            source_type="signal",
+            source_id=getattr(signal, "signal_id", "unknown"),
+            source_name=title,
         )
-        event.add_signal_reference(
+        event.generated_signals.append(
             signal.signal_id
         )
         logger.info(

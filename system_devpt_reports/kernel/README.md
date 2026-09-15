@@ -56,3 +56,7 @@
 | Supersedes Refinements | `topic_ops.py add-node --supersedes NAME` bypasses the similarity gate, marks the prior node `superseded` (exported status, gate-skipped, history kept); `--stance` (decisions default `agree`) lets `contradicts` detection fire |
 | Cross-Topic Evidence | `--evidence TOPIC:NAME` pointers stored in node metadata, both directions via `topic_ops.py neighbors`; `batch --file spec.json` runs many mutations in one hydrate |
 | Dry-Run Gate Verdict | `topic_ops.py --dry-run add-node` runs the contradiction gate without writing and reports `would_block` + conflicts (text and `--json`), so agents can pre-check phrasing |
+| Capability Activation Registry | `kernel/capability_registry.yaml` machine-readable inventory of every kernel module (`ACTIVE/PARTIALLY_ACTIVE/DORMANT`, inputs/outputs/consumers); answers "which dormant capabilities fit X" — code is source |
+| Kernel Bus | `kernel/kernel_bus.py` thin `publish_event/publish_signal/publish_observation` + `subscribe` over existing engines (no new engine logic, kernel.db only); revived `events/event_extractor.py` + `signals/signal_router.py` from empty stubs |
+| Versioned Unit Schema Artifact | `schemas/unit_schema.py:UNIT_SCHEMA_VERSION` + `export_json.py` emits `unit_schema.v1.json` (single source; FireFlow vendoring deferred) |
+| Validity as Twin Versioning | `validity.py` concept-invalidation reused outside sims: twin `v1→HISTORICAL` on field change with changed-variables recorded |

@@ -619,6 +619,25 @@ class DigitalTwinManager:
             ),
         }
     # HELPERS
+    def ensure_unit(
+        self,
+        unit_id: str,
+        unit_type: str,
+        name: str = "",
+        source: str = "digital_twins",
+    ) -> Optional[Dict[str, Any]]:
+        """Register a unit via the ONE kernel unit scheme (see CityTwin.ensure_unit)."""
+        if self.unit_registry is None:
+            from kernel.unit_registry import UnitRegistry
+            self.unit_registry = UnitRegistry()
+        unit = {
+            "unit_id": unit_id,
+            "unit_type": unit_type,
+            "name": name or unit_id,
+            "source": source,
+        }
+        self.unit_registry.register_unit(unit)
+        return unit
     def resolve_unit(
         self,
         unit_id: str,

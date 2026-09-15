@@ -5,6 +5,8 @@ from typing import Dict, List, Any, Optional
 from datetime import datetime
 import uuid
 
+UNIT_SCHEMA_VERSION = "1.0.0"
+
 def generate_id(prefix: str = "unit") -> str:
     return f"{prefix}_{uuid.uuid4().hex[:12]}"
 

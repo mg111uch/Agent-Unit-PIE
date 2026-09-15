@@ -1,5 +1,5 @@
 # Kernel Status
-_Last verified: 2026-07-23_
+_Last verified: 2026-09-15_
 > Capability claims are hypotheses. Re-validate: `python scripts/validate_capabilities.py`
 
 ## Current Capability
@@ -19,6 +19,8 @@ _Last verified: 2026-07-23_
 - No self-contradiction detection across sessions — low
 
 ## Recent Changes (newest first, max 10)
+- 2026-09-15: Integration substrate live (PhasePlan 0–6): `capability_registry.yaml` (67 entries ACTIVE/PARTIAL/DORMANT), `kernel_bus.py` (publish_event/signal/observation + subscribe), `events/event_extractor.py` + `signals/signal_router.py` revived from 0-line stubs, versioned unit-schema artifact (`unit_schema.v1.json`, `UNIT_SCHEMA_VERSION=1.0.0`), `query_events` + cascade glue, validity first caller (twin versioning)
+- 2026-09-15: Twins + calibration + contrast loop closed on kernel: Kanpur capacity slice (observation→event→signal→pattern→cascade answer), versioned CityState twins, calibration→popula baseline (4% pop error), policy registry + cross-city Pareto lab + sensor flywheel — all findings via kernel lineage, tmp-DB verified, real kernel.db untouched
 - E5+E6: export_to_semantic_memory uses hypothesis_type as node_type + status in metadata; dev_change event type added; timeline_engine.add_event fixed — `codebase/kernel/hypothesis/hypothesis_engine.py`, `codebase/kernel/events/timeline_engine.py`, `codebase/kernel/ontology/event_types.py`
 - 2026-07-21: Kernel improvements: analyzer.py removed, vector_store consolidated, config constants centralized, kernel_bridge relocated, MCP code RAG tools added, SQLite sole persistence backend
 - 2026-07-21: Test suite created: tests/kernel/test_integration.py — 11 tests covering contradiction detection, signal pipeline, semantic population

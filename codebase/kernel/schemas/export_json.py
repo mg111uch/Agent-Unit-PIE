@@ -31,12 +31,15 @@ def main() -> None:
             raise TypeError(f"{name} is not a dataclass")
         fields[name] = sorted(f.name for f in dataclasses.fields(cls))
     top = sorted(f.name for f in dataclasses.fields(mod.UnitSchema))
-    artifact = {"schema_version": SCHEMA_VERSION,
+    version = getattr(mod, "UNIT_SCHEMA_VERSION", SCHEMA_VERSION)
+    artifact = {"schema_version": version,
                 "fields": dict(sorted(fields.items())),
                 "required": top}
     out = HERE / "unit_schema.json"
     out.write_text(json.dumps(artifact, indent=2, sort_keys=True) + "\n")
-    print(f"wrote {out} schema_version={SCHEMA_VERSION}")
+    vout = HERE / f"unit_schema.v{version.split('.')[0]}.json"
+    vout.write_text(json.dumps(artifact, indent=2, sort_keys=True) + "\n")
+    print(f"wrote {out} + {vout} schema_version={version}")
 
 
 if __name__ == "__main__":

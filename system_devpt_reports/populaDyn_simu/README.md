@@ -2,6 +2,10 @@
 
 > **For future agents:** Keep this README as wholesome feature docs — add/update features as one-liner prose rows in `## Features Overview`; do not add phase sections or phase-wise history. Code is the ultimate source of truth.
 
+## Clarification
+- **popula_dyn** is a *general* civilization simulator — not tied to any real city. Use it to simulate policies, human-behavior patterns, and emergent rules (what-if experiments, not a city replica).
+- **digital_twins** are 1:1 replicas of *real existing* cities. First replicas: **Kanpur** and **Delhi** (city twin → params/scenarios flow into popula_dyn via kernel).
+
 ## New system
 - Generic `UnitAgent` with behavior list
 - Pluggable behaviors in registry
@@ -55,6 +59,7 @@ Goal-autonomous research using the shared agent loop.
 | Simulation Model | Unit initialization, `BehaviorRegistry` + `SpatialEngine` orchestration, stepwise `step`/`run`, `DataCollector` (Population, Wealth, Births/Births_Cumul, Deaths/Deaths_Cumul) |
 | WorldEngine Integration | `simulation_model` constructor param, `process_simulation()` tick, `with_agricultural_simulation(params)`, `health_check` |
 | Simulation Connector | `run_and_extract`/`compare_runs`/`inject_policy`/`get_signals`/`list_runs`; stores `params.yaml`, `signals.json`, `data.csv`, `summary.json` under `data/units/simulations/{run_id}` |
+| Twin-Driven Scenarios | `digital_twins/calibration_engine.py` maps CityState fields to sim params (honest fields only, placeholders as ranges); baseline-vs-held-history validation; `policy_experiments.py` registry + `contrast_lab.py` cross-city runs reuse `core/scenarios.py` branch/score with full lineage — sim code unchanged |
 | Per-Sim Isolation & Lineage | Kernel scopes findings, versions and topics per simulator (`sim@commit` via Git, `data/units/simulations/{sim}/{run}` sharded, `ACTIVE→HISTORICAL` validity) — code is source of truth |
 | Pattern Auto-Detection | Simulation signals → kernel pattern engine (population_trends, resource_cycles, collapse_signals), closes simulation → cognition loop |
 | Reproduction & Mating | Fertile window 15–50, `mate_radius`/`mate_global_fallback`/`require_opposite_gender`, `births_total`/`deaths_total` cumulative, independent `model.random` RNG |

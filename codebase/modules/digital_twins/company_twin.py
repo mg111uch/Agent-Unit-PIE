@@ -85,11 +85,14 @@ class CompanyTwin:
         resource_engine=None,
         market_engine=None,
         timeline_engine=None,
+        unit_registry=None,
         config: Optional[
             Dict[str, Any]
         ] = None,
     ):
         self.company_id = company_id
+        self.unit_id = f"company_{company_id}"
+        self.unit_registry = unit_registry
         self.memory_engine = (
             memory_engine
         )
@@ -759,6 +762,33 @@ class CompanyTwin:
                 self.timeline
             ),
         }
+    # IDENTITY (ONE kernel unit scheme)
+    def ensure_unit(
+        self,
+    ) -> Dict[str, Any]:
+        """Register this twin via kernel/unit_registry.py:UnitRegistry.
+
+        Duck-type seam: any object with register_unit/get_unit works;
+        the canonical kernel registry is the lazy default (Phase 2
+        wires it live).
+        """
+        if self.unit_registry is None:
+            from kernel.unit_registry import UnitRegistry
+            self.unit_registry = UnitRegistry()
+        unit = {
+            "unit_id": self.unit_id,
+            "unit_type": "company",
+            "name": self.company_id,
+            "source": "digital_twins",
+        }
+        self.unit_registry.register_unit(unit)
+        return unit
+    def resolve_unit(
+        self,
+    ) -> Optional[Dict[str, Any]]:
+        if self.unit_registry is None:
+            return None
+        return self.unit_registry.get_unit(self.unit_id)
     # HELPERS
     @staticmethod
     def utc_now() -> str:

@@ -2,6 +2,7 @@
 
   conda run -n myenv python codebase/modules/stock_analyser/paper/cli.py trees
   conda run -n myenv python codebase/modules/stock_analyser/paper/cli.py portfolio [--tree T1/batch3]
+  conda run -n myenv python codebase/modules/stock_analyser/paper/cli.py backfill [--universe MY_UNIVERSE_200]
   conda run -n myenv python codebase/modules/stock_analyser/paper/cli.py next
   conda run -n myenv python codebase/modules/stock_analyser/paper/cli.py promote --run <rid> --policy <name>
   conda run -n myenv python codebase/modules/stock_analyser/paper/cli.py migrate --from A --to B
@@ -30,6 +31,17 @@ def _pct(x: float, base: float) -> str:
     return f"{100 * x / base:+.2f}%" if base else "+0.00%"
 
 
+def _hold_days(t_in: str, as_of: str) -> str:
+    """Calendar days held: as_of - t_in (YYYY-MM-DD). '-' when unparseable."""
+    try:
+        from datetime import date
+        d0 = date.fromisoformat((t_in or "")[:10])
+        d1 = date.fromisoformat((as_of or "")[:10])
+        return str(max(0, (d1 - d0).days))
+    except Exception:
+        return "-"
+
+
 def _closes(symbols: List[str], db_path: str | None, n: int = 2) -> Dict[str, list]:
     from modules.stock_analyser.data.store import query_equity
     out = {}
@@ -52,6 +64,13 @@ def portfolio(trees: List[str], db_path: str | None = None,
         syms = {r[0] for r in con.execute(
             "SELECT DISTINCT symbol FROM paper_trades WHERE strategy IN (%s)"
             % ",".join("?" * len(trees)), trees).fetchall()}
+        if use_live and syms:
+            try:  # --live tops up daily bars so as_of advances (best-effort)
+                from modules.stock_analyser.data.recorder import fetch_daily_history
+                fetch_daily_history(sorted(syms), span="1mo", timeframe="1D",
+                                    db_path=db_path)
+            except Exception:
+                pass
         px = _closes(sorted(syms), db_path)
         cmp_src: Dict[str, str] = {}
         live_mode = "closed"
@@ -107,6 +126,7 @@ def portfolio(trees: List[str], db_path: str | None = None,
                     hold = qty * last
                     pos.append({"symbol": sym, "qty": int(qty), "entry": px_in,
                                 "t_in": (t_in or "")[:10], "live": round(last, 1),
+                                "hold_days": _hold_days(t_in, today),
                                 "unreal": round(u, 1), "unreal_pct": _pct(u, qty * px_in),
                                 "holding": round(hold, 0), "status": "OPEN"})
                     unreal += u
@@ -114,6 +134,7 @@ def portfolio(trees: List[str], db_path: str | None = None,
                 for sym, qty, px_in, px_out, net, t_in, t_out in closed:
                     pos.append({"symbol": sym, "qty": int(qty), "entry": px_in,
                                 "t_in": (t_in or "")[:10], "live": round(px_out or 0, 1),
+                                "hold_days": _hold_days(t_in, t_out),
                                 "unreal": round(net or 0, 1),
                                 "unreal_pct": _pct(net or 0, qty * px_in),
                                 "holding": 0, "status": f"CLOSED@{(t_out or '')[:10]}"})
@@ -186,10 +207,10 @@ def print_portfolio(p: Dict[str, Any]) -> None:
             if not m["positions"]:
                 print("    (no open positions)")
                 continue
-            rows = [["Symbol", "Qty", "Entry", "Since", "Live", "Unreal", "Holding", "Status"]]
+            rows = [["Symbol", "Qty", "Entry", "Since", "Hold Days", "Live", "Unreal", "Holding", "Status"]]
             for q in m["positions"]:
                 rows.append([str(q["symbol"]), str(q["qty"]), f"{q['entry']:.2f}",
-                             str(q["t_in"]), f"{q['live']:.1f}",
+                             str(q["t_in"]), str(q.get("hold_days", "-")), f"{q['live']:.1f}",
                              f"{q['unreal']:+.0f} ({q['unreal_pct']})",
                              f"{q['holding']:.0f}", str(q["status"])])
             for line in _table(rows):
@@ -355,6 +376,32 @@ def next_day(trees: List[str] | None = None, db_path: str | None = None) -> Dict
     return out
 
 
+def cmd_backfill(universe: str | None = None, symbols: List[str] | None = None,
+                 span: str = "1mo", timeframe: str = "1D",
+                 db_path: str | None = None) -> Dict[str, Any]:
+    """Backfill daily bars (split-adjusted Yahoo, idempotent). Defaults to MY_UNIVERSE_200."""
+    from modules.stock_analyser.data.universe import resolve_universe
+    from modules.stock_analyser.data.recorder import fetch_daily_history
+    if symbols:
+        syms = sorted({s.strip().upper() for s in symbols if s and s.strip()})
+        src = "symbols"
+    else:
+        name = universe or "MY_UNIVERSE_200"
+        syms = resolve_universe(name, db_path)
+        src = f"universe {name}"
+    if not syms:
+        print(f"BACKFILL {src}: no symbols resolved")
+        return {"symbols": 0, "new_rows": 0}
+    out = fetch_daily_history(syms, span=span, timeframe=timeframe, db_path=db_path)
+    print(f"BACKFILL {src}: {len(syms)} symbols span={span} new_rows={out.get('new_rows', 0)}")
+    errs = {s: v for s, v in (out.get("per_symbol") or {}).items() if isinstance(v, str)}
+    if errs:
+        sample = ", ".join(f"{s}({v[:40]})" for s, v in list(errs.items())[:5])
+        print(f"  errors {len(errs)}: {sample}")
+    return {"src": src, "symbols": len(syms), "new_rows": out.get("new_rows", 0),
+            "errors": len(errs)}
+
+
 def main(argv: List[str] | None = None) -> None:
     ap = argparse.ArgumentParser(prog="paper.cli")
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -363,7 +410,7 @@ def main(argv: List[str] | None = None) -> None:
     p1.add_argument("--tree", default=None, help="tree id (see trees cmd)")
     p1.add_argument("--db", default=None)
     p1.add_argument("--live", action="store_true",
-                    help="fetch fresh CMP; default shows last fetched CMP (no network)")
+                    help="backfill daily bars + fetch fresh CMP; default offline cache")
     p2 = sub.add_parser("next", help="step non-DEAD trees")
     p2.add_argument("--trees", nargs="*", default=None)
     p2.add_argument("--db", default=None)
@@ -377,6 +424,12 @@ def main(argv: List[str] | None = None) -> None:
     p5.add_argument("--run", required=True)
     p5.add_argument("--policy", required=True)
     p5.add_argument("--db", default=None)
+    p6 = sub.add_parser("backfill", help="backfill daily bars for a universe/symbols")
+    p6.add_argument("--universe", default="MY_UNIVERSE_200")
+    p6.add_argument("--symbols", nargs="*", default=None)
+    p6.add_argument("--span", default="1mo", help="yahoo range: 5d/1mo/1y (1y = first fill)")
+    p6.add_argument("--timeframe", default="1D")
+    p6.add_argument("--db", default=None)
     a = ap.parse_args(argv)
     if a.cmd == "portfolio":
         if a.trees:
@@ -391,6 +444,9 @@ def main(argv: List[str] | None = None) -> None:
         cmd_trees(db_path=a.db)
     elif a.cmd == "promote":
         cmd_promote(a.run, a.policy, db_path=a.db)
+    elif a.cmd == "backfill":
+        cmd_backfill(a.universe, a.symbols, span=a.span,
+                     timeframe=a.timeframe, db_path=a.db)
     else:
         next_day(a.trees, db_path=a.db)
 

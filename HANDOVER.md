@@ -16,6 +16,15 @@ Rule: fresh agent picks a module, loads its `module.json` first (`development/mo
 
 Follow the unified loop in `data/workflows/research_development.json` (see `research_development.md` for node contracts) strictly via `develop.*` primitives — LLM thinks inside workflow, `workflow_engine` enforces transitions. No steps duplicated here — read workflow files.
 
+## Integration target (PhasePlan track)
+
+Kernel + FireFlow + economy + popula_dyn + digital_twins converge as a SINGLE integrated
+application on the kernel bus (kernel = substrate: identity, events, memory; FireFlow =
+economic execution + sensors; economy = books/graphs; twins = state estimate;
+popula_dyn = policy laboratory). Plan: `system_devpt_reports/PhasePlan.md`, source
+`system_devpt_reports/FixesIssues.md`. Standalone, excluded from this convergence:
+stock_analyser (own ledger `data/market.db`, own loop) and control-works (external games).
+
 ## Execution Mode — Ask First
 
 Fresh agents must ask user before iteration 2+:
@@ -100,6 +109,8 @@ develop_orient({"query":"population","module":"popula_dyn"})
 `applicable` = engine `allowed` minus descriptor `skip_nodes` (no engine change). Run descriptor `commands` via `bash workdir` (externals) or `develop.*` (native). Close every run with one kernel node (`scripts/topic_ops.py add-node`, decision/argument) on the module topic, plus playbook entries for cross-module lessons.
 
 Loop mandate: ALL module work — native sims AND external dirs — runs inside the `research_development` loop via `develop.*` primitives (orient → hypothesis → decide_branch → experiment/modify → analyze → validate → loop). No raw execution outside the loop: no direct training launches, no manual experiment runs, no hand-written kernel nodes. Descriptor `commands` execute as loop experiment steps with the worker reporting back through `develop_analyze`/`develop_validate`, so gates, lineage sync, and docs-freshness apply to externals exactly as to native sims. Direct terminal use is for read-only inspection (logs, plots, `ps`) only.
+
+Scope rule: research_development loop is for modules only (native + external). Kernel, workflow, or harness edits are out-of-loop — never drive them through `develop.*` or `develop_commit`, never run `git add`/`git commit`/`git push`/`gh` or any git command after them (not even `git add`). Kernel fixes are direct patches with no commit; commits happen only for module legs via `develop_commit`.
 
 ## Training discipline — one at a time (host is CPU-bound)
 

@@ -85,11 +85,17 @@ class CityTwin:
         resource_engine=None,
         timeline_engine=None,
         knowledge_engine=None,
+        unit_registry=None,
         config: Optional[
             Dict[str, Any]
         ] = None,
     ):
         self.city_id = city_id
+        self.unit_id = f"city_{city_id}"
+        self.unit_registry = unit_registry
+        self.state: Dict[str, Any] = {}
+        self.twin_version_n = 1
+        self.version_history: List[Dict[str, Any]] = []
         self.memory_engine = (
             memory_engine
         )
@@ -684,6 +690,50 @@ class CityTwin:
                 ]
             ),
         }
+    # VERSIONED STATE (thin; logic in city_state.py / twin_versioning.py)
+    def set_state(self, fields: Dict[str, Any]) -> Dict[str, Any]:
+        from .city_state import build_state
+        self.state = build_state(self.city_id, fields)
+        return self.state
+    def snapshot(self) -> Dict[str, Any]:
+        from .city_state import snapshot_state
+        from .twin_versioning import version_id
+        return snapshot_state(
+            self.city_id, version_id(self.city_id, self.twin_version_n),
+            self.state)
+    def bump_version(self, changed: List[str], sources: List[str]):
+        from .twin_versioning import bump_version
+        rec = bump_version(self.city_id, self.twin_version_n, changed, sources)
+        self.version_history.append(rec["superseded"])
+        self.twin_version_n += 1
+        return rec
+    # IDENTITY (ONE kernel unit scheme)
+    def ensure_unit(
+        self,
+    ) -> Dict[str, Any]:
+        """Register this twin via kernel/unit_registry.py:UnitRegistry.
+
+        Duck-type seam: any object with register_unit/get_unit works;
+        the canonical kernel registry is the lazy default so twins
+        import kernel only when wiring runs (Phase 2 wires it live).
+        """
+        if self.unit_registry is None:
+            from kernel.unit_registry import UnitRegistry
+            self.unit_registry = UnitRegistry()
+        unit = {
+            "unit_id": self.unit_id,
+            "unit_type": "city",
+            "name": self.city_id,
+            "source": "digital_twins",
+        }
+        self.unit_registry.register_unit(unit)
+        return unit
+    def resolve_unit(
+        self,
+    ) -> Optional[Dict[str, Any]]:
+        if self.unit_registry is None:
+            return None
+        return self.unit_registry.get_unit(self.unit_id)
     # HELPERS
     @staticmethod
     def utc_now() -> str:
