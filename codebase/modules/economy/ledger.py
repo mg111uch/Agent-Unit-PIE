@@ -25,6 +25,14 @@ CREATE TABLE IF NOT EXISTS tasks(
 CREATE TABLE IF NOT EXISTS transactions(
   tx_id TEXT PRIMARY KEY, sender TEXT, recipient TEXT,
   amount REAL, kind TEXT DEFAULT 'payment', ts TEXT DEFAULT '');
+CREATE TABLE IF NOT EXISTS prospects(
+  prospect_id TEXT PRIMARY KEY, company TEXT, problem TEXT,
+  region TEXT DEFAULT '', industry TEXT DEFAULT '',
+  evidence_json TEXT DEFAULT '[]', triggers_json TEXT DEFAULT '[]',
+  estimated_monthly_value REAL DEFAULT 0.0,
+  recommended_pilot REAL DEFAULT 0.0,
+  contactability REAL DEFAULT 0.5, confidence REAL DEFAULT 0.5,
+  source TEXT DEFAULT '', no_contact INTEGER DEFAULT 0);
 """
 
 
@@ -191,8 +199,45 @@ def get_tx(txid: str, db_path: Optional[str] = None) -> Optional[Dict[str, Any]]
         con.close()
 
 
+def record_prospect(p: Any, db_path: Optional[str] = None) -> str:
+    d = asdict(p) if not isinstance(p, dict) else dict(p)
+    con = connect(db_path)
+    try:
+        con.executescript(SCHEMA)
+        con.execute(
+            "INSERT OR IGNORE INTO prospects(prospect_id,company,problem,"
+            "region,industry,evidence_json,triggers_json,"
+            "estimated_monthly_value,recommended_pilot,contactability,"
+            "confidence,source,no_contact) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            (d["prospect_id"], d["company"], d["problem"],
+             d.get("region", ""), d.get("industry", ""),
+             json.dumps(d.get("evidence", [])),
+             json.dumps(d.get("triggers", [])),
+             d.get("estimated_monthly_value", 0.0),
+             d.get("recommended_pilot", 0.0),
+             d.get("contactability", 0.5), d.get("confidence", 0.5),
+             d.get("source", ""), int(bool(d.get("no_contact", False)))))
+        con.commit()
+        return d["prospect_id"]
+    finally:
+        con.close()
+
+
+def get_prospect(pid: str, db_path: Optional[str] = None) -> Optional[Dict[str, Any]]:
+    con = connect(db_path)
+    try:
+        r = _row(con, "SELECT * FROM prospects WHERE prospect_id=?", (pid,))
+        if r:
+            r["evidence"] = json.loads(r.pop("evidence_json", "[]"))
+            r["triggers"] = json.loads(r.pop("triggers_json", "[]"))
+            r["no_contact"] = bool(r["no_contact"])
+        return r
+    finally:
+        con.close()
+
+
 def list_table(table: str, db_path: Optional[str] = None) -> List[Dict[str, Any]]:
-    assert table in ("units", "opportunities", "tasks", "transactions")
+    assert table in ("units", "opportunities", "tasks", "transactions", "prospects")
     con = connect(db_path)
     try:
         con.row_factory = sqlite3.Row

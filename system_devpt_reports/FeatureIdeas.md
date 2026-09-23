@@ -1011,7 +1011,3 @@ The current FireFlow already has most of the **economic primitives** required fo
 One final point: because FireFlow will operate around gig/platform work, payments and personal data, compliance must be built into the execution substrate rather than left for the growth stage. India's Social Security Code has been enforced since November 21, 2025, including provisions concerning gig/platform workers, while India's DPDP Rules were notified in November 2025 with phased implementation. ([Labour Government of India][3])
 
 **I would now stop feature expansion and build the first closed loop: `PIE finds paying B2B problem → FireFlow executes → customer pays → ledger reconciles → PIE learns`.** That is the point at which your moonshot stops being an architecture and starts becoming an engine.
-
-[1]: https://www.meity.gov.in/static/uploads/2026/04/46face7d48c8f6a97030f713ad5fdab4.pdf?utm_source=chatgpt.com "COVER _ Meity_2025-26.cdr"
-[2]: https://compute.indiaai.gov.in/endusers?utm_source=chatgpt.com "India Al Cloud Computing Portal"
-[3]: https://www.labour.gov.in/static/uploads/2026/03/d70bb9f7e87ec48bd64fde40329f9c09.pdf?utm_source=chatgpt.com "No. H-11025/03/2025-GPW"

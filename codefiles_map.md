@@ -794,7 +794,7 @@ Total tokens: 722540
 │   ├── economy/ [64 LOC, 1058 tokens]
 │   │   ├── [] roadmap.md [16 LOC, 113 tokens]
 │   │   ├── [] status.md [19 LOC, 379 tokens]
-│   │   └── [] README.md [29 LOC, 566 tokens]
+│   │   └── [X] README.md [29 LOC, 566 tokens]
 │   ├── agent_core/ [1428 LOC, 19898 tokens]
 │   │   ├── [] roadmap.md [339 LOC, 5186 tokens]
 │   │   ├── [] status.md [38 LOC, 1143 tokens]

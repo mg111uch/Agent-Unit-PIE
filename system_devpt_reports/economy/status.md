@@ -7,14 +7,14 @@ _Last verified: 2026-09-15_
 - Economic layer live: object model + ledger, opportunity engine, twin sync both ways, firm hire/invest, capital books + approval gate, execution pipeline, economic loop subgraph, industrial graph lite, barter kernel, fiscal ledger (all rows in README Features; smoke ok, harness 5/5 at ship time).
 
 ## Next (single source for the next task)
-_Economic core + twin sync + fiscal record shipped. Next slice TBD (supplier graph expansion or export engine)._
+_3 India READY packs (DealerGPT, RSG, VexarDrive-hybrid-caution). Next: your manual submits on hasjob links, then daily re-scan._
 
 ## Recent (newest first, max 5)
-- 2026-09-15: Economic event adapter shipped — FireFlow-shaped `PaymentSettled` → kernel event + `capital_flow` signal via `kernel_bus` (`event_adapter.py`, proxy pattern, no external calls); smoke ok on tmp DB.
-- 2026-09-09: Opportunity engine 7-factor — scalability/adjacency added (objects/ledger/scoring/challenge + FireFlow thin proxy via score_cli, no duplicated weights); tmp-DB smoke ok.
-- 2026-09-08: Fiscal ledger shipped — fiscal.py (fiscal_runs in market.db, record_fiscal/query_fiscal, net column) wired into execution.record_outcome_tx; smoke ok on tmp DB (net=15, idempotent), sim determinism intact.
-- 2026-09-08: Barter kernel shipped — scoring.barter_price over popula_dyn scarcity, no ledger writes, sim direction-verified.
-- 2026-09-08: Actor→Unit rename shipped — objects/ledger (units table + actors→units migration, actors never dropped) + all callers; tmp-DB smoke ok.
-- 2026-09-06: Industrial graph lite shipped — industrial.py graph queries, smoke ok, harness 5/5.
+- 2026-09-17: Hasjob wired (11 India roles) + relocate rule; 3 TAILOR packs logged READY, all India-eligible.
+- 2026-09-17: India-first policy — non-India caps at OUTREACH, India-tagged parser rule; GitLab Canada pack parked.
+- 2026-09-17: Job outreach shipped — `jobs/job_outreach.py` (notes + caps + approval); 2 drafts logged, both needs_approval.
+- 2026-09-17: Application packs shipped — `jobs/apply.py` (evidence-only variants, policy gate); Pivotal pack logged READY (auto_ok).
+- 2026-09-17: Job fit shipped — `jobs/fit.py` (gates + description match, 2 live bugs fixed: comp-unknown + ui noise); 8 live roles scored (1 TAILOR, 6 OUTREACH, 1 SKIP).
+- 2026-09-17: Job ingestion shipped — `jobs/sources.py` (6 adapters incl. Hasjob, fixtures green, 95+11 imported).
 
 (End of file)
