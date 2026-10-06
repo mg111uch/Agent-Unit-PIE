@@ -8,16 +8,31 @@ for _c in [_P(__file__).resolve().parents[3], _P(__file__).resolve().parents[4]]
         _s.path.insert(0, str(_c))
 
 
+def test_breakeven_agrees_with_book_cost():
+    # Q9: breakeven rung must satisfy the tariff model at 5k/10k/25k scales
+    from modules.stock_analyser.research.capital_ladder import estimate_breakeven, ladder
+    from modules.stock_analyser.backtest.costs import realistic_breakdown
+    from modules.stock_analyser.config import load_capital
+    cfg = load_capital()
+    steps = ladder(cfg)
+    s = estimate_breakeven(-500.0, 900.0, 10, 50000.0, 0.2, cfg, steps)
+    assert s in steps
+    gross = -500.0 + 900.0
+    assert gross * s / 50000.0 - realistic_breakdown(0.2 * s, cfg)["total"] * 10 > 0
+    prev = max(x for x in steps if x < s)
+    assert gross * prev / 50000.0 - realistic_breakdown(0.2 * prev, cfg)["total"] * 10 <= 0
+
+
 def test_capital_ladder_breakeven():
     from modules.stock_analyser.research.capital_ladder import ladder, estimate_breakeven
     from modules.stock_analyser.config import load_capital
     steps = ladder(load_capital())
     assert steps == [25000, 50000, 75000, 100000]
-    # n=10, net -20/trade at 50k, flat 60: gross=+400 -> C*=75k
-    assert estimate_breakeven(-200.0, 10, 50000.0, 60.0, steps) == 75000
-    assert estimate_breakeven(-600.0, 10, 50000.0, 60.0, steps) is None  # gross<=0
-    assert estimate_breakeven(-500.0, 10, 50000.0, 60.0, steps) is None  # beyond cap
-    assert estimate_breakeven(100.0, 10, 50000.0, 60.0, steps) is None  # already net+
+    # realistic drag dilutes with capital: gross>0 but net<0 at 50k clears higher
+    cfg = load_capital()
+    assert estimate_breakeven(-200.0, 600.0, 10, 50000.0, 0.2, cfg, steps) in steps
+    assert estimate_breakeven(-200.0, 100.0, 10, 50000.0, 0.2, cfg, steps) is None  # gross<=0
+    assert estimate_breakeven(100.0, 600.0, 10, 50000.0, 0.2, cfg, steps) is None  # already net+
 
 
 def test_tradable_filter_drops_low_adv():
@@ -83,16 +98,54 @@ def test_connector_and_paper_drop_indices():
 
 
 def test_engine_tracks_net_of_flat_costs():
+    from unittest import mock
     from modules.stock_analyser.data.providers import SyntheticProvider
     from modules.stock_analyser.strategies.model import default_long_volume_breakout
-    from modules.stock_analyser.backtest.engine import run_backtest
+    import modules.stock_analyser.backtest.engine as E
     data = SyntheticProvider().fetch(["RELIANCE", "TCS"], n=120, seed=11)
     s = default_long_volume_breakout()
     s.flat_cost, s.position_frac, s.max_positions = 60.0, 0.5, 2
-    res = run_backtest(s, data, start_cash=50000.0)
+    flat_cfg = {"min_history_bars": 60, "flat_cost_per_roundtrip": 60,
+                "cost_basis": "flat"}
+    with mock.patch.object(E, "load_capital", return_value=flat_cfg):
+        res = E.run_backtest(s, data, start_cash=50000.0)
     assert res["total_costs"] == 60 * res["n"]
     assert abs(res["avg_net_per_trade"] * res["n"] - res["net_profit"]) < res["n"] * 0.01 + 0.01
     assert res["final_equity"] <= 50000 + sum(t["qty"] * 0 for t in res["trades"]) + 1e6  # sane
+    res = E.run_backtest(s, data, start_cash=50000.0)  # realistic default
+    assert res["n"] > 0
+    from modules.stock_analyser.backtest.costs import realistic_breakdown as _rb
+    from modules.stock_analyser.config import load_capital as _lc
+    _cc = _lc()
+    exp = sum((_rb(t["notional"], _cc)["total"]
+               + _rb(t["notional"] * (1 + t["ret"]), _cc)["total"]) / 2
+              for t in res["trades"])
+    assert abs(res["total_costs"] - exp) < 1.0  # booked = tariff model
+    assert 30 < res["avg_cost_bps"] < 70  # delivery band with DP (not flat 60)
+    assert res["avg_cost_bps"] > 0 and all("notional" in t for t in res["trades"])
+    net_bps = sum(t["net"] / t["notional"] for t in res["trades"]) / res["n"] * 10000
+    assert abs(res["avg_gross_bps"] - res["avg_cost_bps"] - net_bps) < 0.5  # gross-cost=net
+
+
+def test_shadow_scores_carry_provenance():
+    from modules.stock_analyser.data.providers import SyntheticProvider
+    from modules.stock_analyser.strategies.model import strategy_from_dict
+    from modules.stock_analyser.paper.trader import step
+    from modules.stock_analyser.data.store import connect
+    db = os.path.join(tempfile.mkdtemp(), "shprov.db")
+    SyntheticProvider().fetch(["RELIANCE", "TCS"], n=60, seed=5,
+                              db_path=db, persist=True)
+    d = strategy_from_dict({"name": "always", "universe": "U", "timeframe": "1D",
+                            "entry": {"op": "gt", "args": [{"const": 2}, {"const": 1}]},
+                            "max_hold": 2, "position_frac": 0.5, "max_positions": 1,
+                            "flat_cost": 60.0}).to_dict()
+    assert step(d, ["RELIANCE", "TCS"], db_path=db)["status"] == "ok"
+    con = connect(db)
+    cols = [r[1] for r in con.execute("PRAGMA table_info(shadow_scores)").fetchall()]
+    assert {"model", "cfg_hash", "eligible"} <= set(cols)
+    n = con.execute("SELECT COUNT(*) FROM shadow_scores").fetchone()[0]
+    assert n > 0
+    con.close()
 
 
 def test_paper_signal_fill_lifecycle():

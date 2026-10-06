@@ -31,9 +31,10 @@ def _corr(xs: List[float], ys: List[float]) -> float:
     return sum(a * b for a, b in zip(dx, dy)) / den if den else 0.0
 
 
-def _symbolic_stats(entry: Dict, bars: Dict[str, List[Dict]]) -> Dict[str, Any]:
+def _symbolic_stats(entry: Dict, bars: Dict[str, List[Dict]], min_hot: int = 30) -> Dict[str, Any]:
     from ..features.algebra import columns_from_bars, evaluate
     freqs, flips, nobs = [], [], 0
+    n_hot = 0
     for bl in bars.values():
         if len(bl) < 30:
             continue
@@ -41,17 +42,24 @@ def _symbolic_stats(entry: Dict, bars: Dict[str, List[Dict]]) -> Dict[str, Any]:
         hot = [1 if s is True else 0 for s in sigs]
         n = len(hot)
         nobs += n
+        n_hot += sum(hot)
         f = sum(hot) / n if n else 0
         freqs.append(f)
         flips.append(sum(1 for a, b in zip(hot, hot[1:]) if a != b) / n if n else 0)
     if not freqs:
-        return {"freq": 0.0, "nobs": 0, "turnover": 1.0, "stab_sym": 0.0, "stab_time": 0.0}
+        return {"freq": 0.0, "nobs": 0, "n_hot": 0, "turnover": 1.0, "stab_sym": 0.0, "stab_time": 0.0}
     mf = sum(freqs) / len(freqs)
     sd = math.sqrt(sum((f - mf) ** 2 for f in freqs) / len(freqs)) if len(freqs) > 1 else 0.0
-    return {"freq": mf, "nobs": nobs,
+    if n_hot >= min_hot and mf <= 0.4:
+        stab_time = 1.0
+    elif mf > 0.4:  # frenetic: fires on everything, no selection
+        stab_time = max(0.0, 1.0 - abs(mf - 0.1) * 5)
+    else:  # thin but graded by hot-bar count, never structurally killed
+        stab_time = max(0.0, n_hot / min_hot)
+    return {"freq": mf, "nobs": nobs, "n_hot": n_hot,
             "turnover": sum(flips) / len(flips),
             "stab_sym": 1.0 / (1.0 + sd * 10),
-            "stab_time": 1.0 if 0.005 <= mf <= 0.4 else max(0.0, 1.0 - abs(mf - 0.1) * 5)}
+            "stab_time": stab_time}
 
 
 def _ml_stats(bars: Dict[str, List[Dict]]) -> Dict[str, Any]:
@@ -91,14 +99,20 @@ def _rank_spread(vals: List[float], y: List[float], qs: int = 5) -> float:
 
 
 def hierarchy(bars: Dict[str, List[Dict]], feats: List[str] | None = None,
-              cfg: Dict[str, Any] | None = None) -> Dict[str, Any]:
-    """L0-A→E probe ladder over one shared panel. Pass at ANY of B/C/D/E keeps."""
+              cfg: Dict[str, Any] | None = None, _rows=None) -> Dict[str, Any]:
+    """L0-A→E probe ladder over one shared panel. Pass at ANY of B/C/D/E keeps.
+    `_rows`: prebuilt symbol_frame rows (calibration backdoor — lets null/
+    positive-control probes permute labels without rebuilding the panel;
+    production path always builds from bars)."""
     from ..ml.dataset import symbol_frame
     cfg = cfg or {}
     min_obs = int(cfg.get("alpha_min_obs", 200))
-    rows = []
-    for bl in bars.values():
-        rows.extend(symbol_frame(bl))
+    if _rows is not None:
+        rows = [dict(r) for r in _rows]
+    else:
+        rows = []
+        for bl in bars.values():
+            rows.extend(symbol_frame(bl))
     # L0-A sanity
     if len(rows) < min_obs:
         return {"pass": False, "score": -1.0, "levels": {"A": {"nobs": len(rows)}}}
@@ -117,8 +131,9 @@ def hierarchy(bars: Dict[str, List[Dict]], feats: List[str] | None = None,
         if ic > b_ic:
             b_ic = ic
             b_feat = f
-            b_stab = 1.0 - min(1.0, abs(abs(_corr(x[:half], y[:half]))
-                                       - abs(_corr(x[half:], y[half:])) * 10))
+            c1 = abs(_corr(x[:half], y[:half]))
+            c2 = abs(_corr(x[half:], y[half:]))
+            b_stab = 1.0 - min(1.0, abs(c1 - c2) * 10)
     # L0-C rank/nonlinear spread on best-B feature + best spread overall
     b_spread = 0.0
     for f in sorted(ics, key=lambda k: -ics[k])[:5]:
@@ -138,6 +153,9 @@ def hierarchy(bars: Dict[str, List[Dict]], feats: List[str] | None = None,
         cap = min(int(cfg.get("alpha_probe_cap", 2000)), len(rows))
         rng = np.random.RandomState(7)
         idx = rng.choice(len(rows), cap, replace=False)
+        # time split (not random halves): 5-bar labels overlap, so random
+        # halves leak; train past, test future.
+        idx = sorted(idx, key=lambda i: rows[i].get("ts", ""))
         X = np.array([[rows[i][f] for f in use] for i in idx], dtype=float)
         yy = np.array([rows[i]["fwd_ret"] for i in idx], dtype=float)
         k = max(1, cap // 2)
@@ -152,9 +170,10 @@ def hierarchy(bars: Dict[str, List[Dict]], feats: List[str] | None = None,
           "D": {"ic": round(d_ic, 4), "pair": top2},
           "E": {"ic": round(e_ic, 4)}}
     ok = (b_ic >= float(cfg.get("alpha_min_ic", 0.02))
-          or b_spread >= float(cfg.get("alpha_min_spread", 0.15))
-          or d_ic >= float(cfg.get("alpha_min_ic", 0.02))
-          or e_ic >= float(cfg.get("alpha_min_e_ic", 0.05)))
+          and b_stab >= float(cfg.get("alpha_min_stab", 0.5))
+          and (b_spread >= float(cfg.get("alpha_min_spread", 0.15))
+               or d_ic >= float(cfg.get("alpha_min_ic", 0.02))
+               or e_ic >= float(cfg.get("alpha_min_e_ic", 0.05))))
     score = max(b_ic * 2 + b_stab * 0.5, b_spread, d_ic * 2, e_ic * 3)
     return {"pass": ok, "score": round(score, 3), "levels": lv}
 
@@ -162,6 +181,12 @@ def hierarchy(bars: Dict[str, List[Dict]], feats: List[str] | None = None,
 def screen(strategy_d: Dict[str, Any], bars: Dict[str, List[Dict]],
            cfg: Dict[str, Any] | None = None) -> Dict[str, Any]:
     cfg = cfg or {}
+    try:  # seal discipline: the cheap gate never sees the locked-OOS tail;
+        # shared-date first-80% approximates the embargo split (L1 leak fix)
+        from ..backtest.validation import _split as _prelock
+        bars = _prelock(bars, 0.8)[0] or bars
+    except Exception:
+        pass
     fam = (strategy_d.get("meta", {}) or {}).get("family", "sym")
     min_obs = int(cfg.get("alpha_min_obs", 200))
     max_nodes = int(cfg.get("alpha_max_nodes", 60))
@@ -176,14 +201,20 @@ def screen(strategy_d: Dict[str, Any], bars: Dict[str, List[Dict]],
                             "probe_ic": lv.get("E", {}).get("ic", 0.0),
                             "stab": b.get("stab", 0.0),
                             "nobs": lv.get("A", {}).get("nobs", 0)}}
-    st = _symbolic_stats(strategy_d.get("entry", {}), bars)
+    st = _symbolic_stats(strategy_d.get("entry", {}), bars,
+                         min_hot=int(cfg.get("alpha_min_hot", 30)))
     nodes = expr_nodes(strategy_d.get("entry", {}))
     cx = 0.0 if nodes <= max_nodes else (nodes - max_nodes) / max_nodes
     score = st["stab_sym"] + st["stab_time"] - st["turnover"] * 2 - cx
-    ok = (st["nobs"] >= min_obs and 0.005 <= st["freq"] <= 0.4
+    # Sample-size gate (Round-3 activity retune): slow anomalies fire rarely
+    # by nature, so the old 0.005 freq floor killed them structurally. Gate
+    # on evidence instead: >=30 hot bars total, frenetic cap unchanged.
+    ok = (st["nobs"] >= min_obs and st["n_hot"] >= int(cfg.get("alpha_min_hot", 30))
+          and st["freq"] <= 0.4
           and st["turnover"] <= float(cfg.get("alpha_max_turnover", 0.5))
           and nodes <= max_nodes * 2)
     return {"pass": ok, "score": round(score, 3),
-            "metrics": {"freq": round(st["freq"], 4), "turnover": round(st["turnover"], 3),
+            "metrics": {"freq": round(st["freq"], 4), "n_hot": st["n_hot"],
+                        "turnover": round(st["turnover"], 3),
                         "stab_sym": round(st["stab_sym"], 3), "nobs": st["nobs"],
                         "nodes": nodes}}

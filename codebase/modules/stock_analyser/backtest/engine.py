@@ -8,7 +8,7 @@ import math
 from typing import Dict, List, Any
 from ..features.algebra import evaluate, columns_from_bars, _eval
 from ..strategies.model import Strategy
-from .costs import trade_cost, floor_qty
+from .costs import book_cost, floor_qty
 from ..config import load_capital
 
 
@@ -60,13 +60,16 @@ def _signals(strategy: Strategy, bars: List[Dict[str, Any]]) -> List[bool]:
 
 def run_backtest(strategy: Strategy, bars_by_symbol: Dict[str, List[Dict[str, Any]]],
                  start_cash: float = 100000.0, min_bars: int | None = None,
-                 signals: Dict[str, List[bool]] | None = None) -> Dict[str, Any]:
+                 signals: Dict[str, List[bool]] | None = None,
+                 scores: Dict[str, List[float]] | None = None) -> Dict[str, Any]:
     """Date-aligned union panel: symbols join on dates they trade; <min_bars excluded.
 
     No lookahead: a fill on date d uses signals/ATR from that symbol's own bars
     strictly before d. Late entrants (IPOs) trade only inside their window.
     `signals` (ML adapter): precomputed per-symbol bool lists aligned to each
     symbol's bars; entry on date d reads signals[idx(d)-1], same as symbolic.
+    `scores`: parallel per-symbol score lists; capped books fill top-ranked
+    picks first instead of alphabetically.
     """
     if min_bars is None:
         try:
@@ -76,6 +79,14 @@ def run_backtest(strategy: Strategy, bars_by_symbol: Dict[str, List[Dict[str, An
     cash, positions, trades = start_cash, {}, []
     total_costs = 0.0
     flat = _flat(strategy)
+    try:
+        _ccap = load_capital()
+    except Exception:
+        _ccap = {}
+    try:
+        _mult = float((strategy.meta or {}).get("cost_mult", 1.0) or 1.0)
+    except Exception:
+        _mult = 1.0
     equity_curve = []
     syms = sorted(s for s, bl in bars_by_symbol.items() if len(bl) >= min_bars)
     excluded = sorted(set(bars_by_symbol) - set(syms))
@@ -104,24 +115,38 @@ def run_backtest(strategy: Strategy, bars_by_symbol: Dict[str, List[Dict[str, An
             take = p["px_in"] + strategy.take_atr * p["atr"]
             exit_px = None
             if b["low"] <= stop:
-                exit_px = stop
+                # gap-down opens below the stop fill at the open, not the stop
+                exit_px = min(b["open"], stop) if b["open"] else stop
             elif b["high"] >= take:
-                exit_px = take
+                exit_px = max(b["open"], take) if b["open"] else take
             elif hold >= strategy.max_hold:
                 exit_px = b["open"]
             if exit_px is not None:
                 notional = p["qty"] * exit_px
-                cost = trade_cost(notional, flat, strategy.fee_bps, strategy.slippage_bps) / 2
+                cost = book_cost(notional, flat, strategy.fee_bps, strategy.slippage_bps,
+                                _ccap, _mult) / 2
                 total_costs += cost + p["entry_cost"]
                 cash += notional - cost
                 ret = (exit_px - p["px_in"]) / p["px_in"]
                 trades.append({"symbol": s, "t_in": p["t_in"], "t_out": d,
                                "ret": ret, "qty": p["qty"],
+                               "notional": round(p["qty"] * p["px_in"], 2),
                                "net": p["qty"] * (exit_px - p["px_in"]) - cost - p["entry_cost"]})
                 del positions[s]
-        # entries: signal from symbol's own prior bar -> fill at d open
+        # entries: signal from symbol's own prior bar -> fill at d open.
+        # ranked first when scores supplied (top-N policy), else alphabetical.
         if k > 0 and len(positions) < strategy.max_positions:
-            for s in syms:
+            cands = [s for s in syms if s not in positions]
+            if scores:
+                def _rk(s: str) -> float:
+                    sl = scores.get(s) or []
+                    j = min(max(idx_of[s].get(d, 1) - 1, 0), len(bars_by_symbol[s]) - 1)
+                    try:
+                        return float(sl[j]) if j < len(sl) else 0.0
+                    except Exception:
+                        return 0.0
+                cands.sort(key=_rk, reverse=True)
+            for s in cands:
                 if s in positions:
                     continue
                 if len(positions) >= strategy.max_positions:
@@ -144,7 +169,8 @@ def run_backtest(strategy: Strategy, bars_by_symbol: Dict[str, List[Dict[str, An
                 qty = floor_qty(alloc / b["open"]) if b["open"] > 0 else 0
                 if qty < 1:
                     continue
-                cost = trade_cost(qty * b["open"], flat, strategy.fee_bps, strategy.slippage_bps) / 2
+                cost = book_cost(qty * b["open"], flat, strategy.fee_bps, strategy.slippage_bps,
+                               _ccap, _mult) / 2
                 cash -= qty * b["open"] + cost  # pay notional + costs, not costs alone
                 positions[s] = {"qty": qty, "px_in": b["open"], "atr": atr,
                                 "t_in": d, "k_in": k, "last_px": b["open"],
@@ -175,11 +201,16 @@ def _metrics(trades: List[Dict], eq: List[float], start: float,
         peak = max(peak, v)
         dd = min(dd, (v - peak) / peak if peak else 0.0)
     sd = (sum((r - avg) ** 2 for r in rets) / (n - 1)) ** 0.5 if n > 1 else 0.0
-    sharpe = (avg / sd * math.sqrt(252)) if sd else 0.0
+    # per-trade returns held H days annualize with sqrt(252/H), not sqrt(252)
+    hold_d = max(1.0, float(avg_hold) if avg_hold else 1.0)
+    sharpe = (avg / sd * math.sqrt(252.0 / hold_d)) if sd else 0.0
     downside = [r for r in rets if r < 0]
     dsd = (sum(r ** 2 for r in downside) / len(downside)) ** 0.5 if downside else 0.0
-    sortino = (avg / dsd * math.sqrt(252)) if dsd else 0.0
+    sortino = (avg / dsd * math.sqrt(252.0 / hold_d)) if dsd else 0.0
     cagr = ((eq[-1] / start) ** (252 / max(1, len(eq))) - 1) if eq and start else 0.0
+    gross_bps = round(sum(rets) / n * 10000, 1) if n else 0.0
+    cbps = [((t["ret"] * (t.get("notional") or 0) - t.get("net", 0.0))
+             / t["notional"] * 10000) if t.get("notional") else 0.0 for t in trades]
     return {"n": n, "wins": wins, "losses": n - wins, "avg_ret": round(avg, 5),
             "median_ret": round(med, 5), "max_dd": round(dd, 5),
             "sharpe": round(sharpe, 3), "sortino": round(sortino, 3),
@@ -187,4 +218,5 @@ def _metrics(trades: List[Dict], eq: List[float], start: float,
             "total_costs": round(total_costs, 2),
             "net_profit": round(sum(nets), 2),
             "avg_hold_days": avg_hold,
+            "avg_gross_bps": gross_bps, "avg_cost_bps": round(sum(cbps) / n, 1) if n else 0.0,
             "avg_net_per_trade": round(sum(nets) / n, 2) if n else 0.0}

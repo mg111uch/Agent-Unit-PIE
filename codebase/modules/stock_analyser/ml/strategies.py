@@ -58,8 +58,10 @@ def _score_rows(bars: Dict[str, List[Dict]], fwd: int = 5):
     for s, bl in bars.items():
         if not _tradable(s):
             continue
-        for r in _sf(bl, fwd, bench=bench, need_label=False):
+        for r in symbol_frame(bl, fwd, bench=bench, need_label=False):
             rows.append({"symbol": s, **r})
+    from .dataset import _xs_normalize as _xs
+    rows = _xs(rows, with_target=False)
     if len(_SCORE_CACHE) >= 8:
         _SCORE_CACHE.pop(next(iter(_SCORE_CACHE)))
     _SCORE_CACHE[key] = rows
@@ -99,7 +101,8 @@ def _panel_rows_uncached(bars: Dict[str, List[Dict]], fwd: int = 5):
             continue
         for r in symbol_frame(bl, fwd, bench=bench):
             rows.append({"symbol": s, **r})
-    return rows
+    from .dataset import _xs_normalize as _xs
+    return _xs(rows, with_target=True, target_mode="rank-gauss")
 
 
 def _rows_capped(bars: Dict[str, List[Dict]], fwd: int = 5, end_ts: str = ""):
@@ -111,23 +114,120 @@ def _rows_capped(bars: Dict[str, List[Dict]], fwd: int = 5, end_ts: str = ""):
     return [r for r in rows if r.get("ts", "") <= end_ts]
 
 
+def rolling_oos(strategy_d: Dict[str, Any], bars: Dict[str, List[Dict]],
+                lock_from: str, start_cash: float = 50000.0,
+                step_days: int = 21, max_origins: int = 30) -> Dict[str, Any]:
+    """Stitched rolling-origin OOS: monthly expanding-window refit, each model
+    scores only its own forward window; concatenated into one backtest. Gives
+    2-3 years of OOS (vs 6-10 months for the one-shot lock) and matches how
+    paper retrains. The final lock stays one-shot — rolling never sees it."""
+    import pandas as pd
+    from .ranker import score_lists as _sl
+    m = strategy_d.get("meta", {}) or {}
+    df = pd.DataFrame(_panel_rows(bars))
+    if df.empty:
+        return {"error": "no panel", "verdict": "REJECT"}
+    dates = sorted(d for d in set(df["ts"]) if d < lock_from)
+    if len(dates) < 60:
+        return {"error": "thin pre-lock span", "verdict": "REJECT"}
+    origins = dates[::max(1, step_days)][-max_origins:]
+    parts = []
+    for i, o in enumerate(origins):
+        end = origins[i + 1] if i + 1 < len(origins) else lock_from
+        if not (o < end):
+            continue
+        past = df[df["ts"] < o]
+        # purge training labels overlapping the scoring window (see ml_signals)
+        from datetime import datetime as _dt, timedelta as _td
+        try:
+            cut = (_dt.fromisoformat(o) - _td(days=10)).isoformat()
+        except Exception:
+            cut = o
+        past = past[past["ts"] < cut]
+        if len(past) < 50:
+            continue
+        try:
+            model = train_ranker(past, top_n=m.get("top_n", 5),
+                                 model=m.get("model", "hgb"),
+                                 feats=m.get("features"),
+                                 max_depth=m.get("max_depth", 3))
+            parts.append(add_scores(model, df[(df["ts"] >= o) & (df["ts"] < end)]))
+        except Exception:
+            continue
+    if not parts:
+        return {"error": "no origins trained", "verdict": "REJECT"}
+    import pandas as _pd
+    scored = _pd.concat(parts)
+    sigs = top_n_signals(scored, bars, top_n=m.get("top_n", 5),
+                         live_from=origins[0])
+    res = run_backtest(ml_exits(strategy_d), bars, start_cash=start_cash,
+                       min_bars=0, signals=sigs, scores=_sl(scored, bars))
+    res["origins"] = len(parts)
+    res["from"] = origins[0]
+    return res
+
+
 def ml_signals(strategy_d: Dict[str, Any], bars: Dict[str, List[Dict]],
-               live_from: str = "", _rows=None, _score=None) -> Dict[str, List[bool]]:
+               live_from: str = "", _rows=None, _score=None,
+               _keep: list | None = None, _freeze_db: str | None = None,
+               _freeze_name: str = "") -> Dict[str, List[bool]]:
     """Train ranker on labeled bars strictly before live_from; score the
-    label-free frame (incl. latest bars) and mask pre-live_from."""
+    label-free frame (incl. latest bars) and mask pre-live_from.
+
+    Artifact freeze (ridge only): when _freeze_db is given, shadow scoring
+    reuses ONE frozen ridge instead of retraining daily. First call trains
+    and freezes; later calls load the hash-verified artifact. The frozen
+    version is reported via _keep as {"frozen_version": v} so the ledger
+    model id can tag it (refit_warning fires if the id ever changes)."""
     import pandas as pd
     m = strategy_d.get("meta", {})
+    if m.get("model") == "ridge" and _freeze_db and _freeze_name:
+        try:
+            from .freeze import FrozenRidge, frozen_name
+            fz = FrozenRidge(_freeze_db, frozen_name(_freeze_name))
+            fz.top_n_ = int(m.get("top_n", 5) or 5)
+            scored = add_scores(fz, pd.DataFrame(
+                _score if _score is not None else _score_rows(bars)))
+            if _keep is not None:
+                _keep.append(scored)
+                _keep.append({"frozen_version": fz.version})
+            return top_n_signals(scored, bars, top_n=fz.top_n_, live_from=live_from)
+        except KeyError:
+            pass  # no frozen artifact yet: train below, then freeze
+        except Exception:
+            pass
     rows = _rows if _rows is not None else _panel_rows(bars)
     df = pd.DataFrame(rows)
     if df.empty:
         return {s: [False] * len(bl) for s, bl in bars.items()}
-    past = df[df["ts"] < live_from] if live_from else df
+    if live_from:
+        # purge: 5-bar labels (~7-9 calendar days over weekends) must not
+        # overlap the scoring window; 10 calendar days is safely beyond.
+        from datetime import datetime, timedelta
+        try:
+            cut = (datetime.fromisoformat(live_from) - timedelta(days=10)).isoformat()
+        except Exception:
+            cut = live_from
+        past = df[df["ts"] < cut]
+    else:
+        past = df
     if len(past) < 50:
         return {s: [False] * len(bl) for s, bl in bars.items()}
     model = train_ranker(past, top_n=m.get("top_n", 5), model=m.get("model", "hgb"),
                          feats=m.get("features"), max_depth=m.get("max_depth", 3))
+    if m.get("model") == "ridge" and _freeze_db and _freeze_name:
+        try:  # first shadow run freezes; later runs reuse the artifact above
+            from .freeze import freeze_sklearn_ridge, frozen_name
+            v = freeze_sklearn_ridge(_freeze_db, frozen_name(_freeze_name),
+                                     model, {"trained_through": live_from or ""})
+            if _keep is not None:
+                _keep.append({"frozen_version": v})
+        except Exception:
+            pass
     scored = add_scores(model, pd.DataFrame(
         _score if _score is not None else _score_rows(bars)))
+    if _keep is not None:
+        _keep.append(scored)
     return top_n_signals(scored, bars, top_n=m.get("top_n", 5), live_from=live_from)
 
 
@@ -145,20 +245,30 @@ def quick_screen(strategy_d: Dict[str, Any], bars: Dict[str, List[Dict]],
         m = strategy_d.get("meta", {}) or {}
         # train on full history strictly before val (val-only panel starves
         # training: past would be empty by construction); score mapped onto
-        # val bars with pre-live masking, so no peek.
+        # val bars with pre-live masking, so no peek. Purged 10d before val
+        # start so 5-bar labels can't cross the boundary.
         df_all = pd.DataFrame(_panel_rows(bars))
-        past = df_all[df_all["ts"] < live] if live else df_all
+        from datetime import datetime as _dt, timedelta as _td
+        try:
+            _cut = (_dt.fromisoformat(live) - _td(days=10)).isoformat() if live else ""
+        except Exception:
+            _cut = live
+        past = df_all[df_all["ts"] < _cut] if live else df_all
         if df_all.empty or len(past) < 50:
             sigs = {s: [False] * len(bl) for s, bl in val.items()}
+            val_scores = None
         else:
             model = train_ranker(past, top_n=m.get("top_n", 5),
                                  model=m.get("model", "hgb"),
                                  feats=m.get("features"),
                                  max_depth=m.get("max_depth", 3))
-            sigs = top_n_signals(add_scores(model, df_all), val,
+            _qsc = add_scores(model, df_all)
+            from .ranker import score_lists as _qsl
+            sigs = top_n_signals(_qsc, val,
                                  top_n=m.get("top_n", 5), live_from=live)
+            val_scores = _qsl(_qsc, val)
         res = run_backtest(ml_exits(strategy_d), val, start_cash=start_cash,
-                           min_bars=0, signals=sigs)
+                           min_bars=0, signals=sigs, scores=val_scores)
     else:
         from ..strategies.model import strategy_from_dict as sfd
         res = run_backtest(sfd(strategy_d), val, start_cash=start_cash, min_bars=0)
@@ -167,7 +277,8 @@ def quick_screen(strategy_d: Dict[str, Any], bars: Dict[str, List[Dict]],
 
 
 def validate_ml(strategy_d: Dict[str, Any], bars: Dict[str, List[Dict]],
-                start_cash: float = 50000.0, early_kill: bool = True) -> Dict[str, Any]:
+                start_cash: float = 50000.0, early_kill: bool = True,
+                dataset_id: str = "", db_path: str | None = None) -> Dict[str, Any]:
     """Full pipeline for ML family: screen -> val -> dropout -> stress -> locked test."""
     import pandas as pd
     stages: Dict[str, Any] = {}
@@ -193,20 +304,24 @@ def validate_ml(strategy_d: Dict[str, Any], bars: Dict[str, List[Dict]],
     m = strategy_d.get("meta", {})
     exits = ml_exits(strategy_d)
     # validation-slice backtest (the screen, recorded)
+    from .ranker import score_lists as _sl
+    _vsc = add_scores(train_ranker(
+        tr_df, top_n=m.get("top_n", 5), model=m.get("model", "hgb"),
+        feats=m.get("features"), max_depth=m.get("max_depth", 3)), df)
     v0 = run_backtest(exits, {s: [b for b in bars.get(s, []) if b["ts"] <= bounds["val_end"]]
                               for s in bars}, start_cash=start_cash, min_bars=0,
-                      signals=top_n_signals(add_scores(train_ranker(
-                          tr_df, top_n=m.get("top_n", 5), model=m.get("model", "hgb"),
-                          feats=m.get("features"), max_depth=m.get("max_depth", 3)), df),
-                                            bars, top_n=m.get("top_n", 5),
-                                            live_from=bounds["val_start"]))
+                      signals=top_n_signals(_vsc, bars, top_n=m.get("top_n", 5),
+                                            live_from=bounds["val_start"]),
+                      scores=_sl(_vsc, bars))
     stages["backtest"] = {k: v0.get(k) for k in ("n", "sharpe", "max_dd", "cagr",
                                                  "avg_net_per_trade", "net_profit",
                                                  "avg_hold_days")}
     if early_kill:  # IS-dead skips 2 dropout retrains + stress + locked (4 trains total)
+        # bar matches the locked-OOS minimum (5): killing at 10 punished lack
+        # of trades on a 20% slice, not lack of edge (P4 structural fix)
         _vn, _vnet = v0.get("n", 0) or 0, v0.get("avg_net_per_trade", 0) or 0
-        if _vn < 10 or not _vnet > 0:
-            stages.update(verdict="REJECT", reason="LOW_N_IS" if _vn < 10 else "NEG_IS",
+        if _vn < 5 or not _vnet > 0:
+            stages.update(verdict="REJECT", reason="LOW_N_IS" if _vn < 5 else "NEG_IS",
                           robustness=0.0, perturbation={"avg_nets": [], "stable": False},
                           cost_stress={}, locked_oos={})
             return stages
@@ -221,23 +336,27 @@ def validate_ml(strategy_d: Dict[str, Any], bars: Dict[str, List[Dict]],
     for f in list(tr_df[FEATS].var().nlargest(2).index):
         d2 = dict(strategy_d)
         d2["meta"] = {**m, "features": [x for x in m.get("features", FEATS) if x != f]}
+        _dk: list = []
         r = run_backtest(exits, val_bars, start_cash=start_cash, min_bars=0,
                          signals=ml_signals(d2, val_bars, live_from=bounds["val_start"],
-                                            _rows=val_rows, _score=val_score))
+                                            _rows=val_rows, _score=val_score, _keep=_dk),
+                         scores=_sl(_dk[0], val_bars) if _dk else None)
         drops.append(r.get("avg_net_per_trade", 0) or 0)
-    stages["perturbation"] = {"avg_nets": drops, "stable": sum(1 for x in drops if x > 0) >= 1}
+    stages["perturbation"] = {"avg_nets": drops, "stable": sum(1 for x in drops if x > 0) >= 2}
     # cost stress + locked test share one signal stream (same model inputs,
     # deterministic train → identical signals; exits differ only in costs)
-    sigs_test = ml_signals(strategy_d, bars, live_from=bounds["test_start"])
+    _tk: list = []
+    sigs_test = ml_signals(strategy_d, bars, live_from=bounds["test_start"], _keep=_tk)
+    test_scores = _sl(_tk[0], bars) if _tk else None
     stress_exits = ml_exits({**strategy_d, "flat_cost": (strategy_d.get("flat_cost", 0) or 60) * 2})
     st = run_backtest(stress_exits, bars, start_cash=start_cash, min_bars=0,
-                      signals=sigs_test)
+                      signals=sigs_test, scores=test_scores)
     stages["cost_stress"] = {"n": st.get("n"), "avg_net_per_trade": st.get("avg_net_per_trade")}
     if ml_hash(strategy_d) != h0:
         return {"verdict": "REJECT", "reason": "MUTATED_AFTER_SEAL",
                 "robustness": 0.0, "seal": stages["seal"]}
     locked = run_backtest(exits, bars, start_cash=start_cash, min_bars=0,
-                          signals=sigs_test)
+                          signals=sigs_test, scores=test_scores)
     stages["locked_oos"] = {k: locked.get(k) for k in ("n", "sharpe", "max_dd", "cagr",
                                                        "avg_net_per_trade", "net_profit",
                                                        "avg_hold_days")}
@@ -254,8 +373,38 @@ def validate_ml(strategy_d: Dict[str, Any], bars: Dict[str, List[Dict]],
     oos_net = locked.get("avg_net_per_trade", 0) or 0
     ok = ((locked.get("n", 0) or 0) >= 5 and oos_net > 0
           and (locked.get("max_dd", 0) or 0) >= MAX_DD
-          and (v0.get("n", 0) or 0) >= 10 and base_net > 0
+          and (v0.get("n", 0) or 0) >= 5 and base_net > 0
           and stages["perturbation"]["stable"])
+    if ok:  # Phase 2 honest gate: rank edge recorded (ML is rank-native),
+        # excess-return CI binding
+        try:
+            from ..backtest.validation import rank_validation as _rv
+            _tb = {s: [b for b in bl if b.get("ts", "") >= bounds["test_start"]]
+                   for s, bl in bars.items()}
+            stages["rank_validation"] = _rv(_tb)
+        except Exception:
+            pass
+        try:
+            from ..research.stats import excess_gate as _eg
+            # gate on stitched rolling OOS (2-3 yrs, reachable periods); fall
+            # back to the one-shot lock when rolling can't train
+            _roll = rolling_oos(strategy_d, bars, bounds["test_start"], start_cash)
+            if _roll.get("error"):
+                stages["rolling_oos"] = {"error": _roll["error"], "origins": 0}
+                _gtrades = locked.get("trades", [])
+            else:
+                stages["rolling_oos"] = {
+                    k: _roll.get(k) for k in ("n", "sharpe", "max_dd", "cagr",
+                                             "avg_net_per_trade", "net_profit",
+                                             "avg_hold_days", "origins", "from")}
+                _gtrades = _roll.get("trades", [])
+            stages["excess_gate"] = _eg(_gtrades, dataset_id, db_path)
+            if not stages["excess_gate"].get("pass"):
+                ok = False
+                stages["reason"] = str(stages["excess_gate"].get("reason")
+                                       or "WEAK_EXCESS")[:24]
+        except Exception:
+            pass
     stages["verdict"] = "PAPER_READY" if ok else "REJECT"
     if not ok and "reason" not in stages:
         if (locked.get("n", 0) or 0) < 5:
@@ -264,7 +413,7 @@ def validate_ml(strategy_d: Dict[str, Any], bars: Dict[str, List[Dict]],
             stages["reason"] = "NEG_OOS"
         elif not (locked.get("max_dd", 0) or 0) >= MAX_DD:
             stages["reason"] = "DEEP_DD"
-        elif (v0.get("n", 0) or 0) < 10:
+        elif (v0.get("n", 0) or 0) < 5:
             stages["reason"] = "LOW_N_IS"
         elif not base_net > 0:
             stages["reason"] = "NEG_IS"  # ridge 2020-23 case: IS<0, OOS>0

@@ -12,7 +12,6 @@ from typing import Dict, List, Any
 from ..strategies.model import Strategy
 from ..strategies.genome import mutate
 from .engine import run_backtest
-from .costs import stressed_costs
 
 MIN_TRADES, MIN_SHARPE, MAX_DD = 20, 0.5, -0.35
 
@@ -80,8 +79,8 @@ def run_locked_oos(strategy: Strategy, oos: Dict[str, List],
                 "reason": "strategy mutated after seal; new lineage required"}
     r = run_backtest(strategy, oos, start_cash=start_cash, min_bars=0)
     return {k: r.get(k) for k in ("n", "sharpe", "max_dd", "cagr",
-                                  "avg_net_per_trade", "net_profit",
-                                  "avg_hold_days")}
+                                  "avg_net_per_trade", "net_profit", "total_costs",
+                                  "avg_hold_days", "trades")}
 
 
 def _split(bars: Dict[str, List], frac: float) -> tuple:
@@ -95,7 +94,8 @@ def _split(bars: Dict[str, List], frac: float) -> tuple:
 
 def validate_strategy(strategy: Strategy, bars: Dict[str, List[Dict[str, Any]]],
                       oos_frac: float = 0.2, start_cash: float = 50000.0,
-                      min_bars: int | None = None, early_kill: bool = True) -> Dict[str, Any]:
+                      min_bars: int | None = None, early_kill: bool = True,
+                      dataset_id: str = "", db_path: str | None = None) -> Dict[str, Any]:
     if (strategy.meta or {}).get("oos_seal"):
         return {"verdict": "REJECT", "reason": "MUTATED_AFTER_SEAL",
                 "robustness": 0.0, "seal": (strategy.meta or {})["oos_seal"]}
@@ -116,7 +116,8 @@ def validate_strategy(strategy: Strategy, bars: Dict[str, List[Dict[str, Any]]],
     base = run_backtest(strategy, train, start_cash=start_cash, min_bars=0)
     stages["backtest"] = {k: base.get(k) for k in ("n", "sharpe", "max_dd", "cagr",
                                                    "avg_net_per_trade", "net_profit",
-                                                   "avg_hold_days")}
+                                                   "avg_hold_days", "avg_gross_bps",
+                                                   "avg_cost_bps")}
     if early_kill:  # IS-dead pays 1 backtest, not ~10 (batch-2: most REJECTs here)
         _bn, _bnet = base.get("n", 0) or 0, base.get("avg_net_per_trade", 0) or 0
         if _bn < MIN_TRADES or not _bnet > 0:
@@ -126,9 +127,14 @@ def validate_strategy(strategy: Strategy, bars: Dict[str, List[Dict[str, Any]]],
                           walk_forward={"avg_nets": []}, locked_oos={})
             return stages
     s2 = copy.deepcopy(strategy)
-    s2.fee_bps, s2.slippage_bps = stressed_costs(strategy.fee_bps, strategy.slippage_bps)
-    if hasattr(s2, "flat_cost") and s2.flat_cost:
-        s2.flat_cost = s2.flat_cost * 2  # stress flat costs too
+    try:  # stress = cost_stress_mult x booked cost (realistic basis, not flat x2)
+        from ..config import load_capital as _scap
+        _sm = float(_scap().get("cost_stress_mult", 2.0) or 2.0)
+    except Exception:
+        _sm = 2.0
+    _m2 = dict(getattr(s2, "meta", None) or {})
+    _m2["cost_mult"] = _sm
+    s2.meta = _m2
     stress = run_backtest(s2, train, start_cash=start_cash, min_bars=0)
     stages["cost_stress"] = {"sharpe": stress.get("sharpe"), "n": stress.get("n"),
                              "avg_net_per_trade": stress.get("avg_net_per_trade")}
@@ -138,7 +144,8 @@ def validate_strategy(strategy: Strategy, bars: Dict[str, List[Dict[str, Any]]],
         _cc = _ccap()
         _not = start_cash * float(getattr(strategy, "position_frac", 0.1) or 0.1)
         stages["realistic_costs"] = {"per_trade_drag": _real(_not, _cc)["total"],
-                                     "notional": round(_not, 2)}
+                                      "notional": round(_not, 2)}
+        stages["cost_basis"] = _cc.get("cost_basis", "realistic")
     except Exception:
         pass
     perts = []
@@ -147,14 +154,17 @@ def validate_strategy(strategy: Strategy, bars: Dict[str, List[Dict[str, Any]]],
         r = run_backtest(m, train, start_cash=start_cash, min_bars=0)
         perts.append(r.get("avg_net_per_trade", 0) or 0)
     stages["perturbation"] = {"avg_nets": perts,
-                              "stable": sum(1 for x in perts if x > 0) >= 2}
-    # walk-forward: 3 folds on train
+                               "stable": sum(1 for x in perts if x > 0) >= 3}
+    # walk-forward: 3 INDEPENDENT folds partitioning train (nested prefixes
+    # re-tested the same early data 3x; disjoint blocks test regime carry)
     wfs = []
+    sym0 = next(iter(train.values()))
     for f in range(3):
-        wcut = int(len(next(iter(train.values()))) * (0.5 + 0.15 * f))
-        sub = {s: bl[:wcut] for s, bl in train.items()}
+        a, b = int(len(sym0) * f / 3), int(len(sym0) * (f + 1) / 3)
+        sub = {s: bl[a:b] for s, bl in train.items()}
         wfs.append(run_backtest(strategy, sub, start_cash=start_cash, min_bars=0).get("avg_net_per_trade", 0) or 0)
-    stages["walk_forward"] = {"avg_nets": wfs}
+    stages["walk_forward"] = {"avg_nets": wfs,
+                              "frac": sum(1 for x in wfs if x > 0) / max(1, len(wfs))}
     locked = run_locked_oos(strategy, oos, sealed, start_cash=start_cash)
     if locked.get("error") == "MUTATED_AFTER_SEAL":
         locked["reason"] = locked.pop("error")
@@ -169,7 +179,27 @@ def validate_strategy(strategy: Strategy, bars: Dict[str, List[Dict[str, Any]]],
           and (base.get("max_dd", 0) or 0) >= MAX_DD
           and (base.get("n", 0) or 0) >= MIN_TRADES
           and base_net > 0
-          and stages["perturbation"]["stable"])
+          and stages["perturbation"]["stable"]
+          and (locked.get("sharpe", 0) or 0) >= MIN_SHARPE
+          and stages["walk_forward"]["frac"] >= 2 / 3)
+    if ok:  # Phase 2 honest gate: cross-sectional rank edge + excess-return CI
+        try:
+            stages["rank_validation"] = rank_validation(train)
+            if not stages["rank_validation"].get("pass"):
+                ok = False
+                stages["reason"] = "NO_RANK_EDGE"
+        except Exception:
+            pass
+    if ok:
+        try:
+            from ..research.stats import excess_gate as _eg
+            stages["excess_gate"] = _eg(locked.get("trades", []), dataset_id, db_path)
+            if not stages["excess_gate"].get("pass"):
+                ok = False
+                stages["reason"] = str(stages["excess_gate"].get("reason")
+                                       or "WEAK_EXCESS")[:24]
+        except Exception:
+            pass
     stages["verdict"] = "PAPER_READY" if ok else "REJECT"
     if not ok and "reason" not in stages:
         if (locked.get("n", 0) or 0) < 5:
@@ -178,6 +208,10 @@ def validate_strategy(strategy: Strategy, bars: Dict[str, List[Dict[str, Any]]],
             stages["reason"] = "NEG_OOS"
         elif not (base.get("max_dd", 0) or 0) >= MAX_DD:
             stages["reason"] = "DEEP_DD"
+        elif (locked.get("sharpe", 0) or 0) < MIN_SHARPE:
+            stages["reason"] = "LOW_SHARPE"
+        elif stages["walk_forward"]["frac"] < 2 / 3:
+            stages["reason"] = "WF_WEAK"
         elif (base.get("n", 0) or 0) < MIN_TRADES:
             stages["reason"] = "LOW_N_IS"
         elif not base_net > 0:

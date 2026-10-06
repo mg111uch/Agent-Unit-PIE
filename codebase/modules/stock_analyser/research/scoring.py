@@ -71,6 +71,34 @@ def score(strategy_d: Dict[str, Any], stages: Dict[str, Any],
     return {"score": round(total, 3), "breakdown": bd}
 
 
+def score_is(strategy_d: Dict[str, Any], stages: Dict[str, Any],
+             cfg: Dict[str, Any] | None = None) -> Dict[str, Any]:
+    """Pre-OOS elite score: IS economics + perturbation stability - complexity.
+
+    The full `score` sees locked OOS, so using it for elite selection fits the
+    sealed window adaptively. Elites (exploit/validate parents) rank on this;
+    the full score stays recorded as a diagnostic only.
+    """
+    cfg = cfg or {}
+    bt = stages.get("backtest") or {}
+    pert = stages.get("perturbation") or {}
+    base_net = float(bt.get("avg_net_per_trade") or 0)
+    eco = _clamp(base_net / 100.0)
+    if base_net <= 0:
+        eco -= 1.0
+    pavgs = pert.get("avg_nets") or []
+    stab = (sum(1 for x in pavgs if (x or 0) > 0) / len(pavgs)) if pavgs else 0.0
+    n = int(bt.get("n") or 0)
+    suff = math.log1p(max(0, n)) / math.log1p(200)
+    if n < 25:
+        suff -= 0.5
+    cx = complexity_of(strategy_d)
+    total = eco + suff + stab - 0.02 * cx
+    return {"score": round(total, 3),
+            "breakdown": {"eco_is": round(eco + suff, 3), "stab_is": round(stab, 3),
+                          "cx": cx, "n": n}}
+
+
 def info_value(stages: Dict[str, Any], cfg: Dict[str, Any] | None = None) -> float:
     """Phase 2 (FixesIssues #8): information value 0..1 — regime persistence
     + perturbation spread. High when edge holds across WF legs even if small."""

@@ -1,13 +1,13 @@
 """Model family interface: interchangeable rankers over the same panel target.
 
 Target stays rank(fwd_ret) via top-N cross-sectional policy (rank, don't classify).
-Models: hgb (default), rf, ridge. Same train/predict contract; attribution helper
+Models: hgb (default), rf, ridge, extra. Same train/predict contract; attribution helper
 for findings (built-in importances, else +/-corr fallback, stdlib).
 """
 from __future__ import annotations
 from typing import Any, Dict, List
 
-MODELS = ("hgb", "rf", "ridge")
+MODELS = ("hgb", "rf", "ridge", "extra")
 
 _DEFAULTS = {
     "hgb": {"max_depth": 3, "learning_rate": 0.05, "max_iter": 200,
@@ -15,6 +15,8 @@ _DEFAULTS = {
     "rf": {"n_estimators": 200, "max_depth": 6, "min_samples_leaf": 20,
            "random_state": 7, "n_jobs": -1},
     "ridge": {"alpha": 1.0},
+    "extra": {"n_estimators": 200, "max_depth": 6, "min_samples_leaf": 20,
+              "random_state": 7, "n_jobs": -1},
 }
 
 
@@ -38,6 +40,14 @@ def train(model: str, train_df, feats: List[str], top_n: int = 5, **overrides):
     elif model == "ridge":
         from sklearn.linear_model import Ridge
         est = Ridge(alpha=float(overrides.get("alpha", 1.0)))
+    elif model == "extra":
+        from sklearn.ensemble import ExtraTreesRegressor
+        p = {**_DEFAULTS["extra"], **overrides}
+        depth = overrides.get("max_depth", p["max_depth"])
+        p.update({"max_depth": depth})
+        est = ExtraTreesRegressor(**{k: v for k, v in p.items()
+                                     if k in ("n_estimators", "max_depth", "min_samples_leaf",
+                                              "random_state", "n_jobs")})
     else:
         from sklearn.ensemble import HistGradientBoostingRegressor
         p = {**_DEFAULTS["hgb"], **overrides}

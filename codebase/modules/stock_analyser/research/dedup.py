@@ -22,14 +22,14 @@ def seen_global(h: str, db_path: str | None = None) -> bool:
 
 def record_dup(rid: str, h: str, cand_d: dict, fam: str, kind: str, mode: str,
                db_path: str | None, data_hash: str, code_ver: str,
-               dataset_id: str, seed_i: int) -> dict:
+               dataset_id: str, seed_i: int, regime: str = "") -> dict:
     """Exact-hash revisit ledger write (no backtest). Returns the result row."""
     from .job import _record
     from .firewall import fingerprints as _fps0
     _fp = _fps0(cand_d, seed_i, dataset_id, data_hash, code_ver)
     _record(rid, h, cand_d, fam, kind, "DUPLICATE", None, None, 0.0, db_path,
             data_hash, code_ver, _fp["feature_set_hash"], _fp["model_config_hash"],
-            _fp["random_seed"], _fp["dataset_id"], "")
+            _fp["random_seed"], _fp["dataset_id"], "", eval_regime=regime)
     return {"strategy": cand_d.get("name"), "mutation": kind, "verdict": "DUPLICATE",
             "alloc": mode, "avg_net": None, "oos_net": None,
             "summary": "dedup-before-screen"}

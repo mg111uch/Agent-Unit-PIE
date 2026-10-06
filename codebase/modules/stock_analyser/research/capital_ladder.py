@@ -1,11 +1,12 @@
-"""Capital-ladder probe: flat Rs/trade punishes small capital linearly.
+"""Capital-ladder probe: costs punish small capital; drag scales with notional.
 
 A candidate with positive gross edge but negative net at research capital
-may clear costs at a higher rung. For REJECTs killed by costs on one leg
-(NEG_IS/NEG_OOS with gross>0), estimate breakeven from the flat-cost line
-and confirm with ONE backtest at the suggested rung (same signals/leg).
-Verdict stays REJECT; suggestion lands in meta for the report.
-Ladder from capital.yaml: research_min/max_capital stepped by scale_step.
+may clear costs at a higher rung (bps drag dilutes, DP flat dilutes). For
+REJECTs killed by costs on one leg (NEG_IS/NEG_OOS with gross>0), estimate
+breakeven from the realistic-drag line and confirm with ONE backtest at the
+suggested rung (same signals/leg). Verdict stays REJECT; suggestion lands
+in meta for the report. Ladder from capital.yaml: research_min/max_capital
+stepped by scale_step.
 """
 from __future__ import annotations
 from typing import Any, Dict, List
@@ -19,16 +20,23 @@ def ladder(cfg: Dict[str, Any] | None = None) -> List[int]:
     return list(range(lo, hi + 1, step)) or [lo]
 
 
-def estimate_breakeven(net_profit: float, n: int, c0: float, flat: float,
+def estimate_breakeven(net_profit: float, total_costs: float, n: int, c0: float,
+                       frac: float, cfg: Dict[str, Any] | None,
                        steps: List[int]) -> int | None:
-    """Cheapest rung where gross−flat*n > 0. None when gross<=0 or beyond cap."""
-    gross = (net_profit or 0) + flat * (n or 0)
+    """Cheapest rung where scaled gross beats realistic drag. Gross scales
+    with capital (returns fixed, notionals scale); drag dilutes (bps part
+    linear, DP flat fixed). None when gross<=0, already profitable, or
+    beyond cap. Confirmation backtest settles the boundary."""
+    from ..backtest.costs import realistic_breakdown as _real
+    gross = (net_profit or 0) + (total_costs or 0)
     if gross <= 0 or not n or (net_profit or 0) > 0:
         return None  # unfixable by capital, or already profitable: no suggestion
-    c_star = flat * n * c0 / gross
     for s in steps:
-        if s + 1e-9 >= c_star and s > c0:
-            return s  # confirmation backtest settles the boundary
+        if s <= c0:
+            continue
+        drag = _real(frac * s, cfg)["total"]
+        if gross * s / c0 - drag * n > 0:
+            return s
     return None
 
 
@@ -41,8 +49,10 @@ def suggest_and_confirm(strategy_d: Dict[str, Any], stages: Dict[str, Any],
         return {}
     m = stages.get(leg) or {}
     n = int(m.get("n") or 0)
-    flat = float(cfg.get("flat_cost_per_roundtrip", 60) or 60)
-    c_star = estimate_breakeven(m.get("net_profit") or 0, n, start_cash, flat, ladder(cfg))
+    frac = float(strategy_d.get("position_frac")
+                 or (strategy_d.get("meta") or {}).get("position_frac", 0.2) or 0.2)
+    c_star = estimate_breakeven(m.get("net_profit") or 0, m.get("total_costs") or 0,
+                                n, start_cash, frac, cfg, ladder(cfg))
     if not c_star:
         return {}
     r = _leg_backtest(strategy_d, bars, is_ml, leg, stages, c_star)

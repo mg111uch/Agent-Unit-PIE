@@ -44,8 +44,9 @@ def test_ranker_end_to_end_on_real_data():
                                 "meta": {"family": "ml", "top_n": 3}})
     res = run_backtest(exits, bars, start_cash=50000.0, signals=sigs)
     assert res["n"] > 0
-    assert res["total_costs"] == 60 * res["n"]
-    assert set(res) >= {"avg_net_per_trade", "net_profit", "max_dd", "sharpe"}
+    assert 0 < res["total_costs"] < 60 * res["n"]  # realistic basis, not flat Rs60
+    assert set(res) >= {"avg_net_per_trade", "net_profit", "max_dd", "sharpe",
+                        "avg_gross_bps", "avg_cost_bps"}
     # artifact round-trip
     p = os.path.join(tempfile.mkdtemp(), "ranker.pkl")
     assert save_model(model, p) == p

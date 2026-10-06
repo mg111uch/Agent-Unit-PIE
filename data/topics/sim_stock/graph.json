@@ -1,9 +1,9 @@
 {
   "nodes": [
     {
-      "name": "stock_res_20260915_082047_20t_0r",
+      "name": "stock_res_20261004_101908_1t_0r",
       "side": "neutral",
-      "premise": "Stock episode res_20260915_082047: 20 candidates on MY_UNIVERSE_200 \u2192 0 PAPER_READY []; verdicts {'DUPLICATE': 7, 'REJECT': 9, 'SCREENED': 1}; families {'ml': 17}",
+      "premise": "Stock episode res_20261004_101908: 1 candidates on MY_UNIVERSE_200 \u2192 0 PAPER_READY []; verdicts {'SCREENED': 1}; families {'ml': 1}",
       "evidence": [],
       "status": "HYPOTHESIS",
       "examples": [],

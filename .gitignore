@@ -11,4 +11,7 @@ cache
 atlas_output/
 generated_reports/
 data/market.db
+data/bhav_copy.db
+data/raw_nse/
 data/units/
+data/chroma_db/6bb1c6cd-e3b1-4e4f-b026-ca31b41bf0d4/

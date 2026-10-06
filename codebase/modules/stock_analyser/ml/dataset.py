@@ -81,6 +81,51 @@ REL_FEATURES = ("rel_mkt_5", "rel_mkt_20", "rel_sec_20", "sec_disp_20")
 ALL_FEATURES = (*FEATURES, *REL_FEATURES)
 
 
+def _xs_normalize(rows, with_target: bool = True, target_mode: str = "demean"):
+    """Cross-sectional disciplinarian: target framing per date + z-score
+    features per date. `target_mode`: raw (no target transform), demean
+    (default, current behavior), demean+winsor (1/99 tame fat tails),
+    rank-gauss (rank -> inverse-normal; robust to earnings jumps).
+    Needs a real cross-section: groups < 3 symbols pass through untouched
+    (unit tests, single-name probes). Applied identically to labeled and
+    serving frames (serving uses with_target=False: features only)."""
+    if not rows:
+        return rows
+    by_ts: dict = {}
+    for r in rows:
+        by_ts.setdefault(r["ts"], []).append(r)
+    feat_keys = [k for k in rows[0] if k not in ("ts", "symbol", "fwd_ret")]
+    for grp in by_ts.values():
+        if len(grp) < 3:
+            continue
+        if with_target:
+            if target_mode == "rank-gauss":
+                from statistics import NormalDist
+                order = sorted(range(len(grp)), key=lambda j: grp[j]["fwd_ret"])
+                for pos, j in enumerate(order):
+                    p = (pos + 0.75) / (len(grp) + 0.5)
+                    grp[j]["fwd_ret"] = NormalDist().inv_cdf(
+                        min(0.9999, max(0.0001, p)))
+            else:
+                m = sum(r["fwd_ret"] for r in grp) / len(grp)
+                vals = [r["fwd_ret"] - m for r in grp]
+                if target_mode == "demean+winsor":
+                    s = sorted(vals)
+                    lo, hi = s[max(0, int(0.01 * len(s)))], s[min(len(s) - 1, int(0.99 * len(s)))]
+                    vals = [min(hi, max(lo, v)) for v in vals]
+                for r, v in zip(grp, vals):
+                    r["fwd_ret"] = v
+        n = float(len(grp))
+        for f in feat_keys:
+            mu = sum(r[f] for r in grp) / n
+            sd = (sum((r[f] - mu) ** 2 for r in grp) / n) ** 0.5
+            if not sd:
+                continue
+            for r in grp:
+                r[f] = (r[f] - mu) / sd
+    return rows
+
+
 def _ret(closes, i, n):
     c0, c1 = closes[i - n] if i - n >= 0 else None, closes[i]
     return None if not c0 or not c1 or c0 == 0 else (c1 - c0) / c0

@@ -10,7 +10,11 @@ from .store import upsert_equity_bars, upsert_instruments, upsert_option_bars
 
 def synthetic_bars(symbol: str, n: int = 120, start: int = 0, seed: int = 7,
                    timeframe: str = "1D", exchange: str = "NSE") -> List[EquityBar]:
-    rng = random.Random(seed + hash(symbol) % 1000)
+    import hashlib
+    # stable digest: builtin hash() is salted per process (PYTHONHASHSEED),
+    # which broke seed->bars determinism across runs
+    salt = int(hashlib.sha256(symbol.encode()).hexdigest(), 16) % 1000
+    rng = random.Random(seed + salt)
     px, out = 100.0 + rng.random() * 50, []
     iid = f"{exchange}:{symbol}"
     for i in range(n):

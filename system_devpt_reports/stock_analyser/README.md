@@ -19,14 +19,26 @@
 | Cheap alpha gate | hierarchical L0 (IC/rank-spread/interaction/tiny-ML); any-level pass |
 | Adaptive allocator (bandit + priors + novelty) | explore/exploit/validate; ML-aware dedup hash |
 | ML family (hgb/rf/ridge) + 23-feature pool | rank fwd_ret, top-N policy; per-validation attribution; 4 sector-relative (stock−NIFTY/sector, `ml/sectors.py`) |
+| ML family +extra (ExtraTrees, no new deps) | randomized-split bias vs hgb/rf; selectable via genome `model` mutation; ledger rollup: only ridge ever PAPER_READY |
+| Staggered paper cohorts | `launch_cohort` new ACTIVE without demoting; `retire_expired` 21d clock auto-run in `next`; `launch`/`retire` CLI; `trees` Age col; clash-guard (no shared strategies) |
+| Honest fills + scoring (P1) | rank-ordered fills via `scores`; gap-aware stop/take; hold-scaled Sharpe; 10d label purge; E-probe time split; paper lookback 750; `shadow_picks` forward-OOS ledger; delivery STT default |
+| Excess-return gate (P2) | `research/stats.py` block-bootstrap CI + trial deflation; binding `WEAK_EXCESS` in both verdicts; `rank_validation` wired in (binding symbolic, recorded ML); `dataset_id` threaded via `job.py` |
+| Rolling-origin OOS (P3) | monthly expanding refit (≤30 origins), stitched signals → 2-3yr OOS; final 20% lock stays one-shot; gate runs on rolling trades |
+| Hard falsification (P4) | 19-perm p≤0.05, both-halves-positive, shift ≤|base|, seeded-random LOO×6; ML IS minimum 5 (was structural 10) |
+| Cross-sectional targets (L2) | per-date demeaned `fwd_ret` + z-scored features, identical train/serve framing |
+| Target framing modes (R2-1) | `_xs_normalize` `target_mode` raw/demean/demean+winsor/rank-gauss (default demean); ML trains rank-gauss (4-arm A/B N=483: rank-gauss IC +0.0175 t3.11 best, diffs n.s.) |
+| OOS-isolated search (L1) | elites rank on IS-only `score_is`; resume seeds on `avg_net`; alpha gate frames pre-lock 80% |
+| Independent WF + bound verdict (L3) | disjoint WF folds, ≥2/3 required; locked Sharpe ≥0.5; perturbation 3/4 symbolic, 2/2 ML; alpha needs B AND (C/D/E) |
+| Shadow forward-OOS (L4) | `shadow_picks` per daily pick + `shadow_eval` matured excess read (`cli.py shadow`); full 200-name score vector in `shadow_scores` + `shadow_ic` forward rank-IC (PlanFixes3 #5, needs 60+d) |
+| GRU experiment (P5) | `ml/seq.py` tiny GRU (20×F window, h16, 3 epochs), `ranker` dispatch, out of mutation pool; probe verdict NEG_IS — not superior, as predicted |
 | Data-quality gate | trims live forming bar; adj-mix flag; INSUFFICIENT_DATA |
 | Validation reject reasons | LOW_N_OOS/NEG_OOS/DEEP_DD/LOW_N_IS/NEG_IS/UNSTABLE + `meta.reject_reason` in ledger |
-| Realistic costs + vol sizing | STT/stamp/impact breakdown; shared ATR sizing (engine + paper) |
-| Determinism + ledger provenance | run seed→bars; data_hash + code_version per candidate |
+| Realistic costs + vol sizing | tariff-verified delivery drag via `book_cost` (engine+paper parity); 2× cost stress; gross-vs-cost bps per backtest; shared ATR sizing |
+| Determinism + ledger provenance | run seed→bars (sha-stable); data_hash + code_version + eval_regime per candidate; score_is/n_is persisted; regime-keyed dedup |
 | Paper parity guards | max_positions cap; bar-count hold; stale/action guards |
 | Research firewall (provenance + seal binding) | 7 hashes/candidate incl. signal_hash; sealed lineage frozen to data+code |
 | Candidate dedup (canonical + behavioral) | normalized-AST hash; identical signal stream → DUPLICATE; cross-run exact-hash dedup-before-screen (`research/dedup.py`) |
-| Capital ladder probe | cost-killed near-miss (gross>0, NEG_IS/NEG_OOS) gets breakeven estimate + 1 confirmation backtest on 25k→100k rungs; suggestion in `meta.suggested_min_capital`, verdict stays REJECT (`research/capital_ladder.py`) |
+| Capital ladder probe | cost-killed near-miss (gross>0, NEG_IS/NEG_OOS) gets breakeven estimate on realistic drag (gross scales, DP dilutes) + 1 confirmation backtest on 25k→100k rungs; suggestion in `meta.suggested_min_capital`, verdict stays REJECT (`research/capital_ladder.py`) |
 | Tradability filter + index guard | sub-min-ADV names pre-dropped (`tradable_filter`); canonical `INDEX_SYMBOLS` excluded from connector/run_job/ML panel/paper buys; exits never blocked |
 | Test tiers | 5 real-data tests marked `slow`; gate = `pytest -m "not slow"` (~19s); slow lane background pre-sweep; affected-tests-only |
 | Liquidity/capacity gate | ADV/participation/spread/price; ILLIQUID blocks PAPER_READY |
@@ -48,6 +60,7 @@
 | Regime datasets + baseline ladder (Phase1) | `ensure_regime_datasets` 4 windows; `baseline_ladder` L0-L2; ML +4 features (mom_vol_20/dd_high_60/rev_5_20/range_vol) |
 | Ladder gating + info scoring (Phase2) | `gate_families` (ML needs L2 evidence); `score_with_info` (edge + info/compute) |
 | Rank validation + stall retirement (Adds) | `rank_validation` cross-sectional gate; `family_stalls` retires SCREENED-streak families |
+| Staged discovery (R2) | stage-1 signal IC + spread (no exits/costs, NW-t kill) before any sim; epoch cap 30/dataset (+ one-run override); structural-only exploit; shrunk-median elites; dup retries/refunds + SPACE_EXHAUSTED; symbolic retired (`retired_families`), 6 hand-factor controls |
 
 ## File map (all code under `codebase/modules/stock_analyser/` unless noted)
 
@@ -77,6 +90,7 @@
 | `research/alpha_screen.py` | cheap pre-sim gate (freq/turnover/stability/complexity; ML max-IC) |
 | `research/scoring.py` | multi-objective ResearchScore (eco/stab/rob − DD/cx/gap); elites rank by score |
 | `research/allocate.py` | bandit allocator (prior×ready_rate+UCB; explore/exploit/validate) |
+| `research/stage1.py` | signal-level rank-IC + spread screen (no exits/costs, NW-t kill); structural-only exploit pool lives in job |
 | `research/falsify.py` | permutation/halves/shift/LOO attacks on passers only; FALSIFIED downgrade |
 | `research/firewall.py` | provenance fingerprints + execution-layer seal binding (data+code) |
 | `research/liquidity.py` | ADV/participation/spread gate pre-PAPER_READY |
@@ -86,13 +100,13 @@
 | `kernel_bridge.py` | signals + topic findings + sim_runs |
 | `connector.py` | `run_and_extract` / `run_episode` / `register_to_kernel` for develop.*; datasets synthetic/csv/marketdb (+registry pin) |
 | `research/questions.py` | questions from objectives, observations, gaps |
-| `research/job.py` | day + overnight resumable jobs; bandit allocation; score-ranked elites; seeded RNG; firewall seal binding; ledger in market.db (full strategy_json + 6 provenance hashes) |
+| `research/job.py` | day + overnight resumable jobs; bandit allocation; shrunk-median elites; seeded RNG + step/i split; firewall seal binding; epoch cap + override; ledger in market.db (full strategy_json + provenance + regime) |
 | `research/dedup.py` | cross-run exact-hash `seen_global` probe for dedup-before-screen |
 | `ml/dataset.py` | 19-feature panel on algebra primitives + 4 sector-relative; fwd-5 labels; embargoed splits |
 | `ml/sectors.py` | NIFTY + 6 sectoral trailing-return bench map (causal, DB-backed, {} fallback) |
 | `ml/ranker.py` | family-dispatched ranker (hgb/rf/ridge); top-N signals via engine hook; pickle artifacts |
 | `ml/strategies.py` | ML validation (screen→dropout→stress→locked test→falsify); sealed embargo; attribution |
-| `research/job.py` | families compete via bandit; tiered screen (alpha→quick→full); retirement after 25 consecutive REJECTs |
+| `research/job.py` | families compete via bandit; tiered screen (alpha→stage-1 IC→quick→full); retirement after 25 consecutive REJECTs; SPACE_EXHAUSTED at >30% dups; symbolic retired |
 | `tests/test_ml_ranker.py` | train→score→backtest on locked test; OOS gating; artifact round-trip |
 | `tests/test_ml_dataset.py` | panel integrity, causality (no peek), embargo gaps |
 | `data/universe.py` | `import_universe[_file]` for hand-picked lists; DB-first resolve |
@@ -234,6 +248,17 @@ conda run -n myenv python codebase/modules/stock_analyser/paper/cli.py next     
 conda run -n myenv python codebase/modules/stock_analyser/paper/cli.py promote --run <rid> --policy <name>  # new tree from COMPLETE run
 conda run -n myenv python codebase/modules/stock_analyser/paper/cli.py migrate --from A --to B  # rotation plan
 ```
+
+## Horizon-scan CLI (from workspace root; Round-3 step 2)
+
+```bash
+conda run -n myenv python codebase/modules/stock_analyser/research/horizon_cli.py scan   # cached panel, ~30s/horizon-set
+conda run -n myenv python codebase/modules/stock_analyser/research/horizon_cli.py scan --horizons 5 --perms 100  # quick check
+conda run -n myenv python codebase/modules/stock_analyser/research/horizon_cli.py build-panel  # ONLY when trailing bars moved on (~6 min, 92MB)
+conda run -n myenv python codebase/modules/stock_analyser/research/horizon_cli.py controls  # standing regression: 6 hand factors + power (~10 min)
+```
+
+Panel cache: `codebase/utils_files/hscan_panel_200sym_2016-2026.pkl` (200 syms, 2423 dates, bars as of 2026-10-03). Do NOT rebuild after restarts — `scan` loads the cache. Rebuild only when fresh trailing bars matter. 2026-10-03 result: no horizon net-positive (h=5 real but net −49bps) → search stays parked.
 
 ## Next
 

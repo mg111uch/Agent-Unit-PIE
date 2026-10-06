@@ -4,7 +4,8 @@
   conda run -n myenv python codebase/modules/stock_analyser/paper/cli.py portfolio [--tree T1/batch3]
   conda run -n myenv python codebase/modules/stock_analyser/paper/cli.py backfill [--universe MY_UNIVERSE_200]
   conda run -n myenv python codebase/modules/stock_analyser/paper/cli.py next
-  conda run -n myenv python codebase/modules/stock_analyser/paper/cli.py promote --run <rid> --policy <name>
+   conda run -n myenv python codebase/modules/stock_analyser/paper/cli.py promote --run <rid> --policy <name>
+   conda run -n myenv python codebase/modules/stock_analyser/paper/cli.py launch --run <rid> --policy <name>  # staggered cohort (keeps other ACTIVE trees)
   conda run -n myenv python codebase/modules/stock_analyser/paper/cli.py migrate --from A --to B
 
 trees: list policy trees (ACTIVE/DEMOTING; DEAD hidden). portfolio: one tree's
@@ -53,7 +54,8 @@ def _closes(symbols: List[str], db_path: str | None, n: int = 2) -> Dict[str, li
 
 
 def portfolio(trees: List[str], db_path: str | None = None,
-              use_live: bool = False, tree_id: str | None = None) -> Dict[str, Any]:
+              use_live: bool = False, tree_id: str | None = None,
+              offline: bool = False) -> Dict[str, Any]:
     from modules.stock_analyser.data.store import connect, ensure_schema
     from modules.stock_analyser.config import load_capital
     ensure_schema(db_path)
@@ -64,6 +66,25 @@ def portfolio(trees: List[str], db_path: str | None = None,
         syms = {r[0] for r in con.execute(
             "SELECT DISTINCT symbol FROM paper_trades WHERE strategy IN (%s)"
             % ",".join("?" * len(trees)), trees).fetchall()}
+        if syms and not use_live and not offline:
+            try:  # default: refresh stale bars so portfolio is never CMP-cache-stale
+                from datetime import date as _d
+                from modules.stock_analyser.data.store import query_equity as _q
+                stale = True
+                for _s in sorted(syms):
+                    _rows = _q(f"NSE:{_s}", "1D", db_path=db_path)
+                    if _rows and _rows[-1]["ts"][:10] >= _d.today().isoformat():
+                        continue
+                    stale = True
+                    break
+                else:
+                    stale = False
+                if stale:
+                    from modules.stock_analyser.data.recorder import fetch_daily_history
+                    fetch_daily_history(sorted(syms), span="1mo", timeframe="1D",
+                                        db_path=db_path)
+            except Exception:
+                pass
         if use_live and syms:
             try:  # --live tops up daily bars so as_of advances (best-effort)
                 from modules.stock_analyser.data.recorder import fetch_daily_history
@@ -77,24 +98,27 @@ def portfolio(trees: List[str], db_path: str | None = None,
         try:
             from modules.stock_analyser.config import load_capital as _cap
             if bool(_cap().get("paper_use_cmp", True)) and syms:
-                if use_live:
-                    from modules.stock_analyser.data.live import get_cmps, save_cmps
-                    fresh = get_cmps(sorted(syms))
+                from modules.stock_analyser.data.live import get_cmps, save_cmps, load_cmps
+                if offline:
+                    fresh = load_cmps(sorted(syms), db_path)
+                else:
+                    fresh = get_cmps(sorted(syms))  # always try fresh first
                     if fresh:
                         save_cmps(fresh, db_path)
-                    for s, q in fresh.items():
-                        if px.get(s) and q.get("px", 0) > 0:
-                            px[s][-1] = dict(px[s][-1], close=float(q["px"]))
-                            cmp_src[s] = str(q.get("source", "?"))
-                    live_mode = "live" if fresh else "closed"
-                else:
-                    from modules.stock_analyser.data.live import load_cmps
-                    cached = load_cmps(sorted(syms), db_path)
-                    for s, q in cached.items():
-                        if px.get(s) and q.get("px", 0) > 0:
-                            px[s][-1] = dict(px[s][-1], close=float(q["px"]))
-                            cmp_src[s] = str(q.get("source", "?"))
-                    live_mode = "cache" if cached else "closed"
+                    else:
+                        fresh = load_cmps(sorted(syms), db_path)  # offline fallback
+                for s, q in fresh.items():
+                    if px.get(s) and q.get("px", 0) > 0:
+                        bar_ts = str(px[s][-1].get("ts", ""))[:10]
+                        q_ts = str(q.get("ts", ""))[:10]
+                        # stale cache must never override fresher closed bars
+                        if "cache" in str(q.get("source", "")) and q_ts and bar_ts \
+                                and q_ts < bar_ts:
+                            continue
+                        px[s][-1] = dict(px[s][-1], close=float(q["px"]))
+                        cmp_src[s] = str(q.get("source", "?"))
+                live_mode = ("live" if any("cache" not in str(v.get("source", ""))
+                             for v in fresh.values()) else "cache") if fresh else "closed"
         except Exception:
             pass
         today = max((b[-1]["ts"][:10] for b in px.values()), default="")
@@ -131,13 +155,13 @@ def portfolio(trees: List[str], db_path: str | None = None,
                                 "holding": round(hold, 0), "status": "OPEN"})
                     unreal += u
                     holding_tot += hold
-                for sym, qty, px_in, px_out, net, t_in, t_out in closed:
+                for sym, qty, px_in, px_out, net, t_in, tout in closed:
                     pos.append({"symbol": sym, "qty": int(qty), "entry": px_in,
                                 "t_in": (t_in or "")[:10], "live": round(px_out or 0, 1),
-                                "hold_days": _hold_days(t_in, t_out),
+                                "hold_days": _hold_days(t_in, tout),
                                 "unreal": round(net or 0, 1),
                                 "unreal_pct": _pct(net or 0, qty * px_in),
-                                "holding": 0, "status": f"CLOSED@{(t_out or '')[:10]}"})
+                                "holding": 0, "status": f"CLOSED@{(tout or '')[:10]}"})
                 day = sum(r[4] for r in closed if (r[6] or "")[:10] == today)
                 for sym, qty, px_in, t_in in opened:
                     bars = px.get(sym, [])
@@ -271,9 +295,10 @@ def cmd_trees(db_path: str | None = None) -> None:
     if not trees:
         print("(no trees — using legacy flat league)")
         return
-    rows = [["Tree", "Policy", "Run", "Status", "Subtrees", "Open", "Holding"]]
+    rows = [["Tree", "Policy", "Run", "Status", "Subtrees", "Open", "Holding", "Age(d)"]]
     con = connect(db_path)
     try:
+        from datetime import date as _dd
         for t in trees:
             syms = members(t["tree_id"], db_path)
             n_open, hold = 0, 0.0
@@ -285,7 +310,8 @@ def cmd_trees(db_path: str | None = None) -> None:
                     n_open += 1
                     hold += (qty or 0) * (px_in or 0)
             rows.append([t["tree_id"], t["policy"] or "-", (t["run_id"] or "-")[:18],
-                         t["status"], str(len(syms)), str(n_open), f"{hold:.0f}"])
+                         t["status"], str(len(syms)), str(n_open), f"{hold:.0f}",
+                         _hold_days(t["created_at"] or "", _dd.today().isoformat())])
     finally:
         con.close()
     for line in _table(rows):
@@ -325,6 +351,47 @@ def cmd_promote(run_id: str, policy: str, db_path: str | None = None) -> Dict[st
         return {"error": "no paper_ready"}
     out = create_tree(policy, run_id, top, db_path)
     print(f"NEW TREE {out['tree_id']} from {run_id}: {', '.join(top)}")
+    return out
+
+
+def cmd_launch(run_id: str, policy: str, db_path: str | None = None) -> Dict[str, Any]:
+    """Staggered cohort: COMPLETE run -> new ACTIVE tree of top 1-3 PAPER_READY
+    by oos_net, WITHOUT demoting other ACTIVE trees. Refuses when the top
+    picks are already live (ledger is keyed by strategy name)."""
+    import json
+    from modules.stock_analyser.data.store import connect, ensure_schema
+    from modules.stock_analyser.paper.trees import launch_cohort
+    ensure_schema(db_path)
+    con = connect(db_path)
+    try:
+        r = con.execute("SELECT status FROM research_runs WHERE id=?", (run_id,)).fetchone()
+        if not r:
+            print(f"REFUSE unknown run {run_id}")
+            return {"error": "unknown run"}
+        if r[0] != "COMPLETE":
+            print(f"REFUSE run {run_id} status {r[0]} (need COMPLETE)")
+            return {"error": f"run {r[0]}"}
+        rows = con.execute("SELECT strategy_json,oos_net,avg_net FROM research_candidates"
+                           " WHERE run_id=? AND verdict='PAPER_READY'", (run_id,)).fetchall()
+    finally:
+        con.close()
+    cands = []
+    for sj, oos, avg in rows:
+        try:
+            cands.append((json.loads(sj).get("name", "?"), oos, avg))
+        except Exception:
+            continue
+    cands.sort(key=lambda c: ((c[1] if c[1] is not None else -1e18),
+                              (c[2] if c[2] is not None else -1e18)), reverse=True)
+    top = [c[0] for c in cands[:3]]
+    if not top:
+        print(f"REFUSE run {run_id} has no PAPER_READY")
+        return {"error": "no paper_ready"}
+    out = launch_cohort(policy, run_id, top, db_path)
+    if "error" in out:
+        print(f"REFUSE {out['error']}")
+    else:
+        print(f"NEW COHORT {out['tree_id']} from {run_id}: {', '.join(top)}")
     return out
 
 
@@ -371,6 +438,14 @@ def next_day(trees: List[str] | None = None, db_path: str | None = None) -> Dict
         for a in r.get("actions", []):
             if a.startswith(("SIGNAL", "FILL", "CLOSE", "RETIRED", "SKIP")):
                 print(f"   {a}")
+    try:  # staggered cohorts: 21-day clock -> DEMOTING (exit-only)
+        from modules.stock_analyser.config import load_capital as _ccap
+        from modules.stock_analyser.paper.trees import retire_expired
+        window = int((_ccap().get("cohort_window_days", 21)))
+        for tid in retire_expired(window, db_path):
+            print(f"RETIRED {tid} (window {window}d over — exit-only)")
+    except Exception:
+        pass
     for tid in sweep_dead(db_path):
         print(f"DEAD {tid} (flat — hidden from portfolio)")
     return out
@@ -410,7 +485,9 @@ def main(argv: List[str] | None = None) -> None:
     p1.add_argument("--tree", default=None, help="tree id (see trees cmd)")
     p1.add_argument("--db", default=None)
     p1.add_argument("--live", action="store_true",
-                    help="backfill daily bars + fetch fresh CMP; default offline cache")
+                    help="legacy: refresh is now default; kept for compat")
+    p1.add_argument("--cached", action="store_true",
+                    help="offline: use closed bars + cached CMP only, no network")
     p2 = sub.add_parser("next", help="step non-DEAD trees")
     p2.add_argument("--trees", nargs="*", default=None)
     p2.add_argument("--db", default=None)
@@ -424,6 +501,16 @@ def main(argv: List[str] | None = None) -> None:
     p5.add_argument("--run", required=True)
     p5.add_argument("--policy", required=True)
     p5.add_argument("--db", default=None)
+    p7 = sub.add_parser("launch", help="staggered cohort: new ACTIVE tree, keep others")
+    p7.add_argument("--run", required=True)
+    p7.add_argument("--policy", required=True)
+    p7.add_argument("--db", default=None)
+    p8 = sub.add_parser("retire", help="retire ACTIVE trees past window to exit-only")
+    p8.add_argument("--window-days", type=int, default=21)
+    p8.add_argument("--db", default=None)
+    p9 = sub.add_parser("shadow", help="forward-OOS read of shadow picks ledger")
+    p9.add_argument("--horizon", type=int, default=21)
+    p9.add_argument("--db", default=None)
     p6 = sub.add_parser("backfill", help="backfill daily bars for a universe/symbols")
     p6.add_argument("--universe", default="MY_UNIVERSE_200")
     p6.add_argument("--symbols", nargs="*", default=None)
@@ -433,17 +520,30 @@ def main(argv: List[str] | None = None) -> None:
     a = ap.parse_args(argv)
     if a.cmd == "portfolio":
         if a.trees:
-            print_portfolio(portfolio(a.trees, db_path=a.db, use_live=bool(a.live)))
+            print_portfolio(portfolio(a.trees, db_path=a.db, use_live=bool(a.live),
+                                      offline=bool(a.cached)))
         else:
             tid, syms = resolve_tree(a.tree, db_path=a.db)
             print_portfolio(portfolio(syms, db_path=a.db,
-                                      use_live=bool(a.live), tree_id=tid))
+                                      use_live=bool(a.live), tree_id=tid,
+                                      offline=bool(a.cached)))
     elif a.cmd == "migrate":
         migrate(a.from_tree, a.to_tree, db_path=a.db)
     elif a.cmd == "trees":
         cmd_trees(db_path=a.db)
     elif a.cmd == "promote":
         cmd_promote(a.run, a.policy, db_path=a.db)
+    elif a.cmd == "launch":
+        cmd_launch(a.run, a.policy, db_path=a.db)
+    elif a.cmd == "retire":
+        from modules.stock_analyser.paper.trees import retire_expired
+        for tid in retire_expired(a.window_days, db_path=a.db):
+            print(f"RETIRED {tid} (window {a.window_days}d over — exit-only)")
+    elif a.cmd == "shadow":
+        from modules.stock_analyser.paper.league import shadow_eval, shadow_ic
+        import json as _js
+        print(_js.dumps({"picks": shadow_eval(db_path=a.db, horizon=a.horizon),
+                         "ic": shadow_ic(db_path=a.db, horizon=a.horizon)}, indent=1))
     elif a.cmd == "backfill":
         cmd_backfill(a.universe, a.symbols, span=a.span,
                      timeframe=a.timeframe, db_path=a.db)

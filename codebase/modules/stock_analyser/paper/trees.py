@@ -121,6 +121,68 @@ def create_tree(policy: str, run_id: str, strategies: List[str],
         con.close()
 
 
+def launch_cohort(policy: str, run_id: str, strategies: List[str],
+                 db_path: str | None = None) -> Dict[str, Any]:
+    """Staggered cohort: new ACTIVE tree WITHOUT demoting other ACTIVE trees.
+
+    Each cohort runs full notional (paper) on its own 21-day clock; `next`
+    auto-retires expired cohorts to DEMOTING (exit-only) and `sweep_dead`
+    hides them when flat. Ledger is keyed by strategy name, so cohorts must
+    use distinct strategies (no sharing with live trees).
+    """
+    from ..data.store import connect
+    con = connect(db_path)
+    try:
+        ensure(con)
+        live = [r[0] for r in con.execute(
+            "SELECT DISTINCT m.strategy FROM paper_tree_members m"
+            " JOIN paper_trees t ON t.tree_id=m.tree_id WHERE t.status!='DEAD'").fetchall()]
+        clash = [s for s in strategies[:3] if s in live]
+        if clash:
+            return {"error": f"strategies already live: {', '.join(clash)}"}
+        n = con.execute("SELECT COUNT(*) FROM paper_trees").fetchone()[0]
+        tid = f"T{n + 1}/{policy}"
+        con.execute("INSERT INTO paper_trees(tree_id,policy,run_id,status,created_at)"
+                    " VALUES(?,?,?,?,?)",
+                    (tid, policy, run_id, "ACTIVE", _now()))
+        for s in strategies[:3]:
+            con.execute("INSERT OR IGNORE INTO paper_tree_members VALUES(?,?,?)",
+                        (tid, s, _now()))
+        con.commit()
+        return {"tree_id": tid, "policy": policy, "run_id": run_id,
+                "status": "ACTIVE", "members": strategies[:3]}
+    finally:
+        con.close()
+
+
+def retire_expired(window_days: int = 21,
+                   db_path: str | None = None) -> List[str]:
+    """ACTIVE trees older than window_days -> DEMOTING (exit-only)."""
+    from datetime import timedelta
+    from ..data.store import connect
+    con = connect(db_path)
+    dead: List[str] = []
+    try:
+        ensure(con)
+        try:
+            cutoff = (datetime.now(timezone.utc)
+                      - timedelta(days=int(window_days))).isoformat()
+        except Exception:
+            return []
+        rows = con.execute("SELECT tree_id,created_at FROM paper_trees"
+                           " WHERE status='ACTIVE'").fetchall()
+        for tid, created in rows:
+            if created and created >= cutoff:
+                continue
+            con.execute("UPDATE paper_trees SET status='DEMOTING' WHERE tree_id=?",
+                        (tid,))
+            dead.append(tid)
+        con.commit()
+    finally:
+        con.close()
+    return dead
+
+
 def demote(strategy: str, db_path: str | None = None) -> bool:
     """Move one subtree out of its ACTIVE tree into its own DEMOTING splinter."""
     from ..data.store import connect

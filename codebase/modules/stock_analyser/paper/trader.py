@@ -11,7 +11,7 @@ from typing import Any, Dict, List
 from ..data.store import connect, ensure_schema, query_equity
 from ..data.recorder import IST, market_open
 from ..backtest.engine import _signals, _atr
-from ..backtest.costs import trade_cost, floor_qty as _floor_qty
+from ..backtest.costs import book_cost as _book, floor_qty as _floor_qty
 from ..config import load_capital
 from ..strategies.model import strategy_from_dict
 
@@ -19,6 +19,14 @@ ORDERS_SCHEMA = """
 CREATE TABLE IF NOT EXISTS paper_orders(
  id INTEGER PRIMARY KEY AUTOINCREMENT, strategy TEXT, symbol TEXT,
  signal_ts TEXT, status TEXT DEFAULT 'PENDING', created_at TEXT DEFAULT '');
+CREATE TABLE IF NOT EXISTS shadow_picks(
+ strategy TEXT, symbol TEXT, signal_ts TEXT, created_at TEXT DEFAULT '',
+ PRIMARY KEY(strategy, symbol, signal_ts));
+CREATE TABLE IF NOT EXISTS shadow_scores(
+ strategy TEXT, symbol TEXT, signal_ts TEXT, score REAL DEFAULT 0,
+ model TEXT DEFAULT '', cfg_hash TEXT DEFAULT '', eligible INTEGER DEFAULT 1,
+ created_at TEXT DEFAULT '',
+ PRIMARY KEY(strategy, symbol, signal_ts));
 """
 
 
@@ -29,8 +37,11 @@ def _now() -> str:
 def _ensure(con) -> None:
     con.executescript(ORDERS_SCHEMA)
     for _alter in ("ALTER TABLE paper_trades ADD COLUMN atr REAL DEFAULT 0",
-                   "ALTER TABLE paper_trades ADD COLUMN mode TEXT DEFAULT 'PAPER'",
-                   "ALTER TABLE paper_trades ADD COLUMN fill_src TEXT DEFAULT ''"):
+                    "ALTER TABLE paper_trades ADD COLUMN mode TEXT DEFAULT 'PAPER'",
+                    "ALTER TABLE paper_trades ADD COLUMN fill_src TEXT DEFAULT ''",
+                    "ALTER TABLE shadow_scores ADD COLUMN model TEXT DEFAULT ''",
+                    "ALTER TABLE shadow_scores ADD COLUMN cfg_hash TEXT DEFAULT ''",
+                    "ALTER TABLE shadow_scores ADD COLUMN eligible INTEGER DEFAULT 1"):
         try:
             con.execute(_alter)
         except Exception:
@@ -121,15 +132,31 @@ def _est_qty(bl: List[Dict], i: int, strat, cap: Dict, con, closes: Dict) -> str
 
 
 def step(strategy_d: Dict[str, Any], symbols: List[str], db_path: str | None = None,
-         lookback: int = 120) -> Dict[str, Any]:
+         lookback: int | None = None) -> Dict[str, Any]:
+    cap = load_capital()
+    if lookback is None:
+        # paper must train on the same depth as validation, not 120 bars
+        lookback = int(cap.get("paper_lookback_bars", 750) or 750)
     is_ml = (strategy_d.get("meta", {}) or {}).get("family") == "ml"
     if is_ml:
         from ..ml.strategies import ml_exits, ml_signals
         strat = ml_exits(strategy_d)
     else:
         strat = strategy_from_dict(strategy_d)
-    cap = load_capital()
     flat = strat.flat_cost or float(cap.get("flat_cost_per_roundtrip", 60) or 0)
+    try:  # shadow provenance (Q6): model identity + cost-config hash per row,
+        import hashlib as _hl, json as _js  # so silent refits are detectable
+        _mm = strategy_d.get("meta", {}) or {}
+        _fid = _hl.sha256(_js.dumps(_mm.get("features") or [],
+                                    sort_keys=True).encode()).hexdigest()[:8]
+        _model_id = (f"{_mm.get('model', 'bool')}:{_mm.get('top_n', '?')}:{_fid}"
+                     if is_ml else "bool")
+        _cfg_hash = _hl.sha256(_js.dumps(
+            {k: cap.get(k) for k in ("cost_basis", "flat_cost_per_roundtrip",
+                                     "cost_stress_mult", "max_positions")},
+            sort_keys=True, default=str).encode()).hexdigest()[:8]
+    except Exception:
+        _model_id, _cfg_hash = "?", "?"
     capital = float(cap.get("capital", 50000))
     ensure_schema(db_path)
     con = connect(db_path)
@@ -150,13 +177,36 @@ def step(strategy_d: Dict[str, Any], symbols: List[str], db_path: str | None = N
         closes = {s: bars[s][ci[s]]["close"] for s in bars}
         log: List[str] = []
         ml_sig: Dict[str, List[bool]] = {}
+        ml_scores: Dict[str, List[float]] = {}
         if is_ml:
             from ..ml.strategies import ml_signals as _mls
             try:
+                _keep: List[Any] = []
+                _mm = strategy_d.get("meta", {}) or {}
+                _frozen_ver = ""
+                _fdb = None
+                if _mm.get("model") == "ridge":
+                    try:
+                        from ..data.store import get_db_path as _gdb
+                        _fdb = str(_gdb(db_path))
+                    except Exception:
+                        _fdb = None
                 ml_sig = _mls(strategy_d, bars,
-                              live_from=max(bars[s][ci[s]]["ts"] for s in bars))
+                              live_from=max(bars[s][ci[s]]["ts"] for s in bars),
+                              _keep=_keep, _freeze_db=_fdb,
+                              _freeze_name=strat.name)
+                for _k in _keep:  # frozen version tag from ml_signals
+                    if isinstance(_k, dict) and _k.get("frozen_version"):
+                        _frozen_ver = _k.pop("frozen_version")
+                if _frozen_ver:
+                    _model_id = f"{_model_id}:frozen:{_frozen_ver}"
+                if _keep:
+                    from ..ml.ranker import score_lists as _sl
+                    _df0 = next((k for k in _keep if hasattr(k, "groupby")), None)
+                    if _df0 is not None:
+                        ml_scores = _sl(_df0, bars)
             except Exception:
-                ml_sig = {}
+                ml_sig, ml_scores = {}, {}
         # 1. fills: CMP intraday when available, else first open after signal (parity)
         use_cmp = bool(cap.get("paper_use_cmp", True))
         settle_mode = str(cap.get("settlement_mode", "T1_EPI"))
@@ -208,7 +258,7 @@ def step(strategy_d: Dict[str, Any], symbols: List[str], db_path: str | None = N
                 if qty < 1:
                     log.append(f"SKIP {sym} funds in settlement ({settle_mode})")
                     continue  # stays PENDING, retries next step
-                cost = trade_cost(qty * px, flat) / 2
+                cost = _book(qty * px, flat, 0.0, 0.0, cap) / 2
                 con.execute("INSERT INTO paper_trades(strategy,symbol,t_in,qty,px_in,atr,cost,"
                             "status,fill_src,created_at) VALUES(?,?,?,?,?,?,?,'OPEN',?,?)",
                             (strat.name, sym, t_in, qty, px, atr, cost, src, _now()))
@@ -242,7 +292,7 @@ def step(strategy_d: Dict[str, Any], symbols: List[str], db_path: str | None = N
             if qty < 1:
                 log.append(f"SKIP {sym} funds in settlement ({settle_mode})")
                 continue  # stays PENDING, retries next step
-            cost = trade_cost(qty * fb["open"], flat) / 2
+            cost = _book(qty * fb["open"], flat, 0.0, 0.0, cap) / 2
             con.execute("INSERT INTO paper_trades(strategy,symbol,t_in,qty,px_in,atr,cost,"
                         "status,fill_src,created_at) VALUES(?,?,?,?,?,?,?,'OPEN','OPEN',?)",
                         (strat.name, sym, fb["ts"], qty, fb["open"], atr, cost, _now()))
@@ -264,7 +314,7 @@ def step(strategy_d: Dict[str, Any], symbols: List[str], db_path: str | None = N
                 held = _bars_held(bl, t_in, ci[sym]) >= strat.max_hold
                 if not (hit or held):
                     continue
-                cost = trade_cost(qty * cmp, flat) / 2
+                cost = _book(qty * cmp, flat, 0.0, 0.0, cap) / 2
                 entry_cost = con.execute("SELECT cost FROM paper_trades WHERE id=?", (tid,)).fetchone()[0]
                 net = qty * (cmp - px_in) - cost - (entry_cost or 0)
                 con.execute("UPDATE paper_trades SET t_out=?,px_out=?,net=?,cost=cost+?,"
@@ -277,7 +327,7 @@ def step(strategy_d: Dict[str, Any], symbols: List[str], db_path: str | None = N
                 px = last["close"]  # engine parity: bar-count hold, not calendar days
             if px is None:
                 continue
-            cost = trade_cost(qty * px, flat) / 2
+            cost = _book(qty * px, flat, 0.0, 0.0, cap) / 2
             entry_cost = con.execute("SELECT cost FROM paper_trades WHERE id=?", (tid,)).fetchone()[0]
             net = qty * (px - px_in) - cost - (entry_cost or 0)
             con.execute("UPDATE paper_trades SET t_out=?,px_out=?,net=?,cost=cost+?,"
@@ -302,8 +352,30 @@ def step(strategy_d: Dict[str, Any], symbols: List[str], db_path: str | None = N
                 fired = bool(len(sl) > i and sl[i] is True)
             else:
                 fired = _signals(strat, bl[:i + 1])[-1] is True
+            try:  # PlanFixes3 #5: full score vector daily (IC needs all 200,
+                # not just top-N picks); symbolic logs fired 1/0
+                if is_ml:
+                    _scl = ml_scores.get(s, [])
+                    sc = float(_scl[i]) if len(_scl) > i else None
+                else:
+                    sc = 1.0 if fired else 0.0
+                if sc is not None:
+                    con.execute("INSERT OR IGNORE INTO shadow_scores(strategy,symbol,"
+                                "signal_ts,score,model,cfg_hash,eligible,created_at)"
+                                " VALUES(?,?,?,?,?,?,?,?)",
+                                (strat.name, s, bl[i]["ts"], sc, _model_id,
+                                 _cfg_hash, 1, _now()))
+            except Exception:
+                pass
             if not fired:
                 continue
+            try:  # shadow ledger: every daily pick, scored or not, for free
+                # forward-OOS across all live strategies (evaluate after 60+d)
+                con.execute("INSERT OR IGNORE INTO shadow_picks(strategy,symbol,signal_ts,"
+                            "created_at) VALUES(?,?,?,?)",
+                            (strat.name, s, bl[i]["ts"], _now()))
+            except Exception:
+                pass
             exists = con.execute("SELECT 1 FROM paper_trades WHERE strategy=? AND symbol=?"
                                  " AND status='OPEN'", (strat.name, s)).fetchone()
             pend = con.execute("SELECT 1 FROM paper_orders WHERE strategy=? AND symbol=?"

@@ -1,6 +1,6 @@
 """Cross-sectional ranker over trailing primitives (rank fwd_ret, top-N policy).
 
-Model family dispatches via ml/family.py (hgb default, rf, ridge); defaults stay
+Model family dispatches via ml/family.py (hgb default, rf, ridge, extra); defaults stay
 fixed — no tuning grid (deliberate anti-overfit choice at this data scale).
 Artifacts pickle to run shards.
 """
@@ -17,6 +17,10 @@ DEFAULTS = {"max_depth": 3, "learning_rate": 0.05, "max_iter": 200,
 def train_ranker(train_df, top_n: int = 5, model: str = "hgb", feats=None, **overrides):
     cols = list(getattr(train_df, "columns", FEATS))
     use = [f for f in (feats or FEATS) if f in cols] or [f for f in FEATS if f in cols]
+    if model == "gru":  # Phase-5 experiment only; never in the mutation pool
+        from .seq import train as _train_seq
+        return _train_seq(train_df, use, top_n=top_n,
+                          seed=int(overrides.get("random_state", 7)))
     if model not in MODELS:
         model = "hgb"
     params = {**DEFAULTS, **overrides} if model == "hgb" else dict(overrides)
@@ -30,6 +34,9 @@ def attribution(model, df, feats: List[str] | None = None):
 
 def add_scores(model, df):
     out = df.copy()
+    if hasattr(model, "score_frame"):  # sequence models score windowed frames
+        out["score"] = model.score_frame(df)
+        return out
     feats = list(getattr(model, "feats_", FEATS))
     use = [f for f in feats if f in df.columns]
     out["score"] = model.predict(df[use].to_numpy(dtype=float))
@@ -56,6 +63,20 @@ def top_n_signals(scored_df, bars_by_symbol: Dict[str, List[Dict]],
                            and (not live_from or b["ts"] >= live_from)))
         out[s] = sl
     return out
+
+
+def score_lists(scored_df, bars_by_symbol: Dict[str, List[Dict]]) -> Dict[str, List[float]]:
+    """Per-symbol score lists aligned to each symbol's bars (0 where unscored).
+    Lets the engine fill top-ranked picks first instead of alphabetically."""
+    by_ts: Dict[str, Dict[str, float]] = {}
+    try:
+        for ts, grp in scored_df.groupby("ts"):
+            by_ts[str(ts)] = {str(s): float(v) for s, v in
+                              zip(grp["symbol"], grp["score"])}
+    except Exception:
+        return {s: [0.0] * len(bl) for s, bl in bars_by_symbol.items()}
+    return {s: [by_ts.get(b["ts"], {}).get(s, 0.0) for b in bl]
+            for s, bl in bars_by_symbol.items()}
 
 
 def save_model(model, path: str) -> str:

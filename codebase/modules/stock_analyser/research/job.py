@@ -32,6 +32,12 @@ LEDGER_ALTER5 = "ALTER TABLE research_candidates ADD COLUMN model_config_hash TE
 LEDGER_ALTER6 = "ALTER TABLE research_candidates ADD COLUMN random_seed TEXT DEFAULT ''"
 LEDGER_ALTER7 = "ALTER TABLE research_candidates ADD COLUMN dataset_id TEXT DEFAULT ''"
 LEDGER_ALTER8 = "ALTER TABLE research_candidates ADD COLUMN signal_hash TEXT DEFAULT ''"
+LEDGER_ALTER9 = "ALTER TABLE research_candidates ADD COLUMN score_is REAL DEFAULT NULL"
+LEDGER_ALTER10 = "ALTER TABLE research_candidates ADD COLUMN n_is INTEGER DEFAULT NULL"
+LEDGER_ALTER11 = "ALTER TABLE research_candidates ADD COLUMN eval_regime TEXT DEFAULT ''"
+EPOCH_OVERRIDE_DDL = ("CREATE TABLE IF NOT EXISTS epoch_overrides(dataset_id TEXT PRIMARY KEY,"
+                      " reason TEXT DEFAULT '', hashes_json TEXT DEFAULT '[]',"
+                      " created_at TEXT DEFAULT '', used_by TEXT DEFAULT '')")
 
 
 def data_fingerprint(bars: Dict[str, List]) -> str:
@@ -52,10 +58,10 @@ def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
-_STAGE_ORDER = ("iter_start", "mutated", "gated", "alpha", "screen",
+_STAGE_ORDER = ("iter_start", "mutated", "gated", "alpha", "stage1", "screen",
                 "validated", "ladder", "backtest", "recorded")
 _STAGE_LABEL = {"mutated": "choose_mutate", "gated": "dedup_seal_sigfp",
-                "alpha": "alpha_gate", "screen": "quick_screen",
+                "alpha": "alpha_gate", "stage1": "stage1_ic", "screen": "quick_screen",
                 "validated": "validate", "ladder": "ladder",
                 "backtest": "backtest", "recorded": "record"}
 
@@ -112,12 +118,46 @@ def _con(db_path: str | None = None):
     ensure_schema(db_path)
     con = connect(db_path)
     for _alter in (LEDGER_ALTER, LEDGER_ALTER2, LEDGER_ALTER3, LEDGER_ALTER4,
-                   LEDGER_ALTER5, LEDGER_ALTER6, LEDGER_ALTER7, LEDGER_ALTER8):
+                   LEDGER_ALTER5, LEDGER_ALTER6, LEDGER_ALTER7, LEDGER_ALTER8,
+                   LEDGER_ALTER9, LEDGER_ALTER10, LEDGER_ALTER11):
         try:
             con.execute(_alter)
         except Exception:
             pass
+    try:
+        con.execute(EPOCH_OVERRIDE_DDL)
+    except Exception:
+        pass
+    try:  # Q10: tag pre-regime rows once. Cost flip deployed ~08:15 UTC
+        # 2026-10-03 (sweep-6 and earlier ran flat; sweep-7+ realistic).
+        con.execute("UPDATE research_candidates SET eval_regime='flat'"
+                    " WHERE (eval_regime IS NULL OR eval_regime='')"
+                    " AND created_at < '2026-10-03T08:15'")
+        con.execute("UPDATE research_candidates SET eval_regime='realistic'"
+                    " WHERE eval_regime IS NULL OR eval_regime=''")
+        con.commit()
+    except Exception:
+        pass
     return con
+
+
+def grant_epoch_override(dataset_id: str, reason: str, hashes: List[str],
+                         db_path: str | None = None) -> Dict[str, Any]:
+    """Auditable one-run override of the epoch cap (round-2 Q10): for
+    re-evaluating already-tested hypotheses under a new regime (e.g. the
+    rank-gauss ridge finalist under the corrected tariff) — not a fresh
+    sweep. Consumed on use; the frozen hash list documents scope."""
+    import json as _j
+    con = _con(db_path)
+    try:
+        con.execute(EPOCH_OVERRIDE_DDL)
+        con.execute("INSERT OR IGNORE INTO epoch_overrides(dataset_id,reason,hashes_json,"
+                    "created_at,used_by) VALUES(?,?,?,?,?)",
+                    (dataset_id, reason, _j.dumps(hashes), _now(), ""))
+        con.commit()
+        return {"dataset_id": dataset_id, "reason": reason, "n_hashes": len(hashes)}
+    finally:
+        con.close()
 
 
 def start_run(objective: str, universe: str, mode: str, budget: int,
@@ -145,13 +185,24 @@ def tested_hashes(run_id: str, db_path: str | None = None) -> set:
         con.close()
 
 
-def best_candidates(run_id: str, limit: int = 5, db_path: str | None = None) -> List[Dict]:
+def best_candidates(run_id: str, limit: int = 5, db_path: str | None = None,
+                    regime: str | None = None) -> List[Dict]:
+    """Resume elites ranked on score_is (pre-OOS rank reproducible from the
+    ledger), never OOS: ranking on the sealed window would fit it adaptively
+    across restarts. regime filters out other cost-basis eras (Q10)."""
     con = _con(db_path)
     try:
-        cols = ["strategy_json", "parent", "mutation", "verdict", "avg_net", "oos_net"]
-        rows = con.execute(f"SELECT {','.join(cols)} FROM research_candidates WHERE run_id=?"
-                           " AND verdict NOT IN ('SCREENED','DUPLICATE') ORDER BY COALESCE(oos_net,-1e18) DESC LIMIT ?",
-                           (run_id, limit,)).fetchall()
+        cols = ["strategy_json", "parent", "mutation", "verdict", "avg_net", "oos_net",
+                "score_is", "n_is"]
+        q = (f"SELECT {','.join(cols)} FROM research_candidates WHERE run_id=?"
+             " AND verdict NOT IN ('SCREENED','DUPLICATE')")
+        args: list = [run_id]
+        if regime:
+            q += " AND eval_regime=?"
+            args.append(regime)
+        q += " ORDER BY COALESCE(score_is,avg_net,-1e18) DESC LIMIT ?"
+        args.append(limit)
+        rows = con.execute(q, args).fetchall()
         return [dict(zip(cols, r)) for r in rows]
     finally:
         con.close()
@@ -198,6 +249,14 @@ def family_stalls(run_id: str, family: str, db_path: str | None = None) -> int:
     return n
 
 
+def _fam_retired(fam: str, cap: Dict[str, Any] | None = None) -> bool:
+    """PlanFixes3 #9: retired families (prefix match, e.g. "sym:") never
+    enter the bandit. Checked per-iteration so all-retired lands on the
+    existing ALL_RETIRED terminal state."""
+    ret = (cap or {}).get("retired_families", []) or []
+    return any(fam == r or fam.startswith(r) for r in ret)
+
+
 def _prepare_base(base_d: Dict[str, Any], cap: Dict[str, Any]) -> Dict[str, Any]:
     d = dict(base_d)
     d.setdefault("max_positions", cap.get("max_positions", 8))
@@ -213,7 +272,8 @@ def _pilot_bars(bars: Dict[str, List], k: int) -> Dict[str, List]:
 
 
 def _pilot_or_full(cand_d: Dict[str, Any], bars: Dict[str, List], start_cash: float,
-                   is_ml: bool, k: int, enabled: bool) -> Dict[str, Any]:
+                   is_ml: bool, k: int, enabled: bool,
+                   dataset_id: str = "", db_path: str | None = None) -> Dict[str, Any]:
     """Pilot gate: only structural LOW_N_IS on a stratified subset skips full.
 
     NEG_IS never pilot-kills (bench showed pilot NEG_IS vs full UNSTABLE:
@@ -221,18 +281,21 @@ def _pilot_or_full(cand_d: Dict[str, Any], bars: Dict[str, List], start_cash: fl
     if not enabled or len(bars) <= k:
         from ..ml.strategies import validate_ml as _vml
         if is_ml:
-            return _vml(cand_d, bars, start_cash)
-        return validate_strategy(strategy_from_dict(cand_d), bars, start_cash=start_cash)
+            return _vml(cand_d, bars, start_cash, dataset_id=dataset_id, db_path=db_path)
+        return validate_strategy(strategy_from_dict(cand_d), bars, start_cash=start_cash,
+                                 dataset_id=dataset_id, db_path=db_path)
     pb = _pilot_bars(bars, k)
     from ..ml.strategies import validate_ml as _vml
-    pv = (_vml(cand_d, pb, start_cash) if is_ml
-          else validate_strategy(strategy_from_dict(cand_d), pb, start_cash=start_cash))
+    pv = (_vml(cand_d, pb, start_cash, dataset_id=dataset_id, db_path=db_path) if is_ml
+          else validate_strategy(strategy_from_dict(cand_d), pb, start_cash=start_cash,
+                                 dataset_id=dataset_id, db_path=db_path))
     if pv.get("verdict") == "REJECT" and pv.get("reason") == "LOW_N_IS":
         pv = dict(pv)
         pv["pilot_kill"] = True
         return pv
-    return (_vml(cand_d, bars, start_cash) if is_ml
-            else validate_strategy(strategy_from_dict(cand_d), bars, start_cash=start_cash))
+    return (_vml(cand_d, bars, start_cash, dataset_id=dataset_id, db_path=db_path) if is_ml
+            else validate_strategy(strategy_from_dict(cand_d), bars, start_cash=start_cash,
+                                   dataset_id=dataset_id, db_path=db_path))
 
 
 def run_job(objective: str, base_strategy: Dict[str, Any] | None = None,
@@ -248,6 +311,9 @@ def run_job(objective: str, base_strategy: Dict[str, Any] | None = None,
     pilot: screen-passers first validate on sorted(bars)[:pilot_symbols]; only
     pilot IS-survivors pay for the full-universe validate (3-4x saving)."""
     cap = load_capital()
+    _reg = str(cap.get("cost_basis", "realistic") or "realistic")
+    _rhs = ":r" if _reg == "realistic" else ":f"  # regime-keyed hashes:
+    # re-evaluations under a new cost regime never collide with old rows
     syms = symbols or resolve_universe(universe) or ["RELIANCE"]
     fam_bases = [_prepare_base(s, cap) for s in (seeds or ([base_strategy] if base_strategy else []))]
     if not fam_bases:
@@ -296,6 +362,41 @@ def run_job(objective: str, base_strategy: Dict[str, Any] | None = None,
                     "results": []}
     t_end = time.time() + max_hours * 3600 if max_hours > 0 else 0
     open_ended = budget <= 0
+    _cap_trials = cap.get("epoch_max_trials", 30)
+    _cap_trials = 30 if _cap_trials is None else int(_cap_trials)
+    from .stats import trial_count as _tcount
+    _prior_trials = _tcount(dataset_id, db_path)
+    _override = ""
+    if _prior_trials > _cap_trials:
+        try:  # one-run auditable override (re-evaluation, not a fresh sweep)
+            con = _con(db_path)
+            try:
+                _ov = con.execute("SELECT reason FROM epoch_overrides WHERE dataset_id=?"
+                                  " AND (used_by IS NULL OR used_by='')",
+                                  (dataset_id,)).fetchone()
+                if _ov:
+                    con.execute("UPDATE epoch_overrides SET used_by=? WHERE dataset_id=?",
+                                (rid, dataset_id))
+                    con.commit()
+                    _override = str(_ov[0] or "override")
+            finally:
+                con.close()
+        except Exception:
+            pass
+    if _prior_trials > _cap_trials and not _override:
+        # PlanFixes3 #10: bounded hypotheses per dataset epoch (deflation
+        # scales with M); fresh bars open a new epoch, not more sweeps.
+        # Override explicitly via epoch_max_trials (auditable), not silently.
+        con = _con(db_path)
+        try:
+            con.execute("UPDATE research_runs SET status='EPOCH_CAPPED' WHERE id=?", (rid,))
+            con.commit()
+        finally:
+            con.close()
+        return {"run_id": rid, "status": "EPOCH_CAPPED", "dataset_id": dataset_id,
+                "reason": f"{_prior_trials} trials on {dataset_id} >= cap {_cap_trials}"
+                          " (grant_epoch_override for auditable re-evaluation)",
+                "tested_this_session": 0, "paper_ready": 0, "results": []}
     if dataset != "synthetic" and any(
             (s.get("meta", {}) or {}).get("family") == "ml" for s in fam_bases):
         try:  # warm shared panel once (~100s cold); all ML candidates reuse it
@@ -306,15 +407,29 @@ def run_job(objective: str, base_strategy: Dict[str, Any] | None = None,
     _flush_time(rid, 0, "_setup", "-", "SETUP",
                 {"iter_start": t_setup, "recorded": time.perf_counter()})
     results, i, status = [], 0, "COMPLETE"
+    _hist: List[float] = []  # run population for median shrinkage
+    try:  # seed progression survives budget refunds (Q7): step counts every
+        con = _con(db_path)  # attempt, i counts only budget-consuming trials
+        try:
+            _d0 = con.execute("SELECT done FROM research_runs WHERE id=?", (rid,)).fetchone()
+            step = int((_d0 or [0])[0])
+        finally:
+            con.close()
+    except Exception:
+        step = 0
     elites: Dict[str, Dict] = {}
     try:
-        for b in best_candidates(rid, 20, db_path):
+        for b in best_candidates(rid, 20, db_path, _reg):
             try:
                 d = json.loads(b["strategy_json"])
                 fam = family_of(d)
                 if fam not in elites:
+                    # resume seeds raw score_is (median unknown cross-run;
+                    # in-loop comparisons use shrunk keys consistently)
                     elites[fam] = {"strategy_json": b["strategy_json"],
-                                   "_score": b.get("oos_net") or -1e18}
+                                   "_score": (b.get("score_is")
+                                              if b.get("score_is") is not None else -1e18),
+                                   "_tries": 0}
             except Exception:
                 pass
     except Exception:
@@ -327,23 +442,32 @@ def run_job(objective: str, base_strategy: Dict[str, Any] | None = None,
                 break
             live_fams = [f for f in live_fams
                          if family_rejects(rid, family_of(fam_bases[f]), db_path) < retire_after
-                         and family_stalls(rid, family_of(fam_bases[f]), db_path) < screened_retire_after]
+                         and family_stalls(rid, family_of(fam_bases[f]), db_path) < screened_retire_after
+                         and not _fam_retired(family_of(fam_bases[f]), cap)]
             if not live_fams:
                 status = "ALL_RETIRED"
                 break
             from .allocate import choose as _choose, family_stats as _fstats
             from .allocate import novelty_kind as _nkind
             ts = {"iter_start": time.perf_counter()}
-            rng = random.Random(seed + i)
+            rng = random.Random(seed + step)
             live_names = [family_of(fam_bases[f]) for f in live_fams]
-            stats = _fstats(rid, sorted(set(live_names)), db_path)
+            stats = _fstats(rid, sorted(set(live_names)), db_path, _reg)
             fam_pick, mode, novelty = _choose(sorted(set(live_names)), stats, cap, rng)
             fi = rng.choice([f for f in live_fams if family_of(fam_bases[f]) == fam_pick])
             base_d = fam_bases[fi]
             fam = family_of(base_d)
             is_ml = (base_d.get("meta", {}) or {}).get("family") == "ml"
             kinds = ML_MUTATIONS if is_ml else MUTATIONS
-            kind = _nkind(is_ml, rng) if novelty else rng.choice(kinds)
+            if novelty:
+                kind = _nkind(is_ml, rng)
+            elif mode == "exploit" and is_ml:
+                # PlanFixes3 #4: exploit searches structure/regularisation
+                # only; execution knobs (top_n/exit/hold/position) are fixed
+                # once — neighbour fitness diffs sit inside noise
+                kind = rng.choice(("features", "model", "depth"))
+            else:
+                kind = rng.choice(kinds)
             if novelty:
                 mode = "explore-novelty"
             elite = elites.get(fam)
@@ -351,8 +475,12 @@ def run_job(objective: str, base_strategy: Dict[str, Any] | None = None,
             if mode == "exploit" and elite is not None:
                 try:
                     parent_d = json.loads(elite["strategy_json"])
+                    elite["_tries"] = elite.get("_tries", 0) + 1
                 except Exception:
                     pass
+            if mode == "exploit" and elite is not None and elite.get("_tries", 0) >= 3:
+                # stale elite: force a structural move, not another knob tweak
+                kind = _nkind(is_ml, rng)
             elif mode == "validate" and elite is not None:
                 try:
                     parent_d = json.loads(elite["strategy_json"])
@@ -364,27 +492,52 @@ def run_job(objective: str, base_strategy: Dict[str, Any] | None = None,
             elif i == 0 and elite is None:
                 cand_d = dict(parent_d)
             else:
-                cand_d = mutate_ml(parent_d, seed + i, kind) if is_ml else \
-                    mutate(strategy_from_dict(parent_d), seed + i, kind).to_dict()
-            h, fam_now = _hash(cand_d), family_of(cand_d)
+                cand_d = mutate_ml(parent_d, seed + step, kind) if is_ml else \
+                    mutate(strategy_from_dict(parent_d), seed + step, kind).to_dict()
+            h, fam_now = _hash(cand_d) + _rhs, family_of(cand_d)
             if h in seen and mode == "validate":
                 # elite already tested: fall back to exploit-mutate, don't burn budget
-                cand_d = mutate_ml(parent_d, seed + i + 999, kind if kind != "validate" else None) if is_ml else \
-                    mutate(strategy_from_dict(parent_d), seed + i + 999, None).to_dict()
-                h, fam_now, kind = _hash(cand_d), family_of(cand_d), "exploit-fallback"
+                cand_d = mutate_ml(parent_d, seed + step + 999, kind if kind != "validate" else None) if is_ml else \
+                    mutate(strategy_from_dict(parent_d), seed + step + 999, None).to_dict()
+                h, fam_now, kind = _hash(cand_d) + _rhs, family_of(cand_d), "exploit-fallback"
+            if mode != "validate":
+                # duplicate retries: bounded seed bumps before burning budget
+                # on a DUPLICATE record (sweep-7 wasted 11/20 this way)
+                from .dedup import seen_global as _sg
+                _att = 0
+                while (h in seen or _sg(h, db_path)) and _att < 5:
+                    _att += 1
+                    _rk = ("features" if (is_ml and _att >= 3)
+                           else (kind if kind in (kinds or ()) else None))
+                    cand_d = mutate_ml(parent_d, seed + step + 997 * _att, _rk) if is_ml else \
+                        mutate(strategy_from_dict(parent_d), seed + step + 997 * _att, _rk).to_dict()
+                    h, fam_now = _hash(cand_d) + _rhs, family_of(cand_d)
+                    if not is_ml:  # same signal stream = same idea: keep bumping
+                        try:
+                            _rsig = signal_fingerprint(cand_d, bars)
+                            if _rsig and _rsig in seen_signals:
+                                continue
+                        except Exception:
+                            pass
             i += 1
+            step += 1  # every attempt advances seed progression, refund or not
             ts["mutated"] = time.perf_counter()
             from .dedup import seen_global as _seen_global, record_dup as _record_dup
             if h in seen or _seen_global(h, db_path):
                 seen.add(h)
                 results.append(_record_dup(rid, h, cand_d, fam_now, kind, mode, db_path,
-                                           data_hash, code_ver, dataset_id, seed + i))
+                                           data_hash, code_ver, dataset_id, seed + step, _reg))
                 _flush_time(rid, i, cand_d.get("name", "?"), kind, "DUPLICATE", ts)
+                i -= 1  # Q7: revisits don't consume budget (SPACE_EXHAUSTED bounds loops)
+                if len(results) >= 10 and sum(
+                        1 for r in results[-10:] if r.get("verdict") == "DUPLICATE") / 10 > 0.3:
+                    status = "SPACE_EXHAUSTED"  # structural space exhausted,
+                    break  # distinct from learning stalls (retire_after counts REJECTs)
                 continue
             seen.add(h)
             from .firewall import fingerprints as _fps, check_seal_binding as _sealbind
             from .alpha_screen import screen as alpha_gate
-            _fp = _fps(cand_d, seed + i, dataset_id, data_hash, code_ver)
+            _fp = _fps(cand_d, seed + step, dataset_id, data_hash, code_ver)
             _prov = (_fp["feature_set_hash"], _fp["model_config_hash"],
                      _fp["random_seed"], _fp["dataset_id"])
             # P15 behavioral dedup: identical signal stream = redundant (symbolic only; cheap)
@@ -396,18 +549,25 @@ def run_job(objective: str, base_strategy: Dict[str, Any] | None = None,
                     pass
             if _sigfp and _sigfp in seen_signals:
                 _record(rid, h, cand_d, fam_now, kind, "DUPLICATE",
-                        None, None, 0.0, db_path, data_hash, code_ver, *_prov, _sigfp)
+                        None, None, 0.0, db_path, data_hash, code_ver, *_prov, _sigfp,
+                        eval_regime=_reg)
                 results.append({"strategy": cand_d.get("name"), "mutation": kind,
                                 "verdict": "DUPLICATE", "alloc": mode,
                                 "avg_net": None, "oos_net": None, "summary": ""})
                 _flush_time(rid, i, cand_d.get("name", "?"), kind, "DUPLICATE", ts)
+                i -= 1  # Q7: revisits don't consume budget
+                if len(results) >= 10 and sum(
+                        1 for r in results[-10:] if r.get("verdict") == "DUPLICATE") / 10 > 0.3:
+                    status = "SPACE_EXHAUSTED"
+                    break
                 continue
             if _sigfp:
                 seen_signals.add(_sigfp)
             _reason = _sealbind(cand_d, data_hash, code_ver)
             if _reason:
                 _record(rid, h, cand_d, fam_now, kind, "REJECT",
-                        None, None, 0.0, db_path, data_hash, code_ver, *_prov, _sigfp)
+                        None, None, 0.0, db_path, data_hash, code_ver, *_prov, _sigfp,
+                        eval_regime=_reg)
                 results.append({"strategy": cand_d.get("name"), "mutation": kind,
                                 "verdict": "REJECT", "reason": _reason, "alloc": mode,
                                 "avg_net": None, "oos_net": None, "summary": ""})
@@ -418,10 +578,24 @@ def run_job(objective: str, base_strategy: Dict[str, Any] | None = None,
             ts["alpha"] = time.perf_counter()
             if not ag["pass"]:
                 _record(rid, h, cand_d, fam_now, kind, "SCREENED",
-                        None, None, 0.0, db_path, data_hash, code_ver, *_prov, _sigfp)
+                        None, None, 0.0, db_path, data_hash, code_ver, *_prov, _sigfp,
+                        eval_regime=_reg)
                 results.append({"strategy": cand_d.get("name"), "mutation": kind,
                                 "verdict": "SCREENED", "avg_net": None, "alloc": mode,
                                 "oos_net": None, "summary": f"alpha_gate {ag['metrics']}"[:150]})
+                _flush_time(rid, i, cand_d.get("name", "?"), kind, "SCREENED", ts)
+                continue
+            from .stage1 import ic_screen as _ics  # stage 1: signal-level IC,
+            _st1 = _ics(cand_d, bars, is_ml, cap)  # no exits/costs; sim only on survivors
+            ts["stage1"] = time.perf_counter()
+            if not _st1["pass"]:
+                _record(rid, h, cand_d, fam_now, kind, "SCREENED",
+                        None, None, 0.0, db_path, data_hash, code_ver, *_prov, _sigfp,
+                        eval_regime=_reg)
+                results.append({"strategy": cand_d.get("name"), "mutation": kind,
+                                "verdict": "SCREENED", "avg_net": None, "alloc": mode,
+                                "oos_net": None,
+                                "summary": f"stage1_ic { {k: _st1.get(k) for k in ('mean_ic', 't_nw', 'n_dates', 'spread_bps')} }"[:150]})
                 _flush_time(rid, i, cand_d.get("name", "?"), kind, "SCREENED", ts)
                 continue
             from ..ml.strategies import quick_screen, validate_ml
@@ -431,7 +605,8 @@ def run_job(objective: str, base_strategy: Dict[str, Any] | None = None,
             ts["screen"] = time.perf_counter()
             if not scr["pass"]:
                 _record(rid, h, cand_d, fam_now, kind, "SCREENED",
-                        scr["avg_net"], None, 0.0, db_path, data_hash, code_ver, *_prov, _sigfp)
+                        scr["avg_net"], None, 0.0, db_path, data_hash, code_ver, *_prov, _sigfp,
+                        eval_regime=_reg)
                 results.append({"strategy": cand_d.get("name"), "mutation": kind,
                                 "verdict": "SCREENED", "avg_net": scr["avg_net"], "alloc": mode,
                                 "oos_net": None, "summary": ""})
@@ -439,10 +614,10 @@ def run_job(objective: str, base_strategy: Dict[str, Any] | None = None,
                 continue
             if is_ml:
                 v = _pilot_or_full(cand_d, bars, start_cash, True, pilot_symbols,
-                                   pilot_enable)
+                                   pilot_enable, dataset_id, db_path)
             else:
                 v = _pilot_or_full(cand_d, bars, start_cash, False, pilot_symbols,
-                                   pilot_enable)
+                                   pilot_enable, dataset_id, db_path)
             ts["validated"] = time.perf_counter()
             if v.get("verdict") == "REJECT" and v.get("reason"):
                 cand_d = dict(cand_d)  # surface gate in ledger strategy_json
@@ -461,11 +636,18 @@ def run_job(objective: str, base_strategy: Dict[str, Any] | None = None,
                               "dataset_id": dataset_id})  # P13: seal binds data+code
                 cand_d["meta"] = {**(cand_d.get("meta") or {}), "oos_seal": _seal}
             oos = v.get("locked_oos") or {}
+            try:  # score_is/n_is feed the resume rank (defect: raw avg_net couldn't)
+                from .scoring import score_is as _score_is0
+                _isr0 = _score_is0(cand_d, v, cap) or {}
+                _is0, _in0 = _isr0.get("score"), ((_isr0.get("breakdown") or {}).get("n")) or 0
+            except Exception:
+                _is0, _in0 = None, 0
             _record(rid, h, cand_d, fam_now, kind, v.get("verdict"),
                     (v.get("backtest") or {}).get("avg_net_per_trade"),
                     oos.get("avg_net_per_trade"), v.get("robustness"), db_path,
-                    data_hash, code_ver, *_prov)
-            exp_id = f"run_policy_mut{seed + i}" if i > 1 else "run_basic"
+                    data_hash, code_ver, *_prov,
+                    score_is=_is0, n_is=_in0, eval_regime=_reg)
+            exp_id = f"run_policy_mut{seed + step}" if step > 1 else "run_basic"
             params = {"strategy": cand_d, "dataset": dataset, "symbols": syms,
                       "timeframe": timeframe, "start_cash": start_cash}
             try:
@@ -494,9 +676,23 @@ def run_job(objective: str, base_strategy: Dict[str, Any] | None = None,
             score = ((v.get("research_score") or {}).get("score")
                      if (v.get("research_score") or {}).get("score") is not None
                      else (oos.get("avg_net_per_trade") or -1e18))
+            try:  # elites rank pre-OOS only (OOS-ranked elites fit the seal)
+                from .scoring import score_is as _score_is
+                _isr = _score_is(cand_d, v, cap) or {}
+                is_score = _isr.get("score")
+                _in = ((_isr.get("breakdown") or {}).get("n")) or 0
+                # shrunk toward the run median (round-2 defect: shrinking raw
+                # toward zero ranked low-n losers above measured losers)
+                _hist.append(float(is_score) if is_score is not None else 0.0)
+                _med = sorted(_hist)[len(_hist) // 2]
+                elite_key = (_med + (is_score - _med) * _in / (_in + 25)
+                             if is_score is not None else -1e18)
+            except Exception:
+                elite_key = -1e18
             cur = elites.get(fam_now)
-            if cur is None or score > (cur.get("_score") or -1e18):
-                elites[fam_now] = {"strategy_json": json.dumps(cand_d), "_score": score}
+            if cur is None or elite_key > (cur.get("_score") or -1e18):
+                elites[fam_now] = {"strategy_json": json.dumps(cand_d),
+                                   "_score": elite_key, "_tries": 0}
     except KeyboardInterrupt:
         status = "PAUSED_USER"
     con = _con(db_path)
@@ -516,6 +712,7 @@ def run_job(objective: str, base_strategy: Dict[str, Any] | None = None,
             "tested_total": done, "paper_ready": len(ready), "capital": start_cash,
             "quality": quality, "seed": seed, "data_hash": data_hash,
             "code_version": code_ver, "dataset_id": dataset_id,
+            "epoch_override": _override,
             "universe_snapshot_hash": _snaphash(syms),            "retired": [family_of(fam_bases[f]) for f in range(len(fam_bases)) if f not in live_fams],
             "best": sorted(results, key=lambda r: (r.get("score") if r.get("score") is not None else (r.get("oos_net") or -1e18)))[-3:],
             "results": results}
@@ -525,17 +722,19 @@ def _record(run_id: str, h: str, d: Dict, fam: str, kind: str, verdict: str | No
             avg_net: Any, oos_net: Any, robustness: Any, db_path: str | None,
             data_hash: str = "", code_version: str = "",
             feature_set_hash: str = "", model_config_hash: str = "",
-            random_seed: str = "", dataset_id: str = "", signal_hash: str = "") -> None:
+            random_seed: str = "", dataset_id: str = "", signal_hash: str = "",
+            score_is: Any = None, n_is: Any = None, eval_regime: str = "") -> None:
     con = _con(db_path)
     try:
         con.execute("INSERT OR IGNORE INTO research_candidates(run_id,strategy_hash,"
                     "strategy_json,parent,mutation,verdict,avg_net,oos_net,robustness,family,"
                     "created_at,data_hash,code_version,feature_set_hash,model_config_hash,"
-                    "random_seed,dataset_id,signal_hash) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                    "random_seed,dataset_id,signal_hash,score_is,n_is,eval_regime)"
+                    " VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                     (run_id, h, json.dumps(d), (d.get("meta", {}) or {}).get("parent", d.get("name")),
                      kind, verdict, avg_net, oos_net, robustness, fam, _now(),
                      data_hash, code_version, feature_set_hash, model_config_hash,
-                     random_seed, dataset_id, signal_hash))
+                     random_seed, dataset_id, signal_hash, score_is, n_is, eval_regime))
         con.execute("UPDATE research_runs SET done=done+1 WHERE id=?", (run_id,))
         con.commit()
     finally:

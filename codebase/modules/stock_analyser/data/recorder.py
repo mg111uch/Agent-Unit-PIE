@@ -85,6 +85,8 @@ def yahoo_bars(symbol: str, interval: str = "15m", rng: str = "1d",
     dividends don't appear as fake jumps in backtests.
     """
     ysym = YAHOO_MAP.get(symbol, symbol if symbol.endswith(".NS") else symbol + ".NS")
+    from urllib.parse import quote as _q
+    ysym = _q(ysym, safe="^.")
     url = (f"https://query1.finance.yahoo.com/v8/finance/chart/{ysym}"
            f"?interval={interval}&range={rng}&events=div%2Csplit")
     req = urllib.request.Request(url, headers={"User-Agent": UA})

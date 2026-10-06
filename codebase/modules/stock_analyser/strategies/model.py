@@ -66,6 +66,40 @@ def strategy_from_dict(d: Dict[str, Any]) -> Strategy:
     return s
 
 
+def positive_controls(universe: str = "MY_RESEARCH_UNIVERSE") -> List[Dict[str, Any]]:
+    """6 canonical hand-specified factors (PlanFixes3 #9): known anomalies as
+    named positive controls. If these can't pass the gates on NSE data, the
+    gates or the power are the problem, not the search. Trailing-only ops."""
+    def lag(e, n=1):
+        return {"op": "lag", "args": [e, {"const": n}]}
+    def ma(field, n):
+        return {"op": "rolling_mean", "args": [{"field": field}, {"const": n}]}
+    specs = [
+        ("control_mom_12_1",  # 12-1 momentum: above 200d mean excluding last month
+         {"op": "gt", "args": [{"field": "close"}, lag(ma("close", 200), 21)]}),
+        ("control_reversal_5d",  # 5-day reversal: >3% 5d drop
+         {"op": "lt", "args": [{"op": "ratio", "args": [
+             {"field": "close"}, lag({"field": "close"}, 5)]}, {"const": 0.97}]}),
+        ("control_lowvol",  # low-vol: 20d vol below its own 20d-ago level
+         {"op": "lt", "args": [
+             {"op": "rolling_std", "args": [{"field": "returns"}, {"const": 20}]},
+             lag({"op": "rolling_std", "args": [{"field": "returns"}, {"const": 20}]}, 20)]}),
+        ("control_high_52w",  # 52-week-high proximity: within 10% of 240d high
+         {"op": "gt", "args": [{"op": "ratio", "args": [
+             {"field": "close"},
+             {"op": "rolling_max", "args": [{"field": "high"}, {"const": 240}]}]},
+             {"const": 0.9}]}),
+        ("control_vol_surge",  # volume surge: 2x trailing 20d mean
+         {"op": "gt", "args": [{"op": "ratio", "args": [
+             {"field": "volume"}, lag(ma("volume", 20))]}, {"const": 2.0}]}),
+        ("control_trend_50_200",  # golden cross: 50d mean above 200d mean
+         {"op": "gt", "args": [ma("close", 50), ma("close", 200)]}),
+    ]
+    return [{"name": n, "universe": universe, "timeframe": "1D", "entry": e,
+             "meta": {"family": "control", "control": n}}
+            for n, e in specs]
+
+
 def default_long_volume_breakout(universe: str = "MY_RESEARCH_UNIVERSE") -> Strategy:
     # NOTE: rolling refs are lag(...,1) — comparing against a window that
     # includes the current bar can never fire (and would peek by construction).

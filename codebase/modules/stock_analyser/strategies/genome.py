@@ -12,7 +12,7 @@ ML_MUTATIONS = ("top_n", "depth", "exit", "hold", "position", "features", "model
 ML_DEFAULTS = {"model": "hgb", "top_n": 5, "max_depth": 3, "stop_atr": 2.0, "take_atr": 4.0,
                "max_hold": 10, "position_frac": 0.2, "max_positions": 3}
 
-ML_MODELS = ("hgb", "rf", "ridge")
+ML_MODELS = ("hgb", "rf", "ridge", "extra")
 
 
 def ml_seed(universe: str = "MY_UNIVERSE_200", top_n: int = 5) -> Dict[str, Any]:

@@ -1,5 +1,19 @@
 capital: 50000
 flat_cost_per_roundtrip: 60
+# execution cost basis: realistic (honest ~20bps drag) or flat (legacy Rs60).
+# gates + paper both book via book_cost, so research/paper stay in parity.
+cost_basis: realistic
+# cost-stress leg multiplies the booked cost (2x realistic per PlanFixes3 #8)
+cost_stress_mult: 2.0
+# families retired from the bandit (prefix match; PlanFixes3 #9: symbolic is a
+# random walk r=0.03 — hand factors live on as positive controls, not search)
+retired_families: ["sym:"]
+# staged discovery (PlanFixes3 #1/#10): stage-1 signal IC kills below this
+# Newey-West t before any portfolio sim; hypotheses per dataset epoch capped
+# (deflation scales with M — fresh bars open a new epoch, not more sweeps)
+stage1_min_t: 1.0
+stage1_fwd: 5
+epoch_max_trials: 30
 # research capital ladder: near-miss probe suggests min capital on these steps
 research_min_capital: 25000
 research_max_capital: 100000
@@ -16,6 +30,8 @@ scale_min_avg_net_per_trade: 90
 scale_max_drawdown: -0.15
 # paper execution: True = FILL/CLOSE + mark at live CMP; False = next-open parity
 paper_use_cmp: true
+# paper model depth: bars per symbol sliced per step (validation parity, not 120)
+paper_lookback_bars: 750
 # settlement: T1_EPI (EPI same-day proceeds, large broker) or T1 (strict, blocked 1 day)
 settlement_mode: T1_EPI
 # retired trees: exit-only (fills pending + exits, no new signals) for strategy rotation

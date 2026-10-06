@@ -21,7 +21,8 @@ def prior_of(family: str, cap: Dict[str, Any]) -> float:
     return float(cap.get("prior_default", 1.0))
 
 
-def family_stats(run_id: str, families: List[str], db_path: str | None = None) -> Dict[str, Dict]:
+def family_stats(run_id: str, families: List[str], db_path: str | None = None,
+                 regime: str | None = None) -> Dict[str, Dict]:
     from ..data.store import connect, ensure_schema
     ensure_schema(db_path)
     con = connect(db_path)
@@ -32,8 +33,17 @@ def family_stats(run_id: str, families: List[str], db_path: str | None = None) -
             pass
         out: Dict[str, Dict] = {}
         for f in families:
-            rows = con.execute("SELECT verdict, COALESCE(oos_net,-1e18) FROM research_candidates"
-                               " WHERE run_id=? AND family=?", (run_id, f)).fetchall()
+            q = ("SELECT verdict, COALESCE(oos_net,-1e18) FROM research_candidates"
+                 " WHERE run_id=? AND family=?")
+            args: list = [run_id, f]
+            if regime:  # Q10: old-cost verdicts must not feed allocator priors
+                q += " AND eval_regime=?"
+                args.append(regime)
+            try:
+                rows = con.execute(q, args).fetchall()
+            except Exception:
+                rows = con.execute("SELECT verdict, COALESCE(oos_net,-1e18) FROM research_candidates"
+                                   " WHERE run_id=? AND family=?", (run_id, f)).fetchall()
             n = len(rows)
             ready = sum(1 for v, _ in rows if v == "PAPER_READY")
             avg = sum(o for _, o in rows if o and o > -1e17) / max(1, sum(1 for _, o in rows if o and o > -1e17))
