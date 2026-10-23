@@ -5,46 +5,147 @@
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>Coding Agent</title>
 <script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/lib/codemirror.css"/>
 <link rel="stylesheet" href="style.css"/>
 </head>
 <body class="bg-zinc-950 text-zinc-100">
 <div id="app" class="flex h-screen flex-col">
   <agent-header></agent-header>
-  <div class="min-h-0 flex-1">
-    <agent-chat></agent-chat>
+  <div class="flex min-h-0 flex-1">
+    <aside class="shrink-0 border-r border-zinc-800 min-h-0" :style="{ width: store.treeWidth + 'px' }">
+      <file-tree></file-tree>
+    </aside>
+    <div @mousedown="store.startResize('left', $event)"
+      class="shrink-0 w-1 cursor-col-resize bg-zinc-800/40 hover:bg-sky-500/60 transition-colors"></div>
+    <main class="flex-1 min-w-0 min-h-0">
+      <code-editor></code-editor>
+    </main>
+    <div @mousedown="store.startResize('right', $event)"
+      class="shrink-0 w-1 cursor-col-resize bg-zinc-800/40 hover:bg-sky-500/60 transition-colors"></div>
+    <aside class="shrink-0 border-l border-zinc-800 flex flex-col min-h-0" :style="{ width: store.chatWidth + 'px' }">
+      <div class="min-h-0 flex-1">
+        <agent-chat></agent-chat>
+      </div>
+      <agent-input></agent-input>
+    </aside>
   </div>
-  <agent-input></agent-input>
 </div>
 
 <!-- Templates -->
+<template id="file-tree-tmpl">
+  <div class="flex flex-col h-full min-h-0">
+    <div class="px-3 py-2 border-b border-zinc-800/80 flex items-center gap-2 shrink-0">
+      <span class="text-[10px] font-medium uppercase tracking-wider text-zinc-500 flex-1">Files</span>
+      <button @click="newFile" title="New file" class="text-zinc-500 hover:text-zinc-300 text-sm leading-none">+</button>
+      <button @click="refresh" title="Refresh" class="text-zinc-500 hover:text-zinc-300 text-xs">⟳</button>
+    </div>
+    <div class="px-2 py-2 shrink-0">
+      <input v-model="filter" placeholder="Filter files..." class="w-full bg-zinc-900 border border-zinc-800 rounded px-2 py-1 text-xs text-zinc-200 outline-none focus:border-sky-500/50"/>
+    </div>
+    <p v-if="error" class="px-3 py-2 text-[11px] text-red-400 break-safe shrink-0">{{ error }}</p>
+    <div ref="listRef" class="flex-1 min-h-0 overflow-y-auto pb-3 text-xs font-mono">
+      <div v-for="row in visibleRows" :key="row.path" @click="click(row)"
+        @contextmenu.prevent="openMenu(row, $event)"
+        :data-path="row.path"
+        class="w-full flex items-center pr-1 cursor-pointer select-none"
+        :class="isActive(row.path) ? 'bg-sky-500/15 text-sky-300' : 'text-zinc-400 hover:bg-zinc-800/60'"
+        :style="{ paddingLeft: (8 + row.depth * 12) + 'px' }">
+        <span class="flex-1 min-w-0 truncate py-0.5">
+          <span class="inline-block w-3 text-zinc-600">{{ row.type === 'dir' ? (expanded[row.path] ? '▾' : '▸') : '' }}</span>{{ row.name || row.path }}
+        </span>
+      </div>
+    </div>
+    <teleport to="body">
+      <div v-if="menu.open" class="ft-context-menu fixed z-50 w-44 rounded-lg border border-zinc-700/80 bg-zinc-900/95 shadow-xl shadow-black/50 py-1 text-xs"
+        :style="{ left: menu.x + 'px', top: menu.y + 'px' }">
+        <p class="px-3 py-1 text-[10px] text-zinc-500 truncate border-b border-zinc-800/80 mb-1">{{ menu.row && (menu.row.name || menu.row.path) }}</p>
+        <button @click="menuCopyPath" class="w-full text-left px-3 py-1.5 text-zinc-300 hover:bg-zinc-800 transition-colors">Copy Path</button>
+        <button @click="menuReveal" class="w-full text-left px-3 py-1.5 text-zinc-300 hover:bg-zinc-800 transition-colors">{{ menu.row && menu.row.type === 'dir' ? 'Open Folder' : 'Open Containing Folder' }}</button>
+        <div class="my-1 border-t border-zinc-800/80"></div>
+        <button @click="menuRename" class="w-full text-left px-3 py-1.5 text-zinc-300 hover:bg-zinc-800 transition-colors">Rename</button>
+        <button @click="menuDelete" class="w-full text-left px-3 py-1.5 text-red-400 hover:bg-red-500/10 transition-colors">Delete</button>
+      </div>
+    </teleport>
+  </div>
+</template>
+
+<template id="code-editor-tmpl">
+  <div class="flex flex-col h-full min-h-0">
+    <div class="h-10 shrink-0 border-b border-zinc-800/80 flex items-stretch bg-zinc-950">
+      <div class="flex-1 min-w-0 flex items-stretch overflow-x-auto">
+        <div v-for="tab in store.tabs" :key="tab.path" @click="store.activateTab(tab.path)"
+          :title="tab.path"
+          class="group flex items-center gap-1.5 px-3 text-xs border-r border-zinc-800/60 cursor-pointer max-w-[14rem] shrink-0 transition-colors"
+          :class="tab.path === store.activeFile ? 'bg-zinc-900 text-zinc-100' : 'text-zinc-500 hover:text-zinc-300 hover:bg-zinc-900/40'">
+          <span class="truncate">{{ tabName(tab.path) }}</span>
+          <span v-if="tab.dirty" class="text-amber-400">●</span>
+          <button @click="close($event, tab.path)" title="Close"
+            class="ml-1 w-4 h-4 flex items-center justify-center rounded text-zinc-600 hover:text-zinc-100 hover:bg-zinc-700/60">×</button>
+        </div>
+        <span v-if="!store.tabs.length" class="flex items-center px-3 text-xs text-zinc-600">No file open</span>
+      </div>
+      <div class="flex items-center gap-2 px-3 shrink-0 border-l border-zinc-800/60">
+        <span class="text-[10px] uppercase tracking-wider text-zinc-600">{{ language }}</span>
+        <button v-if="store.activeFile" @click="store.saveFile()" :disabled="!store.editorDirty || store.saving"
+          class="text-xs px-2 py-1 rounded transition-colors"
+          :class="store.editorDirty && !store.saving ? 'bg-sky-600 hover:bg-sky-500 text-white' : 'bg-zinc-800 text-zinc-500 cursor-not-allowed'">
+          {{ store.saving ? 'Saving...' : 'Save' }}
+        </button>
+      </div>
+    </div>
+    <p v-if="store.editorError" class="px-3 py-2 text-xs text-red-400 border-b border-red-500/20 bg-red-500/10 break-safe shrink-0">{{ store.editorError }}</p>
+    <div class="flex-1 min-h-0 relative">
+      <div v-show="store.activeFile" ref="hostRef" class="absolute inset-0"></div>
+      <div v-if="!store.activeFile" class="flex h-full items-center justify-center text-sm text-zinc-600">Select a file to edit</div>
+    </div>
+  </div>
+</template>
+
 <template id="agent-header-tmpl">
-  <header class="border-b border-zinc-800/80 bg-zinc-950/95 backdrop-blur-md shrink-0">
+  <header class="relative z-30 border-b border-zinc-800/80 bg-zinc-950/95 backdrop-blur-md shrink-0">
     <div class="mx-auto max-w-3xl flex items-center justify-between h-12 px-4">
       <div class="flex items-center gap-2">
         <span :class="['connection-led', store.connected ? 'connected' : 'disconnected']"></span>
         <h1 class="text-sm font-medium">Unit-PIE</h1>
       </div>
-      <div class="relative">
-        <button @click="toggle" class="flex items-center gap-1.5 text-xs text-zinc-400 hover:text-zinc-200 transition-colors px-2 py-1 rounded-lg hover:bg-zinc-800/50">
-          <span v-if="catalog.active" class="truncate max-w-[11rem]">{{ catalog.active.provider }} · {{ catalog.active.model }}</span>
-          <span v-else>loading...</span>
-          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
-        </button>
-        <div v-if="open" class="absolute right-0 top-full mt-1 w-60 rounded-xl border border-zinc-700/80 bg-zinc-900/95 shadow-xl shadow-black/40 z-20 max-h-72 overflow-y-auto">
-          <div class="sticky top-0 bg-zinc-900/95 px-3 py-2 text-[10px] font-medium uppercase tracking-wider text-zinc-500 border-b border-zinc-800">Model</div>
-          <div v-if="noProviders" class="px-3 py-4 text-xs text-zinc-500 text-center">No providers registered</div>
-          <div v-for="(entry, name) in providerList" :key="name">
-            <div class="px-3 pt-2 pb-1 text-[10px] font-medium uppercase tracking-wider text-zinc-500">{{ name }}</div>
-            <button v-for="m in entry.models" :key="m" @click="switchModel(name, m)"
-              class="w-full text-left px-3 py-1.5 text-xs flex items-center gap-2 hover:bg-zinc-800 transition-colors"
-              :class="isActive(name, m) ? 'text-zinc-100' : 'text-zinc-400'"
-              :disabled="!canChange">
-              <span class="w-1.5 h-1.5 rounded-full" :class="isActive(name, m) ? 'bg-sky-400' : 'bg-transparent'"></span>
-              {{ m }}
+      <div class="flex items-center gap-1">
+        <div class="relative model-menu">
+          <button @click="toggle" class="flex items-center gap-1.5 text-xs text-zinc-400 hover:text-zinc-200 transition-colors px-2 py-1 rounded-lg hover:bg-zinc-800/50">
+            <span v-if="catalog.active" class="truncate max-w-[11rem]">{{ catalog.active.provider }} · {{ catalog.active.model }}</span>
+            <span v-else>loading...</span>
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+          </button>
+          <div v-if="open" class="absolute right-0 top-full mt-1 w-60 rounded-xl border border-zinc-700/80 bg-zinc-900/95 shadow-xl shadow-black/40 z-20 max-h-72 overflow-y-auto">
+            <div class="sticky top-0 bg-zinc-900/95 px-3 py-2 text-[10px] font-medium uppercase tracking-wider text-zinc-500 border-b border-zinc-800">Model</div>
+            <div v-if="noProviders" class="px-3 py-4 text-xs text-zinc-500 text-center">No providers registered</div>
+            <div v-for="(entry, name) in providerList" :key="name">
+              <div class="px-3 pt-2 pb-1 text-[10px] font-medium uppercase tracking-wider text-zinc-500">{{ name }}</div>
+              <button v-for="m in entry.models" :key="m" @click="switchModel(name, m)"
+                class="w-full text-left px-3 py-1.5 text-xs flex items-center gap-2 hover:bg-zinc-800 transition-colors"
+                :class="isActive(name, m) ? 'text-zinc-100' : 'text-zinc-400'"
+                :disabled="!canChange">
+                <span class="w-1.5 h-1.5 rounded-full" :class="isActive(name, m) ? 'bg-sky-400' : 'bg-transparent'"></span>
+                {{ m }}
+              </button>
+            </div>
+          </div>
+          <p v-if="switchError" class="absolute right-0 top-full mt-1 text-xs text-red-400 whitespace-nowrap">{{ switchError }}</p>
+        </div>
+        <div class="relative settings-menu">
+          <button @click="toggleSettings" title="Settings"
+            class="flex items-center justify-center w-7 h-7 rounded-lg text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50 transition-colors">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.7" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.7" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+          </button>
+          <div v-if="settingsOpen" class="absolute right-0 top-full mt-1 w-60 rounded-xl border border-zinc-700/80 bg-zinc-900/95 shadow-xl shadow-black/40 z-20">
+            <div class="px-3 py-2 text-[10px] font-medium uppercase tracking-wider text-zinc-500 border-b border-zinc-800">Editor</div>
+            <button @click="store.toggleWordWrap()" class="w-full flex items-center justify-between px-3 py-2 text-xs text-zinc-300 hover:bg-zinc-800/60 transition-colors">
+              <span>Word wrap</span>
+              <span class="w-8 h-4 rounded-full transition-colors relative" :class="store.wordWrap ? 'bg-sky-500' : 'bg-zinc-700'">
+                <span class="absolute top-0.5 w-3 h-3 rounded-full bg-white transition-all" :class="store.wordWrap ? 'left-4' : 'left-0.5'"></span>
+              </span>
             </button>
           </div>
         </div>
-        <p v-if="switchError" class="absolute right-0 top-full mt-1 text-xs text-red-400 whitespace-nowrap">{{ switchError }}</p>
       </div>
     </div>
   </header>
@@ -121,14 +222,19 @@
 <template id="tool-call-card-tmpl">
   <div v-if="toolCall" class="rounded-lg border mb-2 overflow-hidden"
     :class="toolCall.ok === false ? 'border-red-500/40 bg-red-900/20' : parallel ? 'border-yellow-500/50 bg-zinc-900/50' : 'border-zinc-700/60 bg-zinc-900/50'">
-    <button @click="expanded = !expanded" class="w-full flex items-center justify-between px-3 py-2 text-xs hover:bg-zinc-800/50 transition-colors"
+    <div class="w-full flex items-center px-3 py-2 text-xs"
       :class="toolCall.ok === false ? 'text-red-300' : 'text-zinc-300'">
-      <span class="font-mono">{{ toolCall.tool }}</span>
-      <span class="ml-auto"></span>
-      <span v-if="toolCall.ok === false" class="text-[10px] text-red-400 mr-2">FAILED</span>
-      <span v-if="showUsage()" class="text-[10px] text-emerald-400 mr-2">{{ formatTokens(toolCall.usage.total_tokens) }} tok</span>
-      <svg class="w-3.5 h-3.5 transition-transform shrink-0" :class="expanded ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
-    </button>
+      <button @click="primary" class="flex-1 min-w-0 text-left flex items-center gap-2 hover:text-sky-300 transition-colors"
+        :title="target ? 'Open ' + target.path + ':' + target.line : ''">
+        <span class="font-mono shrink-0">{{ toolCall.tool }}</span>
+        <span v-if="target" class="text-[10px] text-zinc-500 truncate">{{ target.path }}<span v-if="target.line > 1">:{{ target.line }}</span></span>
+      </button>
+      <span v-if="toolCall.ok === false" class="text-[10px] text-red-400 mr-2 shrink-0">FAILED</span>
+      <span v-if="showUsage()" class="text-[10px] text-emerald-400 mr-2 shrink-0">{{ formatTokens(toolCall.usage.total_tokens) }} tok</span>
+      <button @click="expanded = !expanded" class="p-1 -mr-1 shrink-0 text-zinc-500 hover:text-zinc-200 transition-colors" title="Details">
+        <svg class="w-3.5 h-3.5 transition-transform" :class="expanded ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+      </button>
+    </div>
     <div v-show="expanded" class="border-t border-zinc-800 px-3 py-2 space-y-2">
       <div>
         <p class="text-[10px] font-medium uppercase tracking-wider text-zinc-500 mb-1">Input</p>
@@ -241,6 +347,17 @@
 <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/lib/codemirror.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/mode/python/python.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/mode/javascript/javascript.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/mode/xml/xml.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/mode/css/css.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/mode/htmlmixed/htmlmixed.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/mode/markdown/markdown.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/mode/yaml/yaml.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/mode/shell/shell.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/mode/clike/clike.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/mode/sql/sql.min.js"></script>
 <script src="store.js"></script>
 <script src="websocket.js"></script>
 <script src="app.js"></script>

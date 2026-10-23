@@ -4,6 +4,7 @@ AgentComponents.AgentHeader = {
     const store = AgentStore
     const catalog = Vue.ref({ active: null })
     const open = Vue.ref(false)
+    const settingsOpen = Vue.ref(false)
     const switchError = Vue.ref(null)
 
     const noProviders = Vue.computed(() => {
@@ -15,7 +16,9 @@ AgentComponents.AgentHeader = {
 
     const canChange = Vue.computed(() => !store.sessionActive && !store.isBusy)
 
-    function toggle() { if (canChange.value) open.value = !open.value }
+    function toggle() { if (canChange.value) { settingsOpen.value = false; open.value = !open.value } }
+
+    function toggleSettings() { open.value = false; settingsOpen.value = !settingsOpen.value }
 
     function isActive(name, model) {
       const a = catalog.value.active
@@ -45,10 +48,11 @@ AgentComponents.AgentHeader = {
     })
 
     function closeDropdown(e) {
-      if (open.value) { const el = e.target.closest('.relative'); if (!el) open.value = false }
+      if (open.value && !e.target.closest('.model-menu')) open.value = false
+      if (settingsOpen.value && !e.target.closest('.settings-menu')) settingsOpen.value = false
     }
     if (typeof document !== 'undefined') document.addEventListener('mousedown', closeDropdown)
 
-    return { store, catalog, open, switchError, noProviders, providerList, canChange, toggle, isActive, switchModel }
+    return { store, catalog, open, settingsOpen, switchError, noProviders, providerList, canChange, toggle, toggleSettings, isActive, switchModel }
   }
 }

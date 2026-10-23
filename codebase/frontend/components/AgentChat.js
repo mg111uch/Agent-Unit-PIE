@@ -54,11 +54,44 @@ AgentComponents.ToolCallCard = {
     Vue.watch(() => props.toolCall?.result, (val) => {
       if (val) expanded.value = true
     }, { immediate: true })
+
+    function parseInput(raw) {
+      if (!raw) return null
+      if (typeof raw === 'object') return raw
+      try { return JSON.parse(raw) } catch (_) { return null }
+    }
+
+    const target = Vue.computed(() => {
+      const tc = props.toolCall
+      if (!tc) return null
+      if (!['Write', 'edit_file', 'cross_file_edit', 'undo_last_edit'].includes(tc.tool)) return null
+      const inp = parseInput(tc.input)
+      if (!inp || typeof inp !== 'object') return null
+      let path = inp.path || inp.file_path || ''
+      let line = Number(inp.line) || 0
+      if (Array.isArray(inp.edits) && inp.edits.length) {
+        const edit = inp.edits.find(e => e && (e.path || e.file_path)) || inp.edits[0]
+        if (!path && edit) path = edit.path || edit.file_path || ''
+        if (!line && edit) line = Number(edit.line) || 0
+      }
+      if (!path) return null
+      if (!line && typeof tc.result === 'string') {
+        const m = tc.result.match(/@@ -\d+(?:,\d+)? \+(\d+)/)
+        if (m) line = parseInt(m[1], 10)
+      }
+      return { path, line: line || 1 }
+    })
+
+    function primary() {
+      if (target.value) AgentStore.openFileAt(target.value.path, target.value.line)
+      else expanded.value = !expanded.value
+    }
+
     function formatInput(input) { return prettyJSON(input) }
     function showUsage() {
       return AgentStore.showToolTokenUsage && props.toolCall?.usage?.total_tokens
     }
-    return { expanded, formatInput, renderResult: sanitizeMarkdown, showUsage, formatTokens }
+    return { expanded, target, primary, formatInput, renderResult: sanitizeMarkdown, showUsage, formatTokens }
   }
 }
 

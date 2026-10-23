@@ -12,6 +12,8 @@ from agent_core.server.audit import build_tree
 from agent_core.config import EXCLUDE_DIRS, SHOW_TOOL_TOKEN_USAGE, resolve_active_tool_packs
 import agent_core.server as _srv
 
+MAX_EDIT_BYTES = 2_000_000
+
 
 @app.get("/api/status")
 async def get_status():
@@ -102,6 +104,42 @@ async def get_workspace_files():
     return {"root": root, "files": sorted(paths)}
 
 
+def _workspace_root() -> str:
+    return _srv.get_user_workspace_root() or _srv.workspace_root
+
+
+def _rel(path: str) -> str:
+    rel = os.path.relpath(path, _workspace_root()).replace("\\", "/")
+    return "" if rel == "." else rel
+
+
+@app.get("/api/files/ls")
+async def list_dir(path: str = "", user: dict = Depends(require_auth)):
+    _srv.set_user_workspace(str(user.get("id")))
+    try:
+        full = _srv.ws_resolve(path or ".")
+    except _srv.PathEscapeError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    if not os.path.isdir(full):
+        raise HTTPException(status_code=400, detail=f"Not a directory: {path}")
+    excluded = set(EXCLUDE_DIRS) | {"__pycache__", "node_modules"}
+    entries = []
+    try:
+        names = sorted(os.listdir(full))
+    except PermissionError:
+        raise HTTPException(status_code=403, detail=f"Permission denied: {path}")
+    for name in names:
+        if name.startswith(".") or name in excluded:
+            continue
+        item = os.path.join(full, name)
+        if os.path.isdir(item):
+            entries.append({"name": name, "type": "dir", "path": _rel(item)})
+        elif os.path.isfile(item):
+            entries.append({"name": name, "type": "file", "path": _rel(item)})
+    entries.sort(key=lambda e: (e["type"] != "dir", e["name"].lower()))
+    return {"path": _rel(full), "entries": entries}
+
+
 @app.get("/api/files/read")
 async def Read(path: str, user: dict = Depends(require_auth)):
     try:
@@ -109,13 +147,96 @@ async def Read(path: str, user: dict = Depends(require_auth)):
         full = _srv.ws_resolve(path)
         if not os.path.exists(full):
             return {"error": f"File not found: {path}"}
-        with open(full, "r", encoding="utf-8") as f:
-            content = f.read()
-        return {"path": path, "content": content}
+        if os.path.getsize(full) > MAX_EDIT_BYTES:
+            return {"error": f"File too large to open ({os.path.getsize(full)} bytes)"}
+        with open(full, "rb") as f:
+            raw = f.read()
+        if b"\x00" in raw[:8192]:
+            return {"error": "Binary file — cannot open in editor"}
+        return {"path": path, "content": raw.decode("utf-8", errors="replace")}
     except _srv.PathEscapeError as e:
         return {"error": str(e)}
     except Exception as e:
         return {"error": str(e)}
+
+
+@app.post("/api/files/write")
+async def write_file(data: dict, user: dict = Depends(require_auth)):
+    path = data.get("path")
+    content = data.get("content")
+    if not isinstance(path, str) or not path.strip():
+        raise HTTPException(status_code=400, detail="path is required")
+    if not isinstance(content, str):
+        raise HTTPException(status_code=400, detail="content must be a string")
+    if "\x00" in content:
+        raise HTTPException(status_code=400, detail="Refusing to write binary content")
+    size = len(content.encode("utf-8"))
+    if size > MAX_EDIT_BYTES:
+        raise HTTPException(status_code=413, detail=f"Content too large ({size} bytes)")
+    _srv.set_user_workspace(str(user.get("id")))
+    try:
+        full = _srv.ws_resolve(path)
+    except _srv.PathEscapeError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    if os.path.isdir(full):
+        raise HTTPException(status_code=400, detail=f"Not a file: {path}")
+    from agent_core.tools.undo_ops import save_checkpoint
+
+    save_checkpoint(_rel(full))
+    os.makedirs(os.path.dirname(full), exist_ok=True)
+    with open(full, "w", encoding="utf-8", newline="") as f:
+        f.write(content)
+    return {"status": "ok", "path": _rel(full), "bytes": size}
+
+
+@app.post("/api/files/rename")
+async def rename_file(data: dict, user: dict = Depends(require_auth)):
+    path = data.get("path")
+    new_path = data.get("new_path")
+    if not isinstance(path, str) or not isinstance(new_path, str):
+        raise HTTPException(status_code=400, detail="path and new_path are required")
+    _srv.set_user_workspace(str(user.get("id")))
+    try:
+        src = _srv.ws_resolve(path)
+        dst = _srv.ws_resolve(new_path)
+    except _srv.PathEscapeError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    if not os.path.exists(src):
+        raise HTTPException(status_code=404, detail=f"Not found: {path}")
+    if os.path.exists(dst):
+        raise HTTPException(status_code=400, detail=f"Target already exists: {new_path}")
+    if not os.path.isdir(os.path.dirname(dst)):
+        raise HTTPException(status_code=400, detail="Target parent directory does not exist")
+    try:
+        os.rename(src, dst)
+    except OSError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    return {"status": "ok", "path": _rel(dst)}
+
+
+@app.post("/api/files/delete")
+async def delete_file(data: dict, user: dict = Depends(require_auth)):
+    path = data.get("path")
+    if not isinstance(path, str) or not path.strip():
+        raise HTTPException(status_code=400, detail="path is required")
+    _srv.set_user_workspace(str(user.get("id")))
+    try:
+        full = _srv.ws_resolve(path)
+    except _srv.PathEscapeError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    if full == os.path.realpath(_workspace_root()):
+        raise HTTPException(status_code=400, detail="Refusing to delete the workspace root")
+    if not os.path.exists(full):
+        raise HTTPException(status_code=404, detail=f"Not found: {path}")
+    rel = _rel(full)
+    try:
+        if os.path.isdir(full):
+            os.rmdir(full)
+        else:
+            os.remove(full)
+    except OSError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    return {"status": "ok", "path": rel}
 
 
 @app.get("/api/audit")

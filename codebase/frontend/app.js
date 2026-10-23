@@ -2,6 +2,8 @@ const AgentComponents = {}
 
 const scripts = [
   'components/AgentHeader.js',
+  'components/FileTree.js',
+  'components/CodeEditor.js',
   'components/AgentChat.js',
   'components/AgentInput.js',
   'components/QuestionPanel.js',

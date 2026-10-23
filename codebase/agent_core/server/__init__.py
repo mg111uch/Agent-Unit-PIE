@@ -145,7 +145,11 @@ from agent_core.server.routes import (
     list_providers,
     switch_provider,
     get_file_tree,
+    list_dir,
     Read,
+    write_file,
+    rename_file,
+    delete_file,
     get_audit_log,
 )
 
