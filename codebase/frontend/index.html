@@ -36,6 +36,9 @@
   <div class="flex flex-col h-full min-h-0">
     <div class="px-3 py-2 border-b border-zinc-800/80 flex items-center gap-2 shrink-0">
       <span class="text-[10px] font-medium uppercase tracking-wider text-zinc-500 flex-1">Files</span>
+      <button @click="addProject" title="Add project" class="text-zinc-500 hover:text-zinc-300">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 13h6m-3-3v6m-9 1V7a2 2 0 012-2h4l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"></path></svg>
+      </button>
       <button @click="newFile" title="New file" class="text-zinc-500 hover:text-zinc-300 text-sm leading-none">+</button>
       <button @click="refresh" title="Refresh" class="text-zinc-500 hover:text-zinc-300 text-xs">⟳</button>
     </div>
@@ -44,14 +47,15 @@
     </div>
     <p v-if="error" class="px-3 py-2 text-[11px] text-red-400 break-safe shrink-0">{{ error }}</p>
     <div ref="listRef" class="flex-1 min-h-0 overflow-y-auto pb-3 text-xs font-mono">
-      <div v-for="row in visibleRows" :key="row.path" @click="click(row)"
+      <div v-for="row in visibleRows" :key="row.pid + '|' + row.path" @click="click(row)"
         @contextmenu.prevent="openMenu(row, $event)"
-        :data-path="row.path"
+        :data-key="row.pid + '|' + row.path"
         class="w-full flex items-center pr-1 cursor-pointer select-none"
-        :class="isActive(row.path) ? 'bg-sky-500/15 text-sky-300' : 'text-zinc-400 hover:bg-zinc-800/60'"
+        :class="row.isRoot ? 'font-medium text-zinc-300 hover:bg-zinc-800/60'
+          : (isActive(row.path, row.pid) ? 'bg-sky-500/15 text-sky-300' : 'text-zinc-400 hover:bg-zinc-800/60')"
         :style="{ paddingLeft: (8 + row.depth * 12) + 'px' }">
         <span class="flex-1 min-w-0 truncate py-0.5">
-          <span class="inline-block w-3 text-zinc-600">{{ row.type === 'dir' ? (expanded[row.path] ? '▾' : '▸') : '' }}</span>{{ row.name || row.path }}
+          <span class="inline-block w-3 text-zinc-600">{{ row.type === 'dir' ? (expanded[keyOf(row.pid, row.path)] ? '▾' : '▸') : '' }}</span>{{ row.name || row.path }}<span v-if="row.isRoot && row.active" class="ml-1.5 text-[10px] text-sky-400" title="Agent workspace">●</span>
         </span>
       </div>
     </div>
@@ -59,13 +63,106 @@
       <div v-if="menu.open" class="ft-context-menu fixed z-50 w-44 rounded-lg border border-zinc-700/80 bg-zinc-900/95 shadow-xl shadow-black/50 py-1 text-xs"
         :style="{ left: menu.x + 'px', top: menu.y + 'px' }">
         <p class="px-3 py-1 text-[10px] text-zinc-500 truncate border-b border-zinc-800/80 mb-1">{{ menu.row && (menu.row.name || menu.row.path) }}</p>
-        <button @click="menuCopyPath" class="w-full text-left px-3 py-1.5 text-zinc-300 hover:bg-zinc-800 transition-colors">Copy Path</button>
-        <button @click="menuReveal" class="w-full text-left px-3 py-1.5 text-zinc-300 hover:bg-zinc-800 transition-colors">{{ menu.row && menu.row.type === 'dir' ? 'Open Folder' : 'Open Containing Folder' }}</button>
-        <div class="my-1 border-t border-zinc-800/80"></div>
-        <button @click="menuRename" class="w-full text-left px-3 py-1.5 text-zinc-300 hover:bg-zinc-800 transition-colors">Rename</button>
-        <button @click="menuDelete" class="w-full text-left px-3 py-1.5 text-red-400 hover:bg-red-500/10 transition-colors">Delete</button>
+        <template v-if="menu.row && menu.row.isRoot">
+          <button @click="menuSetActive" class="w-full text-left px-3 py-1.5 text-zinc-300 hover:bg-zinc-800 transition-colors">Make active workspace</button>
+          <button @click="menuCopyPath" class="w-full text-left px-3 py-1.5 text-zinc-300 hover:bg-zinc-800 transition-colors">Copy Path</button>
+          <div class="my-1 border-t border-zinc-800/80"></div>
+          <button v-if="menu.row.pid !== 'default'" @click="menuRemoveProject" class="w-full text-left px-3 py-1.5 text-red-400 hover:bg-red-500/10 transition-colors">Remove from tree</button>
+        </template>
+        <template v-else>
+          <button @click="menuCopyPath" class="w-full text-left px-3 py-1.5 text-zinc-300 hover:bg-zinc-800 transition-colors">Copy Path</button>
+          <button @click="menuReveal" class="w-full text-left px-3 py-1.5 text-zinc-300 hover:bg-zinc-800 transition-colors">{{ menu.row && menu.row.type === 'dir' ? 'Open Folder' : 'Open Containing Folder' }}</button>
+          <div class="my-1 border-t border-zinc-800/80"></div>
+          <button @click="menuRename" class="w-full text-left px-3 py-1.5 text-zinc-300 hover:bg-zinc-800 transition-colors">Rename</button>
+          <button @click="menuDelete" class="w-full text-left px-3 py-1.5 text-red-400 hover:bg-red-500/10 transition-colors">Delete</button>
+        </template>
       </div>
     </teleport>
+  </div>
+</template>
+
+<template id="db-table-tmpl">
+  <div class="flex flex-col h-full min-h-0 bg-zinc-950">
+    <div class="h-10 shrink-0 border-b border-zinc-800/80 flex items-center gap-2 px-3">
+      <span class="text-[10px] uppercase tracking-wider text-zinc-500">SQLite</span>
+      <span class="flex-1 min-w-0 truncate text-xs font-mono text-zinc-400">{{ path }}</span>
+      <button @click="reload" :disabled="loading" title="Reload"
+        class="text-xs text-zinc-400 hover:text-zinc-200 px-2 py-1 rounded hover:bg-zinc-800/60 disabled:opacity-40">⟳</button>
+      <button @click="addRow" :disabled="!active || info.readonly" title="Insert row"
+        class="text-xs px-2 py-1 rounded transition-colors"
+        :class="active && !info.readonly ? 'bg-sky-600 hover:bg-sky-500 text-white' : 'bg-zinc-800 text-zinc-500 cursor-not-allowed'">
+        + Row
+      </button>
+    </div>
+
+    <div class="shrink-0 flex items-center gap-1 px-2 py-1.5 overflow-x-auto border-b border-zinc-800/60">
+      <button v-for="t in tables" :key="t.name" @click="pick(t.name)"
+        class="px-2 py-1 rounded font-mono text-[11px] whitespace-nowrap transition-colors"
+        :class="t.name === active ? 'bg-zinc-800 text-sky-300' : 'text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/50'">
+        {{ t.name }}<span class="ml-1 opacity-50">{{ t.rows }}</span>
+      </button>
+      <span v-if="!tables.length" class="text-[11px] text-zinc-600 px-1">No tables</span>
+    </div>
+
+    <p v-if="error" class="px-3 py-2 text-[11px] text-red-400 border-b border-red-500/20 bg-red-500/10 shrink-0 break-safe">{{ error }}</p>
+
+    <div class="flex-1 min-h-0 overflow-auto">
+      <table v-if="info.columns.length" class="min-w-full border-collapse text-xs font-mono">
+        <thead class="sticky top-0 z-10 bg-zinc-900">
+          <tr>
+            <th class="px-2 py-1 text-right text-[10px] font-normal text-zinc-600 border-b border-zinc-800">#</th>
+            <th v-for="c in info.columns" :key="c.name" @click="sortBy(c.name)"
+              class="px-2 py-1 text-left font-normal border-b border-zinc-800 cursor-pointer whitespace-nowrap hover:text-zinc-200"
+              :class="info.pk.includes(c.name) ? 'text-amber-300/90' : 'text-zinc-400'">
+              {{ c.name }}<span class="ml-1 text-[9px] text-zinc-600">{{ c.type }}</span>
+              <span v-if="order === c.name" class="ml-1 text-sky-400">{{ dir === 'asc' ? '▲' : '▼' }}</span>
+            </th>
+            <th class="px-1 border-b border-zinc-800"></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-if="draft" class="bg-sky-500/5">
+            <td class="px-2 py-0.5 text-right text-sky-400">+</td>
+            <td v-for="c in info.columns" :key="c.name" class="px-1 py-0.5 border-b border-zinc-800/60">
+              <input v-model="draft[c.name]" :placeholder="c.name"
+                class="w-full min-w-[6rem] bg-zinc-900 border border-sky-500/40 rounded px-1 py-0.5 text-xs text-zinc-100 outline-none"/>
+            </td>
+            <td class="px-1 py-0.5 border-b border-zinc-800/60 whitespace-nowrap">
+              <button @click="saveDraft" title="Insert" class="text-emerald-400 hover:text-emerald-300 px-1">✓</button>
+              <button @click="draft = null" title="Cancel" class="text-zinc-500 hover:text-zinc-300 px-1">×</button>
+            </td>
+          </tr>
+          <tr v-for="(row, i) in info.rows" :key="rowKey(row)" class="hover:bg-zinc-900/60">
+            <td class="px-2 py-0.5 text-right text-zinc-600">{{ offset + i + 1 }}</td>
+            <td v-for="c in info.columns" :key="c.name" @click="startEdit(row, c.name, $event)"
+              class="px-2 py-0.5 border-b border-zinc-900 align-top" :class="info.readonly ? '' : 'cursor-text'">
+              <input v-if="isEditing(row, c.name)" v-model="editing.text" @keydown.enter.prevent="commitEdit"
+                @keydown.esc="editing = null" @blur="commitEdit"
+                class="w-full min-w-[6rem] bg-zinc-900 border border-sky-500/50 rounded px-1 py-0.5 text-xs text-zinc-100 outline-none"/>
+              <span v-else class="block max-w-[22rem] truncate" :class="isNull(row[c.name]) ? 'text-zinc-600 italic' : 'text-zinc-300'">{{ cellText(row[c.name]) }}</span>
+            </td>
+            <td class="px-1 py-0.5 border-b border-zinc-900 text-right">
+              <button v-if="!info.readonly" @click.stop="removeRow(row)" title="Delete row"
+                class="text-zinc-600 hover:text-red-400 px-1">✕</button>
+            </td>
+          </tr>
+          <tr v-if="!info.rows.length">
+            <td :colspan="info.columns.length + 2" class="px-3 py-6 text-center text-zinc-600">No rows</td>
+          </tr>
+        </tbody>
+      </table>
+      <div v-else-if="!loading" class="flex h-full items-center justify-center text-sm text-zinc-600">No tables in this database</div>
+    </div>
+
+    <div class="h-8 shrink-0 border-t border-zinc-800/80 flex items-center gap-3 px-3 text-[11px] text-zinc-500">
+      <span>{{ info.total }} row{{ info.total === 1 ? '' : 's' }}</span>
+      <span v-if="order" class="text-zinc-600">sorted by {{ order }}</span>
+      <span v-if="loading" class="text-sky-400">loading…</span>
+      <span class="flex-1"></span>
+      <span>{{ info.total ? (offset + 1) + '–' + Math.min(offset + DB_PAGE, info.total) : '0' }} / {{ info.total }}</span>
+      <button @click="prevPage" :disabled="offset === 0" class="px-1 hover:text-zinc-300 disabled:opacity-30">‹</button>
+      <button @click="nextPage" :disabled="offset + DB_PAGE >= info.total" class="px-1 hover:text-zinc-300 disabled:opacity-30">›</button>
+    </div>
   </div>
 </template>
 
@@ -78,24 +175,18 @@
           class="group flex items-center gap-1.5 px-3 text-xs border-r border-zinc-800/60 cursor-pointer max-w-[14rem] shrink-0 transition-colors"
           :class="tab.path === store.activeFile ? 'bg-zinc-900 text-zinc-100' : 'text-zinc-500 hover:text-zinc-300 hover:bg-zinc-900/40'">
           <span class="truncate">{{ tabName(tab.path) }}</span>
-          <span v-if="tab.dirty" class="text-amber-400">●</span>
+          <span v-if="tab.dirty" title="Unsaved changes"
+            class="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0"></span>
           <button @click="close($event, tab.path)" title="Close"
             class="ml-1 w-4 h-4 flex items-center justify-center rounded text-zinc-600 hover:text-zinc-100 hover:bg-zinc-700/60">×</button>
         </div>
         <span v-if="!store.tabs.length" class="flex items-center px-3 text-xs text-zinc-600">No file open</span>
       </div>
-      <div class="flex items-center gap-2 px-3 shrink-0 border-l border-zinc-800/60">
-        <span class="text-[10px] uppercase tracking-wider text-zinc-600">{{ language }}</span>
-        <button v-if="store.activeFile" @click="store.saveFile()" :disabled="!store.editorDirty || store.saving"
-          class="text-xs px-2 py-1 rounded transition-colors"
-          :class="store.editorDirty && !store.saving ? 'bg-sky-600 hover:bg-sky-500 text-white' : 'bg-zinc-800 text-zinc-500 cursor-not-allowed'">
-          {{ store.saving ? 'Saving...' : 'Save' }}
-        </button>
-      </div>
     </div>
     <p v-if="store.editorError" class="px-3 py-2 text-xs text-red-400 border-b border-red-500/20 bg-red-500/10 break-safe shrink-0">{{ store.editorError }}</p>
     <div class="flex-1 min-h-0 relative">
-      <div v-show="store.activeFile" ref="hostRef" class="absolute inset-0"></div>
+      <div v-show="store.activeFile && !isDb" ref="hostRef" class="absolute inset-0" :class="{ 'cm-md': language === 'markdown' }"></div>
+      <db-table v-if="isDb" :path="store.activeFile" class="absolute inset-0"></db-table>
       <div v-if="!store.activeFile" class="flex h-full items-center justify-center text-sm text-zinc-600">Select a file to edit</div>
     </div>
   </div>
@@ -103,12 +194,27 @@
 
 <template id="agent-header-tmpl">
   <header class="relative z-30 border-b border-zinc-800/80 bg-zinc-950/95 backdrop-blur-md shrink-0">
-    <div class="mx-auto max-w-3xl flex items-center justify-between h-12 px-4">
-      <div class="flex items-center gap-2">
+    <div class="w-full flex items-center justify-between gap-2 h-12 px-4">
+      <div class="flex items-center gap-2 min-w-0">
         <span :class="['connection-led', store.connected ? 'connected' : 'disconnected']"></span>
-        <h1 class="text-sm font-medium">Unit-PIE</h1>
+        <h1 class="text-sm font-medium shrink-0">Unit-PIE</h1>
+        <div class="relative settings-menu">
+          <button @click="toggleSettings" title="Settings"
+            class="flex items-center justify-center w-7 h-7 rounded-lg text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50 transition-colors">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.7" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.7" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+          </button>
+          <div v-if="settingsOpen" class="absolute left-0 top-full mt-1 w-60 rounded-xl border border-zinc-700/80 bg-zinc-900/95 shadow-xl shadow-black/40 z-20">
+            <div class="px-3 py-2 text-[10px] font-medium uppercase tracking-wider text-zinc-500 border-b border-zinc-800">Editor</div>
+            <button @click="store.toggleWordWrap()" class="w-full flex items-center justify-between px-3 py-2 text-xs text-zinc-300 hover:bg-zinc-800/60 transition-colors">
+              <span>Word wrap</span>
+              <span class="w-8 h-4 rounded-full transition-colors relative" :class="store.wordWrap ? 'bg-sky-500' : 'bg-zinc-700'">
+                <span class="absolute top-0.5 w-3 h-3 rounded-full bg-white transition-all" :class="store.wordWrap ? 'left-4' : 'left-0.5'"></span>
+              </span>
+            </button>
+          </div>
+        </div>
       </div>
-      <div class="flex items-center gap-1">
+      <div class="flex items-center gap-1 shrink-0">
         <div class="relative model-menu">
           <button @click="toggle" class="flex items-center gap-1.5 text-xs text-zinc-400 hover:text-zinc-200 transition-colors px-2 py-1 rounded-lg hover:bg-zinc-800/50">
             <span v-if="catalog.active" class="truncate max-w-[11rem]">{{ catalog.active.provider }} · {{ catalog.active.model }}</span>
@@ -130,21 +236,6 @@
             </div>
           </div>
           <p v-if="switchError" class="absolute right-0 top-full mt-1 text-xs text-red-400 whitespace-nowrap">{{ switchError }}</p>
-        </div>
-        <div class="relative settings-menu">
-          <button @click="toggleSettings" title="Settings"
-            class="flex items-center justify-center w-7 h-7 rounded-lg text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50 transition-colors">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.7" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.7" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
-          </button>
-          <div v-if="settingsOpen" class="absolute right-0 top-full mt-1 w-60 rounded-xl border border-zinc-700/80 bg-zinc-900/95 shadow-xl shadow-black/40 z-20">
-            <div class="px-3 py-2 text-[10px] font-medium uppercase tracking-wider text-zinc-500 border-b border-zinc-800">Editor</div>
-            <button @click="store.toggleWordWrap()" class="w-full flex items-center justify-between px-3 py-2 text-xs text-zinc-300 hover:bg-zinc-800/60 transition-colors">
-              <span>Word wrap</span>
-              <span class="w-8 h-4 rounded-full transition-colors relative" :class="store.wordWrap ? 'bg-sky-500' : 'bg-zinc-700'">
-                <span class="absolute top-0.5 w-3 h-3 rounded-full bg-white transition-all" :class="store.wordWrap ? 'left-4' : 'left-0.5'"></span>
-              </span>
-            </button>
-          </div>
         </div>
       </div>
     </div>

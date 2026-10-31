@@ -1,6 +1,6 @@
 # Agent Runtime (Level 1) — how the PIE agent works
 
-> Reconstructed from the module docs; the operating-rules file `AGENTS.md` and prompt fragments were **not supplied** (DOC-04). Where a fact is inferred it is tagged `[INFERRED]`. Master doc: `README.md`.
+> Reconstructed from the module docs before `AGENTS.md` and `codebase/prompt_fragments/` were supplied; where a fact is inferred it is tagged `[INFERRED]`. Master doc: `00_README_master.md`.
 
 ## 1. Orchestrator in one paragraph
 

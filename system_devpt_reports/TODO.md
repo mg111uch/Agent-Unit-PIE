@@ -29,9 +29,10 @@ Also give suggestions for this workflow optimization, patterns which could be av
 
 -  You are not allowed to read complete project or module code. You have a budget of 75k total tokens including thinking and ip/op context under which you should complete the task, so you must read code files judiciously so that your context window does not fill with unrelated code which does not relate to the task.
 
-# GROK session
+# Agent Sessions
 grok --resume 01a06170-e581-7360-b166-0688bfda701e
 hermes --resume 20260913_124456_cc385a
+opencode -s ses_e88dde6e4ffed2XDaXvqU2GkK0
 
 # Questions
 

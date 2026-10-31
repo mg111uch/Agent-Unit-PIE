@@ -1,0 +1,8 @@
+
+# python -m pip install -r requirements.txt
+python-dotenv
+cryptography
+fastapi uvicorn
+google-genai
+openai
+jwt

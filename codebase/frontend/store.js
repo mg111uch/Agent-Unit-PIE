@@ -92,11 +92,41 @@ AgentStore.activateTab = (path) => {
   AgentStore.editorVersion++
 }
 
+const MAX_TABS = 3
+const DB_EXTS = new Set(['db', 'sqlite', 'sqlite3'])
+
+AgentStore.isDbPath = (path) => {
+  const ext = (path || '').split('.').pop().toLowerCase()
+  return DB_EXTS.has(ext)
+}
+
+// Keep the tab strip bounded: opening a new file retires the oldest tab.
+AgentStore.trimTabs = (keep) => {
+  while (AgentStore.tabs.length > MAX_TABS) {
+    const idx = AgentStore.tabs.findIndex(t => t.path !== keep)
+    if (idx === -1) break
+    const tab = AgentStore.tabs[idx]
+    if (tab.dirty && !window.confirm(`Discard unsaved changes to ${tab.path}?`)) break
+    AgentStore.tabs.splice(idx, 1)
+    if (AgentStore.activeFile === tab.path) {
+      AgentStore.activeFile = AgentStore.tabs[AgentStore.tabs.length - 1]?.path || null
+    }
+  }
+}
+
 AgentStore.openFile = async (path) => {
   if (!path) return null
   AgentStore.editorError = null
   if (AgentStore.tabFor(path)) {
     AgentStore.activateTab(path)
+    return path
+  }
+  if (AgentStore.isDbPath(path)) {
+    // SQLite files are binary: the tree viewer reads them over /api/db/*.
+    AgentStore.tabs.push({ path, content: '', saved: '', dirty: false, kind: 'db' })
+    AgentStore.trimTabs(path)
+    AgentStore.activeFile = path
+    AgentStore.editorVersion++
     return path
   }
   try {
@@ -105,6 +135,7 @@ AgentStore.openFile = async (path) => {
     if (data.error) { AgentStore.editorError = data.error; return null }
     const full = data.path || path
     AgentStore.tabs.push({ path: full, content: data.content, saved: data.content, dirty: false })
+    AgentStore.trimTabs(full)
     AgentStore.activeFile = full
     AgentStore.editorVersion++
     return full
@@ -168,10 +199,18 @@ AgentStore.renameTab = (oldPath, newPath) => {
   AgentStore.editorVersion++
 }
 
+AgentStore.resetEditor = () => {
+  AgentStore.tabs.splice(0, AgentStore.tabs.length)
+  AgentStore.activeFile = null
+  AgentStore.pendingGoto = null
+  AgentStore.editorError = null
+  AgentStore.editorVersion++
+}
+
 AgentStore.reloadCleanTabs = async () => {
   let changed = false
   for (const tab of [...AgentStore.tabs]) {
-    if (tab.dirty) continue
+    if (tab.dirty || tab.kind === 'db') continue
     try {
       const res = await fetch('/api/files/read?path=' + encodeURIComponent(tab.path))
       const data = await res.json()
@@ -187,7 +226,7 @@ AgentStore.reloadCleanTabs = async () => {
 
 AgentStore.saveFile = async () => {
   const tab = AgentStore.tabFor(AgentStore.activeFile)
-  if (!tab || AgentStore.saving) return
+  if (!tab || AgentStore.saving || tab.kind === 'db') return
   AgentStore.saving = true
   AgentStore.editorError = null
   try {

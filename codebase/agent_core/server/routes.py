@@ -10,6 +10,8 @@ from agent_core.server import app
 from agent_core.server.auth import require_auth
 from agent_core.server.audit import build_tree
 from agent_core.config import EXCLUDE_DIRS, SHOW_TOOL_TOKEN_USAGE, resolve_active_tool_packs
+from agent_core import workspace as _ws
+from agent_core.projects import registry as project_registry
 import agent_core.server as _srv
 
 MAX_EDIT_BYTES = 2_000_000
@@ -81,6 +83,75 @@ async def switch_provider(data: dict, user: dict = Depends(require_auth)):
     }
 
 
+def _project_list(user_id: str) -> list[dict]:
+    active = _ws.get_active_root(user_id)
+    default_root = _ws.default_user_workspace_root(user_id)
+    items = [{
+        "id": "default",
+        "name": os.path.basename(os.path.normpath(default_root)) or "workspace",
+        "path": default_root,
+        "active": active is None,
+    }]
+    for p in project_registry.list():
+        items.append({**p, "active": p["path"] == active})
+    return items
+
+
+@app.get("/api/projects")
+async def list_projects(user: dict = Depends(require_auth)):
+    uid = str(user.get("id"))
+    items = _project_list(uid)
+    active = next((p for p in items if p["active"]), items[0])
+    return {"projects": items, "active": active["id"], "root": active["path"]}
+
+
+@app.post("/api/projects")
+async def add_project(data: dict, user: dict = Depends(require_auth)):
+    path = data.get("path")
+    if not isinstance(path, str) or not path.strip():
+        raise HTTPException(status_code=400, detail="path is required")
+    default_root = os.path.realpath(_ws.default_user_workspace_root(str(user.get("id"))))
+    if os.path.realpath(os.path.expanduser(path.strip())) == default_root:
+        raise HTTPException(status_code=400, detail="That folder is already the main project")
+    try:
+        project = project_registry.add(path)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    return {"status": "ok", "project": project}
+
+
+@app.delete("/api/projects/{project_id}")
+async def remove_project(project_id: str, user: dict = Depends(require_auth)):
+    removed = project_registry.remove(project_id)
+    if not removed:
+        raise HTTPException(status_code=404, detail="Unknown project")
+    uid = str(user.get("id"))
+    if _ws.get_active_root(uid) == removed["path"]:
+        _ws.set_active_root(uid, None)
+    return {"status": "ok", "removed": removed["name"]}
+
+
+@app.post("/api/projects/activate")
+async def activate_project(data: dict, user: dict = Depends(require_auth)):
+    uid = str(user.get("id"))
+    pid = str(data.get("id") or "")
+    if not pid:
+        raise HTTPException(status_code=400, detail="id is required")
+    if pid == "default":
+        _ws.set_active_root(uid, None)
+    else:
+        project = project_registry.get(pid)
+        if not project:
+            raise HTTPException(status_code=404, detail="Unknown project")
+        try:
+            _ws.set_active_root(uid, project["path"])
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e))
+    items = _project_list(uid)
+    active = next((p for p in items if p["active"]), items[0])
+    return {"status": "ok", "active": active["id"], "root": active["path"], "name": active["name"]}
+
+
 @app.get("/api/files/tree")
 async def get_file_tree(user: dict = Depends(require_auth)):
     root = _srv.set_user_workspace(str(user.get("id")))
@@ -89,8 +160,9 @@ async def get_file_tree(user: dict = Depends(require_auth)):
 
 
 @app.get("/api/files/workspace")
-async def get_workspace_files():
-    root = _srv.workspace_root
+async def get_workspace_files(user: dict = Depends(require_auth)):
+    _srv.set_user_workspace(str(user.get("id")))
+    root = _workspace_root()
     exclude_set = set(EXCLUDE_DIRS)
     paths = []
     for dirpath, dirnames, filenames in os.walk(root):
@@ -137,7 +209,11 @@ async def list_dir(path: str = "", user: dict = Depends(require_auth)):
         elif os.path.isfile(item):
             entries.append({"name": name, "type": "file", "path": _rel(item)})
     entries.sort(key=lambda e: (e["type"] != "dir", e["name"].lower()))
-    return {"path": _rel(full), "entries": entries}
+    return {
+        "path": _rel(full),
+        "entries": entries,
+        "root_name": os.path.basename(os.path.normpath(_workspace_root())),
+    }
 
 
 @app.get("/api/files/read")

@@ -289,8 +289,8 @@
 **DOC-03 · S2 · P1 —** Stale rows: kernel README "FireFlow vendoring deferred" vs shipped drift suite; usage.md date (KRN-05).
 **DOC-04 · S2 · P1 —** Referenced-but-unsupplied docs (see master §13) — a direction session cannot see them.
 **DOC-05 · S3 · P1 —** Line-number citations (`file.py:255`) rot immediately; use file + symbol.
-**DOC-06 · S3 · P2 —** `SimDvptPhases.md` is the original game README + an old plan; split into `game UI` notes and roadmap items (done in `populaDyn_simu/README.md` and `roadmap_master.md`).
-**DOC-07 · S3 · P1 —** No append-only iteration log across docs (only PhasePlan's gate log). Adopt `iteration_log.md`.
+**DOC-06 · S3 · P2 —** `SimDvptPhases.md` is the original game README + an old plan; split into `game UI` notes and roadmap items (done in `populaDyn_simu/README.md` and `02_roadmap_master.md`).
+**DOC-07 · S3 · P1 —** No append-only iteration log across docs (only PhasePlan's gate log). Adopt `04_iteration_log.md`.
 
 ---
 

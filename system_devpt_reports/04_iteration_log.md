@@ -1,6 +1,6 @@
 # Iteration Log (Level 1) — append-only
 
-> Newest at the bottom. One entry per iteration, copied from the coding agent's Iteration Report (`session_playbook.md` §2). Never rewrite history; add a correction entry instead. No code in this file.
+> Newest at the bottom. One entry per iteration, copied from the coding agent's Iteration Report (`01_session_playbook.md` §2). Never rewrite history; add a correction entry instead. No code in this file.
 
 ## Seed entries (reconstructed from supplied docs; dates as stated there)
 
@@ -38,4 +38,4 @@
 ---
 
 ## Template for new entries
-(copy the Iteration Report from `session_playbook.md` §2)
+(copy the Iteration Report from `01_session_playbook.md` §2)

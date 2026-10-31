@@ -80,3 +80,27 @@ textarea::-webkit-scrollbar-thumb { background:#52525b; border-radius:3px; }
 .cm-s-default .cm-quote { color:#71717a; }
 .cm-s-default .cm-link { color:#38bdf8; }
 .cm-s-default .cm-header { color:#e4e4e7; font-weight:600; }
+
+/* Markdown editor — VS Code Dark+ token colours (scoped via .cm-md) */
+.cm-md .CodeMirror { line-height:1.75; }
+.cm-md .cm-formatting { color:#6e7681; font-weight:400; font-style:normal; }
+.cm-md .cm-header { color:#569cd6; font-weight:600; }
+.cm-md .cm-header-1 { font-size:1.5em; }
+.cm-md .cm-header-2 { font-size:1.32em; }
+.cm-md .cm-header-3 { font-size:1.16em; }
+.cm-md .cm-header-4 { font-size:1.06em; }
+.cm-md .cm-strong { color:#569cd6; font-weight:700; }
+.cm-md .cm-em { color:#c586c0; font-style:italic; }
+.cm-md .cm-strikethrough { color:#8b949e; text-decoration:line-through; }
+.cm-md .cm-quote { color:#6a9955; }
+.cm-md .cm-link { color:#4ec9b0; text-decoration:underline; }
+.cm-md .cm-comment { color:#ce9178; font-style:normal; }
+.cm-md .cm-string, .cm-md .cm-url { color:#ce9178; }
+.cm-md .cm-variable-2, .cm-md .cm-variable-3, .cm-md .cm-keyword { color:#6796e6; }
+.cm-md .cm-builtin { color:#dcdcaa; }
+.cm-md .cm-hr { color:#6e7681; }
+.cm-md .cm-image-marker { color:#4ec9b0; }
+.cm-md .cm-image-alt-text, .cm-md .cm-image-alt-text.cm-link { color:#569cd6; text-decoration:none; }
+.cm-md .cm-image { color:#4ec9b0; }
+.cm-md .cm-meta { color:#d7ba7d; }
+.cm-md .cm-property { color:#6a9955; }

@@ -11,24 +11,57 @@ WORKSPACE_ROOT = os.path.abspath(
 os.makedirs(WORKSPACE_ROOT, exist_ok=True)
 
 _user_context = threading.local()
+_active_roots: dict[str, str] = {}
+_active_lock = threading.Lock()
 
 
-def set_user_workspace(user_id: str) -> str:
-    if user_id == "local":
-        _user_context.root = WORKSPACE_ROOT
+def default_user_workspace_root(user_id: str) -> str:
+    """Workspace root used when no extra project is activated for the user."""
+    if str(user_id) == "local":
         return WORKSPACE_ROOT
     root = os.path.join(WORKSPACE_BASE, str(user_id))
     os.makedirs(root, exist_ok=True)
-    _user_context.root = root
     return root
 
 
+def get_active_root(user_id: str) -> str | None:
+    with _active_lock:
+        return _active_roots.get(str(user_id))
+
+
+def set_active_root(user_id: str, path: str | None) -> str:
+    """Point the user at an extra project root (None = back to default)."""
+    uid = str(user_id)
+    with _active_lock:
+        if path:
+            real = os.path.realpath(os.path.expanduser(path))
+            if not os.path.isdir(real):
+                raise ValueError(f"Not an existing directory: {path}")
+            _active_roots[uid] = real
+        else:
+            _active_roots.pop(uid, None)
+    return get_active_root(uid) or default_user_workspace_root(uid)
+
+
+def set_user_workspace(user_id: str) -> str:
+    uid = str(user_id)
+    _user_context.user_id = uid
+    _user_context.root = default_user_workspace_root(uid)
+    return get_user_workspace_root() or _user_context.root
+
+
 def get_user_workspace_root() -> str | None:
+    uid = getattr(_user_context, "user_id", None)
+    if uid is not None:
+        active = get_active_root(uid)
+        if active:
+            return active
     return getattr(_user_context, "root", None)
 
 
 def clear_user_context():
     _user_context.root = None
+    _user_context.user_id = None
 
 
 class PathEscapeError(ValueError):

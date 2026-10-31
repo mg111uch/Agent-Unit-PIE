@@ -18,6 +18,14 @@ function cmModeFor(path) {
   return CM_MODE_BY_EXT[ext] || null
 }
 
+// Markdown gets VS Code-like rich highlighting: separate spans for the
+// markers (`#`, `**`, `>`) instead of one flat token per line.
+function cmModeOption(path) {
+  const mode = cmModeFor(path)
+  if (mode === 'markdown') return { name: 'markdown', highlightFormatting: true }
+  return mode
+}
+
 AgentComponents.CodeEditor = {
   template: '#code-editor-tmpl',
   setup() {
@@ -30,10 +38,15 @@ AgentComponents.CodeEditor = {
 
     function activeTab() { return store.tabFor(store.activeFile) }
 
+    const isDb = Vue.computed(() => {
+      const tab = activeTab()
+      return !!(tab && tab.kind === 'db')
+    })
+
     function stashCurrent() {
       if (!cm || !currentPath) return
       const tab = store.tabFor(currentPath)
-      if (!tab) return
+      if (!tab || tab.kind === 'db') return
       const val = cm.getValue()
       if (tab.content !== val) {
         tab.content = val
@@ -74,6 +87,12 @@ AgentComponents.CodeEditor = {
       if (currentPath !== store.activeFile) stashCurrent()
       const tab = activeTab()
       const nextPath = tab ? tab.path : null
+      if (tab && tab.kind === 'db') {
+        // SQLite tabs are rendered by <db-table>, not CodeMirror.
+        currentPath = nextPath
+        if (store.pendingGoto && store.pendingGoto.path === nextPath) store.pendingGoto = null
+        return
+      }
       const sameDoc = currentPath === nextPath && cm.getValue() === (tab ? tab.content : '')
       currentPath = nextPath
       if (!sameDoc) {
@@ -82,7 +101,7 @@ AgentComponents.CodeEditor = {
         cm.clearHistory()
         applying = false
       }
-      cm.setOption('mode', cmModeFor(currentPath))
+      cm.setOption('mode', cmModeOption(currentPath))
       cm.refresh()
       const goto = store.pendingGoto
       if (goto && goto.path === currentPath) {
@@ -122,7 +141,7 @@ AgentComponents.CodeEditor = {
       }
     }
 
-    const language = Vue.computed(() => cmModeFor(store.activeFile) || 'text')
+    const language = Vue.computed(() => (isDb.value ? 'sqlite' : cmModeFor(store.activeFile) || 'text'))
 
     function tabName(path) {
       return path ? path.split('/').pop() : ''
@@ -133,6 +152,6 @@ AgentComponents.CodeEditor = {
       store.closeTab(path)
     }
 
-    return { store, hostRef, language, tabName, close }
+    return { store, hostRef, language, isDb, tabName, close }
   }
 }

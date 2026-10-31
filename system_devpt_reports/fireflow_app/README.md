@@ -1,397 +1,201 @@
-# FireFlow App - Development Guide
+# FireFlow App (Level 1) — the economic operating system, as PIE sees it
 
-> FireFlow = the economic operating system: real-world sensor + marketplace +
-> transaction + workforce + compute + data layer feeding the PIE brain.
-> PIE thinks; FireFlow earns, executes, and closes the loop in the real world.
+> Repo: `$FIREFLOW_ROOT` (directory currently named `reddit-clone`). Origin: a social/community app; now the **economic execution + sensor layer** feeding the PIE brain.
+> Agent rule: shipped features → §3 tables; unimplemented → `02_roadmap_master.md` + `roadmap.md` (same dir); **no phase/stage labels** in feature tables.
+> Kernel tag for FireFlow findings: `fireflow_app`. Master doc: `00_README_master.md` (Level 0).
 
-## Architecture
+## 1. Role & architecture
 
 ```
 RESEARCH ──┐
-           ├──► ECONOMIC TWIN ──► opportunity ──► SIMULATE / EXECUTE ──► MEASURE ──► LEARN / SCALE
-FIRE FLOW ─┘        (KERNEL)
+           ├──► ECONOMIC TWIN (kernel) ──► opportunity ──► SIMULATE/EXECUTE ──► MEASURE ──► LEARN/SCALE
+FIREFLOW ──┘
 ```
+FireFlow owns: identity, markets, contracts, payments, workforce, compute, data, evidence. PIE owns cognition. **PIE says what should happen; FireFlow determines whether and how.** FireFlow must never grow a second brain.
 
-- RESEARCH/KERNEL: cognition, simulation, policy scoring (PIE side).
-- FIRE FLOW: identity, markets, contracts, payments, workforce, compute, data.
-- ECONOMIC TWIN: live model of every actor — people, businesses, machines.
-- Loop: observe → twin → simulate → execute → measure → learn → scale or pivot.
+**Objective** (shared): maximize sustainable real-world productive capability subject to cash/risk/capital/skills/technology/regulation/time/energy/demand/reliability. **Bootstrap operating mode:** FireFlow is *infrastructure behind an AI-operated B2B intelligence service*, not yet a public marketplace.
 
-## Guiding Objective
+**Loop:** observe → twin → simulate → execute → measure → learn → scale or pivot.
 
-MAXIMIZE SUSTAINABLE REAL-WORLD PRODUCTIVE CAPABILITY subject to:
+**Code layout (`fireflow/` + `economy/`):** `units/` (identity + profiles) · `opportunities/` (scored demand) · `contracts/` (agreements + escrow states) · `tasks/` (paid work) · `reputation/` (verification + ratings) · `payments/` (cash books + approval gates) · `markets/` (task / data / compute / B2B surfaces) · `agent_accounts/` (business_agent + worker-agent credentials bound to AI Agent units).
 
-cash / risk / capital / skills / technology / regulation / time / energy /
-demand / reliability.
+## 2. Stack, run & test
 
-Kernel tag for future FireFlow findings: `fireflow_app`.
+| Item | Detail |
+|---|---|
+| Prerequisites | Next.js 15.3.3 (pinned — OPS-05), Node.js (v18+), npm, SQLite (included) |
+| Frontend | Next.js 15.3.3, React, TypeScript; Jest, Playwright (E2E), Cypress |
+| Backend | Node.js (v18+) API, SQLite (included), jest; `backend/pie/` = PIE gateway |
+| Run both | `npm run app` (backend + frontend). **Port docs conflict:** backend 3001 vs 5000 (DOC-01); frontend 3000 |
+| Backend only / frontend only | `cd backend && npm start` (API at `http://localhost:5000`) · `cd frontend && npm run dev` (app at `http://localhost:3000`) |
+| Tests | backend `npm test [-- file] [-t name]` (e.g. `npm test -- forms.test.js -t "should submit form successfully"`); frontend `npm test`, `npm run test:watch` (e.g. `npm test -- payment-modal.test.tsx`); E2E `npx playwright install chromium` first, then `npm run test:e2e`, `npm run test:e2e:ui`, or `npm run test:e2e -- payment-flow.spec.ts` (app must be running); Cypress `npm run test:cypress:open` |
+| Integration suites (counts at last gate) | drift+contract 8 · gateway 12 · ledger 18 · settlement 23 · sensors 26 (cumulative-looking numbers [INFERRED]) |
+| Local secrets | `backend/.pie_operator` (shared operator password, chmod 600), `backend/.sender_identity` (outreach signature) — never in docs |
+| Frontend surface | social shell, forms, generative UI, services ✅; **economic modules (CRM, outreach, ledger approvals, funnel) have no documented UI** — operated by API/curl [INFERRED] (STR-05) |
 
-## Prerequisites
+## 3. Feature inventory (shipped)
 
-- Next.js 15.3.3
-- Node.js (v18+) and npm 
-- SQLite database (included)
-
-## Running the Application
-
-### Option 1: Run Both (Recommended)
-
-```bash
-cd project-dir
-npm run app
-```
-
-This starts both backend (port 3001) and frontend (port 3000).
-
-### Option 2: Run Separately
-
-#### Backend Only
-
-```bash
-cd project-dir/backend
-npm start
-```
-
-- API runs at: http://localhost:5000
-
-#### Frontend Only
-
-```bash
-cd project-dir/frontend
-npm run dev
-```
-
-- App runs at: http://localhost:3000
-
----
-
-## Testing
-
-### Backend Tests (Jest)
-
-```bash
-# Run all backend tests
-cd project-dir/backend
-npm test
-
-# Run specific test file
-npm test -- forms.test.js
-
-# Run specific test
-npm test -- forms.test.js -t "should submit form successfully"
-```
-
-### Frontend Tests
-
-#### Unit Tests (Jest)
-
-```bash
-cd project-dir/frontend
-npm test
-
-# Watch mode
-npm run test:watch
-
-# Run specific test file
-npm test -- payment-modal.test.tsx
-```
-
-#### E2E Tests (Playwright)
-
-```bash
-cd project-dir/frontend
-
-# Install browsers (first time only)
-npx playwright install chromium
-
-# Run E2E tests
-npm run test:e2e
-
-# To run only this specific test file
-npm run test:e2e -- payment-flow.spec.ts
-
-# Run E2E tests with UI
-npm run test:e2e:ui
-
-# Note: E2E tests require the app to be running.
-
-# Cypress E2E test in watch mode
-npm run test:cypress:open
-```
-
----
-
-## Features Overview
-
-> Agent rule: shipped features → this table; unimplemented work → `roadmap.md`.
-> NEVER use phase/stage labels (`Phase X`, `Stage A`, or any build-step tag) in
-> this table — list features by what they ARE (e.g. `Task marketplace`, not
-> `Stage A3`). Stage labels belong to session history only, never to feature docs.
-
+### 3.1 Social / product shell (frozen — STR-01)
 | Capability | Description |
-|------------|-------------|
-| **Auth** | Login, Register, forgot-password, reset-password. |
-| **Main feed** | General and community posts with like, dislike, save, share, comment, views, options per post; create-post button, post filter, stats (total + online users). 
-| **Create posts** | General 280-word post, community post, form post (General and Service type), voting post arranged in tabs. 
-| **Chats** | Chats list, user chat. 
-| **Communities** | Community list and page with community posts; create, edit, delete community. 
-| **Generative-UI** | Custom forms with LLM generated components; 16px editable grid for placement and property editing. 
-| **Markets** | Post detail page with live voting trends and bets (prediction-market type). 
-| **Notifications** | All in-app notifications. 
-| **Options** | Account settings, saved posts, About app, logout. 
-| **Payments** | Service forms have a cost to make. 
-| **Posts** | Post with comment threads. 
-| **Profile** | Header card (name, email, pic, followers/following, total posts); user communities, posts, forms; followers/following lists. 
-| **Search** | Showcase of posts and a search bar to find users. 
-| **Services** | Services with subservices; subservice post lists and creation forms; premium feature. 
-| **Global context** | Auth, Notification, Post, Socket providers. 
-| **Shared lib** | Config, icons, service-data, types, utils. 
-| **UI components** | BottomAppBar, FormCard, MarketCard, PostCard, TopAppBar. 
-| **Economic identity** | One identity per productive entity (people, businesses, agents, machines) as Units; credential-gated minting. 
-| **Task marketplace** | Posters publish objective + budget + deadline + verification rule; workers claim, execute, get paid on verification. |
-| **Supply offers** | Spare capacity listed as offers (vehicle, space, skills, compute); buyers book, complete, and pay suppliers; money flows buyer → supplier. |
-| **Micro-work splitting** | Projects split into micro-tasks with progress tracking; parents complete only when children are done. |
-| **Referrals** | Workers mint invite codes; one redemption per invitee; growth signal per inviter. |
-| **Engagement records** | Work classified at publish (gig, contract, trial) with terms reference; portable per-worker history with earnings and ratings. |
-| **Opportunity scoring** | Scored demand (demand × fit × margin × speed × cost × scalability × adjacency) with debate hook; single-source scorer, thin proxy. 
-| **Contract escrow** | Funds lock on acceptance, release on verified completion; milestone splits, kill-fee, dispute records. 
-| **Reputation** | Ratings per completed task/contract, portable per-user aggregates; capability attestations; verification gate before first payout. 
-| **Single ledger** | Every rupee movement as income/expense/staged/approved rows in one book; agents propose, humans approve. 
-| **Business profiles** | Capability profile, structured capacity (headcount, shifts, offerings with quantity and lead time), order book, compliance docs; quantity and lead-time filters. |
-| **Capability search** | Supplier search by capability and region, most capable first, over business profiles. |
-| **Commerce pipeline** | Opportunity to cash: score, challenge, stage, human approve, execute via task, reconcile estimate versus actuals. |
-| **Enterprise twin** | Live business model: derived task, cashflow, workforce, reputation, and pipeline measures plus owner-reported metrics feeds. |
-| **Business agent** | Per-business duties (inventory watch, supplier discovery, market intel, quotation, analysis); event-driven runs with history. |
-| **Data marketplace** | Consent-first datasets bound to Dataset units; purpose-bound access requests with logged grant, deny, and revoke; provenance lineage. |
-| **Compute exchange** | Benchmarked nodes bound to Compute Node units serving published workloads only; code blobs rejected; queued to done lifecycle. |
-| **Sensor network** | Structured human observations feeding business twins; reporter-only escalation into measured tasks. |
-| **Drift + contract tests** | Schema drift guards (adapter built from kernel artifact, no shadowed keys); escrow lifecycle, rake math, verification gate jest suites. |
-| **Trusted observations** | Source, device, geography, evidence, confidence on every observation; independent confirmations with self/double-confirm rejected; per-capability reporter reliability scores. |
-| **Revenue rails** | Marketplace rake recorded per payout (runtime-changeable rate); platform revenue view. |
-| **Loop decisions** | Every loop closes with scaled, abandoned, or pivoted verdict plus reason; kill reasons surfaced in twins. |
-| **Market signals** | Weekly industry inputs (trends, demand, policy, tech costs) with staleness flags; carried into market intel. |
-| **Capability ladder** | Rung-by-rung path from a business's capabilities to a target industry, with local supplier counts per rung. |
-| **Industry scanner** | Market signals auto-drafted into scored opportunities; drafts accepted with edited economics. |
-| **Ventures** | Research commercialization in gated rungs (lab, pilot, product, graduated, killed); evidence per gate, reasons for kills. |
-| **Export orders** | Global orders with quote, compliance-gated confirm, ship, deliver lifecycle; forex estimates and policy incentive on delivery. |
-| **Agent accounts** | API keys bound to AI Agent units; supervised spend caps enforced on proposals. 
-| **Authoritative ledger** | Double-entry accounts, idempotency keys (webhooks pay once), pending→settled state machine, releases reference paid tasks instead of re-booking. |
-| **Fee policy rails** | Runtime-changeable task/gig/contract rake, data/compute fees, and welfare head; splits computed at settle time, no redeploy. |
-| **Verified gig payouts** | Gig drivers must own a verified unit before payout, closing the task-only verification gap. |
-| **Settlement pipeline** | Contract authorize→provider→settle→reconcile→payout→report with idempotency at every step; provider failures settle nothing. |
-| **Data and compute settlement** | Dataset grants book the flat access fee with license issue; compute completions book the node-rate fee; double grants and double jobs pay once. |
-| **Dataset licenses** | First-class grant records with terms, purpose, and revocation; revoked licenses block future grants server-side. |
-| **Agent proposal gateway** | Strict proposal envelopes (objective, action, budget, risk, capabilities, expected outcome, authorization); server-side authorize, deny, or needs-approval decisions. |
-| **Execution receipts** | Idempotent execution evidence ingested as observations; invalid envelopes rejected, over-cap proposals denied. |
-| **Prospect CRM** | Evidence-backed prospects (company, problem, triggers, value, contactability, confidence); dedup on company+problem; opt-out blocks outreach/pilot. |
-| **Prospect bulk import** | `POST /api/prospects/import` pushes PIE discovery batches with within-batch dedup, per-row errors, created/deduplicated counts. |
-| **Proposals** | Offer bridge: prospect + template + price → proposal; accept spins up the executing task + draft contract and marks the prospect pilot. |
-| **Outreach pipeline** | Draft → human approve → capped send (1/7d) → classified response; unsubscribe auto-opts the prospect out. |
-| **Proposal launch** | Accepted proposals split into budgeted microtask children under the delivery task; payouts bounded by the pilot price. |
-| **Revenue funnel** | `GET /api/metrics/funnel` canonical dashboard: stage counts, responses by class, released wins, revenue/cost/margin in paise. |
-| **Job ingestion store** | `POST /api/jobs/import` bulk-pushes normalized roles (dedup by job_id); `GET /api/jobs` lists. |
-| **Job fit scoring** | `POST /api/jobs/:id/score` fits the role against your candidate twin via PIE; caches score + APPLY/TAILOR/OUTREACH/SKIP. |
-| **Application tracker** | Packs stored per job; status follows the hiring pipeline with illegal jumps rejected server-side. |
-| **Job outreach** | Network-first notes per role: draft → approve → capped send (5/day) → classified response. |
-| **Jobs funnel** | `GET /api/metrics/jobs`: verdict mix, application pipeline, outreach counts, responses by class. |
-
-
-## Stage A — Economic Substrate
-
-No markets without identity; no transactions without trust. Substrate first.
-
-### A1. Economic identity
-
-Every productive entity gets one identity:
-
-- Person / Business / Organization
-- AI Agent / Service / Product
-- Vehicle / Machine / Facility
-- Compute Node / Dataset
-
-### A2. Module layout (`fireflow/` + `economy/`)
-
-- `units/` — identity + profiles (people, businesses, agents, machines)
-- `opportunities/` — scored demand (see A4)
-- `contracts/` — agreements + escrow states
-- `tasks/` — units of paid work (see Stage B)
-- `reputation/` — verification + ratings (see A5)
-- `payments/` — cash books + approval gates
-- `markets/` — task / data / compute / B2B exchange surfaces
-- `agent_accounts/` — business_agent + worker agent accounts (credentials bound to AI Agent units)
-
-### A3. Task marketplace
-
-- Posters publish objective + budget + deadline + verification rule.
-- Workers (human or agent) claim, execute, get paid on verification.
-- Disputes resolve against the contract record, not chat logs.
-
-### A4. Opportunity engine
-
-Score every opportunity on:
-
-demand × capability-fit × cost × margin × speed × scalability × adjacency
-
-- Cheap gate first: capital-heavy ideas rejected before deep scoring.
-- Debate hook: challenger argues against, scorer defends — only survivors run.
-
-### A5. Reputation / verification
-
-- Identity verification before first payout.
-- Ratings per completed task/contract; portable across marketplaces.
-- Capability attestations (tests, trial tasks) unlock higher-value work.
-
-### A6. Contract / escrow
-
-- Funds lock on acceptance, release on verified completion.
-- Milestone splits for large work; kill-fee for cancelled work.
-
-### A7. Universal transaction ledger
-
-- Every rupee movement: income / expense / staged / approved.
-- Human-approval gate on real money movement (agents propose, humans approve).
-- One store only — no parallel books.
-
-### A8. Business profiles + agent accounts
-
-- Businesses: capability profile, capacity, order book, compliance docs.
-- Agents: own accounts, own reputation, supervised spending limits.
-
-### First coding target
-
-Shared Economic Object Model + Opportunity/Task/Transaction API — one
-language so FireFlow and PIE interoperate from day one.
-
----
-
-## Stage B — People Earn
-
-Turn spare human capacity into income.
-
-### B1. `agent_tasks` schema
-
-Every task carries:
-
-objective / budget / deadline / inputs / required capabilities /
-verification rule / reward / risk flag.
-
-### B2. Spare-capacity monetization
-
-- Vehicle idle hours → logistics / delivery slots.
-- Rooftop / spare room → storage, solar, micro-warehousing.
-- Skills after hours → review, tutoring, annotation, audit tasks.
-- Devices idle → benchmarked compute contributions (see C4).
-
-### B3. Micro-work flywheel
-
-AI demand → distribute micro-tasks → workers earn → workers invite others →
-supply grows → bigger projects become feasible → repeat.
-
-### B4. Compliance from day one
-
-- Worker classification, records, and social protection built in, not bolted on.
-- Social Security Code in force (Nov 2025): gig/platform worker welfare,
-  registration, and benefit rails are design inputs, not afterthoughts.
-
----
-
-## Stage C — Businesses Earn
-
-### C1. `industrial_b2b` profiles + capability search
-
-- Every business: what it can make, capacity, lead time, quality record.
-- Capability search queries: "who within 300 km can CNC aluminium ±0.05 mm?"
-- Industrial capability graph of India — the map businesses buy into.
-
-### C2. `business_agent`
-
-Always-on agent per business doing:
-
-sales outreach / procurement / inventory watch / customer support /
-market intel / quotation drafting / supplier discovery / hiring screens /
-business analysis.
-
-### C3. `enterprise_twin` feeds
-
-Live sync of: orders / inventory / costs / capacity / machines / workers /
-suppliers / customers / energy / cashflow / defects / delivery times.
-
-Twin → simulate decisions → execute → measure back into twin.
-
-### C4. Data marketplace + compute exchange
-
-- Data marketplace: consent-first, provenance-tracked datasets; DPDP
-  compliance as a first-class feature, not a banner.
-- Compute exchange: benchmarked, sandboxed nodes; published workload list
-  (render, inference, simulation, annotation QA). No arbitrary customer code
-  ever runs directly on hosts.
-
-### C5. Agent-mediated commerce pipeline
-
-score → challenge → stage → approve → execute → reconcile → twin-update.
-Same pipeline for a ₹500 task and a ₹50 lakh order — only the gates scale.
-
-### C6. Interoperate, don't rebuild
-
-Plug into open commerce networks for discovery and settlement; build only
-the twin, scoring, and execution layers that are ours.
-
-### C7. Human sensor network (closed loop)
-
-People observe → twin updates → simulate → execute in the world →
-measure → learn. Humans are the highest-resolution sensors.
-
-### C8. Ride-hailing: LATER
-
-Only as a logistics capability (move goods/people for other jobs), never as
-a standalone consumer app bet.
-
----
-
-## Stage D — Economic Autonomy
-
-### D1. Revenue priority (in order)
-
-1. B2B services (agent-built, agent-delivered)
-2. Task marketplace rake
-3. Data marketplace fees
-4. Compute exchange margin
-5. Enterprise twins (SaaS)
-6. Procurement / supply-chain services
-7. Export facilitation
-8. Industrial intel reports
-9. Skilling-to-earning pipelines
-10. Consumer ads (last — never the engine)
-
-### D2. Economic loop stages
-
-observe → discover → estimate → simulate → rank → task → execute →
-collect → reconcile → twin → learn → scale / abandon / pivot.
-
-Every rupee tracked; every loop either scales or gets killed with a reason.
-
-### D3. Geography
-
-Kanpur = operations base. India = the market. Win at home first.
-
-### D4. `future_industry_engine` (weekly inputs)
-
-Trends, demand signals, policy shifts, technology costs — refreshed weekly,
-feeding the opportunity engine.
-
-### D5. `industrial_pathfinder` ladder
-
-Climb rung by rung (services → components → systems → industries). No direct
-jump to the Moon — each rung funds the next.
-
----
-
-## Stage E — Industrial Leap
-
-- **Industrial graph:** who makes what, where, at what capacity, at what cost.
-- **Technology graph:** which capabilities unlock which industries.
-- **Future-industry scanner:** where demand is moving before it arrives.
-- **Pathfinder:** cheapest viable ladder from here to there.
-- **Research commercialization:** lab → pilot → product pipeline.
-- **India-wide supplier graph:** the B2B map as infrastructure.
-- **Export engine:** domestic capability → global orders.
+|---|---|
+| Auth | Login, register, forgot/reset password |
+| Main feed | General + community posts: like, dislike, save, share, comment, views, options; create-post, filter, stats (total + online users) |
+| Create posts | 280-word general, community, form posts (General/Service), voting post — tabs |
+| Chats | chat list, user chat |
+| Communities | list/page; create, edit, delete |
+| Generative-UI | custom forms with LLM-generated components; 16 px editable grid for placement/property editing |
+| Markets | post detail with live voting trends and bets (prediction-market type) |
+| Profile | header card (name, email, pic, followers/following, total posts); user communities, posts, forms; followers/following lists |
+| Notifications / Options / Search / Posts | in-app notifications; settings, saved posts, about, logout; post showcase + user search; comment threads |
+| Payments (forms) | service forms carry a cost to make |
+| Services | services with subservices, post lists/creation forms; premium feature |
+| Global context / Shared lib / UI components | Auth/Notification/Post/Socket providers; config, icons, service-data, types, utils; BottomAppBar, FormCard, MarketCard, PostCard, TopAppBar |
+
+### 3.2 Economic substrate
+| Capability | Description |
+|---|---|
+| Economic identity | one identity per productive entity as Units: Person, Business, Organization, AI Agent, Service, Product, Vehicle, Machine, Facility, Compute Node, Dataset; credential-gated minting |
+| Task marketplace | posters publish objective + budget + deadline + verification rule; workers (human/agent) claim, execute, get paid on verification; disputes resolve against the contract record, not chat logs |
+| Task record fields (`agent_tasks`) | every task carries objective / budget / deadline / inputs / required capabilities / verification rule / reward / risk flag |
+| Supply offers | spare capacity (vehicle, space, skills, compute) listed as offers; buyers book, complete, pay suppliers (buyer→supplier) |
+| Micro-work splitting | projects → micro-tasks with progress; parents complete only when children are done |
+| Referrals | workers mint invite codes; one redemption per invitee; growth signal per inviter |
+| Engagement records | work classified at publish (gig/contract/trial) with terms reference; portable per-worker history (earnings, ratings) |
+| Opportunity scoring | scored demand (demand × fit × margin × speed × cost × scalability × adjacency) with debate hook; **single-source scorer in PIE, FireFlow is a thin proxy** |
+| Contract escrow | funds lock on acceptance, release on verified completion; milestone splits; kill-fee; dispute records |
+| Reputation | ratings per completed task/contract; portable aggregates; capability attestations; **verification gate before first payout** |
+| Verified gig payouts | gig drivers must own a verified unit before payout (closes task-only verification gap) |
+
+**Interface target (adopted):** a shared Economic Object Model + Opportunity/Task/Transaction API — one language so FireFlow and PIE interoperate from day one.
+
+### 3.3 Money
+| Capability | Description |
+|---|---|
+| Single ledger | every rupee movement as income/expense/staged/approved rows in **one book — no parallel books**; agents propose, humans approve |
+| Authoritative ledger | double-entry accounts; idempotency keys (webhooks pay once); pending→settled state machine; releases reference paid tasks instead of re-booking |
+| Settlement pipeline | contract authorize→provider→settle→reconcile→payout→report, idempotent at every step; provider failures settle nothing |
+| Revenue rails | marketplace rake recorded per payout (runtime-changeable); platform revenue view |
+| Fee policy rails | runtime-changeable task/gig/contract rake, data/compute fees, welfare head; splits computed at settle time, no redeploy |
+| Data & compute settlement | dataset grants book flat access fee with license issue; compute completions book node-rate fee; double grants/jobs pay once |
+[LOOPHOLE FIN-01 · S1] Provider/payout rail and a global kill switch are undocumented. [/LOOPHOLE]
+[LOOPHOLE FIN-02 · S1] Escrow-holding may be regulated; start customers on a no-escrow invoice path. [/LOOPHOLE]
+[SUGGESTION INT-06 · P1] Stamp `fee_policy_version` on every economic event so findings expire when rake changes. [/SUGGESTION]
+
+### 3.4 Businesses & intelligence
+| Capability | Description |
+|---|---|
+| Business profiles (`industrial_b2b`) | capability profile; structured capacity (headcount, shifts, offerings with quantity & lead time); order book; compliance docs; quantity & lead-time filters |
+| Capability search | supplier search by capability + region, most capable first (e.g., "who within 300 km can CNC aluminium ±0.05 mm?") |
+| Commerce pipeline | opportunity→cash: score, challenge, stage, human approve, execute via task, reconcile estimate vs actuals; **same pipeline for a ₹500 task and a ₹50 lakh order — only the gates scale** |
+| Enterprise twin | live business model: derived task/cashflow/workforce/reputation/pipeline measures + owner-reported metric feeds (truth tiers apply) |
+| Business agent | per-business duties (inventory watch, supplier discovery, market intel, quotation, analysis); event-driven runs with history |
+| Agent accounts | API keys bound to AI Agent units; supervised spend caps enforced on proposals |
+| Loop decisions | every loop closes scaled / abandoned / pivoted + reason; kill reasons surfaced in twins |
+| Market signals | weekly industry inputs (trends, demand, policy, tech costs) with staleness flags; feed market intel; **`future_industry_engine`** refreshes these weekly into the opportunity engine |
+| Capability ladder | rung-by-rung path from a business's capabilities to a target industry with local supplier counts per rung |
+| Industry scanner | market signals auto-drafted into scored opportunities; drafts accepted with edited economics |
+| Ventures | research commercialization in gated rungs (lab, pilot, product, graduated, killed); evidence per gate; kill reasons |
+| Export orders | quote → compliance-gated confirm → ship → deliver; forex estimates; policy incentive on delivery |
+
+### 3.5 Data, compute, sensors
+| Capability | Description |
+|---|---|
+| Data marketplace | consent-first datasets bound to Dataset units; purpose-bound access requests with logged grant/deny/revoke; provenance lineage (DPDP compliance first-class, not a banner) |
+| Dataset licenses | first-class grant records with terms, purpose, revocation; revoked licenses block future grants server-side |
+| Compute exchange | benchmarked nodes bound to Compute Node units serving **published workloads only** (render, inference, simulation, annotation QA); code blobs rejected; queued→done lifecycle; no arbitrary customer code on hosts |
+| Sensor network | structured human observations feeding business twins; reporter-only escalation into measured tasks; humans are the highest-resolution sensors (observe → twin → simulate → execute → measure → learn) |
+| Trusted observations | source, device, geography, evidence, confidence on every observation; independent confirmations (self/double-confirm rejected); per-capability reporter reliability |
+[SUGGESTION SEN-01 · P1] Count a confirmation as independent only if devices/geo buckets differ and the two accounts share no referral chain. [/SUGGESTION]
+[SUGGESTION STR-06 · P2] Compute node attestation/heartbeat/isolation/result-verification/failure-handling status is undocumented; keep the exchange internal until demand exists. [/SUGGESTION]
+
+### 3.6 PIE gateway
+| Capability | Description |
+|---|---|
+| Agent proposal gateway | strict envelopes (objective, action, budget, risk, capabilities, expected outcome, authorization); server-side authorize / deny / needs-approval; RBAC |
+| Execution receipts | idempotent execution evidence ingested as observations; invalid envelopes rejected; over-cap proposals denied |
+| Drift + contract tests | schema drift guards (adapter built from the kernel artifact, no shadowed keys); escrow lifecycle, rake math, verification-gate jest suites; single-source rule = kernel owns `codebase/kernel/schemas/`, FireFlow vendors the artifact + drift-tests |
+
+### 3.7 Revenue acquisition (customer pipeline)
+| Capability | Description |
+|---|---|
+| Prospect CRM | evidence-backed prospects (company, problem, triggers, value, contactability, confidence); dedup on company+problem; opt-out blocks outreach/pilot |
+| Prospect bulk import | `POST /api/prospects/import` — PIE discovery batches, within-batch dedup, per-row errors, created/deduplicated counts |
+| Proposals | offer bridge: prospect + template + price → proposal; **accept** spins up the executing task + draft contract and marks prospect *pilot* |
+| Outreach pipeline | draft → human approve → capped send (1 per 7 days) → classified response; unsubscribe auto-opts-out |
+| Proposal launch | accepted proposals split into budgeted microtask children under the delivery task; payouts bounded by the pilot price |
+| Revenue funnel | `GET /api/metrics/funnel`: stage counts, responses by class, released wins, revenue/cost/margin in paise |
+
+### 3.8 Job search (specialized economic agent)
+| Capability | Description |
+|---|---|
+| Job ingestion store | `POST /api/jobs/import` bulk-push normalized roles (dedup by `job_id`); `GET /api/jobs` |
+| Job fit scoring | `POST /api/jobs/:id/score` fits role vs candidate twin via PIE; caches score + APPLY/TAILOR/OUTREACH/SKIP |
+| Application tracker | packs per job; status follows hiring pipeline; **illegal jumps rejected server-side** |
+| Job outreach | network-first notes: draft → approve → capped send (5/day) → classified response |
+| Jobs funnel | `GET /api/metrics/jobs`: verdict mix, application pipeline, outreach counts, responses by class |
+
+## 4. State machines (the invariants a direction session should rely on)
+
+| Object | States / rule |
+|---|---|
+| Task | published → claimed → executing → verified → paid; cannot be verified and cancelled together; a worker can't claim twice [VERIFY FIN-08: DB-level?] |
+| Contract/escrow | accepted (lock) → milestones → verified (release) / cancelled (kill-fee) / disputed |
+| Ledger entry | pending → settled (+ failed/refunded/disputed/reversed planned [VERIFY]); idempotency key per external event |
+| Settlement | authorize → provider → settle → reconcile → payout → report |
+| Outreach | draft → approved → sent → response classified (interested / later / wrong person / not relevant / unsubscribe); 1 per 7 days per prospect |
+| Job outreach | draft → approved → sent (≤5/day) → classified |
+| Proposal | drafted → accepted → launched (microtasks) ; accept marks prospect `pilot` |
+| Application | discovered → qualified → ready → applied → outreach → screen → interview → technical → offer → accepted; rejected/withdrawn/expired [INFERRED from plan] |
+| Export order | quote → confirmed (compliance-gated) → shipped → delivered |
+| Compute job | queued → … → done |
+| Dataset access | request → grant/deny → revoke; license carries purpose + terms |
+| Venture | lab → pilot → product → graduated / killed (evidence per gate) |
+| Loop | → scaled / abandoned / pivoted (+ reason) |
+
+## 5. Human gates & authorization
+
+| Gate | Who | Where |
+|---|---|---|
+| Real-money movement | human approves staged ledger rows | ledger |
+| Agent proposal over cap / risky | human (needs-approval) | gateway |
+| Outreach send | human approves each draft | `/api/outreach` approve→send |
+| Proposal price/confidence gate | human | proposals |
+| Job outreach send | human approves every send | jobs |
+| Application submit | policy gate (what passes is ❓ JOB-03) | tracker |
+
+## 6. Design intent by domain (retained from the old README; no stage labels)
+
+- **Economic loop stages:** observe → discover → estimate → simulate → rank → task → execute → collect → reconcile → twin → learn → scale / abandon / pivot. Every rupee tracked; every loop either scales or gets killed with a reason.
+- **Opportunity engine:** cheap gate first (capital-heavy ideas rejected before deep scoring); debate hook — challenger argues against, scorer defends, only survivors run.
+- **Reputation:** identity verification before first payout; ratings portable across marketplaces; attestations (tests, trial tasks) unlock higher-value work.
+- **Workers & compliance:** classification, records and social protection built in from day one (Social Security Code in force per planning chat; DPDP Rules notified Nov 2025, phased) — design inputs, not afterthoughts [verify].
+- **Spare-capacity monetization:** idle vehicle hours → logistics/delivery slots; rooftop/spare room → storage/solar/micro-warehousing; skills after hours → review/tutoring/annotation/audit; idle devices → benchmarked compute.
+- **Micro-work flywheel:** AI demand → micro-tasks → workers earn → invite others → supply grows → bigger projects.
+- **Business agent duties:** sales outreach, procurement, inventory watch, customer support, market intel, quotation, supplier discovery, hiring screens, analysis — should run as *event → duty → PIE reasoning → proposal → authorization → action → result → event*.
+- **Enterprise twin feeds:** orders, inventory, costs, capacity, machines, workers, suppliers, customers, energy, cashflow, defects, delivery times; twin → simulate → execute → measure back into twin.
+- **Interoperate, don't rebuild:** plug into open commerce networks for discovery/settlement; build only twin, scoring, execution.
+- **Ride-hailing:** later, only as a logistics capability — never a standalone consumer bet.
+- **Revenue priority (in order):** B2B services (agent-built, agent-delivered) → task-marketplace rake → data fees → compute margin → enterprise-twin SaaS → procurement/supply-chain services → export facilitation → industrial intel reports → skilling-to-earning → consumer ads (last, never the engine).
+- **Geography:** Kanpur = operations base; India = the market; win at home first.
+- **Industrial leap (locked ladder, `industrial_pathfinder`):** industrial graph (who makes what, where, at what capacity/cost), technology graph (which capabilities unlock which industries), `future_industry_engine` scanner, pathfinder (services→components→systems→industries, each rung funds the next), research commercialization (lab→pilot→product), India-wide supplier graph, export engine (domestic capability → global orders).
+
+## 7. Known gaps (see register)
+
+[LOOPHOLE INT-04 · S2] PIE `market.db` and FireFlow both hold prospect/ledger-like data — declare FireFlow system-of-record. [/LOOPHOLE]
+[SUGGESTION REV-07 · P1] Add a magic-link customer portal (view → accept → pay/invoice → download deliverable) and a `deliverable_assembly` step. [/SUGGESTION]
+[SUGGESTION FIN-04 · P1] Treat SQLite durability (WAL, backups, restore drill, Postgres path) as a precondition for `MONEY_MODE=live`. [/SUGGESTION]
+[VERIFY FIN-01] Which payment/payout providers are wired and in what mode? [/VERIFY]
+[VERIFY REV-07] How does an external customer accept a proposal and receive a deliverable today? [/VERIFY]
+
+**Carried from `roadmap.md` (same dir) — still open unless marked shipped.** `roadmap.md` remains the single plan of record for FireFlow; this table is the direction-session summary. Unbuilt detail (e.g. the current job-agent slice, funnel snapshot) stays there.
+
+| Item | Status | Note |
+|---|---|---|
+| Welfare contribution rails (bps on payouts into a welfare head) | ⬜ | needs a policy rate (FIN-06) |
+| Scale the reads: `GET /businesses` + search load the whole table | ⬜ | pagination + region indexing before national-scale data (supplier graph at scale is otherwise indexing + seed tooling) |
+| Timestamps + admin | ⬜ | most tables lack `updated_at` (delivery-time metrics impossible); admin hardcoded to user id 1 — replace with a role |
+| Sandbox honesty | ⬜ | node benchmarks are self-reported; job execution is lifecycle-only — integrate a real runner or label mock surfaces (STR-06) |
+| Frontend for economic surfaces | ⬜ | tasks, escrow, ledger, twins, pipelines are API-only (STR-05) |
+| Secrets + observability | ⬜ | JWT falls back to a default secret; no request logging or error tracking in production paths (OPS-03) |
+| Contract/drift tests · data+compute settlement · ledger double-counting · gig verification gap | ✅ | shipped 2026-09-15/17 (see `roadmap.md` shipped log); older roadmap wording is stale |
+| **Stage F — Moon (deferred)** | ⛔ | cislunar economy, lunar twin + Earth–Moon supply chain, ISRU (water/oxygen/regolith), autonomous factories (terrestrial rehearsal first) — no Moon work before industrial autonomy |

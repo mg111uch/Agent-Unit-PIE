@@ -1,7 +1,7 @@
 # 🧠 Agent_Unit_PIE — Master Agent Doc (Level 0)
 
-> **Doc set version:** 2.0 · **Compiled:** 2026-10-19 · **Latest dated evidence in sources:** 2026-09-15 (all integration gates PASS)
-> **Sources:** old master README, 5 module READMEs + kernel `usage.md` + `SimDvptPhases.md`, FireFlow app README, and 4 planning chats (`PlanFixes2`, `FeatureIdeas`, `FixesIssues`, `PhasePlan`).
+> **Doc set version:** 2.1 · **Compiled:** 2026-10-19 · **Consolidated:** 2026-10-25 · **Latest dated evidence in sources:** 2026-09-15 (all integration gates PASS)
+> **Sources:** old master README (now `vision.md`), all module READMEs + kernel `usage.md` + `SimDvptPhases.md`, FireFlow app README, and 4 planning chats (`PlanFixes2`, `FeatureIdeas`, `FixesIssues`, `PhasePlan`).
 > **Purpose:** let an LLM (or a new human) understand **PIE (agent) and FireFlow (app) from docs alone**, and advise on *development direction after each iteration* without being shown code.
 
 ---
@@ -13,8 +13,8 @@
 | **What it is** | **PIE** = persistent cognition (kernel + simulators + digital twins + debate engine + dev loop). **FireFlow** = economic execution + sensor layer (identity, tasks, contracts, ledger, workforce, data, compute, CRM). PIE decides *what should happen*; FireFlow decides *whether and how it actually happens*. |
 | **Objective** | MAXIMIZE SUSTAINABLE REAL-WORLD PRODUCTIVE CAPABILITY under cash / risk / capital / skills / technology / regulation / time / energy / demand / reliability constraints. **Bootstrap overlay:** maximize *validated contribution per unit of agent effort* until revenue is repeatable. |
 | **Where it stands** | Breadth is large and tested (kernel, simulators, twins, economy, ~60 FireFlow capabilities, jest/smoke suites green at the 2026-09-15 gates). **No document records a paid customer yet.** City twins exist as versioned skeletons fed mostly by placeholders (conf ≤ 0.35). Kernel is only partly activated. |
-| **Biggest risks** | (1) the PIE↔FireFlow loop is *closed in adapters and tests*, not proven on live transport; (2) real money rails + Indian compliance are undocumented; (3) delivery capacity/QC for the first paid projects is undocumented; (4) simulator-to-city validity (agent cap 400, placeholder data); (5) several doc contradictions that can cause silent failures. See `loopholes_and_suggestions.md`. |
-| **Direction** | **Stop adding modules. Prove the loop, earn the first rupee, keep the city/sim track as a small parallel slice, keep the Moonshot ladder LOCKED.** See `roadmap_master.md` §1. |
+| **Biggest risks** | (1) the PIE↔FireFlow loop is *closed in adapters and tests*, not proven on live transport; (2) real money rails + Indian compliance are undocumented; (3) delivery capacity/QC for the first paid projects is undocumented; (4) simulator-to-city validity (agent cap 400, placeholder data); (5) several doc contradictions that can cause silent failures. See `03_loopholes_and_suggestions.md`. |
+| **Direction** | **Stop adding modules. Prove the loop, earn the first rupee, keep the city/sim track as a small parallel slice, keep the Moonshot ladder LOCKED.** See `02_roadmap_master.md` §1. |
 
 ---
 
@@ -22,22 +22,26 @@
 
 ### 1.1 Hierarchy (max two levels — do not nest deeper)
 
-| Logical path (drop-in) | Flat download name | Level | Purpose | Read when |
-|---|---|---|---|---|
-| `system_devpt_reports/README.md` | `00_README_master.md` | 0 | This file: vision, system map, loops, contract, invariants, snapshot | Always first |
-| `session_playbook.md` | `01_session_playbook.md` | 1 | How to run a *direction session* with no code; iteration-report template; question bank | Starting/ending any session |
-| `roadmap_master.md` | `02_roadmap_master.md` | 1 | Cross-module unimplemented work, gates, horizons, **recommendation ledger** (every idea from the planning chats with status) | Choosing next work |
-| `loopholes_and_suggestions.md` | `03_loopholes_and_suggestions.md` | 1 | Register of loopholes/suggestions with IDs, severity, fix, and a *verify question* for the coding agent | Prioritising, auditing |
-| `iteration_log.md` | `04_iteration_log.md` | 1 | Append-only log of iterations & gates | After each iteration |
-| `agent_runtime/README.md` | `10_agent_runtime_README.md` | 1 | Agent loop, tools, commands, workflows, autonomy gate, scripts | Questions about *how the agent works* |
-| `kernel/README.md` | `11_kernel_README.md` | 1 | Memory, lineage, validity, contradiction gate, bus, registry | Cognition questions |
-| `populaDyn_simu/README.md` | `12_populaDyn_simu_README.md` | 1 | General civilization simulator, policy stack, epoch engine | Simulation/policy questions |
-| `digital_twins/README.md` | `13_digital_twins_README.md` | 1 | City twins (Kanpur, Delhi), provenance, calibration, contrast lab | City/twin questions |
-| `economy/README.md` | `14_economy_README.md` | 1 | Opportunity engine, revenue loop, job module, PIE-side economic code | Revenue/jobs questions |
-| `debate_argu/README.md` | `15_debate_argu_README.md` | 1 | ArguGod debate/belief engine | Debate/belief questions |
-| `fireflow_app/README.md` | `16_fireflow_app_README.md` | 1 | FireFlow app from PIE's perspective: features, endpoints, state machines, human gates | App questions |
+All files now live flat in `system_devpt_reports/`; module docs keep their own directory and `README.md`.
 
-Module-level `roadmap.md`, `status.md`, `usage.md` files referenced by the old docs were **not supplied**; `roadmap_master.md` consolidates what the planning chats say. See §13 "Known unknowns".
+| Path | Level | Purpose | Read when |
+|---|---|---|---|
+| `00_README_master.md` | 0 | This file: vision index, system map, loops, contract, invariants, snapshot | Always first |
+| `01_session_playbook.md` | 1 | How to run a *direction session* with no code; iteration-report template; question bank | Starting/ending any session |
+| `02_roadmap_master.md` | 1 | Cross-module unimplemented work, gates, horizons, **recommendation ledger** (every idea from the planning chats with status) | Choosing next work |
+| `03_loopholes_and_suggestions.md` | 1 | Register of loopholes/suggestions with IDs, severity, fix, and a *verify question* for the coding agent | Prioritising, auditing |
+| `04_iteration_log.md` | 1 | Append-only log of iterations & gates | After each iteration |
+| `agent_runtime/README.md` | 1 | Agent loop, tools, commands, workflows, autonomy gate, scripts | Questions about *how the agent works* |
+| `kernel/README.md` | 1 | Memory, lineage, validity, contradiction gate, bus, registry | Cognition questions |
+| `populaDyn_simu/README.md` | 1 | General civilization simulator, policy stack, epoch engine | Simulation/policy questions |
+| `digital_twins/README.md` | 1 | City twins (Kanpur, Delhi), provenance, calibration, contrast lab | City/twin questions |
+| `economy/README.md` | 1 | Opportunity engine, revenue loop, job module, PIE-side economic code | Revenue/jobs questions |
+| `debate_argu/README.md` | 1 | ArguGod debate/belief engine | Debate/belief questions |
+| `fireflow_app/README.md` | 1 | FireFlow app from PIE's perspective: features, endpoints, state machines, human gates | App questions |
+| `codebase_atlas/README.md`, `stock_analyser/README.md`, `virtual_silicon/README.md` | 1 | Codebase atlas, stock research precedent, silicon/simulator module | When those modules are in scope |
+| `vision.md` | 2 | Original vision manifesto: universal unit schema, engine catalog, storage architecture, self-evolution mechanisms, stated limitations | When you need *intent* rather than state |
+
+Module-level `roadmap.md` / `status.md` / `usage.md` files are supplied and live beside their README; they remain the plan-of-record for their module. This master doc consolidates cross-module status. See §13 "Known unknowns" for what is still genuinely missing.
 
 ### 1.2 Doc rules (inherited from the project, kept)
 
@@ -65,7 +69,7 @@ Module-level `roadmap.md`, `status.md`, `usage.md` files referenced by the old d
 [VERIFY ID] … [/VERIFY]                     a question only the coding agent can answer from code
 [INFERRED] …                                a statement deduced from docs, not stated by them
 ```
-Inline markers are short; the full entry (evidence, fix, verify question) lives in `loopholes_and_suggestions.md` under the same ID.
+Inline markers are short; the full entry (evidence, fix, verify question) lives in `03_loopholes_and_suggestions.md` under the same ID.
 
 ---
 
@@ -86,6 +90,8 @@ PIE:              observation → signal extraction → pattern formation → wo
 **Intentionally avoided:** giant monolithic memory files, vector-only cognition, hardcoded domain assumptions, static knowledge, *fully autonomous uncontrolled agents*.
 
 **Agent orchestrator design:** tool-driven loop `Observe → Execute → Learn → Store → Evolve`; persistent structured memory via markdown/JSON; deterministic actions; file-size limits; path traversal (`..`) blocked.
+
+**Full vision (Level 2):** `vision.md` keeps the original manifesto — the complete universal-unit schema, the engine catalog (ingestion, behavioral + soft-science, spatial, economic, stock, pattern), the storage-architecture table, the self-evolution mechanisms and the project's own stated limitations. Use it for **intent**; use §6 below for **what is actually built**. Its ArguGod paragraph is corrected to the current code (compiler working, `graph.json` derived — DBT-01).
 
 ---
 
@@ -214,13 +220,14 @@ Universal signal: `{signal_id, unit_id, signal_type, category, location, intensi
 | Behavioral Intelligence + Soft-Sciences-as-hypotheses | human behavior maps | ❓ vision-only in supplied docs | STR-07 |
 | Spatial Intelligence | GIS, infra graphs | ❓ vision-only; no GIS ingestion documented | TWN-01 |
 | popula_dyn | general civilization ABM + policy/epoch stack | ✅ | `populaDyn_simu/` |
-| eco_sim, virtual_silicon | other simulators | ❓ registered; docs not supplied | — |
+| `virtual_silicon` | silicon/simulator module | ❓ docs supplied (`virtual_silicon/`); build state unverified | `virtual_silicon/` |
+| `eco_sim` | second simulator (planning name only) | ⛔ **no code** — nothing under `codebase/modules/simulators/`; do not describe it as registered | SIM-03 |
 | City twins (Kanpur, Delhi) | replica of real cities | 🟡 versioned, provenance-tagged, placeholder-heavy | `digital_twins/` |
 | Company twin | snapshot→ledger | ✅ (PIE) · FireFlow has its own *enterprise twin* | INT-07 |
 | Human / Country twins | — | ❓ vision | — |
 | Economy (PIE side): opportunity, revenue loop, jobs | earn | ✅ code · ❓ traction | `economy/` |
 | Economic Intelligence: capital_flow ✅(signal), opportunity ✅, corruption/gdp/investment engines ❓ | — | mixed | `economy/` |
-| Stock intelligence (separate module; OOS discipline; "hole closed at 51/0") | research precedent | ✅ exists; docs not supplied | — |
+| Stock intelligence (separate module; OOS discipline; "hole closed at 51/0") | research precedent | ✅ exists | `stock_analyser/` |
 | Debate (ArguGod) | belief tracking | ✅ with path/vocab issues | `debate_argu/` |
 | Dev loop (12-node workflow, autonomy gate, eval harness) | self-development | ✅ | `agent_runtime/` |
 | FireFlow backend | execution + sensors | ✅ | `fireflow_app/` |
@@ -331,16 +338,17 @@ Universal signal: `{signal_id, unit_id, signal_type, category, location, intensi
 
 **Open items recorded by the project itself:** hierarchy/relation retrievers dormant · `city_twin.py` oversized (741 lines) · `promote --keep` for parallel ACTIVE trees · real city feeds for conf ≤ 0.35 placeholders + water/energy/air dims · multi-seed + falsify for policy experiments before any finding above HYPOTHESIS; calibration caps (pop 400, skill 1.0) on every record · stock: no new sweep without a new idea.
 
-### Known unknowns (docs referenced but not supplied)
+### Known unknowns (still genuinely missing)
 
-`AGENTS.md` (operating rules) · per-module `roadmap.md` and `status.md` · `kernel_playbook.md`, `onboarding.md` · `project_history` topic · stock-module docs · `eco_sim` / `virtual_silicon` docs · FireFlow `roadmap.md` · FireFlow DB path/schema · resume location.
-[SUGGESTION DOC-04 · P1] Add a one-page digest of each missing doc to the next session paste (or fold them into this set). [/SUGGESTION]
+FireFlow DB path/schema ❓ · candidate `resume.md` location ❓ · `eco_sim` has **no code** at all (a scope gap, not a doc gap) · the stock "hole closed at 51/0" claim conflicts with the stock closure memo — needs one authoritative statement.
+Everything the old doc set called "not supplied" now exists in this directory or the repo: `AGENTS.md`, per-module `roadmap.md`/`status.md`, `kernel_playbook.md`/`onboarding.md` (`codebase/prompt_fragments/`), the `project_history` topic (`data/topics/`), stock + `virtual_silicon` docs, and FireFlow `roadmap.md`.
+[SUGGESTION DOC-04 · P1] ~~Digest each missing doc~~ — **mostly resolved 2026-10-25**: every module doc now sits beside its README. Remaining: FireFlow DB schema, resume path, one stock-number reconciliation. [/SUGGESTION]
 
 ---
 
 ## 14. Top risks & recommended next iteration
 
-**Top risks (full register: `loopholes_and_suggestions.md`):** INT-01 live transport · INT-02 agent identity · FIN-01/02 money rails & escrow legality · REV-01/02/03 no recorded revenue, manual funnel top, undefined delivery capacity · OPS-01 no backup/monitoring story · SIM-01/TWN-01 city validity · DBT-01/02 doc contradictions that can silently break contradiction detection.
+**Top risks (full register: `03_loopholes_and_suggestions.md`):** INT-01 live transport · INT-02 agent identity · FIN-01/02 money rails & escrow legality · REV-01/02/03 no recorded revenue, manual funnel top, undefined delivery capacity · OPS-01 no backup/monitoring story · SIM-01/TWN-01 city validity · DBT-01/02 doc contradictions that can silently break contradiction detection.
 
 **Recommended next iteration (order):**
 1. **Doc/contract fixes (≈1 day):** DOC-01, DOC-02, DOC-03, DBT-01/02/03.

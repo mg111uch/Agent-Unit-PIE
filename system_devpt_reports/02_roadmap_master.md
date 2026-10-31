@@ -1,7 +1,7 @@
 # Roadmap — Master (Level 1)
 
-> Unimplemented / unproven work across PIE and FireFlow, consolidated from the four planning chats and the module docs. Module-level `roadmap.md` files (not supplied) hold finer detail; this file is the cross-module view. Compiled 2026-10-19.
-> Status marks: ✅ shipped · 🟡 partial · ⬜ not built · ⛔ frozen/locked · ❓ unknown (ask coding agent). IDs refer to `loopholes_and_suggestions.md`.
+> Unimplemented / unproven work across PIE and FireFlow, consolidated from the four planning chats and the module docs. Module-level `roadmap.md` files (now supplied beside each README) hold finer detail; this file is the cross-module view. Compiled 2026-10-19.
+> Status marks: ✅ shipped · 🟡 partial · ⬜ not built · ⛔ frozen/locked · ❓ unknown (ask coding agent). IDs refer to `03_loopholes_and_suggestions.md`.
 
 ## 1. Direction in one screen
 

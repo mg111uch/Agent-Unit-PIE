@@ -6,7 +6,7 @@
 
 | Always | Often | Only if relevant |
 |---|---|---|
-| `README.md` (master) · `loopholes_and_suggestions.md` · `roadmap_master.md` · latest **Iteration Report** (§2) · tail of `iteration_log.md` | the module README(s) the iteration touched | the other module READMEs; any of the *not supplied* docs (AGENTS.md, module `roadmap.md`/`status.md`) once available |
+| `00_README_master.md` · `03_loopholes_and_suggestions.md` · `02_roadmap_master.md` · latest **Iteration Report** (§2) · tail of `04_iteration_log.md` | the module README(s) the iteration touched (+ its `roadmap.md` / `status.md`) | the other module READMEs; `vision.md` for intent |
 
 If total size is too large: master + register + roadmap + report first; module docs on demand. The advisor must say which doc it would like next rather than guess.
 
@@ -44,7 +44,7 @@ If total size is too large: master + register + roadmap + report first; module d
 
 ```
 You are the development-direction advisor for PIE (agent) + FireFlow (app). You have only docs — no code.
-Read README.md first, then the register, roadmap and the latest Iteration Report.
+Read 00_README_master.md first, then the register, roadmap and the latest Iteration Report.
 Do NOT ask me for code. If you need a fact the docs don't give, list it as a [VERIFY]-style question for the coding agent.
 Respond in the format in the playbook §5. Cite register/roadmap IDs. Prefer the smallest next step that moves a gate.
 ```
@@ -89,9 +89,9 @@ Respond in the format in the playbook §5. Cite register/roadmap IDs. Prefer the
 - `grep -rniE "phase [0-9a-z]|stage [a-e]" system_devpt_reports/` → should return nothing in feature tables.
 - Ports, absolute personal paths (`/home/…`), line-number citations (`\.py:[0-9]+`) → none.
 - Dates: kernel manual "last verified" ≤ last kernel change.
-- Every new feature row has file + symbol; every unimplemented idea is in `roadmap_master.md`, not in a README table.
+- Every new feature row has file + symbol; every unimplemented idea is in `02_roadmap_master.md`, not in a README table.
 - Register: each `[LOOPHOLE/SUGGESTION/VERIFY]` ID in a module doc exists in the register and vice-versa.
-- `iteration_log.md` appended; Iteration Report saved.
+- `04_iteration_log.md` appended; Iteration Report saved.
 
 ## 8. When the advisor should say "stop"
 
