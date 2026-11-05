@@ -277,6 +277,12 @@ def _compatible_for_contradiction(new_meta: Dict, existing_node) -> bool:
         if new_ver and ex_ver and sim_new and sim_ex and sim_new == sim_ex:
             if not is_compatible(ex_ver, new_ver, simulator=sim_new):
                 return False
+        # SIM-02: a parameter sweep is a different regime, not a contradiction.
+        from kernel.simulation_version import same_regime
+        if not same_regime(new_meta, {**obs, **{k: md.get(k) for k in
+                                                ("run_key", "param_hash")
+                                                if md.get(k)}}):
+            return False
     except Exception:
         pass
     return True

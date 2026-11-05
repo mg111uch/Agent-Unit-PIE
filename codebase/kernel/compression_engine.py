@@ -68,6 +68,10 @@ class CompressionEngine:
             "archive_threshold_days",
             90,
         )
+        # KRN-07: how many ACTIVE findings a consolidated node needs. Config is
+        # explicit because "<2 is always noise" stops being true for expensive
+        # real-world series (one long run can be enough).
+        self.min_support = max(1, int(self.config.get("min_support", 2)))
     # MAIN COMPRESSION CYCLE
     def run_cycle(self) -> Dict[str, Any]:
         """
@@ -177,7 +181,7 @@ class CompressionEngine:
                     key = f"{obs.get('outcome','unknown')}:{int(obs.get('horizon',0)//10)}"
                     groups.setdefault(key, []).append(n)
                 for key, grp in groups.items():
-                    if len(grp) < 2:
+                    if len(grp) < self.min_support:
                         continue
                     outcome = grp[0].metadata.get("observation", {}).get("outcome", "unknown")
                     deltas = [g.metadata.get("observation",{}).get("delta", 0) for g in grp if isinstance(g.metadata.get("observation"), dict)]
@@ -195,10 +199,10 @@ class CompressionEngine:
                         affected = []
                     con_id = f"consolidated_{sim}_{outcome}_{key.replace(':','_')}"
                     existing = semantic_memory.get_node(con_id)
-                    title = f"{sim} consolidated {outcome} ({len(grp)} runs, avg {avg_delta}%)"
+                    title = f"{sim} consolidated {outcome} (n={len(grp)} runs, avg {avg_delta}%)"
                     content = f"Consolidated {sim}: {outcome} over {len(grp)} runs; outcomes {','.join(sorted(set(o for o in [(g.metadata.get('observation',{}) or {}).get('outcome') for g in grp] if o)))}; avg delta {avg_delta}%; sources {','.join(s.node_id for s in grp[:3])}"
                     meta = {
-                        "observation": {"simulator": sim, "version_id": cur_ver, "outcome": outcome, "consolidated": True, "source_count": len(grp), "avg_delta": avg_delta, "horizon": (grp[0].metadata.get("observation",{}) or {}).get("horizon")},
+                        "observation": {"simulator": sim, "version_id": cur_ver, "outcome": outcome, "consolidated": True, "source_count": len(grp), "n": len(grp), "min_support": self.min_support, "avg_delta": avg_delta, "horizon": (grp[0].metadata.get("observation",{}) or {}).get("horizon")},
                         "validity": {"valid_for_version": cur_ver, "status": "ACTIVE", "simulator": sim},
                         "consolidated_from": src_ids,
                         "source_findings": src_ids,
@@ -275,7 +279,7 @@ class CompressionEngine:
                     v = (node.metadata.get("observation", {}) or {}).get("version_id") or node.metadata.get("validity", {}).get("valid_for_version")
                     if v:
                         remaining_vers.add(v)
-                if len(remaining) < 2:
+                if len(remaining) < self.min_support:
                     # not enough evidence → mark HISTORICAL (keep node for audit, filtered from retrieval)
                     c.metadata["validity"] = {"valid_for_version": c.metadata.get("validity", {}).get("valid_for_version", cur_ver), "status": "HISTORICAL", "simulator": simulator, "invalidated_by": cur_ver, "affected_concepts": c.metadata.get("affected_concepts", [])}
                     c.metadata["observation"] = {**c.metadata.get("observation", {}), "validity": c.metadata["validity"]}
@@ -297,7 +301,7 @@ class CompressionEngine:
                     affected = sorted(aff)
                 except Exception:
                     affected = c.metadata.get("affected_concepts", [])
-                c.title = f"{simulator} consolidated {outcome} ({len(remaining)} runs, avg {avg_delta}%)"
+                c.title = f"{simulator} consolidated {outcome} (n={len(remaining)} runs, avg {avg_delta}%)"
                 c.content = f"Consolidated {simulator}: {outcome} over {len(remaining)} runs; avg delta {avg_delta}%; sources {','.join(remaining_ids[:3])} (recomputed)"
                 c.metadata["source_findings"] = remaining_ids
                 c.metadata["consolidated_from"] = remaining_ids
@@ -305,7 +309,7 @@ class CompressionEngine:
                 c.metadata["affected_concepts"] = affected
                 c.metadata["derived_at"] = self.utc_now()
                 c.metadata["validity"] = {"valid_for_version": cur_ver, "status": "ACTIVE", "simulator": simulator}
-                c.metadata["observation"] = {**c.metadata.get("observation", {}), "source_count": len(remaining), "avg_delta": avg_delta, "validity": c.metadata["validity"], "version_id": cur_ver}
+                c.metadata["observation"] = {**c.metadata.get("observation", {}), "source_count": len(remaining), "n": len(remaining), "min_support": self.min_support, "avg_delta": avg_delta, "validity": c.metadata["validity"], "version_id": cur_ver}
                 c.updated_at = self.utc_now()
                 memory_engine.save_object("semantic", c.node_id, c.to_dict())
                 kernel_db.save_semantic_node(c.node_id, c.node_type, c.title, c.content, c.concepts, c.tags, c.importance, c.confidence, c.created_at, c.updated_at, topic, metadata=c.metadata)

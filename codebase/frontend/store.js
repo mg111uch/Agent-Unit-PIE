@@ -35,6 +35,8 @@ const AgentStore = Vue.reactive({
   treeWidth: 240,
   chatWidth: 416,
   wordWrap: false,
+  mdPreview: false,
+  textSize: 110,
 })
 
 const _savedTree = parseInt(localStorage.getItem('agent_tree_width'), 10)
@@ -42,6 +44,28 @@ if (_savedTree >= 120) AgentStore.treeWidth = _savedTree
 const _savedChat = parseInt(localStorage.getItem('agent_chat_width'), 10)
 if (_savedChat >= 280) AgentStore.chatWidth = _savedChat
 AgentStore.wordWrap = localStorage.getItem('agent_word_wrap') === '1'
+AgentStore.mdPreview = localStorage.getItem('agent_md_preview') === '1'
+
+const TEXT_SIZE_DEFAULT = 110
+const TEXT_SIZE_MIN = 80
+const TEXT_SIZE_MAX = 160
+const _savedText = parseInt(localStorage.getItem('agent_text_size'), 10)
+AgentStore.textSize = _savedText >= TEXT_SIZE_MIN && _savedText <= TEXT_SIZE_MAX ? _savedText : TEXT_SIZE_DEFAULT
+
+// Root font-size drives rem-based Tailwind text; --text-scale covers the few
+// fixed-px labels and CodeMirror so every surface resizes together.
+AgentStore.setTextSize = (value) => {
+  const next = Math.round(Math.min(TEXT_SIZE_MAX, Math.max(TEXT_SIZE_MIN, Number(value) || TEXT_SIZE_DEFAULT)))
+  AgentStore.textSize = next
+  localStorage.setItem('agent_text_size', String(next))
+  const scale = next / 100
+  document.documentElement.style.fontSize = (16 * scale) + 'px'
+  document.documentElement.style.setProperty('--text-scale', String(scale))
+}
+
+AgentStore.adjustTextSize = (delta) => AgentStore.setTextSize(AgentStore.textSize + delta)
+
+AgentStore.setTextSize(AgentStore.textSize)
 
 AgentStore.startResize = (side, e) => {
   e.preventDefault()
@@ -75,6 +99,13 @@ AgentStore.toggleWordWrap = () => {
   AgentStore.wordWrap = !AgentStore.wordWrap
   localStorage.setItem('agent_word_wrap', AgentStore.wordWrap ? '1' : '0')
 }
+
+AgentStore.setMdPreview = (on) => {
+  AgentStore.mdPreview = !!on
+  localStorage.setItem('agent_md_preview', AgentStore.mdPreview ? '1' : '0')
+}
+
+AgentStore.toggleMdPreview = () => AgentStore.setMdPreview(!AgentStore.mdPreview)
 
 const WRITE_TOOLS = new Set(['Write', 'edit_file', 'cross_file_edit', 'undo_last_edit', 'execute_command'])
 

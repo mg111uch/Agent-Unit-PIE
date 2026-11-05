@@ -3,7 +3,9 @@
 How topic graphs are stored, how contradiction detection works through the
 kernel, and how to verify each piece from the command line.
 
-_Last verified: 2026-08-29 (smoke-tested 9/9; per-sim lineage, validity, version-aware retrieval live)_
+_Last verified: 2026-11-02 (`scripts/smoke_kernel.py` 14/15 — all topic/gate/bus/lineage checks pass; `embedding cold start` fails on this host because the local MiniLM cache is absent, so embedding scoring silently falls back to Jaccard)_
+
+_Added since the last stamp: kernel bus (`publish_event/signal/observation`), capability registry (`capability_registry.yaml`), relation retriever over city-graph edges, `claim_strength` evidence ladder, configurable compression `min_support` with `n` on consolidated nodes, and `doctor` reporting of journal mode / busy timeout / write probe._
 
 ## Architecture
 

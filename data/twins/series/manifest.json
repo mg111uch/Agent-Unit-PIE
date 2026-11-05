@@ -1,0 +1,15 @@
+{"note": "Remaining TWN-01 gaps. Do not fill these with estimates; collect a cited value or leave them missing.",
+ "cities": {
+  "kanpur": {
+   "road_km": {"candidate": "KMC / UP PWD annual report road length for Kanpur Nagar",
+               "why_hard": "city-level road length is not published in one open table; district road statistics aggregate rural roads"},
+   "power_supply_hours": {"candidate": "UP Power Corporation (UPPCL) urban reliability / 24x7 Power for All dashboard",
+                          "why_hard": "outage hours are reported per feeder, not as one city average"}
+  },
+  "delhi": {
+   "power_supply_hours": {"candidate": "DERC performance report / BSES-Tata outage data",
+                          "why_hard": "three discoms with different feeder reliability; no single city series"}
+  }
+ },
+ "next": "Re-run scripts/twin_coverage.py after adding rows; it prints remaining missing fields."
+}

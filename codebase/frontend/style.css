@@ -1,3 +1,12 @@
+:root { --text-scale: 1.1; }
+
+/* Fixed-px Tailwind labels do not follow the root font-size; keep them in step
+   with the Text size setting. */
+.text-\[9px\] { font-size: calc(9px * var(--text-scale)) !important; }
+.text-\[10px\] { font-size: calc(10px * var(--text-scale)) !important; }
+.text-\[11px\] { font-size: calc(11px * var(--text-scale)) !important; }
+.text-\[14px\] { font-size: calc(14px * var(--text-scale)) !important; }
+
 .connection-led { width:10px; height:10px; border-radius:50%; display:inline-block; }
 .connection-led.connected { background:#34d399; box-shadow:0 0 8px rgba(52,211,153,.6); }
 .connection-led.disconnected { background:#f59e0b; animation:pulse 2s infinite; }
@@ -44,13 +53,29 @@ textarea::-webkit-scrollbar-thumb { background:#52525b; border-radius:3px; }
 .markdown-body img { max-width:100%; border-radius:6px; }
 .markdown-body strong { font-weight:600; color:#e4e4e7; }
 
+/* Markdown display rules — system_devpt_reports/MARKDOWN_DISPLAY_RULES.md */
+.md-preview { max-width:56rem; margin:0 auto; padding:2rem 2.5rem 4rem; }
+.md-preview h1, .md-preview h2, .md-preview h3, .md-preview h4, .md-preview h5, .md-preview h6 { scroll-margin-top:1rem; }
+.markdown-body h5 { font-size:0.9rem; }
+.markdown-body h6 { font-size:0.85rem; color:#a1a1aa; }
+.markdown-body h1 { padding-bottom:0.35rem; border-bottom:1px solid #27272a; }
+.markdown-body h2 { padding-bottom:0.2rem; border-bottom:1px solid #1f1f23; }
+.markdown-body ul.contains-task-list, .markdown-body li.task-list-item { list-style:none; padding-left:0; }
+.markdown-body li.task-list-item { margin-left:0; }
+.markdown-body input[type="checkbox"] { margin-right:0.45rem; accent-color:#0ea5e9; vertical-align:middle; }
+.markdown-body .md-code-block { position:relative; margin-bottom:0.75rem; }
+.markdown-body .md-code-block pre { margin-bottom:0; }
+.markdown-body .md-code-lang { position:absolute; top:0.4rem; right:0.55rem; padding:0 0.3rem; border-radius:4px; background:#18181b; color:#71717a; font-size:0.65rem; line-height:1.4; pointer-events:none; }
+.md-preview table { display:block; overflow-x:auto; }
+.md-preview blockquote { background:#18181b; border-radius:0 6px 6px 0; padding:0.6rem 0.9rem; }
+
 /* CodeMirror dark theme */
 .CodeMirror {
   height:100%;
   background:#09090b;
   color:#e4e4e7;
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size:13px;
+  font-size: calc(13px * var(--text-scale, 1));
   line-height:1.55;
 }
 .CodeMirror-gutters { background:#0c0c0e; border-right:1px solid #1f1f23; }
@@ -84,11 +109,7 @@ textarea::-webkit-scrollbar-thumb { background:#52525b; border-radius:3px; }
 /* Markdown editor — VS Code Dark+ token colours (scoped via .cm-md) */
 .cm-md .CodeMirror { line-height:1.75; }
 .cm-md .cm-formatting { color:#6e7681; font-weight:400; font-style:normal; }
-.cm-md .cm-header { color:#569cd6; font-weight:600; }
-.cm-md .cm-header-1 { font-size:1.5em; }
-.cm-md .cm-header-2 { font-size:1.32em; }
-.cm-md .cm-header-3 { font-size:1.16em; }
-.cm-md .cm-header-4 { font-size:1.06em; }
+.cm-md .cm-header { color:#569cd6; font-weight:400; font-size:1em; }
 .cm-md .cm-strong { color:#569cd6; font-weight:700; }
 .cm-md .cm-em { color:#c586c0; font-style:italic; }
 .cm-md .cm-strikethrough { color:#8b949e; text-decoration:line-through; }

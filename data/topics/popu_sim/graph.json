@@ -78,9 +78,9 @@
       "confidence": 1.0
     },
     {
-      "name": "popula_dyn consolidated IMPROVED (2 runs, avg 150.0%)",
+      "name": "popula_dyn consolidated IMPROVED (2 runs, avg 62.2%)",
       "side": "consolidated",
-      "premise": "Consolidated popula_dyn: IMPROVED over 2 runs; outcomes IMPROVED; avg delta 150.0%; sources argu_popu_sim_run_policy_metabolism07_Findings,argu_popu_sim_run_policy_metabolism12_Findings",
+      "premise": "Consolidated popula_dyn: IMPROVED over 2 runs; outcomes IMPROVED; avg delta 62.2%; sources argu_popu_sim_run_policy_metabolism165_Findings,argu_popu_sim_run_policy_curric24_Findings",
       "evidence": [],
       "status": "active",
       "examples": [],
@@ -384,6 +384,270 @@
       "sources": [],
       "discipline": "",
       "confidence": 1.0
+    },
+    {
+      "name": "urban delhi power_reliability_capex stability",
+      "side": "argument",
+      "premise": "Urban delhi: power_reliability_capex +30% over 2y at scales [400, 2000, 10000] -> UNSTABLE (welfare -21.3% at 10000 agents). Direction: MIXED. Claim: HYPOTHESIS.",
+      "evidence": [],
+      "status": "superseded",
+      "examples": [],
+      "sources": [],
+      "discipline": "",
+      "confidence": 1.0
+    },
+    {
+      "name": "urban delhi transport_subsidy stability",
+      "side": "argument",
+      "premise": "Urban delhi: transport_subsidy +30% over 2y at scales [400, 2000, 10000] -> UNSTABLE (welfare -8.4% at 10000 agents). Direction: MIXED. Claim: HYPOTHESIS.",
+      "evidence": [],
+      "status": "superseded",
+      "examples": [],
+      "sources": [],
+      "discipline": "",
+      "confidence": 1.0
+    },
+    {
+      "name": "urban kanpur power_reliability_capex stability",
+      "side": "argument",
+      "premise": "Urban kanpur: power_reliability_capex +30% over 2y at scales [400, 2000, 10000] -> UNSTABLE (welfare +24.1% at 10000 agents). Direction: MIXED. Claim: HYPOTHESIS.",
+      "evidence": [],
+      "status": "superseded",
+      "examples": [],
+      "sources": [],
+      "discipline": "",
+      "confidence": 1.0
+    },
+    {
+      "name": "urban kanpur transport_subsidy stability",
+      "side": "argument",
+      "premise": "Urban kanpur: transport_subsidy +30% over 2y at scales [400, 2000, 10000] -> IMPROVED (welfare +58.1% at 10000 agents). Direction: INCREASE. Claim: HYPOTHESIS.",
+      "evidence": [],
+      "status": "superseded",
+      "examples": [],
+      "sources": [],
+      "discipline": "",
+      "confidence": 1.0
+    },
+    {
+      "name": "urban delhi power_reliability_capex stability profit_share",
+      "side": "argument",
+      "premise": "Urban delhi: power_reliability_capex +30% over 2y at scales [400, 2000, 10000] -> IMPROVED (welfare +34.9% at 10000 agents). Direction: INCREASE. Claim: HYPOTHESIS. profit_share",
+      "evidence": [],
+      "status": "superseded",
+      "examples": [],
+      "sources": [],
+      "discipline": "",
+      "confidence": 1.0
+    },
+    {
+      "name": "urban delhi transport_subsidy stability profit_share",
+      "side": "argument",
+      "premise": "Urban delhi: transport_subsidy +30% over 2y at scales [400, 2000, 10000] -> IMPROVED (welfare +31.9% at 10000 agents). Direction: INCREASE. Claim: HYPOTHESIS. profit_share",
+      "evidence": [],
+      "status": "superseded",
+      "examples": [],
+      "sources": [],
+      "discipline": "",
+      "confidence": 1.0
+    },
+    {
+      "name": "urban kanpur power_reliability_capex stability profit_share",
+      "side": "argument",
+      "premise": "Urban kanpur: power_reliability_capex +30% over 2y at scales [400, 2000, 10000] -> IMPROVED (welfare +46.3% at 10000 agents). Direction: INCREASE. Claim: HYPOTHESIS. profit_share",
+      "evidence": [],
+      "status": "superseded",
+      "examples": [],
+      "sources": [],
+      "discipline": "",
+      "confidence": 1.0
+    },
+    {
+      "name": "urban kanpur transport_subsidy stability profit_share",
+      "side": "argument",
+      "premise": "Urban kanpur: transport_subsidy +30% over 2y at scales [400, 2000, 10000] -> UNSTABLE (welfare -12.4% at 10000 agents). Direction: MIXED. Claim: HYPOTHESIS. profit_share",
+      "evidence": [],
+      "status": "superseded",
+      "examples": [],
+      "sources": [],
+      "discipline": "",
+      "confidence": 1.0
+    },
+    {
+      "name": "urban delhi power_reliability_capex stability promotion",
+      "side": "argument",
+      "premise": "Urban delhi: power_reliability_capex +30% over 2y at scales [400, 2000, 10000] x seeds [1, 2, 3] -> IMPROVED (welfare +33.1% at 10000 agents). Direction: INCREASE. Claim: FALSIFICATION_PASSED. promotion",
+      "evidence": [],
+      "status": "superseded",
+      "examples": [],
+      "sources": [],
+      "discipline": "",
+      "confidence": 1.0
+    },
+    {
+      "name": "urban delhi transport_subsidy stability promotion",
+      "side": "argument",
+      "premise": "Urban delhi: transport_subsidy +30% over 2y at scales [400, 2000, 10000] x seeds [1, 2, 3] -> IMPROVED (welfare +27.7% at 10000 agents). Direction: INCREASE. Claim: FALSIFICATION_PASSED. promotion",
+      "evidence": [],
+      "status": "superseded",
+      "examples": [],
+      "sources": [],
+      "discipline": "",
+      "confidence": 1.0
+    },
+    {
+      "name": "urban kanpur power_reliability_capex stability promotion",
+      "side": "argument",
+      "premise": "Urban kanpur: power_reliability_capex +30% over 2y at scales [400, 2000, 10000] x seeds [1, 2, 3] -> IMPROVED (welfare +52.1% at 10000 agents). Direction: INCREASE. Claim: FALSIFICATION_PASSED. promotion",
+      "evidence": [],
+      "status": "superseded",
+      "examples": [],
+      "sources": [],
+      "discipline": "",
+      "confidence": 1.0
+    },
+    {
+      "name": "urban kanpur transport_subsidy stability promotion",
+      "side": "argument",
+      "premise": "Urban kanpur: transport_subsidy +30% over 2y at scales [400, 2000, 10000] x seeds [1, 2, 3] -> UNSTABLE (welfare -8.5% at 10000 agents). Direction: MIXED. Claim: HYPOTHESIS. promotion",
+      "evidence": [],
+      "status": "superseded",
+      "examples": [],
+      "sources": [],
+      "discipline": "",
+      "confidence": 1.0
+    },
+    {
+      "name": "urban delhi power_reliability_capex stability dividend_end",
+      "side": "argument",
+      "premise": "Urban delhi: power_reliability_capex +30% over 2y at scales [400, 2000, 10000] x seeds [1, 2, 3] -> UNSTABLE (welfare -1.2% at 10000 agents). Direction: MIXED. Claim: HYPOTHESIS. dividend_end",
+      "evidence": [],
+      "status": "superseded",
+      "examples": [],
+      "sources": [],
+      "discipline": "",
+      "confidence": 1.0
+    },
+    {
+      "name": "urban delhi transport_subsidy stability dividend_end",
+      "side": "argument",
+      "premise": "Urban delhi: transport_subsidy +30% over 2y at scales [400, 2000, 10000] x seeds [1, 2, 3] -> UNSTABLE (welfare +1.4% at 10000 agents). Direction: MIXED. Claim: HYPOTHESIS. dividend_end",
+      "evidence": [],
+      "status": "superseded",
+      "examples": [],
+      "sources": [],
+      "discipline": "",
+      "confidence": 1.0
+    },
+    {
+      "name": "urban kanpur power_reliability_capex stability dividend_end",
+      "side": "argument",
+      "premise": "Urban kanpur: power_reliability_capex +30% over 2y at scales [400, 2000, 10000] x seeds [1, 2, 3] -> UNSTABLE (welfare +26.0% at 10000 agents). Direction: MIXED. Claim: HYPOTHESIS. dividend_end",
+      "evidence": [],
+      "status": "superseded",
+      "examples": [],
+      "sources": [],
+      "discipline": "",
+      "confidence": 1.0
+    },
+    {
+      "name": "urban kanpur transport_subsidy stability dividend_end",
+      "side": "argument",
+      "premise": "Urban kanpur: transport_subsidy +30% over 2y at scales [400, 2000, 10000] x seeds [1, 2, 3] -> UNSTABLE (welfare +35.5% at 10000 agents). Direction: MIXED. Claim: HYPOTHESIS. dividend_end",
+      "evidence": [],
+      "status": "superseded",
+      "examples": [],
+      "sources": [],
+      "discipline": "",
+      "confidence": 1.0
+    },
+    {
+      "name": "urban delhi power_reliability_capex stability final",
+      "side": "argument",
+      "premise": "Urban delhi: power_reliability_capex +30% over 2y at scales [400, 2000, 10000] x seeds [1, 2, 3] -> UNSTABLE (welfare -1.2% at 10000 agents). Direction: MIXED. Claim: HYPOTHESIS. final",
+      "evidence": [],
+      "status": "superseded",
+      "examples": [],
+      "sources": [],
+      "discipline": "",
+      "confidence": 1.0
+    },
+    {
+      "name": "urban delhi transport_subsidy stability final",
+      "side": "argument",
+      "premise": "Urban delhi: transport_subsidy +30% over 2y at scales [400, 2000, 10000] x seeds [1, 2, 3] -> UNSTABLE (welfare +1.4% at 10000 agents). Direction: MIXED. Claim: HYPOTHESIS. final",
+      "evidence": [],
+      "status": "superseded",
+      "examples": [],
+      "sources": [],
+      "discipline": "",
+      "confidence": 1.0
+    },
+    {
+      "name": "urban kanpur power_reliability_capex stability final",
+      "side": "argument",
+      "premise": "Urban kanpur: power_reliability_capex +30% over 2y at scales [400, 2000, 10000] x seeds [1, 2, 3] -> IMPROVED (welfare +26.0% at 10000 agents). Direction: INCREASE. Claim: FALSIFICATION_PASSED. final",
+      "evidence": [],
+      "status": "superseded",
+      "examples": [],
+      "sources": [],
+      "discipline": "",
+      "confidence": 1.0
+    },
+    {
+      "name": "urban kanpur transport_subsidy stability final",
+      "side": "argument",
+      "premise": "Urban kanpur: transport_subsidy +30% over 2y at scales [400, 2000, 10000] x seeds [1, 2, 3] -> IMPROVED (welfare +35.5% at 10000 agents). Direction: INCREASE. Claim: HYPOTHESIS. final",
+      "evidence": [],
+      "status": "superseded",
+      "examples": [],
+      "sources": [],
+      "discipline": "",
+      "confidence": 1.0
+    },
+    {
+      "name": "urban delhi power_reliability_capex stability final2",
+      "side": "argument",
+      "premise": "Urban delhi: power_reliability_capex +30% over 2y at scales [400, 2000, 10000] x seeds [1, 2, 3] -> UNSTABLE (welfare -1.2% at 10000 agents). Direction: MIXED. Claim: HYPOTHESIS. final2",
+      "evidence": [],
+      "status": "active",
+      "examples": [],
+      "sources": [],
+      "discipline": "",
+      "confidence": 1.0
+    },
+    {
+      "name": "urban delhi transport_subsidy stability final2",
+      "side": "argument",
+      "premise": "Urban delhi: transport_subsidy +30% over 2y at scales [400, 2000, 10000] x seeds [1, 2, 3] -> UNSTABLE (welfare +1.4% at 10000 agents). Direction: MIXED. Claim: HYPOTHESIS. final2",
+      "evidence": [],
+      "status": "active",
+      "examples": [],
+      "sources": [],
+      "discipline": "",
+      "confidence": 1.0
+    },
+    {
+      "name": "urban kanpur power_reliability_capex stability final2",
+      "side": "argument",
+      "premise": "Urban kanpur: power_reliability_capex +30% over 2y at scales [400, 2000, 10000] x seeds [1, 2, 3] -> IMPROVED (welfare +26.0% at 10000 agents). Direction: INCREASE. Claim: FALSIFICATION_PASSED. final2",
+      "evidence": [],
+      "status": "active",
+      "examples": [],
+      "sources": [],
+      "discipline": "",
+      "confidence": 1.0
+    },
+    {
+      "name": "urban kanpur transport_subsidy stability final2",
+      "side": "argument",
+      "premise": "Urban kanpur: transport_subsidy +30% over 2y at scales [400, 2000, 10000] x seeds [1, 2, 3] -> IMPROVED (welfare +35.5% at 10000 agents). Direction: INCREASE. Claim: HYPOTHESIS. final2",
+      "evidence": [],
+      "status": "active",
+      "examples": [],
+      "sources": [],
+      "discipline": "",
+      "confidence": 1.0
     }
   ],
   "edges": [
@@ -419,7 +683,7 @@
     },
     {
       "source": "run_policy_metabolism25 Findings",
-      "target": "popula_dyn consolidated IMPROVED (2 runs, avg 150.0%)",
+      "target": "popula_dyn consolidated IMPROVED (2 runs, avg 62.2%)",
       "relation": "contradicts"
     },
     {
@@ -444,7 +708,7 @@
     },
     {
       "source": "run_policy_metabolism35 Findings",
-      "target": "popula_dyn consolidated IMPROVED (2 runs, avg 150.0%)",
+      "target": "popula_dyn consolidated IMPROVED (2 runs, avg 62.2%)",
       "relation": "contradicts"
     },
     {
@@ -464,7 +728,7 @@
     },
     {
       "source": "run_policy_metabolism17 Findings",
-      "target": "popula_dyn consolidated IMPROVED (2 runs, avg 150.0%)",
+      "target": "popula_dyn consolidated IMPROVED (2 runs, avg 62.2%)",
       "relation": "contradicts"
     },
     {

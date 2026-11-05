@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PIE — Approval inbox</title>
+<style>
+ body{font:14px/1.5 system-ui,sans-serif;margin:0;background:#0f1115;color:#e6e6e6}
+ header{padding:16px 20px;border-bottom:1px solid #2a2f3a;display:flex;gap:12px;align-items:center}
+ h1{font-size:16px;margin:0;font-weight:600}
+ main{padding:20px;max-width:900px;margin:0 auto}
+ input,button,textarea{font:inherit;background:#171a21;color:#e6e6e6;border:1px solid #333a46;border-radius:6px;padding:6px 8px}
+ button{cursor:pointer} button.ok{border-color:#2f6f4f} button.no{border-color:#7a3030}
+ .card{border:1px solid #2a2f3a;border-radius:8px;padding:14px;margin-bottom:12px;background:#14171d}
+ .meta{color:#9aa4b2;font-size:12px} .tier3{border-left:3px solid #b34a4a}
+ .tier2{border-left:3px solid #b38a3a} .tier1{border-left:3px solid #3a7ab3}
+ .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px}
+ #msg{color:#c9a227;min-height:18px}
+</style>
+</head>
+<body>
+<header>
+  <h1>Approval inbox</h1>
+  <span class="meta" id="who"></span>
+  <span style="flex:1"></span>
+  <input id="jwt" placeholder="human JWT (blank in dev)" size="28">
+  <button id="save">Use token</button>
+  <button id="refresh">Refresh</button>
+</header>
+<main>
+  <p class="meta">Tier 3 (money / first sends / legal) needs two distinct humans. A requester can never approve their own action.</p>
+  <div id="msg"></div>
+  <div id="list">Loading…</div>
+</main>
+<script src="approvals.js"></script>
+</body>
+</html>

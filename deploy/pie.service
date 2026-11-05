@@ -1,0 +1,24 @@
+[Unit]
+# OPS-01: supervisor for the PIE server. Copy to /etc/systemd/system/ and
+#   systemctl enable --now pie
+# Paths come from /etc/pie/pie.env (see .env.example); nothing is hardcoded.
+Description=PIE agent server
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=pie
+WorkingDirectory=/srv/pie
+EnvironmentFile=/etc/pie/pie.env
+ExecStart=/opt/conda/envs/myenv/bin/python codebase/server.py
+ExecStartPre=/opt/conda/envs/myenv/bin/python scripts/healthcheck.py --json
+Restart=always
+RestartSec=10
+# Alerting: a failed healthcheck exits non-zero and systemd retries; on-failure
+# hooks are OnFailure=pie-alert.service (mail/webhook), kept out of this unit.
+TimeoutStopSec=30
+KillSignal=SIGTERM
+
+[Install]
+WantedBy=multi-user.target

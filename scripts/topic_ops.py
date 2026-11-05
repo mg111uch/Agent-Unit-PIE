@@ -448,60 +448,14 @@ def report(args, changes, contradictions):
 
 def run_doctor(args) -> int:
     ts.hydrate(use_ro=True)
-    from kernel.memory.memory_engine import memory_engine
-    from kernel.memory.semantic_memory import semantic_memory
-    from kernel.persistence.db import kernel_db_ro
-
-    try:
-        integrity = kernel_db_ro.ro_conn.execute("PRAGMA integrity_check").fetchone()[0]
-    except Exception:
-        integrity = "ok"
-    try:
-        logs_n = kernel_db_ro.ro_conn.execute("SELECT COUNT(*) FROM logs").fetchone()[0]
-    except Exception:
-        logs_n = 0
-    try:
-        signals = sum(1 for i in memory_engine.list_objects_ro("episodic")
-                      if i.startswith("contradiction_detected_"))
-    except Exception:
-        signals = sum(1 for i in memory_engine.list_objects("episodic")
-                      if i.startswith("contradiction_detected_"))
-
-    topics_out, issues = [], []
-    if integrity != "ok":
-        issues.append(f"db integrity: {integrity}")
-    if logs_n > 200:
-        issues.append(f"logs table has {logs_n} rows (>200) — "
-                      f"run scripts/prune_kernel_logs.py --keep 200")
-    for t in ts.list_topics():
-        tnodes = [n for n in semantic_memory.nodes.values()
-                  if n.topic_id == t]
-        id2name = {n.node_id: n.title for n in tnodes}
-        tedges = [e for e in semantic_memory.edges.values()
-                  if e.topic_id == t]
-        live = [e for e in tedges
-                if e.source_node_id in id2name and e.target_node_id in id2name]
-        dangling = len(tedges) - len(live)
-        exported = ts.export_graph(t)
-        path = ts.graph_path(t)
-        disk = json.loads(path.read_text(encoding="utf-8")) \
-            if path.exists() else None
-        parity = ("no export" if disk is None else
-                  ("match" if (len(disk["nodes"]), len(disk["edges"]))
-                   == (len(exported["nodes"]), len(exported["edges"]))
-                   else "STALE"))
-        if dangling:
-            issues.append(f"topic {t}: {dangling} dangling edge(s)")
-        if parity == "STALE":
-            issues.append(f"topic {t}: derived export stale — rerun "
-                          f"scripts/backfill_topics.py {t}")
-        topics_out.append({"topic": t, "nodes": len(tnodes),
-                           "edges": len(live), "dangling": dangling,
-                           "export": parity})
-
-    report = {"db_integrity": integrity, "log_rows": logs_n,
-              "contradiction_signals": signals, "topics": topics_out,
-              "issues": issues, "docs": _DOCS_HINT}
+    from kernel.doctor import build_report
+    report = build_report(ts)
+    journal = report["db_journal_mode"]
+    busy_ms = report["db_busy_timeout_ms"]
+    lock_probe = report["db_write_probe"]
+    issues = report["issues"]
+    integrity, logs_n = report["db_integrity"], report["log_rows"]
+    signals, topics_out = report["contradiction_signals"], report["topics"]
     if _g(args, "json"):
         print(json.dumps(report, separators=(",", ":")))
     else:
@@ -510,6 +464,8 @@ def run_doctor(args) -> int:
         print(f"  log rows     : {logs_n}"
               f"{'  (>200: prune suggested)' if logs_n > 200 else ''}")
         print(f"  signals      : {signals} contradiction_detected_*")
+        print(f"  db           : journal={journal} busy_timeout={busy_ms}ms "
+              f"write_probe={lock_probe}")
         for t in topics_out:
             print(f"  topic {t['topic']}: {t['nodes']}n/{t['edges']}e | "
                   f"export={t['export']} | dangling={t['dangling']}")

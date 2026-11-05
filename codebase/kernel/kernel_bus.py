@@ -81,6 +81,7 @@ def publish_signal(
 def publish_observation(observation: Dict[str, Any]) -> Dict[str, Any]:
     """observation -> normalize -> event + signal. Returns ids + objects."""
     from kernel.observation_pipeline import ObservationPipeline
+    from kernel.hypothesis import claim_strength as _ladder
     normalized = ObservationPipeline().normalize_observation(
         observation or {}
     )
@@ -88,6 +89,13 @@ def publish_observation(observation: Dict[str, Any]) -> Dict[str, Any]:
     if not isinstance(content, dict):
         content = {"value": content}
     prov = dict((observation or {}).get("metadata", {}) or {})
+    # KRN-06: the evidence ladder runs here, so a claim cannot reach memory
+    # stronger than its seeds/sample/falsification allow.
+    if prov.get("claim_strength"):
+        verdict = _ladder.check(prov)
+        if not verdict["ok"]:
+            prov = _ladder.enforce(prov)
+        prov["claim_strength_checked"] = verdict["effective"]
     event = publish_event({
         "event_type": observation.get("event_type", "observation_created"),
         "title": observation.get("title", "observation"),

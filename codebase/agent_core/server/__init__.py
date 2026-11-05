@@ -158,6 +158,9 @@ from agent_core.server.ws_handler import websocket_agent
 # SQLite viewer / row CRUD endpoints (registers /api/db/*)
 from agent_core.server import db_routes as _db_routes  # noqa: F401
 
+# Approval queue + customer portal (registers /api/economy/* and /portal/*)
+from agent_core.server import economy_routes as _economy_routes  # noqa: F401
+
 # Serve frontend at / (no-cache for development)
 _frontend_dir = os.path.normpath(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "..", "frontend"))
 if os.path.isdir(_frontend_dir):

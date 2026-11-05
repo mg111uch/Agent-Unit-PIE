@@ -95,10 +95,13 @@ class ReproduceBehavior(BaseBehavior):
                          + partner.get_resource("wealth", 0)) * 0.05, 2)
 
         # return-intent: model owns spawn (deterministic id + add_unit)
+        child_behavior_names = list(params.get("human_behaviors") or [
+            "move", "prospect", "harvest", "consume_metabolism",
+            "reproduce", "survival"])
         child_data = {
             "unit_type": "human",
             "position": position,
-            "behaviors": ["move", "prospect", "harvest", "consume_metabolism", "reproduce", "survival"],
+            "behaviors": child_behavior_names,
             "state": {"age": 0, "gender": rng.choice(["M", "F"]), "skill": child_skill,
                       "fertility": round(child_fert, 3), "lifespan": child_life,
                       "adaptability": round(float(child_adapt), 3),

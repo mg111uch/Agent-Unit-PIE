@@ -1,0 +1,49 @@
+{
+  "episode_id": "simrun_popula_dyn_run_urban_kanpur_power_reliability_capex_final",
+  "simulator": "popula_dyn",
+  "version_id": "popula_dyn@2cac23d",
+  "run_id": "run_urban_kanpur_power_reliability_capex_final",
+  "parameters": {
+    "domain": "urban",
+    "city": "kanpur",
+    "mechanism": "power_reliability_capex",
+    "magnitude": 0.3,
+    "scales": [
+      400,
+      2000,
+      10000
+    ],
+    "seeds": [
+      1,
+      2,
+      3
+    ],
+    "years": 2,
+    "tag": "final"
+  },
+  "result": {
+    "population": 10000,
+    "welfare": 0.548304,
+    "outcome_override": "IMPROVED",
+    "by_scale": [
+      {
+        "agents": 400,
+        "mean_relative": 0.051763
+      },
+      {
+        "agents": 2000,
+        "mean_relative": 0.12318
+      },
+      {
+        "agents": 10000,
+        "mean_relative": 0.259562
+      }
+    ],
+    "claim_strength": "FALSIFICATION_PASSED",
+    "run_id": "run_urban_kanpur_power_reliability_capex_final",
+    "simulator": "popula_dyn",
+    "timestamp": "2026-11-05T09:13:24.931712",
+    "run_key": "popula_dyn@2cac23d:7af14dd2300d:1+2+3"
+  },
+  "timestamp": "2026-11-05T09:13:24.931712"
+}

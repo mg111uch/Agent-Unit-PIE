@@ -7,11 +7,6 @@ function prettyJSON(val) {
   catch (_) { return String(val) }
 }
 
-function sanitizeMarkdown(text) {
-  if (!text) return ''
-  return DOMPurify.sanitize(marked.parse(String(text)))
-}
-
 AgentComponents.CopyButton = {
   template: '#copy-button-tmpl',
   props: ['text', 'toolCalls'],
@@ -91,7 +86,7 @@ AgentComponents.ToolCallCard = {
     function showUsage() {
       return AgentStore.showToolTokenUsage && props.toolCall?.usage?.total_tokens
     }
-    return { expanded, target, primary, formatInput, renderResult: sanitizeMarkdown, showUsage, formatTokens }
+    return { expanded, target, primary, formatInput, renderResult: renderMarkdown, showUsage, formatTokens }
   }
 }
 
@@ -116,6 +111,8 @@ AgentComponents.AgentChat = {
 
     function onQuestionSubmit(answers) { store.submitQuestionAnswer(answers) }
 
+    function onMarkdownClick(event) { handleMarkdownClick(event, scrollRef.value, '') }
+
     function groupedToolCalls(calls) {
       const groups = {}
       for (const tc of calls) {
@@ -132,6 +129,6 @@ AgentComponents.AgentChat = {
       return '$' + Number(cost).toFixed(6)
     }
 
-    return { store, scrollRef, anchorRef, suggestions, send, onQuestionSubmit, groupedToolCalls, formatCost, renderMarkdown: sanitizeMarkdown, formatTokens }
+    return { store, scrollRef, anchorRef, suggestions, send, onQuestionSubmit, onMarkdownClick, groupedToolCalls, formatCost, renderMarkdown, formatTokens }
   }
 }

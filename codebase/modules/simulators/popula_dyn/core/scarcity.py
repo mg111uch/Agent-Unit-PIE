@@ -26,6 +26,18 @@ def food_per_capita(model: Any) -> float:
 def scarcity_index(model: Any, params: Dict[str, Any]) -> float:
     """Global 0..1 scarcity: worst of food shortfall vs baseline and
     last-step carrying-capacity pressure (regrow caps)."""
+    if params.get("domain") == "urban":
+        # Food is bought, not grown: stress is the share of households that
+        # cannot afford one step of food at the current price.
+        basket = max(1e-9, float(params.get("food_price", 1.0))
+                     * float(params.get("metabolism", 1.0)))
+        humans = [u for u in model.units.values()
+                  if u.unit_type == "human" and u.alive]
+        if not humans:
+            return 0.0
+        afford = sum(float(u.get_resource("wealth", 0) or 0)
+                     for u in humans) / len(humans) / basket
+        return _clamp01(1.0 - min(1.0, afford))
     base = max(1e-9, float(params.get("scarcity_food_baseline", 5.0)))
     s_food = 1.0 - food_per_capita(model) / base
     land = sum(1 for u in model.units.values() if u.unit_type == "land")

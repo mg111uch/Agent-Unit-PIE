@@ -40,13 +40,15 @@ import difflib
 import json
 import keyword
 import os
+from pathlib import Path
 import re
 from collections import defaultdict
 
 TOKEN_RE = re.compile(r"\w+|[^\s\w]")
 _KEYWORDS = frozenset(keyword.kwlist)
 
-DEFAULT_ROOT = "/home/manigupt/Hello/Agentic_Unit_PIE/codebase"
+DEFAULT_ROOT = os.environ.get("PIE_CODEBASE_ROOT",
+                               str(Path(__file__).resolve().parents[1]))
 DEFAULT_IGNORE_DIRS = {".git", "__pycache__", "node_modules", "dist", "build", ".venv", "env"}
 DEFAULT_IGNORE_FILES = {"__init__.py"}
 

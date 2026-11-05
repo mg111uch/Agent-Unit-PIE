@@ -1,0 +1,35 @@
+{
+  "episode_id": "simrun_popula_dyn_run_urban_delhi_transport_subsidy_promotion_base",
+  "simulator": "popula_dyn",
+  "version_id": "popula_dyn@2cac23d",
+  "run_id": "run_urban_delhi_transport_subsidy_promotion_base",
+  "parameters": {
+    "domain": "urban",
+    "city": "delhi",
+    "mechanism": "transport_subsidy",
+    "magnitude": 0.3,
+    "scales": [
+      400,
+      2000,
+      10000
+    ],
+    "seeds": [
+      1,
+      2,
+      3
+    ],
+    "years": 2,
+    "tag": "promotion"
+  },
+  "result": {
+    "population": 10000,
+    "welfare": 0.304611,
+    "outcome_override": "STABLE",
+    "claim_strength": "HYPOTHESIS",
+    "run_id": "run_urban_delhi_transport_subsidy_promotion_base",
+    "simulator": "popula_dyn",
+    "timestamp": "2026-11-05T08:09:46.933620",
+    "run_key": "popula_dyn@2cac23d:da4bac6fc689:1+2+3"
+  },
+  "timestamp": "2026-11-05T08:09:46.933620"
+}

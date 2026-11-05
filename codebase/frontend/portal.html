@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Proposal</title>
+<style>
+ body{font:15px/1.6 system-ui,sans-serif;margin:0;background:#f7f7f9;color:#1c1c1e}
+ main{max-width:720px;margin:48px auto;padding:28px;background:#fff;border-radius:10px;
+      box-shadow:0 2px 12px #0001}
+ h1{font-size:22px;margin:0 0 6px} .meta{color:#666;font-size:13px}
+ .price{font-size:30px;font-weight:600;margin:18px 0}
+ button{font:inherit;padding:10px 16px;border:0;border-radius:7px;background:#1d5c3a;color:#fff;cursor:pointer}
+ button:disabled{background:#999;cursor:default}
+ a{color:#1d5c3a} .ok{color:#1d5c3a;font-weight:600} .err{color:#a11;font-weight:600}
+ .box{border-top:1px solid #e3e3e6;margin-top:20px;padding-top:16px}
+</style>
+</head>
+<body>
+<main>
+  <div class="meta">Proposal · <span id="status">loading</span></div>
+  <h1 id="title">…</h1>
+  <div class="meta" id="customer"></div>
+  <div class="price" id="price"></div>
+  <p id="msg"></p>
+  <div id="actions"></div>
+  <div class="box" id="invoice" hidden></div>
+</main>
+<script src="portal.js"></script>
+</body>
+</html>

@@ -43,6 +43,13 @@ AgentComponents.CodeEditor = {
       return !!(tab && tab.kind === 'db')
     })
 
+    const isMarkdown = Vue.computed(() => !isDb.value && cmModeFor(store.activeFile) === 'markdown')
+    const showPreview = Vue.computed(() => store.mdPreview && isMarkdown.value)
+    const activeContent = Vue.computed(() => {
+      const tab = activeTab()
+      return tab && tab.kind !== 'db' ? tab.content : ''
+    })
+
     function stashCurrent() {
       if (!cm || !currentPath) return
       const tab = store.tabFor(currentPath)
@@ -117,6 +124,7 @@ AgentComponents.CodeEditor = {
     Vue.watch(() => store.activeFile, () => Vue.nextTick(loadActive))
     Vue.watch(() => store.editorVersion, () => Vue.nextTick(loadActive))
     Vue.watch(() => store.wordWrap, (v) => { if (cm) cm.setOption('lineWrapping', !!v) })
+    Vue.watch(() => store.mdPreview, () => Vue.nextTick(() => { if (cm) cm.refresh() }))
     Vue.onMounted(() => {
       Vue.nextTick(() => {
         if (store.activeFile) loadActive()
@@ -138,6 +146,13 @@ AgentComponents.CodeEditor = {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
         e.preventDefault()
         store.saveFile()
+        return
+      }
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 'v' && isMarkdown.value) {
+        const el = document.activeElement
+        if (el && /^(INPUT|TEXTAREA)$/.test(el.tagName)) return
+        e.preventDefault()
+        store.toggleMdPreview()
       }
     }
 
@@ -152,6 +167,6 @@ AgentComponents.CodeEditor = {
       store.closeTab(path)
     }
 
-    return { store, hostRef, language, isDb, tabName, close }
+    return { store, hostRef, language, isDb, isMarkdown, showPreview, activeContent, tabName, close }
   }
 }

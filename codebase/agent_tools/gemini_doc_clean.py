@@ -10,8 +10,10 @@ import os
 import re
 import sys
 
-INPUT = "/home/manigupt/Hello/Agentic_Unit_PIE/gemini_update.md"
-OUTPUT = "/home/manigupt/Hello/Agentic_Unit_PIE/gemini_section_output.md"
+from paths import PIE_ROOT
+
+INPUT = str(PIE_ROOT / "gemini_update.md")
+OUTPUT = str(PIE_ROOT / "gemini_section_output.md")
 
 
 def _read() -> str:

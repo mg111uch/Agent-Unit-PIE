@@ -1,0 +1,44 @@
+{
+  "episode_id": "simrun_popula_dyn_run_urban_delhi_power_reliability_capex_profit_share",
+  "simulator": "popula_dyn",
+  "version_id": "popula_dyn@2cac23d",
+  "run_id": "run_urban_delhi_power_reliability_capex_profit_share",
+  "parameters": {
+    "domain": "urban",
+    "city": "delhi",
+    "mechanism": "power_reliability_capex",
+    "magnitude": 0.3,
+    "scales": [
+      400,
+      2000,
+      10000
+    ],
+    "years": 2,
+    "tag": "profit_share"
+  },
+  "result": {
+    "population": 10000,
+    "welfare": 0.407019,
+    "outcome_override": "IMPROVED",
+    "by_scale": [
+      {
+        "agents": 400,
+        "mean_relative": 0.127247
+      },
+      {
+        "agents": 2000,
+        "mean_relative": 0.181858
+      },
+      {
+        "agents": 10000,
+        "mean_relative": 0.349161
+      }
+    ],
+    "claim_strength": "HYPOTHESIS",
+    "run_id": "run_urban_delhi_power_reliability_capex_profit_share",
+    "simulator": "popula_dyn",
+    "timestamp": "2026-11-05T07:43:25.852214",
+    "run_key": "popula_dyn@2cac23d:4bdf4a9438e1:s-random"
+  },
+  "timestamp": "2026-11-05T07:43:25.852214"
+}

@@ -55,11 +55,18 @@ def from_signals(rows: List[Dict[str, Any]]) -> List[Any]:
 
 
 def collect(source: str, items: List[Dict[str, Any]] | None = None) -> Dict[str, Any]:
-    """Dispatch to a collector. Live portals deferred — no fake data."""
-    if source in LIVE_DEFERRED:
+    """Dispatch to a collector. Live portals deferred — no fake data.
+
+    `gem` accepts a batch that was already parsed from a human-downloaded CSV
+    (modules/economy/sources/gem_csv.py); with no items it still reports
+    'deferred' rather than pretending to fetch.
+    """
+    if source in LIVE_DEFERRED and not items:
         return {"items": [], "note": f"{source} live connector deferred; push via manual import"}
     if source == "signal":
         return {"items": from_signals(items or []), "note": ""}
+    if source in ("gem", "udyam", "ondc"):
+        return {"items": normalize_raw(source, items or []), "note": "imported from file"}
     return {"items": normalize_raw("manual", items or []), "note": ""}
 
 

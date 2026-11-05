@@ -42,6 +42,8 @@ from modules.simulators.popula_dyn.behaviours import (
     LearnBehavior,
     RegrowBehavior,
     ProspectBehavior,
+    WorkBehavior,
+    OperateBehavior,
 )
 
 logger = logging.getLogger(__name__)
@@ -81,6 +83,8 @@ class BehaviorRegistry:
         self.register_behavior(InvestBehavior())
         self.register_behavior(RegrowBehavior())
         self.register_behavior(ProspectBehavior())
+        self.register_behavior(WorkBehavior())
+        self.register_behavior(OperateBehavior())
 
     def register_behavior(self, behavior: BaseBehavior) -> None:
         """Register a behavior instance."""

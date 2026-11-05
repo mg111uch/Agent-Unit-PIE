@@ -1,0 +1,30 @@
+{
+  "episode_id": "simrun_popula_dyn_run_urban_kanpur_transport_subsidy_profit_share_base",
+  "simulator": "popula_dyn",
+  "version_id": "popula_dyn@2cac23d",
+  "run_id": "run_urban_kanpur_transport_subsidy_profit_share_base",
+  "parameters": {
+    "domain": "urban",
+    "city": "kanpur",
+    "mechanism": "transport_subsidy",
+    "magnitude": 0.3,
+    "scales": [
+      400,
+      2000,
+      10000
+    ],
+    "years": 2,
+    "tag": "profit_share"
+  },
+  "result": {
+    "population": 10000,
+    "welfare": 0.408049,
+    "outcome_override": "STABLE",
+    "claim_strength": "HYPOTHESIS",
+    "run_id": "run_urban_kanpur_transport_subsidy_profit_share_base",
+    "simulator": "popula_dyn",
+    "timestamp": "2026-11-05T07:43:25.896608",
+    "run_key": "popula_dyn@2cac23d:0c5a4ec10637:s-random"
+  },
+  "timestamp": "2026-11-05T07:43:25.896608"
+}

@@ -5,14 +5,19 @@ import copy
 from datetime import datetime, timezone
 from typing import Any, Dict
 
+# TWN-01: the ten series worth collecting per city. Coverage is measured on
+# this list, so adding a field makes the gap visible instead of optional.
 FIELDS = (
     "population",
     "employment_rate",
+    "industrial_units",
     "industrial_capacity",
     "water_supply_mld",
     "energy_reliability",
-    "literacy_rate",
+    "power_supply_hours",
     "air_quality_pm25",
+    "road_km",
+    "municipal_budget_cr",
 )
 
 TRUTH = (
@@ -54,6 +59,7 @@ def field(
     geography: Any = None,
     timestamp: str = "",
     truth: str = "",
+    **extra: Any,
 ) -> Dict[str, Any]:
     tier = truth if truth in TRUTH else infer_truth(source)
     return {
@@ -64,7 +70,45 @@ def field(
         "confidence": float(confidence),
         "geography": geography or {},
         "truth": tier,
+        **extra,
     }
+
+
+PLACEHOLDER_PREFIX = "placeholder:"
+
+
+def is_placeholder(value: Dict[str, Any]) -> bool:
+    """A field is a placeholder when its source says so, or it is AI_INFERRED."""
+    src = str((value or {}).get("source", ""))
+    return src.startswith(PLACEHOLDER_PREFIX) or \
+        (value or {}).get("truth") == "AI_INFERRED"
+
+
+def coverage(state: Dict[str, Any]) -> Dict[str, Any]:
+    """TWN-01 answer: how much of a city is observed vs placeholder.
+
+    Counts are over `FIELDS`, so a missing series is reported as missing rather
+    than silently lowering the denominator.
+    """
+    fields = (state or {}).get("fields") or {}
+    by_field, counts = {}, {"observed": 0, "placeholder": 0, "missing": 0}
+    for name in FIELDS:
+        v = fields.get(name)
+        if not v:
+            by_field[name] = "missing"
+            counts["missing"] += 1
+        elif is_placeholder(v):
+            by_field[name] = "placeholder"
+            counts["placeholder"] += 1
+        else:
+            by_field[name] = "observed"
+            counts["observed"] += 1
+    total = len(FIELDS)
+    return {"city_id": (state or {}).get("city_id", ""),
+            "series": total, **counts,
+            "coverage": round(counts["observed"] / total, 3) if total else 0.0,
+            "by_field": by_field,
+            "complete": counts["observed"] == total}
 
 
 def build_state(city_id: str, values: Dict[str, Dict[str, Any]]) -> Dict[str, Any]:

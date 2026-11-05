@@ -1,6 +1,9 @@
+import os
 from pathlib import Path
 
-DATA_ROOT = Path(__file__).resolve().parent.parent.parent.parent / "data"
+# OPS-06: paths come from env so tests and deployments never share a store.
+_DEFAULT_DATA_ROOT = Path(__file__).resolve().parent.parent.parent.parent / "data"
+DATA_ROOT = Path(os.environ.get("PIE_DATA_ROOT", str(_DEFAULT_DATA_ROOT)))
 
 # Working memory TTLs (seconds)
 BELIEF_SHIFT_TTL = 7200

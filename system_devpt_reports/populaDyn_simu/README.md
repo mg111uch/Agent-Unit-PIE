@@ -77,6 +77,11 @@
 | Epoch engine | `core/epoch.py`: 5 regimes, 6 macro vars, constraint gates, multi-scale `run_until_transition`, `compile_epoch` calibration/scenario; `SimulationModel.epoch` |
 | Paradigm search | `ARCHITECTURE` hypothesis + `develop_propose_architecture` gate: `decide_branch→propose_architecture→modify_code` for epoch jumps (behaviours→macro→epoch engine) |
 | Twin-driven scenarios | `digital_twins/calibration_engine.py` maps CityState → sim params (honest fields only; placeholders as ranges); baseline-vs-held-history validation; `policy_experiments.py` + `contrast_lab.py` reuse `core/scenarios.py` with full lineage — sim code unchanged |
+| Domain packs (agrarian \| urban) | `core/domain.py` profile switch on one engine/run-key: urban workers, manufacturing/service firms, zoned parcels, labour market, utilities, congestion, municipal budget; domain-scoped policy table raises on cross-domain levers |
+| Urban calibration + stability | `core/calibration.py`: real series → firms/budget/road ratios, explicit `missing`/`unmapped`, fit report; `scripts/calibrate_urban.py` runs 400/2k/10k, registers findings, writes `data/twins/calibration/urban_fit.{json,md}` |
+| Urban profit share | `behaviours/urban.py`: firms declare `profit_share` (default 0.1) of post-investment profit and `core/urban.py:pay_dividends` pays it at step end; mid-step payout drained the cash that hires the rest of the step |
+| Deterministic hiring | `_nearest_firm` picks the true nearest eligible firm with `(distance, unit_id)` tie-break (was `local[0]`, i.e. grid order) — the Kanpur transport inversion was mid-step dividends, not hiring noise |
+| Urban levers | `core/calibration.py` (`stability(seeds=…)`, `claim_evidence`) + `core/falsify.py` (`falsify_policy`: seed shift, ±magnitude, half horizon, placebo) + `scripts/calibrate_urban.py --seeds --falsify`: power capex both cities + Delhi transport are `FALSIFICATION_PASSED` |
 | Per-sim isolation & lineage | kernel scopes findings/versions/topics per simulator (`sim@commit`, sharded runs, ACTIVE→HISTORICAL validity) |
 
 ## 4. Layout

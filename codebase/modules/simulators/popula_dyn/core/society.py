@@ -7,6 +7,8 @@ are computed live from `model.units`; land fertility/crops ground food.
 from __future__ import annotations
 from typing import Any, Dict, List
 
+from . import urban as urban_pack
+
 
 def _gini(xs: List[float]) -> float:
     xs = sorted(x for x in xs if x >= 0)
@@ -34,14 +36,25 @@ def society_state(model) -> Dict[str, Any]:
     deaths = getattr(model, "deaths_total", 0)
     heals = getattr(model, "successful_healings_total",
                     getattr(model, "successful_healings", 0))
-    return {
+    domain = getattr(model, "domain", "agrarian")
+    if domain == "urban":
+        # No crops: urban food security is a purchasing-power proxy (food access),
+        # not a land stock. Affordability of one step of metabolism.
+        basket = max(1e-9, float(model.params.get("food_price", 1.0))
+                     * float(model.params.get("metabolism", 1)))
+        food = (sum(wealth) / pop) / basket if pop else 0.0
+    out = {
+        "domain": domain,
         "population": pop,
         "age_structure": {"child": round(child, 3), "working": round(1 - child - elder, 3),
                           "elder": round(elder, 3)},
         "gini": round(_gini(wealth), 3),
         "wealth_total": round(sum(wealth), 1),
-        "food_security": round(min(2.0, food), 3),
+        "food_security": round(min(2.0, max(0.0, food)), 3),
         "skilled_share": round(sum(1 for s in skills if s >= 0.5) / pop, 3) if pop else 0.0,
         "health_index": round(min(1.0, heals / max(1, deaths + heals)), 3),
-        "epoch": getattr(model, "epoch", "Agricultural"),
+        "epoch": getattr(model, "epoch",
+                         "Urban" if domain == "urban" else "Agricultural"),
     }
+    out.update(urban_pack.metrics(model))
+    return out

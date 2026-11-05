@@ -1,0 +1,19 @@
+{"city_id": "city_delhi",
+ "collected_by": "TWN-01 collection pass 2026-11-03",
+ "series": [
+  {"field": "road_km", "value": 18594.34,
+   "source": "delhi_economic_survey_2023_24",
+   "truth": "THIRD_PARTY_VERIFIED", "year": 2023, "license": "govt-open",
+   "url": "https://www.hindustantimes.com/cities/delhi-news/delhi-economic-survey-pwd-in-race-with-time-to-finish-key-projects-101709319138140.html",
+   "note": "Net road length March 2023, as reported from the Economic Survey 2023-24"},
+  {"field": "industrial_units", "value": 120863,
+   "source": "msme_udyog_aadhaar_delhi",
+   "truth": "THIRD_PARTY_VERIFIED", "year": 2020, "license": "govt-open",
+   "url": "https://dashboard.msme.gov.in/udyog_aadhaar.aspx",
+   "note": "Cumulative Udyog Aadhaar registrations for Delhi"},
+  {"field": "municipal_budget_cr", "value": 16683.01,
+   "source": "business_standard_mcd_budget_2024_25",
+   "truth": "THIRD_PARTY_VERIFIED", "year": 2024, "license": "press-report",
+   "url": "https://www.business-standard.com/budget/news/mcd-passes-rs-16-683-crore-budget-for-fy-2024-25-amid-pandemonium-124020800802_1.html",
+   "note": "MCD approved expenditure for FY2024-25"}
+ ]}

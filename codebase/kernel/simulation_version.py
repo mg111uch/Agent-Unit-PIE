@@ -149,6 +149,67 @@ def list_lineage(version_id: Optional[str] = None, simulator: Optional[str] = No
     return list(reversed(out))
 
 
+# --- SIM-02: parameter-set identity -------------------------------------
+# `sim@commit` alone cannot tell a baseline from a parameter sweep, so every
+# run key carries the parameter hash and the seed set too.
+_VOLATILE_KEYS = {"run_id", "run_key", "output_dir", "out_dir", "plot", "verbose"}
+
+
+def canonical_params(params: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+    """Params that identify a regime: sorted, floats normalised, noise dropped."""
+    out: Dict[str, Any] = {}
+    for k, v in sorted((params or {}).items()):
+        if k in _VOLATILE_KEYS:
+            continue
+        if isinstance(v, float):
+            out[k] = round(v, 9)
+        elif isinstance(v, (str, int, bool)) or v is None:
+            out[k] = v
+        elif isinstance(v, (list, tuple)):
+            out[k] = [round(x, 9) if isinstance(x, float) else x for x in v]
+        else:
+            out[k] = str(v)
+    return out
+
+
+def param_hash(params: Optional[Dict[str, Any]]) -> str:
+    import hashlib
+    import json
+    blob = json.dumps(canonical_params(params), sort_keys=True,
+                      separators=(",", ":"))
+    return hashlib.sha256(blob.encode()).hexdigest()[:12]
+
+
+def seed_set(params: Optional[Dict[str, Any]]) -> str:
+    """`seed_set` column is the identity of the randomness used."""
+    seeds = (params or {}).get("seeds")
+    if isinstance(seeds, (list, tuple)):
+        return "+".join(str(int(s)) for s in seeds)
+    seed = (params or {}).get("seed")
+    return f"s{seed}" if seed is not None else "s-random"
+
+
+def run_key(simulator: str, version_id: str,
+            params: Optional[Dict[str, Any]]) -> str:
+    """`(sim@commit, param_hash, seed_set)` — the run identity SIM-02 asks for.
+
+    `version_id` already looks like `sim@commit`, so it is not prefixed twice.
+    """
+    version = str(version_id or "")
+    prefix = version if version.startswith(f"{simulator}@") else f"{simulator}@{version}"
+    return f"{prefix}:{param_hash(params)}:{seed_set(params)}"
+
+
+def same_regime(a: Dict[str, Any], b: Dict[str, Any]) -> bool:
+    """Two findings may only contradict each other inside one regime."""
+    if not a or not b:
+        return True
+    for key in ("run_key", "param_hash"):
+        if a.get(key) and b.get(key) and a[key] != b[key]:
+            return False
+    return True
+
+
 def is_compatible(find_version_id: str, query_version_id: str, simulator: Optional[str] = None) -> bool:
     if not find_version_id or not query_version_id:
         return True

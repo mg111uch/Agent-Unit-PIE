@@ -24,13 +24,30 @@ Usage
 
 import json
 import os
-import yaml
 from pathlib import Path
 from datetime import datetime
 from typing import Dict, Any, List, Optional
 
+try:
+    import yaml
+except ImportError:  # PyYAML optional: params.yaml is written as valid JSON
+    class _YamlFallback:
+        @staticmethod
+        def dump(data, stream):
+            json.dump(data, stream, indent=2)
+
+        @staticmethod
+        def safe_load(stream):
+            try:
+                return json.loads(stream.read() or "{}")
+            except ValueError:
+                return {}
+
+    yaml = _YamlFallback()
+
 from modules.simulators.popula_dyn.core.simulation_model import SimulationModel
 from modules.simulators.popula_dyn.constants import PARAMS
+from modules.simulators.observation_metrics import build_observation as _typed_observation
 
 
 def _codebase_root():
@@ -315,15 +332,42 @@ class SimulationConnector:
         # Phase 1: DB + episodic (per-sim isolated)
         self._persist_run_lineage(run_id, params, summary)
 
+    def save_run_summary(self, run_id: str, params: Dict[str, Any],
+                         summary: Dict[str, Any]) -> str:
+        """Persist a run that was executed outside `run_and_extract`.
+
+        Writes the same `params.yaml`/`summary.json` pair the kernel readers
+        expect and records lineage (`simulation_runs`), so a finding can carry
+        a real run id + version without rerunning the model.
+        """
+        run_path = self.base_path / run_id
+        run_path.mkdir(parents=True, exist_ok=True)
+        payload = dict(summary)
+        payload.setdefault("run_id", run_id)
+        payload.setdefault("simulator", self.simulator)
+        payload.setdefault("timestamp", datetime.utcnow().isoformat())
+        with open(run_path / "params.yaml", "w") as f:
+            yaml.dump(params, f)
+        with open(run_path / "signals.json", "w") as f:
+            json.dump([], f)
+        with open(run_path / "summary.json", "w") as f:
+            json.dump(payload, f, indent=2)
+        self._persist_run_lineage(run_id, params, payload)
+        return str(run_path)
+
     def _persist_run_lineage(self, run_id: str, params: Dict[str, Any], summary: Dict[str, Any]):
         try:
             from kernel.simulation_version import sync_from_git
             v = sync_from_git(self.simulator)
             version_id = v["version_id"] if v else f"{self.simulator}@V0"
             horizon = int(summary.get("step_count", params.get("years", 0)) or 0)
+            # SIM-02: run identity = (sim@commit, param_hash, seed_set)
+            from kernel.simulation_version import run_key as _run_key
+            key = _run_key(self.simulator, version_id, params)
+            summary["run_key"] = key
             # DB
             from kernel.persistence.db import kernel_db
-            kernel_db.save_simulation_run(run_id, version_id, params, None, summary, horizon=horizon, simulator=self.simulator)
+            kernel_db.save_simulation_run(run_id, version_id, params, None, summary, horizon=horizon, simulator=self.simulator, run_key=key)
             # Episodic memory (kernel) + filesystem data/memory/episodic
             try:
                 from kernel.memory.episodic_memory import episodic_memory
@@ -332,7 +376,7 @@ class SimulationConnector:
                     episode_type="simulation_run",
                     summary=f"{self.simulator} {run_id} pop={summary.get('population')} wealth={summary.get('total_wealth',0):.1f}",
                     tags=["simulation", self.simulator, run_id, version_id],
-                    metadata={"simulator": self.simulator, "version_id": version_id, "run_id": run_id, "parameters": params, "result": summary},
+                    metadata={"simulator": self.simulator, "version_id": version_id, "run_id": run_id, "run_key": key, "parameters": params, "result": summary},
                     importance=0.7,
                 )
             except Exception:
@@ -561,92 +605,53 @@ class SimulationConnector:
         self,
         run_id: str,
         baseline_run_id: str = None,
+        metric: str = "population",
     ) -> Dict[str, Any]:
-        """Build typed observation for symbolic gate (FixesIssues.md)."""
-        summary = self._read_summary(run_id)
-        params = self.get_params(run_id)
-        signals = self.get_signals(run_id)
-        pop = summary.get("population", 0)
-        wealth = summary.get("total_wealth", 0)
-        deaths = summary.get("deaths_total", summary.get("deaths", 0))
-        births = summary.get("births_total", summary.get("births", 0))
-        years = params.get("years", summary.get("step_count", 0))
-
-        baseline_pop = 0
-        baseline_wealth = 0
-        if baseline_run_id:
-            b = self._read_summary(baseline_run_id)
-            baseline_pop = b.get("population", 0)
-            baseline_wealth = b.get("total_wealth", 0)
-
-        pop_change_pct = ((pop - baseline_pop) / baseline_pop * 100) if baseline_pop else 0.0
-        verdict = "STABLE"
-        if pop_change_pct > 20:
-            verdict = "IMPROVED"
-        elif pop_change_pct < -20:
-            verdict = "DEGRADED"
-        if pop < 5:
-            verdict = "COLLAPSED"
-
-        direction = "STABLE"
-        if verdict == "IMPROVED":
-            direction = "INCREASE"
-        elif verdict in ("DEGRADED", "COLLAPSED"):
-            direction = "DECREASE"
-
-        # scenario = delta vs baseline params (key params)
-        scenario = {}
-        if baseline_run_id:
-            base_params = self.get_params(baseline_run_id)
-            for k in ("birth_rate", "death_rate", "initial_pop", "years", "mate_radius", "mate_global_fallback", "require_opposite_gender", "vision"):
-                if params.get(k) != base_params.get(k):
-                    scenario[k] = params.get(k)
-        else:
-            scenario = {k: params.get(k) for k in ("birth_rate", "death_rate", "mate_radius") if k in params}
-
-        # per-simulator version (git-scoped, strictly isolated)
+        """Typed observation for the symbolic gate; `metric` picks the field."""
+        obs = _typed_observation(
+            run_id=run_id,
+            summary=self._read_summary(run_id),
+            params=self.get_params(run_id),
+            signals=self.get_signals(run_id),
+            baseline_summary=(self._read_summary(baseline_run_id)
+                              if baseline_run_id else None),
+            baseline_params=(self.get_params(baseline_run_id)
+                             if baseline_run_id else None),
+            metric=metric,
+            simulator=self.simulator,
+        )
         try:
             from kernel.simulation_version import sync_from_git
             v = sync_from_git(self.simulator)
-            version_id = v["version_id"] if v else f"{self.simulator}@V0"
+            obs["version_id"] = v["version_id"] if v else f"{self.simulator}@V0"
         except Exception:
-            version_id = f"{self.simulator}@V0"
-        return {
-            "experiment": run_id,
-            "simulator": self.simulator,
-            "version_id": version_id,
-            "scenario": scenario,
-            "baseline": baseline_run_id or "none",
-            "metric": "population",
-            "baseline_value": baseline_pop,
-            "observed_value": pop,
-            "delta": round(pop_change_pct, 1),
-            "direction": direction,
-            "outcome": verdict,
-            "horizon": years,
-            "wealth": wealth,
-            "wealth_delta": round(((wealth - baseline_wealth) / baseline_wealth * 100) if baseline_wealth else 0, 1),
-            "deaths": deaths,
-            "births": births,
-            "signals": [s.get("signal_type") for s in signals],
-        }
+            obs["version_id"] = f"{self.simulator}@V0"
+        return obs
 
     def register_to_kernel(
         self,
         run_id: str,
         premise: str = None,
         baseline_run_id: str = None,
+        metric: str = "population",
+        observation: Dict[str, Any] = None,
+        name: str = None,
     ) -> dict:
         """
         Register simulation findings to kernel topic graph.
         Creates finding node with structured premise + typed observation metadata.
         Auto-creates contradicts edge via symbolic comparison.
+        `observation` lets a caller register a prebuilt typed observation (for
+        example a multi-scale stability verdict that has no single run summary).
         """
-        if premise is None:
-            premise = self.generate_structured_premise(run_id, baseline_run_id)
-        obs = self.build_observation(run_id, baseline_run_id)
+        if observation is None:
+            if premise is None:
+                premise = self.generate_structured_premise(run_id, baseline_run_id)
+            observation = self.build_observation(run_id, baseline_run_id, metric)
+        premise = premise or f"Simulation {run_id}: {observation.get('outcome')}"
+        obs = observation
         verdict = obs.get("outcome", "STABLE")
-        name = f"{run_id} Findings"
+        name = name or f"{run_id} Findings"
         # direct topic_store path to pass metadata (keeps subprocess fallback)
         try:
             import sys, pathlib, json as _json
@@ -661,7 +666,7 @@ class SimulationConnector:
             from argu_god.engine.topic_store import add_node, add_edge
             from kernel.hypothesis.contradiction_gate import check_observation_contradiction
             # strictly isolated per simulator: topic + validity
-            meta = {"observation": obs, "baseline": obs.get("baseline"), "metric": obs.get("metric"), "outcome": verdict, "direction": obs.get("direction"), "horizon": obs.get("horizon"), "scenario": obs.get("scenario"), "simulator": obs.get("simulator"), "version_id": obs.get("version_id"), "validity": {"valid_for_version": obs.get("version_id"), "status": "ACTIVE", "simulator": obs.get("simulator")}}
+            meta = {"observation": obs, "baseline": obs.get("baseline"), "metric": obs.get("metric"), "outcome": verdict, "direction": obs.get("direction"), "horizon": obs.get("horizon"), "scenario": obs.get("scenario"), "simulator": obs.get("simulator"), "version_id": obs.get("version_id"), "claim_strength": obs.get("claim_strength", "HYPOTHESIS"), "validity": {"valid_for_version": obs.get("version_id"), "status": "ACTIVE", "simulator": obs.get("simulator")}}
             res = add_node(self.topic, {"name": name, "premise": premise, "side": "argument", "type": "observation", "metadata": meta}, force=False)
             edges_created = []
             if res.get("kind") == "node_added":
@@ -678,6 +683,6 @@ class SimulationConnector:
             return {"run_id": run_id, "name": name, "verdict": verdict, "observation": obs, "topic_store_result": res, "edges_created": edges_created, "returncode": 0, "stdout": str(res), "stderr": ""}
         except Exception as e:
             import subprocess as sp, json as _js
-            meta_json = _js.dumps({"observation": obs, "baseline": obs.get("baseline"), "metric": obs.get("metric"), "outcome": verdict, "direction": obs.get("direction"), "horizon": obs.get("horizon"), "simulator": obs.get("simulator"), "version_id": obs.get("version_id"), "validity": {"valid_for_version": obs.get("version_id"), "status": "ACTIVE", "simulator": obs.get("simulator")}})
+            meta_json = _js.dumps({"observation": obs, "baseline": obs.get("baseline"), "metric": obs.get("metric"), "outcome": verdict, "direction": obs.get("direction"), "horizon": obs.get("horizon"), "simulator": obs.get("simulator"), "version_id": obs.get("version_id"), "claim_strength": obs.get("claim_strength", "HYPOTHESIS"), "validity": {"valid_for_version": obs.get("version_id"), "status": "ACTIVE", "simulator": obs.get("simulator")}})
             result = sp.run(["python", "scripts/topic_ops.py", "add-node", "--topic", self.topic, "--name", name, "--premise", premise, "--side", "argument", "--type", "observation", "--metadata", meta_json, "--json"], capture_output=True, text=True, cwd=str(self.base_path.parent.parent.parent))
             return {"run_id": run_id, "name": name, "verdict": verdict, "observation": obs, "returncode": result.returncode, "stdout": result.stdout, "stderr": result.stderr + f" direct_err:{e}"}

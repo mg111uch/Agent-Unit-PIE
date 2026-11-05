@@ -9,6 +9,8 @@ Pure functions, no DB.
 from __future__ import annotations
 from typing import Any, Dict, List
 
+from modules.economy.provenance import stamp
+
 FUNNEL_STAGES = ("prospects", "researched", "contacted", "responses",
                  "proposals", "pilots", "won")
 MIN_TRIALS = 30
@@ -57,4 +59,8 @@ def ab_test(name: str, hypothesis: str, arm_a: Dict[str, float],
             "finding": {"hypothesis": hypothesis,
                         "result": f"{verdict} wins ({round(ra,3)} vs {round(rb,3)}, n={n})",
                         "confidence": conf,
+                        # KRN-06: nothing here can pass HYPOTHESIS; only
+                        # multi-seed + falsification may promote it.
+                        "claim_strength": "HYPOTHESIS",
+                        "provenance": stamp(),
                         "evidence": {"experiment": name, "arm_a": arm_a, "arm_b": arm_b}}}

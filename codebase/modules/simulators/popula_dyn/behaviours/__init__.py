@@ -36,6 +36,7 @@ from .invest import InvestBehavior
 from .learn import LearnBehavior
 from .regrow import RegrowBehavior
 from .prospect import ProspectBehavior
+from .urban import WorkBehavior, OperateBehavior
 
 __all__ = [
     "BaseBehavior",
@@ -56,4 +57,6 @@ __all__ = [
     "LearnBehavior",
     "RegrowBehavior",
     "ProspectBehavior",
+    "WorkBehavior",
+    "OperateBehavior",
 ]

@@ -13,6 +13,10 @@ _Last verified: 2026-09-15_
 - heal/trade/produce return-intent intents still open (reproduce pattern done) — med
 
 ## Recent Changes (newest first, max 10)
+- `SIM-03-D` DONE: multi-seed `stability(seeds=...)` + metric-aware `falsify_policy` (seed shift, ±magnitude, half horizon, placebo) → power capex both cities and Delhi transport are `FALSIFICATION_PASSED` (3 seeds, n=37,200); Kanpur transport `MIXED`, stays `HYPOTHESIS`; older urban findings marked superseded
+- `SIM-03-C2` DONE: profit-share channel (firm dividends to workers, default 0.1) closes the distribution gap; re-gate 400/2k/10k → power capex `+` in both cities, Delhi transport `+`, Kanpur transport still mixed; 4 findings re-registered in `popu_sim` (8 runs, `HYPOTHESIS`); metric registry + `save_run_summary` wiring
+- `SIM-03-C` DONE: real TWN-01 rows → urban ratios (`core/calibration.py`), fit report (firms 1.0%/3.8% off target, road 1.5%, budget index by construction, fiscal gap 2.2–4.5× logged), first 400/2k/10k gate → power capex and Delhi flipped without a wage share; `eco_sim` not adopted
+- `SIM-03-B` DONE: urban domain pack adds power/water capacity vs demand, congestion-priced transport, municipal budget (revenue/capex/grant, deficit austerity); policies domain-scoped (`URBAN_MECHANISMS`); 4 new reporter columns; agrarian path unchanged; tests `test_urban_domain` 14/14, fast tier 128/128
 - `Supply-demand` DONE: `core/scarcity.py` index (food-pc vs baseline + cap pressure) feeds vital rates (scarcity damps births, raises deaths — direction-verified) + barter pricing in `trade_ag`/`produce` via local scarcity (price in events); `Scarcity` column (34 total); determinism intact
 - `Environment` DONE: per-cell carrying capacity caps regrow ceiling + heritable `adaptability` trait (buffers hardship mortality, mirror fertility pattern) + `prospect` fertility-gradient hill-climb (no A*); `Prospect_Moves`/`Capacity_Capped` counters + 5 new columns (33 total); determinism intact
 - `Inheritance` via LOOP (hyp_inheritance_01→modify_code→validate→loop, all develop.*): 5%-per-parent bequest, conserving via unit_effects; kids 5.0→~15.0 at parental wealth 100; determinism intact
@@ -41,6 +45,7 @@ _Last verified: 2026-09-15_
 - Iter4-6 DONE: double-count fix (`735cf9a`), regrow fertility sync (`a5f9752`), graded starvation (`9ff8ff1`)
 
 ## Next (single source for the next task — agents pull from here, not HANDOVER)
+1. SIM-03 next mechanisms (2026-11-05): the three levers are promoted; apply the same gate (3 seeds × 400/2k/10k + `falsify_policy`) to any new urban mechanism, and give the hire loop a deterministic order before retesting Kanpur transport. Gate data: `data/twins/calibration/urban_fit.md`; findings in `popu_sim`.
 1. Twin loop live (2026-09-15): Kanpur + Delhi replicas calibrate → baseline (4% pop error) → policy experiments + contrast lab, all via existing scenarios/branch/score (sim unchanged). Next: real city data for conf≤0.35 placeholders; baseline-vs-policy UI still deferred.
 4. Individual variation: fertility trait + lifespan distribution.
 5. Details in `roadmap.md` → Next up. Shipped items move to `README.md` Features Overview.

@@ -26,7 +26,7 @@ FireFlow owns: identity, markets, contracts, payments, workforce, compute, data,
 | Prerequisites | Next.js 15.3.3 (pinned — OPS-05), Node.js (v18+), npm, SQLite (included) |
 | Frontend | Next.js 15.3.3, React, TypeScript; Jest, Playwright (E2E), Cypress |
 | Backend | Node.js (v18+) API, SQLite (included), jest; `backend/pie/` = PIE gateway |
-| Run both | `npm run app` (backend + frontend). **Port docs conflict:** backend 3001 vs 5000 (DOC-01); frontend 3000 |
+| Run both | `npm run app` (backend + frontend). Backend **:5000** (`backend/server.js: PORT || 5000` — DOC-01 closed); frontend 3000 |
 | Backend only / frontend only | `cd backend && npm start` (API at `http://localhost:5000`) · `cd frontend && npm run dev` (app at `http://localhost:3000`) |
 | Tests | backend `npm test [-- file] [-t name]` (e.g. `npm test -- forms.test.js -t "should submit form successfully"`); frontend `npm test`, `npm run test:watch` (e.g. `npm test -- payment-modal.test.tsx`); E2E `npx playwright install chromium` first, then `npm run test:e2e`, `npm run test:e2e:ui`, or `npm run test:e2e -- payment-flow.spec.ts` (app must be running); Cypress `npm run test:cypress:open` |
 | Integration suites (counts at last gate) | drift+contract 8 · gateway 12 · ledger 18 · settlement 23 · sensors 26 (cumulative-looking numbers [INFERRED]) |

@@ -5,10 +5,17 @@ record_* use INSERT OR IGNORE → content-hash ids are idempotent.
 """
 from __future__ import annotations
 import json
+import os
 import sqlite3
 from dataclasses import asdict
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+
+try:
+    from modules.economy.agent_identity import actor_fields
+except ImportError:  # direct-script use (sys.path not set)
+    def actor_fields(actor: Any = None) -> Dict[str, str]:
+        return {"actor_type": "system", "actor_id": ""}
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS units(
@@ -24,7 +31,8 @@ CREATE TABLE IF NOT EXISTS tasks(
   deadline TEXT DEFAULT '', verification TEXT DEFAULT '', reward REAL DEFAULT 0.0);
 CREATE TABLE IF NOT EXISTS transactions(
   tx_id TEXT PRIMARY KEY, sender TEXT, recipient TEXT,
-  amount REAL, kind TEXT DEFAULT 'payment', ts TEXT DEFAULT '');
+  amount REAL, kind TEXT DEFAULT 'payment', ts TEXT DEFAULT '',
+  actor_type TEXT DEFAULT 'system', actor_id TEXT DEFAULT '');
 CREATE TABLE IF NOT EXISTS prospects(
   prospect_id TEXT PRIMARY KEY, company TEXT, problem TEXT,
   region TEXT DEFAULT '', industry TEXT DEFAULT '',
@@ -32,13 +40,34 @@ CREATE TABLE IF NOT EXISTS prospects(
   estimated_monthly_value REAL DEFAULT 0.0,
   recommended_pilot REAL DEFAULT 0.0,
   contactability REAL DEFAULT 0.5, confidence REAL DEFAULT 0.5,
-  source TEXT DEFAULT '', no_contact INTEGER DEFAULT 0);
+  source TEXT DEFAULT '', no_contact INTEGER DEFAULT 0,
+  actor_type TEXT DEFAULT 'system', actor_id TEXT DEFAULT '',
+  fireflow_id TEXT DEFAULT '');
+CREATE TABLE IF NOT EXISTS approvals(
+  item_id TEXT PRIMARY KEY, action TEXT, title TEXT DEFAULT '',
+  payload_json TEXT DEFAULT '{}', tier INTEGER DEFAULT 2,
+  status TEXT DEFAULT 'pending', requested_by TEXT DEFAULT 'agent',
+  approvals_json TEXT DEFAULT '[]', amount_paise INTEGER DEFAULT 0,
+  created_at TEXT DEFAULT '', due_at TEXT DEFAULT '',
+  decided_by TEXT DEFAULT '', reason TEXT DEFAULT '');
+CREATE TABLE IF NOT EXISTS proposals(
+  proposal_id TEXT PRIMARY KEY, token_hash TEXT UNIQUE, customer TEXT,
+  title TEXT DEFAULT '', price REAL DEFAULT 0.0,
+  currency TEXT DEFAULT 'INR', status TEXT DEFAULT 'sent',
+  deliverable_path TEXT DEFAULT '', request_json TEXT DEFAULT '{}',
+  created_at TEXT DEFAULT '', accepted_at TEXT DEFAULT '',
+  accepted_by TEXT DEFAULT '', invoice_id TEXT DEFAULT '',
+  paid_at TEXT DEFAULT '', payment_ref TEXT DEFAULT '');
 """
 
 
 def get_db_path(db_path: Optional[str] = None) -> Path:
     if db_path:
         return Path(db_path)
+    # Tests and deployments isolate state with PIE_DATA_ROOT.
+    env = os.environ.get("PIE_DATA_ROOT")
+    if env:
+        return Path(env) / "market.db"
     # codebase/modules/economy/ledger.py -> workspace/data/market.db
     here = Path(__file__).resolve()
     ws = here.parents[3]  # .../Agentic_Unit_PIE
@@ -63,6 +92,7 @@ def ensure_schema(db_path: Optional[str] = None) -> str:
         con.commit()
         _migrate_units(con)
         _migrate_opportunities(con)
+        _migrate_actor(con)
         con.commit()
     finally:
         con.close()
@@ -79,6 +109,27 @@ def _migrate_opportunities(con: sqlite3.Connection) -> None:
             con.execute("ALTER TABLE opportunities ADD COLUMN adjacency REAL DEFAULT 0.0")
     except Exception:
         pass
+
+
+def _migrate_actor(con: sqlite3.Connection) -> None:
+    """INT-02/INT-04: every mutation names its actor; prospects keep the
+    FireFlow id so the two stores can be reconciled (one sync direction)."""
+    wanted = {
+        "transactions": [("actor_type", "TEXT DEFAULT 'system'"),
+                         ("actor_id", "TEXT DEFAULT ''")],
+        "prospects": [("actor_type", "TEXT DEFAULT 'system'"),
+                      ("actor_id", "TEXT DEFAULT ''"),
+                      ("fireflow_id", "TEXT DEFAULT ''")],
+    }
+    for table, cols in wanted.items():
+        try:
+            have = {r[1] for r in con.execute(
+                f"PRAGMA table_info({table})").fetchall()}
+            for name, decl in cols:
+                if name not in have:
+                    con.execute(f"ALTER TABLE {table} ADD COLUMN {name} {decl}")
+        except Exception:
+            pass
 
 
 def _migrate_units(con: sqlite3.Connection) -> None:
@@ -148,16 +199,23 @@ def record_task(t: Any, db_path: Optional[str] = None) -> str:
         con.close()
 
 
-def record_tx(x: Any, db_path: Optional[str] = None) -> str:
+def record_tx(x: Any, db_path: Optional[str] = None, actor: Any = None) -> str:
     d = x.to_dict() if hasattr(x, "to_dict") else (
         asdict(x) if not isinstance(x, dict) else dict(x))
     frm = d.get("from", d.get("from_"))
+    actor_cols = actor_fields(actor) if actor is not None else {
+        "actor_type": d.get("actor_type", "system"),
+        "actor_id": d.get("actor_id", "")}
     con = connect(db_path)
     try:
         con.executescript(SCHEMA)
-        con.execute("INSERT OR IGNORE INTO transactions VALUES(?,?,?,?,?,?)",
-                    (d["tx_id"], frm, d["to"], d["amount"],
-                     d.get("kind", "payment"), d.get("ts", "")))
+        _migrate_actor(con)
+        con.execute(
+            "INSERT OR IGNORE INTO transactions(tx_id,sender,recipient,amount,"
+            "kind,ts,actor_type,actor_id) VALUES(?,?,?,?,?,?,?,?)",
+            (d["tx_id"], frm, d["to"], d["amount"],
+             d.get("kind", "payment"), d.get("ts", ""),
+             actor_cols["actor_type"], actor_cols["actor_id"]))
         con.commit()
         return d["tx_id"]
     finally:
@@ -199,16 +257,20 @@ def get_tx(txid: str, db_path: Optional[str] = None) -> Optional[Dict[str, Any]]
         con.close()
 
 
-def record_prospect(p: Any, db_path: Optional[str] = None) -> str:
+def record_prospect(p: Any, db_path: Optional[str] = None,
+                    actor: Any = None) -> str:
     d = asdict(p) if not isinstance(p, dict) else dict(p)
+    fields = actor_fields(actor)
     con = connect(db_path)
     try:
         con.executescript(SCHEMA)
+        _migrate_actor(con)
         con.execute(
             "INSERT OR IGNORE INTO prospects(prospect_id,company,problem,"
             "region,industry,evidence_json,triggers_json,"
             "estimated_monthly_value,recommended_pilot,contactability,"
-            "confidence,source,no_contact) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            "confidence,source,no_contact,actor_type,actor_id,fireflow_id)"
+            " VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
             (d["prospect_id"], d["company"], d["problem"],
              d.get("region", ""), d.get("industry", ""),
              json.dumps(d.get("evidence", [])),
@@ -216,7 +278,10 @@ def record_prospect(p: Any, db_path: Optional[str] = None) -> str:
              d.get("estimated_monthly_value", 0.0),
              d.get("recommended_pilot", 0.0),
              d.get("contactability", 0.5), d.get("confidence", 0.5),
-             d.get("source", ""), int(bool(d.get("no_contact", False)))))
+             d.get("source", ""), int(bool(d.get("no_contact", False))),
+             d.get("actor_type", fields["actor_type"]),
+             d.get("actor_id", fields["actor_id"]),
+             str(d.get("fireflow_id", "") or "")))
         con.commit()
         return d["prospect_id"]
     finally:

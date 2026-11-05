@@ -36,6 +36,7 @@ sources (KMC / UP · DDA / Delhi · census · GIS)  → city_adapters (shaped/st
 | Twin versioning via kernel validity | `twin_versioning.py`: field change retires `v1→HISTORICAL` with changed-variables recorded |
 | Kanpur capacity slice | `capacity_slice.py`: utilization observations → events → signals → trend pattern → cascade answer; candidates-only causality (answered "why is capacity…" from a 3/3/1 cascade + history) |
 | Calibration → popula params | `calibration_engine.py`: honest fields mapped, placeholders as flagged ranges; **water/energy/air explicitly unmapped**; caps pop 400, skill 1.0 recorded on every record; baseline pop error 0.036 (≈4%) at last gate |
+| Urban pack calibration (SIM-03 C) | `calibrate(domain="urban")` → `popula_dyn/core/calibration.py`: real rows → firms per 1000, budget-per-capita index, road km per 1000; fit report keeps `missing`/`unmapped` null; `scripts/calibrate_urban.py` writes `data/twins/calibration/urban_fit.{json,md}` |
 | Policy experiments + contrast lab + flywheel | `policy_experiments.py` (lineage registry), `contrast_lab.py` (same policy × both cities, Pareto verdict — **null** at last gate), `flywheel.py` (sensor→twin→scenario→opportunity finding) |
 | Latent seam fixes (verified) | `create_pattern` source_ids preserved via `metadata.extra`; `signal_to_event` uses valid schema kwargs; an earlier bypass removed so the cascade runs the real path |
 

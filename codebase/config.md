@@ -142,7 +142,8 @@ provider's `default_model` wins over this.
 
 Default Gemini model used when no explicit model is chosen.
 
-### providers.gemini.models = ["gemini-3.5-flash-lite", "gemini-3.7-flash", "gemma-4-26b-a4b-it"]
+### providers.gemini.models = ["gemini-3.5-flash-lite","gemini-flash-lite-latest","gemini-3.7-flash","gemini-3.8-flash","gemini-flash-latest","gemma-4-26b-a4b-it"
+]
 
 Model list offered for Gemini in the UI.
 
@@ -150,7 +151,8 @@ Model list offered for Gemini in the UI.
 
 Default OpenRouter model used when no explicit model is chosen.
 
-### providers.openrouter.models = ["google/gemma-4-26b-a4b-it:free", "openai/gpt-oss-20b:free", "nvidia/nemotron-3-ultra-550b-a55b:free", "nvidia/nemotron-3-super-120b-a12b:free", "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free", "nvidia/nemotron-3-nano-30b-a3b:free", "nvidia/nemotron-3.5-lightning:free", "nvidia/nemotron-3-embed-1b:free", "poolside/laguna-s-2.1:free", "poolside/laguna-xs-2.1:free", "inclusionai/ling-3.0-flash:free", "inclusionai/ling-3.0-tiny:free", "bytedance-seed/seedream-4.5"]
+### providers.openrouter.models = ["nvidia/nemotron-3-ultra-550b-a55b:free","nvidia/nemotron-3-super-120b-a12b:free","nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free", "nvidia/nemotron-3-nano-30b-a3b:free","nvidia/nemotron-3.5-lightning:free","nvidia/nemotron-3-embed-1b:free","thinkingmachines/inkling-small:free","dots-studio/dots-3-note-preview:free""liquid/lfm-2.5-2.6b:free","recursive/flint-v1.0:free","cohere/north-mini-code:free"
+]
 
 Model list offered for OpenRouter in the UI. OpenRouter model ids are free to
 change at any time; `:free` suffixes mark no-cost endpoints.

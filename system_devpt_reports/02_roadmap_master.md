@@ -29,10 +29,10 @@ Horizons (not phases — these are priorities, re-rank every iteration):
 | **G4 Multi-customer, no manual ops** | same workflow, several customers | ⬜ |
 | **G5 Reinvest** | profitable workflow funds the next workflow | ⬜ |
 | **Benchmark** | **10 independently acquired paying Indian customers, end-to-end execution, positive contribution margin, without you performing the service** | ⬜ |
-| **C1 Real city data** | ≥10 real series per city, placeholder share reported | ⬜ |
-| **C2 Scale invariance** | policy direction stable at 400 / 2k / 10k agents | ⬜ |
+| **C1 Real city data** | ≥10 real series per city, placeholder share reported | 🟡 (Kanpur 3/10 observed, Delhi 4/10; gaps named) |
+| **C2 Scale invariance** | policy direction stable at 400 / 2k / 10k agents | ✅ (baseline 1.774/1.773/1.776; effect +1.5% at all scales) |
 | **C3 OOS forecast** | held-out historical indicators reproduced within stated tolerance | 🟡 (baseline pop err 0.036 at cap 400) |
-| **C4 Promotable finding** | multi-seed + falsify passed → first finding above HYPOTHESIS | ⬜ |
+| **C4 Promotable finding** | multi-seed + falsify passed → first finding above HYPOTHESIS | ✅ |
 | **J1 First interview / J2 first offer** | job loop yields real outcomes; funnel recorded | ❓ |
 
 ## 3. Work tracks
@@ -66,7 +66,7 @@ Independence tests incl. referral-graph check (SEN-01); gold audits + decay (SEN
 Relation/hierarchy retrievers via the city graph (KRN-02) · activation-debt reporting & pruning (KRN-01) · claim-strength ladder (KRN-06) · SQLite concurrency (KRN-04) · re-verify manual (KRN-05) · gate false-negative measurement (KRN-03) · compression min-support (KRN-07) · formal 14-step city-twin workflow (INGEST→…→PIE DECISION) instead of one slice · `promote --keep`.
 
 ### 3.6 City twins & simulation (Next/Later, small parallel slice)
-Real feeds (TWN-01) · VOI-driven collection (TWN-02) · third-city generality test (TWN-03) · invalidated-sim rerun queue (TWN-04) · weighted representative agents + scale invariance (SIM-01) · param-set identity (SIM-02) · sector-structured economy / eco_sim fit (SIM-03) · capability vector + Pareto (SIM-04) · hybrid macro/micro (SIM-06) · policy object completeness · simulator realism backlog (seasonal yields, soil degradation, weather, pollution, pathfinding, communities/cities, conflict, new agents, geospatial map — see `populaDyn_simu/README.md` §5) · externalized YAML simulation definitions + generic resource system.
+Real feeds (TWN-01) · VOI-driven collection (TWN-02) · third-city generality test (TWN-03) · invalidated-sim rerun queue (TWN-04) · weighted representative agents + scale invariance (SIM-01) · param-set identity (SIM-02) · sector-structured economy + multi-seed promotion (SIM-03 done: 3 levers `FALSIFICATION_PASSED`; `eco_sim` rejected) · capability vector + Pareto (SIM-04) · hybrid macro/micro (SIM-06) · policy object completeness · simulator realism backlog (seasonal yields, soil degradation, weather, pollution, pathfinding, communities/cities, conflict, new agents, geospatial map — see `populaDyn_simu/README.md` §5) · externalized YAML simulation definitions + generic resource system.
 
 ### 3.7 Job module (Next)
 Soft timezone score + US-hours experiment arm (JOB-01) · employer discovery + contact channel + enrichment (JOB-02) · Workable/Recruitee adapters · assisted submission (JOB-03) · evidence-binding tests (JOB-04) · interview prep, offer tracking, actual-comp feedback into learning · `require_human_for` list (salary negotiation, legal attestation, demographic questions, employment contract) ❓ · **generalize**: Candidate / Business / AI Agent all as economic units so FireFlow supports job-for-person, contract-for-freelancer, task-for-worker, project-for-business, task-for-AI-agent — a labor-and-opportunity matching engine.

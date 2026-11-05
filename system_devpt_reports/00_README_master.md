@@ -31,6 +31,7 @@ All files now live flat in `system_devpt_reports/`; module docs keep their own d
 | `02_roadmap_master.md` | 1 | Cross-module unimplemented work, gates, horizons, **recommendation ledger** (every idea from the planning chats with status) | Choosing next work |
 | `03_loopholes_and_suggestions.md` | 1 | Register of loopholes/suggestions with IDs, severity, fix, and a *verify question* for the coding agent | Prioritising, auditing |
 | `04_iteration_log.md` | 1 | Append-only log of iterations & gates | After each iteration |
+| `05_implementation_plan.md` | 1 | ID → file/symbol → acceptance test, sequenced in waves; verified code state | Starting an iteration |
 | `agent_runtime/README.md` | 1 | Agent loop, tools, commands, workflows, autonomy gate, scripts | Questions about *how the agent works* |
 | `kernel/README.md` | 1 | Memory, lineage, validity, contradiction gate, bus, registry | Cognition questions |
 | `populaDyn_simu/README.md` | 1 | General civilization simulator, policy stack, epoch engine | Simulation/policy questions |

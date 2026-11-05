@@ -1,8 +1,10 @@
 const AgentComponents = {}
 
 const scripts = [
+  'components/Markdown.js',
   'components/AgentHeader.js',
   'components/FileTree.js',
+  'components/MarkdownPreview.js',
   'components/CodeEditor.js',
   'components/DbTable.js',
   'components/AgentChat.js',

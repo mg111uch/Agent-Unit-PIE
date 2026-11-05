@@ -8,6 +8,8 @@
 
 | Item | Status | Depends on |
 |---|---|---|
+| Promote urban levers: multi-seed + falsification (SIM-03) | ✅ 3 levers `FALSIFICATION_PASSED` (3 seeds, n=37.2k); Kanpur transport stays `HYPOTHESIS` | `stability(seeds=…)` + `falsify_policy` |
+| Deterministic hire order (Kanpur transport noise) | ✅ true-nearest pick with `unit_id` tie-break; dividend payout moved to step end (mid-step payout drained hiring cash) | urban labour loop |
 | Baseline-vs-policy compare + visual diff (non-technical policy UI) | open (was Option B) | connector compare_runs |
 | Self-evolution loop (auto-summarize learnings, hypothesis→sim→validate, recursive refinement) | open (was Option C) | hypothesis engine + compression |
 | Seasonal yields + soil degradation/fallow + weather shocks + pollution feedback | open (top realism upgrades) | regrow + environment |

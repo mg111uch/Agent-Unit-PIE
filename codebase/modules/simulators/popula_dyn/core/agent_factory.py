@@ -128,6 +128,61 @@ AGENT_CONFIGS = {
             "crops": 5.0,
         },
     },
+    # SIM-03 urban pack: worker sells labour, firm buys it, parcel is zoned land.
+    "worker": {
+        "unit_type": "human",
+        "behaviors": [
+            "move",
+            "work",
+            "consume_metabolism",
+            "reproduce",
+            "survival",
+        ],
+        "initial_state": {
+            "age": 0,
+            "gender": "M",
+            "skill": 0.5,
+            "employer": "",
+            "wage": 0.0,
+            "wealth": 5.0,
+            "alive": True,
+            "death_prob_modifier": 0.0,
+        },
+        "initial_resources": {
+            "wealth": 5.0,
+        },
+    },
+    "urban_firm": {
+        "unit_type": "firm",
+        "behaviors": [
+            "operate",
+        ],
+        "initial_state": {
+            "sector": "manufacturing",
+            "productivity": 1.0,
+            "price": 2.0,
+            "wage_offer": 5.0,
+            "capital_stock": 10.0,
+            "max_workers": 20,
+            "invest_threshold": 20.0,
+            "invest_amount": 5.0,
+            "transport_cost": 1.0,
+            "wealth": 100.0,
+            "alive": True,
+        },
+        "initial_resources": {
+            "wealth": 100.0,
+        },
+    },
+    "parcel": {
+        "unit_type": "parcel",
+        "behaviors": [],
+        "initial_state": {
+            "zone": "residential",
+            "floor_space": 1.0,
+        },
+        "initial_resources": {},
+    },
 }
 
 def create_unit_config(
@@ -178,7 +233,7 @@ def create_unit_config(
     }
 
     initial_state = config.get("initial_state", {}).copy()
-    if agent_type == "farmer":
+    if agent_type in ("farmer", "worker"):
         initial_state.setdefault("age", rng.randint(15, 40))
         initial_state.setdefault("gender", rng.choice(["M", "F"]))
         # individual variation: fertility multiplier + drawn lifespan

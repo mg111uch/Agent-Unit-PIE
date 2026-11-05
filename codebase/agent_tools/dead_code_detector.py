@@ -53,9 +53,11 @@ import argparse
 import ast
 import json
 import os
+from pathlib import Path
 from collections import Counter, defaultdict
 
-DEFAULT_ROOT = "/home/manigupt/Hello/Agentic_Unit_PIE/codebase"
+DEFAULT_ROOT = os.environ.get("PIE_CODEBASE_ROOT",
+                               str(Path(__file__).resolve().parents[1]))
 DEFAULT_IGNORE_DIRS = {".git", "__pycache__", "node_modules", "dist", "build", ".venv", "env"}
 DEFAULT_IGNORE_FILES = set()
 

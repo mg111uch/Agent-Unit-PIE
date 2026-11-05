@@ -16,9 +16,9 @@ Usage
     model.run(years=100)  # Run full simulation
 """
 
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, Optional
+import math
 import numpy as np
-import pandas as pd
 
 from modules.simulators.popula_dyn.behavior_registry import BehaviorRegistry
 from modules.simulators.popula_dyn.core.spatial_engine import SpatialEngine
@@ -30,6 +30,12 @@ from modules.simulators.popula_dyn.core.agent_factory import (
     create_unit_config,
 )
 from modules.simulators.popula_dyn.constants import PARAMS
+from modules.simulators.popula_dyn.core import domain as domain_pack
+from modules.simulators.popula_dyn.core import urban
+from modules.simulators.popula_dyn.core.simulation_datacollector import (
+    DataCollector,
+    build_reporters,
+)
 
 class SimulationModel:
     """
@@ -39,13 +45,27 @@ class SimulationModel:
         self,
         params: Dict[str, Any] = PARAMS,
     ):
-        self.params = params
-        seed = params.get("seed", None)
+        self.params = domain_pack.apply(dict(params or {}))
+        self.domain = self.params["domain"]
+        seed = self.params.get("seed", None)
         self.random = np.random.RandomState(seed)
         self.units: Dict[str, UnitAgent] = {}
         self.behavior_registry = BehaviorRegistry()
-        grid_width = params.get("grid_width", PARAMS["grid_width"])
-        grid_height = params.get("grid_height", PARAMS["grid_height"])
+        # SIM-01: keep land per agent constant when the population is scaled up,
+        # otherwise 10k agents compete for a 2k-agent food stock and the
+        # baseline collapses (a degenerate regime, not a scale result).
+        if self.params.get("auto_scale_grid"):
+            per_agent = float(self.params.get("land_per_agent", 1.25))
+            target = max(1, int(round(
+                float(self.params.get("initial_pop", PARAMS["initial_pop"])) * per_agent)))
+            side = max(3, int(math.ceil(math.sqrt(target))))
+            self.params = {**self.params, "grid_width": side, "grid_height": side}
+            self.land_per_agent = round(side * side / max(1, self.params.get(
+                "initial_pop", PARAMS["initial_pop"])), 3)
+        else:
+            self.land_per_agent = None
+        grid_width = self.params.get("grid_width", PARAMS["grid_width"])
+        grid_height = self.params.get("grid_height", PARAMS["grid_height"])
         self.spatial_engine = SpatialEngine(
             width=grid_width,
             height=grid_height,
@@ -54,7 +74,8 @@ class SimulationModel:
         self.step_count = 0
         self._spawn_counter = 0
         self._id_counter = 0  # deterministic init ids u00001… (uuid fallback untouched)
-        self.epoch = params.get("epoch", "Agricultural")  # Phase 3: macro regime var
+        self.epoch = self.params.get(
+            "epoch", "Urban" if self.domain == "urban" else "Agricultural")
         self.births = 0
         self.deaths = 0
         self.births_total = 0
@@ -74,59 +95,24 @@ class SimulationModel:
         self.prospect_moves_total = 0
         self.capacity_capped = 0
         self.capacity_capped_total = 0
+        self.urban_output = 0.0
+        self.urban_output_total = 0.0
+        self.wage_bill = 0.0
+        self.wage_bill_total = 0.0
+        self.urban_wages = 0
+        self.urban_hires = 0
+        self.urban_firms = 0
+        self.urban_parcels = 0
         self.scarcity_index = 0.0
         self._init_units()
-        self.datacollector = DataCollector(
-            model_reporters={
-                "Population": lambda m: m.get_population_count(),
-                "Total_Wealth": lambda m: m.get_total_wealth(),
-                "Avg_Skill": lambda m: m.get_average_skill(),
-                "Births": "births",
-                "Deaths": "deaths",
-                "Deaths_Starvation": lambda m: m.death_causes["starvation"],
-                "Deaths_OldAge": lambda m: m.death_causes["old_age"],
-                "Deaths_Hazard": lambda m: m.death_causes["hazard"],
-                "Births_Cumul": "births_total",
-                "Deaths_Cumul": "deaths_total",
-                "Healer_Count": lambda m: m.get_unit_type_count("specialist", "heal"),
-                "Toolmaker_Count": lambda m: m.get_unit_type_count("specialist", "produce"),
-                "Trader_Count": lambda m: m.get_unit_type_count("specialist", "trade_ag"),
-                "Successful_Healings": "successful_healings",
-                "Healed_Cumul": "successful_healings_total",
-                "Tools_Produced": "tools_produced",
-                "Trades_Executed": "trades_executed",
-                "Wealth_Traded": "wealth_traded",
-                "Firms_Hired": "firms_hires",
-                "Hired_Cumul": "firms_hires_total",
-                "Capital_Stock": lambda m: sum(
-                    float(u.get_state("capital_stock", 0) or 0)
-                    for u in m.units.values()
-                    if u.unit_type == "firm" and u.alive),
-                "Prospect_Moves": "prospect_moves",
-                "Prospected_Cumul": "prospect_moves_total",
-                "Capacity_Capped": "capacity_capped",
-                "Capped_Cumul": "capacity_capped_total",
-                "Scarcity": "scarcity_index",
-                "Avg_Adaptability": lambda m: float(sum(
-                    float(u.get_state("adaptability", 1.0) or 1.0)
-                    for u in m.units.values()
-                    if u.unit_type == "human" and u.alive)
-                    / max(1, m.get_population_count())),
-                # SocietyState per-step series (policy curves, not just endpoints)
-                "Gini": lambda m: m.society_snapshot()["gini"],
-                "Food_Security": lambda m: m.society_snapshot()["food_security"],
-                "Skilled_Share": lambda m: m.society_snapshot()["skilled_share"],
-                "Health_Index": lambda m: m.society_snapshot()["health_index"],
-                "Wealth_PerCapita": lambda m: (m.society_snapshot()["wealth_total"]
-                                               / max(1, m.society_snapshot()["population"])),
-                "Sex_M": lambda m: m.get_sex_count("M"),
-                "Sex_F": lambda m: m.get_sex_count("F"),
-            }
-        )
+        self.datacollector = DataCollector(build_reporters())
         self._soc_cache: Dict[str, Any] = {}
         self._soc_step = -1
     def _init_units(self) -> None:
         """Initialize all units from agent configs."""
+        if self.domain == "urban":
+            urban.init_urban(self)
+            return
         params = self.params
         grid_width = params.get("grid_width", PARAMS["grid_width"])
         grid_height = params.get("grid_height", PARAMS["grid_height"])
@@ -137,9 +123,6 @@ class SimulationModel:
         if years >= max_age - fertile_min:
             import logging
             logging.getLogger("popula_dyn").warning(f"years {years} >= max_age-fertile_min {max_age-fertile_min}: initial cohort will exit fertile window; expect last-year births dip without overlapping generations")
-        land_patches = params.get("grid_width", PARAMS["grid_width"]) * params.get(
-            "grid_height", PARAMS["grid_height"]
-        )
         for x in range(grid_width):
             for y in range(grid_height):
                 fertility = rng.uniform(1, 10)
@@ -264,6 +247,8 @@ class SimulationModel:
         self.firms_invested = 0
         self.prospect_moves = 0
         self.capacity_capped = 0
+        urban.reset_step(self)
+        urban.begin_step(self)
         world_state = {
             "params": self.params,
             "grid": self.spatial_engine,
@@ -298,6 +283,7 @@ class SimulationModel:
             del self.units[unit.unit_id]
             self.deaths += 1
             self.deaths_total += 1
+        urban.finish_step(self)
         self.step_count += 1
         self.datacollector.collect(self)
 
@@ -382,6 +368,8 @@ class SimulationModel:
             elif event_type == "capacity_capped":
                 self.capacity_capped += 1
                 self.capacity_capped_total += 1
+            else:
+                urban.note_event(self, event)
     def run(self, years: Optional[int] = None) -> None:
         """Run simulation for specified years."""
         years = years or self.params.get("years", PARAMS["years"])
@@ -443,13 +431,13 @@ class SimulationModel:
             self._soc_step = self.step_count
         return self._soc_cache
 
-    def get_dataframe(self) -> pd.DataFrame:
+    def get_dataframe(self):
         """Get collected data as dataframe."""
         return self.datacollector.get_model_vars_dataframe()
 
     def summary(self) -> Dict[str, Any]:
         """Get simulation summary."""
-        return {
+        return domain_pack.augment_summary(self, {
             "step_count": self.step_count,
             "epoch": getattr(self, "epoch", "Agricultural"),
             "total_units": len(self.units),
@@ -461,24 +449,4 @@ class SimulationModel:
             "births_total": self.births_total,
             "deaths_total": self.deaths_total,
             "spatial": self.spatial_engine.summary(),
-        }
-
-class DataCollector:
-    """Data collector for simulation metrics."""
-    def __init__(self, model_reporters: Dict[str, Any]):
-        self.model_reporters = model_reporters
-        self.data: Dict[str, List[Any]] = {
-            name: [] for name in model_reporters
-        }
-
-    def collect(self, model: SimulationModel) -> None:
-        """Collect data from model."""
-        for name, func in self.model_reporters.items():
-            if callable(func):
-                self.data[name].append(func(model))
-            else:
-                self.data[name].append(getattr(model, func, None))
-
-    def get_model_vars_dataframe(self) -> pd.DataFrame:
-        """Return collected data as dataframe."""
-        return pd.DataFrame(self.data)
+        })

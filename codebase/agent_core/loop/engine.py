@@ -427,6 +427,33 @@ def _iter_agent_events_body(
             step_usage = result.get("usage", {})
             state.note_usage(step_usage)
 
+            # OPS-07: log spend per task and stop a runaway loop at the cap.
+            # Zero caps (the default) mean "unlimited", so behaviour is
+            # unchanged unless an operator sets LLM_TASK_BUDGET_*.
+            try:
+                from agent_core import llm_cost
+                budget = getattr(state, "llm_budget", None)
+                if budget is None:
+                    budget = llm_cost.Budget.from_env()
+                    state.llm_budget = budget
+                spend = llm_cost.record_call(
+                    conv_id or session_id or "adhoc", step_usage,
+                    provider or "", model or "", budget)
+                verdict = spend.get("budget") or {}
+                if verdict.get("ok") is False:
+                    yield {
+                        "type": "error",
+                        "message": ("LLM task budget exceeded: "
+                                    f"{verdict.get('tokens')} tokens / "
+                                    f"₹{verdict.get('inr')} "
+                                    f"(caps {verdict.get('max_tokens')} / "
+                                    f"₹{verdict.get('max_inr')})"),
+                        "conversation_id": conv_id,
+                    }
+                    return
+            except Exception:
+                pass  # accounting must never break the conversation
+
             _debug_dump("LLM USAGE",
                 step=step,
                 total_tokens=result.get("usage", {}).get("total_tokens"),

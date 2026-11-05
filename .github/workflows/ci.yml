@@ -1,0 +1,55 @@
+name: ci
+
+# OPS-02: every push runs the fast tier, the secret scan and the kernel smoke.
+# Slow/full suites are deliberately not here — they run pre-release.
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+jobs:
+  fast:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install (core only)
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt || true
+
+      - name: Secret scan (OPS-03)
+        run: python scripts/secret_scan.py
+
+      - name: Path check (OPS-06)
+        run: |
+          if grep -rn "/home/manigupt" --include=*.py codebase | grep -v agent_tools; then
+            echo "::error::personal absolute path in runtime code"; exit 1
+          fi
+
+      - name: Fast tier (unittest, no slow markers)
+        run: |
+          python -m unittest \
+            tests.test_inbox tests.test_loop_proof tests.test_agent_governance \
+            tests.test_funnel_gem tests.test_qc_assembly tests.test_approvals \
+            tests.test_capacity tests.test_ops
+
+      - name: Kernel smoke
+        run: python scripts/smoke_kernel.py || python scripts/smoke_kernel.py
+        env:
+          PIE_DATA_ROOT: ${{ github.workspace }}/data
+
+  fireflow:
+    runs-on: ubuntu-latest
+    if: ${{ vars.FIREFLOW_CI == 'true' }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: ${{ vars.FIREFLOW_REPO }}
+          path: fireflow
+      - uses: oven-sh/setup-bun@v2
+      - name: FireFlow tests
+        working-directory: fireflow/backend
+        run: bun test

@@ -1,10 +1,10 @@
 """Twin CityState -> popula_dyn params (Phase 5 calibration).
 
-Mapped (well-understood only): population -> initial_pop (1 agent : 20k
-people, capped for smoke); literacy -> specialist seed share (documented
-proxy for skill share). Placeholder fields (conf<=0.35) enter as
-wide-prior RANGES, never point values; water/energy/air stay unmapped
-(no honest param exists). Reuses popula_dyn constants; no fork.
+Two domain paths behind one entry point: `agrarian` (default, unchanged) and
+`urban` (SIM-03 Phase C, delegates to popula_dyn.core.calibration so there is
+one mapper). Agrarian: population -> initial_pop, literacy -> specialists.
+Urban: real rows -> ratios (firms per 1000, budget per capita index, road km
+per 1000); missing rows stay null; water/energy/air stay unmapped.
 """
 from __future__ import annotations
 
@@ -19,7 +19,11 @@ def calibrate(
     fields: Dict[str, Dict[str, Any]],
     seed: int = 7,
     years: int = 14,
+    domain: str = "agrarian",
+    agents: int = 400,
 ) -> Dict[str, Any]:
+    if str(domain).lower() in ("urban", "city", "industrial"):
+        return _calibrate_urban(fields, seed=seed, years=years, agents=agents)
     pop = float(fields["population"]["value"])
     lit = float(fields["literacy_rate"]["value"])
     init_pop = min(POP_CAP, max(POP_MIN, round(pop / POP_SCALE)))
@@ -49,6 +53,29 @@ def calibrate(
             "unmapped": unmapped, "provenance": {
                 f: {"source": v.get("source"), "confidence": v.get("confidence")}
                 for f, v in fields.items()}}
+
+
+def _calibrate_urban(
+    fields: Dict[str, Dict[str, Any]], seed: int = 7, years: int = 14,
+    agents: int = 400,
+) -> Dict[str, Any]:
+    """Urban pack: ratios from real rows; delegates, never a second mapper."""
+    from modules.simulators.popula_dyn.core import calibration as urban
+
+    out = urban.from_fields(fields, agents=agents)
+    params = dict(out["params"])
+    params.update({"seed": seed, "years": years})
+    return {
+        "domain": "urban",
+        "params": params,
+        "mapping": {k: v["formula"] for k, v in out["provenance"].items()
+                    if v.get("status") == "observed"},
+        "priors": {},
+        "unmapped": out["unmapped"],
+        "missing": out["missing"],
+        "weight_per_agent": out["weight_per_agent"],
+        "provenance": out["provenance"],
+    }
 
 
 def baseline_error(

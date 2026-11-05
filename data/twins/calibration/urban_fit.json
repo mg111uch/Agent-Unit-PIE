@@ -1,0 +1,594 @@
+{
+ "reports": {
+  "delhi": {
+   "domain": "urban",
+   "agents": 2000,
+   "years": 2,
+   "seed": 1,
+   "weight_per_agent": 8395.0,
+   "parameters": {
+    "domain": "urban",
+    "firms_per_1000": 7.199,
+    "initial_pop": 2000,
+    "municipal_grant": 7.2,
+    "road_capacity": 0.886
+   },
+   "provenance": {
+    "firms_per_1000": {
+     "value": 7.199,
+     "source": "msme_udyog_aadhaar_delhi",
+     "formula": "industrial_units / population * 1000",
+     "status": "observed"
+    },
+    "municipal_grant": {
+     "value": 1.44,
+     "source": "business_standard_mcd_budget_2024_25",
+     "formula": "budget_per_capita / reference (model index, not rupees)",
+     "status": "observed"
+    },
+    "road_capacity": {
+     "value": 1.107,
+     "source": "delhi_economic_survey_2023_24",
+     "formula": "road_km_per_1000 / reference",
+     "status": "observed"
+    },
+    "weight_per_agent": {
+     "value": 8395.0,
+     "source": "census_2011",
+     "formula": "population / agents",
+     "status": "observed"
+    }
+   },
+   "anchors": [
+    {
+     "anchor": "firms_per_1000",
+     "target": 7.199,
+     "simulated": 6.927,
+     "relative_error": 0.0378,
+     "status": "on_target"
+    },
+    {
+     "anchor": "municipal_grant",
+     "target": 1.44,
+     "simulated": 1.44,
+     "relative_error": 0.0,
+     "status": "by_construction"
+    },
+    {
+     "anchor": "road_capacity",
+     "target": 1.107,
+     "simulated": 1.123,
+     "relative_error": 0.0145,
+     "status": "on_target"
+    }
+   ],
+   "fiscal_diagnostic": {
+    "revenue_per_1000_per_year_index": 3.257,
+    "budget_index": 1.44,
+    "ratio": 2.262,
+    "status": "model_gap",
+    "note": "model revenue includes firm taxes, so it exceeds the grant-only budget index; a gap is a pack limitation, not a calibrated result"
+   },
+   "raw_simulated": {
+    "population": 2021.0,
+    "firms_per_1000": 6.927,
+    "municipal_grant_index": 6.514,
+    "road_capacity_index": 1.123,
+    "traffic_congestion": 0.113
+   },
+   "missing": [],
+   "unmapped": [
+    "employment_rate",
+    "industrial_capacity",
+    "water_supply_mld",
+    "energy_reliability",
+    "power_supply_hours",
+    "air_quality_pm25"
+   ],
+   "real_series_used": [
+    "population",
+    "industrial_units",
+    "municipal_budget_cr",
+    "road_km"
+   ],
+   "city": "delhi"
+  },
+  "kanpur": {
+   "domain": "urban",
+   "agents": 2000,
+   "years": 2,
+   "seed": 1,
+   "weight_per_agent": 1385.0,
+   "parameters": {
+    "domain": "urban",
+    "firms_per_1000": 10.033,
+    "initial_pop": 2000,
+    "municipal_grant": 4.99,
+    "road_capacity": 0.8
+   },
+   "provenance": {
+    "firms_per_1000": {
+     "value": 10.033,
+     "source": "msme_udyog_aadhaar_kanpur_nagar",
+     "formula": "industrial_units / population * 1000",
+     "status": "observed"
+    },
+    "municipal_grant": {
+     "value": 0.998,
+     "source": "timesofindia_kmc_budget_2023_24",
+     "formula": "budget_per_capita / reference (model index, not rupees)",
+     "status": "observed"
+    },
+    "road_capacity": {
+     "value": null,
+     "source": "missing",
+     "formula": "road_km_per_1000 / reference",
+     "status": "missing"
+    },
+    "weight_per_agent": {
+     "value": 1385.0,
+     "source": "census_2011",
+     "formula": "population / agents",
+     "status": "observed"
+    }
+   },
+   "anchors": [
+    {
+     "anchor": "firms_per_1000",
+     "target": 10.033,
+     "simulated": 9.93,
+     "relative_error": 0.0103,
+     "status": "on_target"
+    },
+    {
+     "anchor": "municipal_grant",
+     "target": 0.998,
+     "simulated": 0.998,
+     "relative_error": 0.0,
+     "status": "by_construction"
+    },
+    {
+     "anchor": "road_capacity",
+     "target": null,
+     "simulated": null,
+     "relative_error": null,
+     "status": "missing"
+    }
+   ],
+   "fiscal_diagnostic": {
+    "revenue_per_1000_per_year_index": 4.571,
+    "budget_index": 0.998,
+    "ratio": 4.58,
+    "status": "model_gap",
+    "note": "model revenue includes firm taxes, so it exceeds the grant-only budget index; a gap is a pack limitation, not a calibrated result"
+   },
+   "raw_simulated": {
+    "population": 2014.0,
+    "firms_per_1000": 9.93,
+    "municipal_grant_index": 9.142,
+    "road_capacity_index": 1.016,
+    "traffic_congestion": 0.2308
+   },
+   "missing": [
+    "road_km"
+   ],
+   "unmapped": [
+    "employment_rate",
+    "industrial_capacity",
+    "water_supply_mld",
+    "energy_reliability",
+    "power_supply_hours",
+    "air_quality_pm25"
+   ],
+   "real_series_used": [
+    "population",
+    "industrial_units",
+    "municipal_budget_cr"
+   ],
+   "city": "kanpur"
+  }
+ },
+ "stability": {
+  "delhi": {
+   "metric": "welfare",
+   "years": 2,
+   "scales": [
+    400,
+    2000,
+    10000
+   ],
+   "seeds": [
+    1,
+    2,
+    3
+   ],
+   "runs": {
+    "power_reliability_capex": {
+     "direction": "mixed/zero",
+     "passed": false,
+     "scale_passed": false,
+     "seeds": [
+      1,
+      2,
+      3
+     ],
+     "per_seed_signs": {
+      "1": [
+       1,
+       1,
+       -1
+      ],
+      "2": [
+       1,
+       1,
+       -1
+      ],
+      "3": [
+       1,
+       1,
+       -1
+      ]
+     },
+     "n": 37200,
+     "baseline_by_scale": [
+      0.4645,
+      0.43408,
+      0.395144
+     ],
+     "magnitude_range": [
+      -0.011591,
+      0.088065
+     ],
+     "level_drift": {
+      "baselines": [
+       0.4644996666666667,
+       0.43407966666666664,
+       0.395144
+      ],
+      "ratio": 0.851,
+      "warning": null
+     },
+     "by_scale": [
+      {
+       "agents": 400,
+       "mean_relative": 0.088065,
+       "sign": 1
+      },
+      {
+       "agents": 2000,
+       "mean_relative": 0.044873,
+       "sign": 1
+      },
+      {
+       "agents": 10000,
+       "mean_relative": -0.011591,
+       "sign": -1
+      }
+     ],
+     "falsification": {
+      "attempted": false,
+      "passed": false,
+      "reason": "direction not stable at scale"
+     },
+     "claim_strength": "HYPOTHESIS",
+     "seed_ok": true
+    },
+    "transport_subsidy": {
+     "direction": "mixed/zero",
+     "passed": false,
+     "scale_passed": true,
+     "seeds": [
+      1,
+      2,
+      3
+     ],
+     "per_seed_signs": {
+      "1": [
+       -1,
+       -1,
+       1
+      ],
+      "2": [
+       1,
+       1,
+       -1
+      ],
+      "3": [
+       1,
+       1,
+       -1
+      ]
+     },
+     "n": 37200,
+     "baseline_by_scale": [
+      0.4645,
+      0.43408,
+      0.395144
+     ],
+     "magnitude_range": [
+      0.005976,
+      0.014512
+     ],
+     "level_drift": {
+      "baselines": [
+       0.4644996666666667,
+       0.43407966666666664,
+       0.395144
+      ],
+      "ratio": 0.851,
+      "warning": null
+     },
+     "by_scale": [
+      {
+       "agents": 400,
+       "mean_relative": 0.010039,
+       "sign": 1
+      },
+      {
+       "agents": 2000,
+       "mean_relative": 0.005976,
+       "sign": 1
+      },
+      {
+       "agents": 10000,
+       "mean_relative": 0.014512,
+       "sign": 1
+      }
+     ],
+     "falsification": {
+      "attempted": false,
+      "passed": false,
+      "reason": "direction not stable at scale"
+     },
+     "claim_strength": "HYPOTHESIS",
+     "seed_ok": false
+    }
+   },
+   "claim": "HYPOTHESIS: direction does not survive all scales",
+   "city": "delhi"
+  },
+  "kanpur": {
+   "metric": "welfare",
+   "years": 2,
+   "scales": [
+    400,
+    2000,
+    10000
+   ],
+   "seeds": [
+    1,
+    2,
+    3
+   ],
+   "runs": {
+    "power_reliability_capex": {
+     "direction": "+",
+     "passed": true,
+     "scale_passed": true,
+     "seeds": [
+      1,
+      2,
+      3
+     ],
+     "per_seed_signs": {
+      "1": [
+       1,
+       1,
+       1
+      ],
+      "2": [
+       1,
+       1,
+       1
+      ],
+      "3": [
+       -1,
+       1,
+       1
+      ]
+     },
+     "n": 37200,
+     "baseline_by_scale": [
+      0.567984,
+      0.620034,
+      0.435313
+     ],
+     "magnitude_range": [
+      0.051763,
+      0.259562
+     ],
+     "level_drift": {
+      "baselines": [
+       0.567984,
+       0.6200336666666667,
+       0.435313
+      ],
+      "ratio": 0.766,
+      "warning": null
+     },
+     "by_scale": [
+      {
+       "agents": 400,
+       "mean_relative": 0.051763,
+       "sign": 1
+      },
+      {
+       "agents": 2000,
+       "mean_relative": 0.12318,
+       "sign": 1
+      },
+      {
+       "agents": 10000,
+       "mean_relative": 0.259562,
+       "sign": 1
+      }
+     ],
+     "falsification": {
+      "attempted": true,
+      "passed": true,
+      "reason": "",
+      "tests": {
+       "reference": {
+        "delta": 0.0886,
+        "relative": 0.144186,
+        "sign": 1
+       },
+       "seed_shift": {
+        "delta": 0.0394,
+        "relative": 0.061791,
+        "sign": 1
+       },
+       "magnitude_shift": {
+        "0.1": {
+         "delta": 0.0925,
+         "relative": 0.150501,
+         "sign": 1
+        },
+        "0.6": {
+         "delta": 0.0886,
+         "relative": 0.144186,
+         "sign": 1
+        }
+       },
+       "half_horizon": {
+        "delta": 0.0242,
+        "relative": 0.058538,
+        "sign": 1
+       },
+       "placebo": {
+        "delta": 0.0,
+        "relative": 0.0,
+        "sign": 0
+       }
+      }
+     },
+     "claim_strength": "FALSIFICATION_PASSED",
+     "seed_ok": true,
+     "claim_check": {
+      "requested": "FALSIFICATION_PASSED",
+      "effective": "FALSIFICATION_PASSED",
+      "ok": true,
+      "violations": [],
+      "levels": [
+       "HYPOTHESIS",
+       "REPLICATED",
+       "FALSIFICATION_PASSED",
+       "VALIDATED_OOS"
+      ],
+      "seeds": 3,
+      "n": 37200,
+      "min_n": 20,
+      "min_seeds": 2
+     }
+    },
+    "transport_subsidy": {
+     "direction": "+",
+     "passed": true,
+     "scale_passed": true,
+     "seeds": [
+      1,
+      2,
+      3
+     ],
+     "per_seed_signs": {
+      "1": [
+       -1,
+       1,
+       1
+      ],
+      "2": [
+       1,
+       1,
+       1
+      ],
+      "3": [
+       1,
+       1,
+       1
+      ]
+     },
+     "n": 37200,
+     "baseline_by_scale": [
+      0.567984,
+      0.620034,
+      0.435313
+     ],
+     "magnitude_range": [
+      0.03582,
+      0.355376
+     ],
+     "level_drift": {
+      "baselines": [
+       0.567984,
+       0.6200336666666667,
+       0.435313
+      ],
+      "ratio": 0.766,
+      "warning": null
+     },
+     "by_scale": [
+      {
+       "agents": 400,
+       "mean_relative": 0.03582,
+       "sign": 1
+      },
+      {
+       "agents": 2000,
+       "mean_relative": 0.043661,
+       "sign": 1
+      },
+      {
+       "agents": 10000,
+       "mean_relative": 0.355376,
+       "sign": 1
+      }
+     ],
+     "falsification": {
+      "attempted": true,
+      "passed": false,
+      "reason": "attacks failed: seed=False magnitude=True half=True placebo=True",
+      "tests": {
+       "reference": {
+        "delta": 0.0414,
+        "relative": 0.067426,
+        "sign": 1
+       },
+       "seed_shift": {
+        "delta": -0.0048,
+        "relative": -0.007464,
+        "sign": -1
+       },
+       "magnitude_shift": {
+        "0.1": {
+         "delta": 0.0024,
+         "relative": 0.003861,
+         "sign": 1
+        },
+        "0.6": {
+         "delta": 0.0587,
+         "relative": 0.09557,
+         "sign": 1
+        }
+       },
+       "half_horizon": {
+        "delta": 0.0275,
+        "relative": 0.066438,
+        "sign": 1
+       },
+       "placebo": {
+        "delta": 0.0,
+        "relative": 0.0,
+        "sign": 0
+       }
+      }
+     },
+     "claim_strength": "HYPOTHESIS",
+     "seed_ok": true
+    }
+   },
+   "claim": "HYPOTHESIS: direction does not survive all scales",
+   "city": "kanpur"
+  }
+ },
+ "generated_by": "scripts/calibrate_urban.py"
+}

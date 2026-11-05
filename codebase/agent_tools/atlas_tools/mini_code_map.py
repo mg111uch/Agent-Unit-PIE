@@ -5,8 +5,12 @@ import yaml
 from pathlib import Path
 
 # --- CONFIGURATION ---
-PROJECT_DIR = "/home/manigupt/Hello/Agentic_Unit_PIE/codebase/kernel"  # Point this to your legacy folder
-OUTPUT_FILE = "/home/manigupt/Hello/Agentic_Unit_PIE/atlas_output/mini_atlas.md"
+import sys
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+from paths import CODEBASE_ROOT, ATLAS_DIR
+
+PROJECT_DIR = os.environ.get("PIE_ATLAS_PROJECT", str(CODEBASE_ROOT / "kernel"))
+OUTPUT_FILE = os.environ.get("PIE_ATLAS_OUTPUT", str(ATLAS_DIR / "mini_atlas.md"))
 IGNORE_DIRS = {'.git', '__pycache__', 'venv', '.ipynb_checkpoints'}
 # ---------------------
 

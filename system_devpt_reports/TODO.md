@@ -32,7 +32,7 @@ Also give suggestions for this workflow optimization, patterns which could be av
 # Agent Sessions
 grok --resume 01a06170-e581-7360-b166-0688bfda701e
 hermes --resume 20260913_124456_cc385a
-opencode -s ses_e88dde6e4ffed2XDaXvqU2GkK0
+opencode -s ses_e6e834181ffeK3K5RUa5KNGFNG
 
 # Questions
 

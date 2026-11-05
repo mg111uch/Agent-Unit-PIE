@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import sqlite3
 import time
 from pathlib import Path
@@ -12,6 +13,18 @@ from kernel.utils.logger import get_child_logger
 logger = get_child_logger("kernel_db")
 
 DB_PATH = DATA_ROOT / "kernel.db"
+
+# KRN-04: server, CLI and loops share one SQLite file. A writer waits instead
+# of failing, and every lock complaint is counted so `doctor` can show it.
+BUSY_TIMEOUT_MS = int(os.environ.get("PIE_DB_BUSY_TIMEOUT_MS", "5000"))
+LOCK_STATS = {"retries": 0, "last_error": "", "last_at": 0.0}
+
+
+def _note_lock(exc: BaseException) -> None:
+    if "locked" in str(exc).lower() or "busy" in str(exc).lower():
+        LOCK_STATS["retries"] += 1
+        LOCK_STATS["last_error"] = str(exc)
+        LOCK_STATS["last_at"] = time.time()
 
 SCHEMA_SQL = """
 CREATE TABLE IF NOT EXISTS logs (
@@ -200,6 +213,7 @@ class KernelDB:
             self._conn = sqlite3.connect(str(self.db_path))
             self._conn.row_factory = sqlite3.Row
             self._conn.execute("PRAGMA journal_mode=WAL")
+            self._conn.execute(f"PRAGMA busy_timeout={BUSY_TIMEOUT_MS}")
             self._conn.execute("PRAGMA foreign_keys=ON")
         return self._conn
 
@@ -216,6 +230,7 @@ class KernelDB:
             self._ro_conn.row_factory = sqlite3.Row
             try:
                 self._ro_conn.execute("PRAGMA query_only=ON")
+                self._ro_conn.execute(f"PRAGMA busy_timeout={BUSY_TIMEOUT_MS}")
             except Exception:
                 pass
         return self._ro_conn
@@ -241,6 +256,7 @@ class KernelDB:
             "ALTER TABLE simulation_versions ADD COLUMN git_message TEXT DEFAULT ''",
             "ALTER TABLE simulation_versions ADD COLUMN simulator TEXT DEFAULT 'popula_dyn'",
             "ALTER TABLE simulation_runs ADD COLUMN simulator TEXT DEFAULT 'popula_dyn'",
+            "ALTER TABLE simulation_runs ADD COLUMN run_key TEXT DEFAULT ''",
         ]:
             try:
                 self.conn.execute(col_sql)
@@ -852,12 +868,18 @@ class KernelDB:
         d["affected_concepts"] = json.loads(d.pop("affected_concepts_json", "[]"))
         return d
 
-    def save_simulation_run(self, run_id: str, version_id: str, parameters: Dict[str, Any], baseline_run_id: Optional[str], result: Dict[str, Any], horizon: int = 0, status: str = "completed", created_at: Optional[float] = None, simulator: str = "popula_dyn"):
+    def save_simulation_run(self, run_id: str, version_id: str, parameters: Dict[str, Any], baseline_run_id: Optional[str], result: Dict[str, Any], horizon: int = 0, status: str = "completed", created_at: Optional[float] = None, simulator: str = "popula_dyn", run_key: Optional[str] = None):
+        if run_key is None:
+            try:
+                from kernel.simulation_version import run_key as _rk
+                run_key = _rk(simulator, version_id, parameters)
+            except Exception:
+                run_key = ""
         self.conn.execute(
             """INSERT OR REPLACE INTO simulation_runs
-               (run_id, simulator, version_id, parameters_json, baseline_run_id, result_json, horizon, status, created_at)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-            (run_id, simulator, version_id, json.dumps(parameters or {}), baseline_run_id, json.dumps(result or {}), horizon, status, created_at or time.time()),
+               (run_id, simulator, version_id, run_key, parameters_json, baseline_run_id, result_json, horizon, status, created_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (run_id, simulator, version_id, run_key, json.dumps(parameters or {}), baseline_run_id, json.dumps(result or {}), horizon, status, created_at or time.time()),
         )
         self.conn.commit()
 

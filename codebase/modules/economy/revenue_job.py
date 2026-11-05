@@ -14,7 +14,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from modules.economy.discovery import collect, rank
 from modules.economy.service_templates import get_template, instantiate
 from modules.economy.outreach import draft_message
-from modules.economy import ledger
+from modules.economy import ledger, agent_identity
 
 TEMPLATE_FOR = {"supplier discovery": "supplier_discovery_100",
                 "product catalogue": "price_collection_50",
@@ -45,8 +45,13 @@ SEEDS = [
 ]
 
 
-def main(persist: bool = True) -> dict:
+def main(persist: bool = True, gem_path: str | None = None) -> dict:
     bundle = collect("manual", SEEDS)
+    if gem_path:
+        # REV-02: a human-downloaded GeM export is a real source, not a stub.
+        from modules.economy.sources import gem_csv
+        gem = collect("gem", gem_csv.parse(gem_path)["items"])
+        bundle["items"] = list(bundle["items"]) + list(gem["items"])
     ranked = rank(bundle["items"], limit=20)
     offers = []
     for r in ranked:
@@ -67,6 +72,7 @@ def main(persist: bool = True) -> dict:
                 "recommended_pilot", "contactability", "confidence")}, )
             persisted += 1
     report = {"prospects": len(ranked), "persisted": persisted,
+              "gem_import": bool(gem_path),
               "top20": [{"company": r["company"], "problem": r["problem"],
                          "pain": r["pain_score"], "decision": r["decision"]} for r in ranked],
               "top5_offers": offers,
@@ -76,4 +82,7 @@ def main(persist: bool = True) -> dict:
 
 
 if __name__ == "__main__":
-    main(persist="--no-persist" not in sys.argv)
+    gem = None
+    if "--gem" in sys.argv:
+        gem = sys.argv[sys.argv.index("--gem") + 1]
+    main(persist="--no-persist" not in sys.argv, gem_path=gem)

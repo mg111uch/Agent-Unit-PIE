@@ -12,7 +12,7 @@
 | B. Money, ledger, compliance | FIN-01 … FIN-08 |
 | C. Revenue & go-to-market | REV-01 … REV-10 |
 | D. Sensor / data trust | SEN-01 … SEN-04 |
-| E. Kernel & cognition | KRN-01 … KRN-07 |
+| E. Kernel & cognition | KRN-01 … KRN-08 |
 | F. Simulation validity | SIM-01 … SIM-07 |
 | G. Digital twins | TWN-01 … TWN-05 |
 | H. Debate engine | DBT-01 … DBT-08 |
@@ -113,22 +113,22 @@
 
 ## C. Revenue & go-to-market
 
-**REV-01 · S1 · P0 — No documented paid customer.**
+**REV-01 · S1 · P0 — No documented paid customer.** *(Instrumented 2026-11-02: funnel exposes every stage with its source. Closes on the first paid pilot.)*
 *Evidence:* funnel, pain score, templates, outreach, delivery bridge are all built; no doc records a send, reply, pilot or rupee. The stated benchmark is "10 independently acquired paying customers, positive contribution margin, without manual service".
 *Fix:* run a **Revenue Sprint** with fixed targets: 20 qualified prospects/day → 5 personalized offers/day (human-approved) → 1 paid pilot; track `time_to_first_revenue` as *the* metric; no new modules until first rupee.
 *Ask:* "Give the current funnel numbers from `GET /api/metrics/funnel` (stage counts, responses by class, revenue/cost/margin)."
 
-**REV-02 · S1 · P0 — Top of funnel is 20 hand-curated seeds; live connectors deferred.**
+**REV-02 · S1 · P0 — Top of funnel is 20 hand-curated seeds; live connectors deferred.** *(GeM CSV import shipped 2026-11-02; Udyam/ONDC stay human-assisted.)*
 *Evidence:* `revenue_job.py:SEEDS`; `discovery.collect` honestly states Udyam/GeM/ONDC are deferred.
 *Fix:* cheapest real sources first — **GeM public bids as CSV import**, public company/news trigger events, industry-association directories — through the existing import endpoints. Udyam search is human-assisted (respect the portal's terms; no CAPTCHA bypass). Priority order = existing explicit demand (tenders/enquiries) → observable pain (expansion, hiring, new product) → recurring industry pain.
 *Ask:* "How many prospects have non-seed provenance? Which collectors are live?"
 
-**REV-03 · S1 · P0 — Delivery capacity for the first paid project is undefined.**
+**REV-03 · S1 · P0 — Delivery capacity for the first paid project is undefined.** *(Planned 2026-11-02: executor assignment, capacity plan and cost per verified record in `delivery.py`; real payouts still zero.)*
 *Evidence:* worker pool is empty; micro-work splitting and task marketplace exist; "agents execute" but no named executor.
 *Fix:* **agent-first delivery** — worker-agent accounts do research tasks; humans only QC at first; measure cost per verified record; recruit a tiny human pool (5–10) from your own network, not a public launch.
 *Ask:* "For `supplier_discovery_100`, which actor performs each task and what is cost per verified record so far?"
 
-**REV-04 · S2 · P1 — QC for research deliverables is not documented.**
+**REV-04 · S2 · P1 — QC for research deliverables is not documented.** *(Delivered 2026-11-02: blind duplicates, gold records, sampling, confidence, SLA/refund in `modules/economy/qc.py`.)*
 *Evidence:* tasks carry a verification rule; sensor confirmations exist; no mention of redundancy/gold tasks/sampling.
 *Fix:* QC primitives — duplicate blind assignment with consensus, golden records, spot-check sampling ratio, per-record confidence column, accuracy SLA + refund rule tied to dispute records.
 *Ask:* "How is a delivered batch checked for correctness before the customer sees it?"
@@ -143,7 +143,7 @@
 *Fix:* **[verify with counsel]** DPDP applicability to named contacts, TRAI/WhatsApp rules; email only to role/public business addresses; warmed dedicated domain with SPF/DKIM/DMARC; physical postal identity + STOP footer; bounce/complaint handling; no purchased lists.
 *Ask:* "Is `send` an actual SMTP/API transport or a state change? Which provider, domain and caps?"
 
-**REV-07 · S2 · P1 — Customer last mile: acceptance and deliverable.**
+**REV-07 · S2 · P1 — Customer last mile: acceptance and deliverable.** *(Closed 2026-11-03: magic-link `/portal/{token}` accepts a proposal, issues one idempotent invoice, serves the deliverable from the deliverables roots, and an operator payment confirmation writes one ledger tx.)*
 *Evidence:* "accept spins up the task + draft contract" (internal action); FeatureIdeas lists "deliverable assembly → customer approval → payment".
 *Fix:* a magic-link **customer portal** (view proposal → accept → pay/invoice → download deliverable) + `deliverable_assembly` (XLSX/CSV + methodology note + confidence columns).
 *Ask:* "How does an external customer accept a proposal and receive the dataset today?"
@@ -176,31 +176,37 @@
 
 **KRN-01 · S2 · P1 — Activation debt.** Registry at creation: 66 entries, 16/8/42 [INFERRED ACTIVE/PARTIAL/DORMANT]. *Fix:* report the DORMANT count each iteration; mark DEPRECATED any capability with no planned consumer; delete or archive it — dead code misleads agents. *Ask:* "Current registry counts by status?"
 
-**KRN-02 · S2 · P1 — Relation/hierarchy retrievers dormant** while the master principle and the city graph need them. *Fix:* activate via the city graph first (factory `requires` electricity, road `serves` cluster, worker `employed_by` firm, ward `contains` neighborhood, policy `affects` industry), then extend the cascade unit → relation.
+**KRN-02 · S2 · P1 — Relation/hierarchy retrievers dormant** *(Closed 2026-11-02: `relation_retriever.py` over typed city-graph edges + `retrieval_engine.retrieve_relations`.)* while the master principle and the city graph need them. *Fix:* activate via the city graph first (factory `requires` electricity, road `serves` cluster, worker `employed_by` firm, ward `contains` neighborhood, policy `affects` industry), then extend the cascade unit → relation.
 
 **KRN-03 · S2 · P2 — Contradiction-gate error rates are unmeasured.** Symbolic Jaccard+negation gate misses paraphrases. *Fix:* measure false-negative rate with the adversarial eval; optional embedding *candidate retrieval* in a sidecar (never the decider).
 
-**KRN-04 · S2 · P1 — `kernel.db` write concurrency.** Server, CLI scripts, hot-reload and loops share one SQLite file. *Fix:* WAL + busy timeout + one writer queue; surface "database is locked" in `doctor`.
+**KRN-04 · S2 · P1 — `kernel.db` write concurrency.** *(Closed 2026-11-02: `busy_timeout` on RO/RW connections; `doctor` prints journal mode, timeout and a write probe.)* Server, CLI scripts, hot-reload and loops share one SQLite file. *Fix:* WAL + busy timeout + one writer queue; surface "database is locked" in `doctor`.
 
-**KRN-05 · S2 · P1 — Manual stale.** `usage.md` says *Last verified 2026-08-29*, before the bus/registry/adapters (2026-09-15). *Fix:* re-run smoke (9/9), re-stamp, add bus/registry to the manual.
+**KRN-05 · S2 · P1 — Manual stale.** *(Closed 2026-11-02: `usage.md` restamped with the real 14/15 smoke result.)* `usage.md` says *Last verified 2026-08-29*, before the bus/registry/adapters (2026-09-15). *Fix:* re-run smoke (9/9), re-stamp, add bus/registry to the manual.
 
-**KRN-06 · S2 · P1 — Enforce an evidence ladder.** Rule today (docs): no finding above `HYPOTHESIS` without multi-seed + falsify. *Fix:* encode `claim_strength ∈ {HYPOTHESIS, REPLICATED, FALSIFICATION_PASSED, VALIDATED_OOS}` in the gate so it cannot be bypassed by prose. *Ask:* "Is the above-HYPOTHESIS rule enforced in code or by convention?"
+**KRN-06 · S2 · P1 — Enforce an evidence ladder.** *(Closed 2026-11-02: `hypothesis/claim_strength.py` enforced in `publish_observation`; overstated claims downgrade with reasons.)* Rule today (docs): no finding above `HYPOTHESIS` without multi-seed + falsify. *Fix:* encode `claim_strength ∈ {HYPOTHESIS, REPLICATED, FALSIFICATION_PASSED, VALIDATED_OOS}` in the gate so it cannot be bypassed by prose. *Ask:* "Is the above-HYPOTHESIS rule enforced in code or by convention?"
 
-**KRN-07 · S3 · P2 — Compression thin support.** `<2` findings → HISTORICAL, else recomputed `avg_delta`. *Fix:* configurable min support; expose `n` to the LLM with every consolidated node.
+**KRN-08 · S1 · P0 — Episodic retrieval was process-local (found and fixed 2026-11-01).**
+*Evidence:* `episodic_memory.episodes` is an in-memory dict that nothing hydrates on startup; `search_episodic_memory` iterated only that dict, while events themselves *are* persisted in `kernel.db` (`generic_memory`, `memory_type='episodic'`).
+*Risk:* a restarted PIE could not retrieve anything it learned in a previous process — the loop looked closed in-process and was open across restarts. This silently defeated G0.
+*Fix:* `retrieval_engine._persisted_episodic` reads persisted episodic objects via `memory_engine.list_objects_ro` / `load_object_ro` and scores them alongside in-memory episodes. Verified by `tests/test_loop_proof.py` and a live settlement retrieved from a fresh process.
+*Ask:* "Do any other retrievers (pattern/relation/timeline) depend on process-local state the same way?"
+
+**KRN-07 · S3 · P2 — Compression thin support.** *(Closed 2026-11-02: `min_support` config + `n`/`min_support` on consolidated nodes and in search metadata.)* `<2` findings → HISTORICAL, else recomputed `avg_delta`. *Fix:* configurable min support; expose `n` to the LLM with every consolidated node.
 
 ---
 
 ## F. Simulation validity
 
-**SIM-01 · S1 (for policy claims) · P1 — Scale validity.** Calibration caps (pop 400, skill 1.0) vs real cities with millions of people; planning chat recommended ~10,000 representative agents.
+**SIM-01 · S1 (for policy claims) · P1 — Scale validity.** *(Closed 2026-11-03: `scale_invariance` holds land per agent constant; 400/2k/10k baselines 1.774/1.773/1.776, policy effect +1.52/+1.58/+1.52%. Direction and level now survive scale-up; domain mismatch is SIM-03.)* Calibration caps (pop 400, skill 1.0) vs real cities with millions of people; planning chat recommended ~10,000 representative agents.
 *Fix:* weighted representative agents (each agent = N people, stratified by ward/age/income); **scale-invariance test** (same policy → same direction at 400 / 2k / 10k agents); until then every record stays flagged.
 *Ask:* "What is the largest population run that completes, in how long, and does the baseline error hold at that scale?"
 
-**SIM-02 · S2 · P1 — Parameter-set identity.** `sim@commit` lineage doesn't change on parameter sweeps; the popula README's own "Problem Restatement" notes two mutation axes (param sweep vs code mutation) writing to one graph.
+**SIM-02 · S2 · P1 — Parameter-set identity.** *(Closed 2026-11-02: `simulation_version.run_key = (sim@commit, param_hash, seed_set)` persisted on `simulation_runs`; contradiction gate compares only within one regime.)* `sim@commit` lineage doesn't change on parameter sweeps; the popula README's own "Problem Restatement" notes two mutation axes (param sweep vs code mutation) writing to one graph.
 *Fix:* run key = `(sim@commit, param_hash, seed_set)`; contradiction gate compares only within the same parameter regime. *Ask:* "Is param_hash part of run identity today?"
 
-**SIM-03 · S2 · P1 — Domain mismatch.** popula_dyn is an agricultural ABM (farmer/healer/toolmaker/trader/land/firm); Kanpur/Delhi policy questions concern manufacturing, transport, water, energy. Calibration explicitly leaves water/energy/air unmapped.
-*Fix:* state which policy mechanisms the sim *can* represent (5 today); extend with sector-structured firms, labor market and logistics cost before claiming manufacturing/transport insights; evaluate `eco_sim` for fit.
+**SIM-03 · S2 · P1 — Domain mismatch.** *(Phases A–D landed 2026-11-03/05: `domain: agrarian|urban` is a parameter pack on one engine/run-key. Urban pack: workers, manufacturing/service firms, zoned parcels, wage/output labour market, power/water capacity vs demand, congestion-priced transport, municipal budget, and a profit-share channel. Calibration maps real TWN-01 rows to ratios (Kanpur 3 series, Delhi 4); fit on target (firms 1.0%/3.8%, road 1.5%), missing rows null. Promotion gate: 3 seeds × 400/2k/10k + `falsify_policy` (seed shift, ±magnitude, half horizon, placebo) → power capex both cities and Delhi transport are `FALSIFICATION_PASSED` in `popu_sim` (n=37,200). Kanpur transport is `MIXED` (−8.5%…+1.6%) and stays `HYPOTHESIS`: the sign flip is hire-order randomness, not an economic channel. Phase D rejected `eco_sim`.)* popula_dyn was an agricultural ABM; Kanpur/Delhi questions concern manufacturing, transport, water, energy. Water/energy/air remain unmapped.
+*Fix:* new mechanisms must clear the same gate; Kanpur transport needs a deterministic hire order before re-testing.
 
 **SIM-04 · S2 · P2 — Capability vector not built.** Contrast lab returns a *null* Pareto verdict (expected with placeholder data — don't over-read). *Fix:* define the City Productive Capability Vector (economic_output, productivity, real_income, employment, industrial_capacity, entrepreneurship, infrastructure_utilization, human_capital, health, education, mobility, housing, water, energy, environment, inequality, fiscal_sustainability, resilience, innovation) and mark which dims are *fed* vs *placeholder*.
 
@@ -214,7 +220,7 @@
 
 ## G. Digital twins
 
-**TWN-01 · S1 · P1 — Twin data is mostly placeholder/static.** Placeholders ≤0.35; adapters take shaped static inputs, no network; 2011 census anchors only.
+**TWN-01 · S1 · P1 — Twin data is mostly placeholder/static.** *(Closed 2026-11-03: 10 `FIELDS` with observed/placeholder/missing coverage, validated ingestion with source+licence+url, and 5 cited rows; Kanpur 3/10 observed, Delhi 4/10, remaining 3 gaps named in `data/twins/series/manifest.json`.)* Placeholders ≤0.35; adapters take shaped static inputs, no network; 2011 census anchors only.
 *Fix:* pick ~10 high-value real series per city and feed them first — population by ward, employment by sector, industrial units by district, power supply hours, water (MLD), air quality, road/transport counts, municipal budget lines, master-plan land-use (Delhi DDA MPD-2047, Kanpur KMC pages, smart-city GIS layers are named in the planning chat). **[verify availability/licensing per source]**
 *Ask:* "How many CityState fields per city are placeholder vs observed/verified?"
 
@@ -266,19 +272,19 @@
 
 ## J. Security & operations
 
-**OPS-01 · S1 · P0 — No production/monitoring/backup story.** Everything is local conda + localhost + SQLite. *Fix:* runbook — process supervisor, health endpoint, alerting on failed jobs, nightly encrypted backups of `kernel.db`, `market.db`, FireFlow DB and secrets, restore drill, off-machine copy.
+**OPS-01 · S1 · P0 — No production/monitoring/backup story.** *(Partly closed 2026-11-02: systemd unit, `healthcheck.py`, `backup.py` + restore drill. Off-machine encrypted copy still unset.)* Everything is local conda + localhost + SQLite. *Fix:* runbook — process supervisor, health endpoint, alerting on failed jobs, nightly encrypted backups of `kernel.db`, `market.db`, FireFlow DB and secrets, restore drill, off-machine copy.
 
-**OPS-02 · S2 · P1 — No CI described.** Suites exist (backend jest, kernel smoke 9/9, popula smoke, eval harness, drift tests). *Fix:* run all on every commit; block merges on drift/contract failures; disable hot-reload in prod.
+**OPS-02 · S2 · P1 — No CI described.** *(Closed 2026-11-02: `.github/workflows/ci.yml` runs secret scan, path check, fast tier and kernel smoke.)* Suites exist (backend jest, kernel smoke 9/9, popula smoke, eval harness, drift tests). *Fix:* run all on every commit; block merges on drift/contract failures; disable hot-reload in prod.
 
-**OPS-03 · S2 · P1 — Secrets handling.** `.pie_operator`, `.sender_identity`, API keys, JWT secret. *Fix:* env separation dev/prod, secret scanning, rotation policy, no secrets in repo history.
+**OPS-03 · S2 · P1 — Secrets handling.** *(Closed 2026-11-02: `scripts/secret_scan.py` + `.env.example`; rotation documented there.)* `.pie_operator`, `.sender_identity`, API keys, JWT secret. *Fix:* env separation dev/prod, secret scanning, rotation policy, no secrets in repo history.
 
 **OPS-04 · S2 · P1 — Tamper-evident audit log.** Approvals, authorizations, `--force` overrides and kill-switch use must be append-only and hash-chained, with approver identity.
 
-**OPS-05 · S2 · P1 — Framework currency.** README pins Next.js 15.3.3; later security advisories exist for 15.x (including a React Server Components RCE-class issue in late 2025). **[verify]** upgrade to the latest patched release and run `npm audit`; add rate limiting/CORS/input validation review since the app began as a social product.
+**OPS-05 · S2 · P1 — Framework currency.** *(Open: no Node runtime here, so the upgrade cannot be executed or audited.)* README pins Next.js 15.3.3; later security advisories exist for 15.x (including a React Server Components RCE-class issue in late 2025). **[verify]** upgrade to the latest patched release and run `npm audit`; add rate limiting/CORS/input validation review since the app began as a social product.
 
-**OPS-06 · S3 · P2 — Absolute personal paths** in runbooks. *Fix:* `$PIE_ROOT`, `$FIREFLOW_ROOT`.
+**OPS-06 · S3 · P2 — Absolute personal paths** *(Runtime code closed 2026-11-02: `codebase/paths.py`; legacy `agent_tools` and old docs still cite paths.)* in runbooks. *Fix:* `$PIE_ROOT`, `$FIREFLOW_ROOT`.
 
-**OPS-07 · S2 · P1 — LLM spend is uncapped and unlogged.** *Fix:* per-loop token/₹ budget, log model cost per task so unit economics include AI cost; which model/provider is used is not stated in docs ❓.
+**OPS-07 · S2 · P1 — LLM spend is uncapped and unlogged.** *(Closed 2026-11-02: `agent_core/llm_cost.py` — per-task token/₹ budget + SQLite cost rows, hooked into the loop.)* *Fix:* per-loop token/₹ budget, log model cost per task so unit economics include AI cost; which model/provider is used is not stated in docs ❓.
 
 ---
 

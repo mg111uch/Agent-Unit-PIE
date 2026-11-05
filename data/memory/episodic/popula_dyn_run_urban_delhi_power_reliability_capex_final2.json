@@ -1,0 +1,49 @@
+{
+  "episode_id": "simrun_popula_dyn_run_urban_delhi_power_reliability_capex_final2",
+  "simulator": "popula_dyn",
+  "version_id": "popula_dyn@2cac23d",
+  "run_id": "run_urban_delhi_power_reliability_capex_final2",
+  "parameters": {
+    "domain": "urban",
+    "city": "delhi",
+    "mechanism": "power_reliability_capex",
+    "magnitude": 0.3,
+    "scales": [
+      400,
+      2000,
+      10000
+    ],
+    "seeds": [
+      1,
+      2,
+      3
+    ],
+    "years": 2,
+    "tag": "final2"
+  },
+  "result": {
+    "population": 10000,
+    "welfare": 0.390564,
+    "outcome_override": "UNSTABLE",
+    "by_scale": [
+      {
+        "agents": 400,
+        "mean_relative": 0.088065
+      },
+      {
+        "agents": 2000,
+        "mean_relative": 0.044873
+      },
+      {
+        "agents": 10000,
+        "mean_relative": -0.011591
+      }
+    ],
+    "claim_strength": "HYPOTHESIS",
+    "run_id": "run_urban_delhi_power_reliability_capex_final2",
+    "simulator": "popula_dyn",
+    "timestamp": "2026-11-05T09:14:58.793830",
+    "run_key": "popula_dyn@2cac23d:f7d5ae5f9d57:1+2+3"
+  },
+  "timestamp": "2026-11-05T09:14:58.793830"
+}

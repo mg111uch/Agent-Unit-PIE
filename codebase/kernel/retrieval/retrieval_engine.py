@@ -148,6 +148,17 @@ class RetrievalEngine:
         )
         return results[:limit]
     # SEMANTIC MEMORY SEARCH
+    def retrieve_relations(
+        self,
+        node_id: str,
+        relation: Optional[str] = None,
+        depth: int = 2,
+    ) -> Dict[str, Any]:
+        """KRN-02: typed city-graph paths for one node (requires/serves/...)."""
+        from kernel.retrieval.relation_retriever import relation_retriever
+        return relation_retriever.explain(node_id, depth=depth,
+                                          relation=relation)
+
     def search_semantic_memory(
         self,
         query: str,
@@ -186,6 +197,12 @@ class RetrievalEngine:
                         "node_type":
                         node.node_type,
                         "simulator": (node.metadata.get("observation", {}) or {}).get("simulator") if isinstance(node.metadata, dict) else None,
+                        # KRN-07: a consolidated node is only meaningful with
+                        # its support count, so `n` travels with the result.
+                        "n": ((node.metadata.get("observation") or {}).get("n")
+                              if isinstance(node.metadata, dict) else None),
+                        "min_support": ((node.metadata.get("observation") or {}).get("min_support")
+                                        if isinstance(node.metadata, dict) else None),
                     },
                 )
             )
@@ -246,7 +263,58 @@ class RetrievalEngine:
             key=lambda x: x.score,
             reverse=True
         )
+        if len(results) < limit:
+            seen = {r.item_id for r in results}
+            results.extend(self._persisted_episodic(query_lower, seen))
+            results.sort(key=lambda x: x.score, reverse=True)
         return results[:limit]
+
+    # PERSISTED EPISODIC FALLBACK
+    def _persisted_episodic(
+        self,
+        query_lower: str,
+        seen: set,
+    ) -> List[RetrievalResult]:
+        """Episodes live in kernel.db, but `episodic_memory.episodes` is only
+        populated for the current process. Without this fallback a restarted
+        PIE cannot retrieve what it already learned (G0)."""
+        out: List[RetrievalResult] = []
+        try:
+            from kernel.memory.memory_engine import memory_engine
+            ids = memory_engine.list_objects_ro("episodic")
+        except Exception:
+            return out
+        for oid in ids:
+            if oid in seen:
+                continue
+            try:
+                obj = memory_engine.load_object_ro("episodic", oid) or {}
+            except Exception:
+                continue
+            if not isinstance(obj, dict):
+                continue
+            meta = obj.get("metadata") or {}
+            tags = meta.get("tags") or []
+            summary = (obj.get("summary") or obj.get("description")
+                       or obj.get("title") or "")
+            text = " ".join([str(summary), " ".join(map(str, tags)),
+                             str(obj.get("event_type", ""))]).lower()
+            score = self._calculate_text_score(query_lower, text)
+            if score <= 0:
+                continue
+            metrics = obj.get("metrics") or {}
+            score *= (float(metrics.get("importance", 0.5) or 0.5)
+                      * float(metrics.get("confidence", 0.5) or 0.5))
+            out.append(RetrievalResult(
+                item_id=str(oid),
+                item_type="episode",
+                score=score,
+                content=obj,
+                metadata={"episode_type": obj.get("event_type", ""),
+                          "persisted": True},
+            ))
+        return out
+
     # WORKING MEMORY SEARCH
     def search_working_memory(
         self,

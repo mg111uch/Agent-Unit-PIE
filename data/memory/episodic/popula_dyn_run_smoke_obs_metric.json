@@ -1,0 +1,20 @@
+{
+  "episode_id": "simrun_popula_dyn_run_smoke_obs_metric",
+  "simulator": "popula_dyn",
+  "version_id": "popula_dyn@2cac23d",
+  "run_id": "run_smoke_obs_metric",
+  "parameters": {
+    "domain": "urban",
+    "years": 2
+  },
+  "result": {
+    "population": 400,
+    "welfare": 0.5,
+    "outcome_override": "STABLE",
+    "run_id": "run_smoke_obs_metric",
+    "simulator": "popula_dyn",
+    "timestamp": "2026-11-04T09:51:11.371526",
+    "run_key": "popula_dyn@2cac23d:a979496d6ba6:s-random"
+  },
+  "timestamp": "2026-11-04T09:51:11.371526"
+}

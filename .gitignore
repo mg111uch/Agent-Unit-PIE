@@ -1,6 +1,7 @@
 node_modules
 utils_files
 *.env*
+!.env.example
 chroma_data
 __pycache__
 encoding_cache
